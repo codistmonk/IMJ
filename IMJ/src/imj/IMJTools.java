@@ -2,7 +2,15 @@ package imj;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static javax.imageio.ImageIO.read;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
+
+import java.io.File;
+import java.io.IOException;
+
+import imj.ImageOfBufferedImage.Feature;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
 
 /**
@@ -12,6 +20,27 @@ public final class IMJTools {
 	
 	private IMJTools() {
 		throw new IllegalInstantiationException();
+	}
+	
+	public static final Image binary(final Image image) {
+		final int rowCount = image.getRowCount();
+		final int columnCount = image.getColumnCount();
+		final int pixelCount = rowCount * columnCount;
+		final Image result = new ImageOfInts(rowCount, columnCount);
+		
+		for (int pixel = 0; pixel < pixelCount; ++pixel) {
+			result.setValue(pixel, image.getValue(pixel) == 0 ? 0 : 1);
+		}
+		
+		return result;
+	}
+	
+	public static final Image image(final String id, final Feature feature) {
+		try {
+			return new ImageOfBufferedImage(read(new File(id)), Feature.MAX_RGB);
+		} catch (final IOException exception) {
+			throw unchecked(exception);
+		}
 	}
 	
 	public static final Image image(final int[][] data) {

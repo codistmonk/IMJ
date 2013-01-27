@@ -1,5 +1,8 @@
 package imj;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * @author codistmonk (creation 2013-01-25)
  */

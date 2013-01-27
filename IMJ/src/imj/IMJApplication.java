@@ -5,27 +5,17 @@ import static java.util.Arrays.copyOfRange;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj.ImageOfBufferedImage.Feature;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
-import java.io.BufferedReader;
-import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.lang.annotation.Documented;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -36,10 +26,8 @@ import javax.imageio.ImageIO;
 
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
-
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-01-22)
@@ -72,11 +60,6 @@ public final class IMJApplication {
 	 */
 	public static final void main(final String[] commandLineArguments) {
 		final int n = commandLineArguments.length;
-		
-		if (n == 0) {
-			Operation.SHOW.process(new CommandLineArgumentsParser("file", "border.pgm"));
-			return;
-		}
 		
 		Operation.valueOf(commandLineArguments[0].toUpperCase()).process(
 				new CommandLineArgumentsParser(copyOfRange(commandLineArguments, 1, n)));
