@@ -29,7 +29,7 @@ public final class RegionalExtremaTest {
 		final Image expected = image(new int[][] {
 				{ 1 }
 		});
-		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getLabels());
+		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getResult());
 		
 		assertImageEquals(expected, minima);
 	}
@@ -42,7 +42,7 @@ public final class RegionalExtremaTest {
 		final Image expected = image(new int[][] {
 				{ 1, 1 }
 		});
-		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getLabels());
+		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getResult());
 		
 		assertImageEquals(expected, minima);
 	}
@@ -57,7 +57,7 @@ public final class RegionalExtremaTest {
 				{ 1, 1 },
 				{ 1, 1 }
 		});
-		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getLabels());
+		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getResult());
 		
 		assertImageEquals(expected, minima);
 	}
@@ -70,7 +70,7 @@ public final class RegionalExtremaTest {
 		final Image expected = image(new int[][] {
 				{ 1, 0 },
 		});
-		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getLabels());
+		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getResult());
 		
 		assertImageEquals(expected, minima);
 	}
@@ -83,7 +83,7 @@ public final class RegionalExtremaTest {
 		final Image expected = image(new int[][] {
 				{ 0, 1 },
 		});
-		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getLabels());
+		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getResult());
 		
 		assertImageEquals(expected, minima);
 	}
@@ -96,7 +96,7 @@ public final class RegionalExtremaTest {
 		final Image expected = image(new int[][] {
 				{ 1, 0, 1 },
 		});
-		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getLabels());
+		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getResult());
 		
 		assertImageEquals(expected, minima);
 	}
@@ -109,7 +109,7 @@ public final class RegionalExtremaTest {
 		final Image expected = image(new int[][] {
 				{ 0, 1, 0 },
 		});
-		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getLabels());
+		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getResult());
 		
 		assertImageEquals(expected, minima);
 	}
@@ -122,7 +122,7 @@ public final class RegionalExtremaTest {
 		final Image expected = image(new int[][] {
 				{ 0, 1, 1, 0 },
 		});
-		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getLabels());
+		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getResult());
 		
 		assertImageEquals(expected, minima);
 	}
@@ -135,7 +135,7 @@ public final class RegionalExtremaTest {
 		final Image expected = image(new int[][] {
 				{ 0, 0, 1, 0 },
 		});
-		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getLabels());
+		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getResult());
 		
 		assertImageEquals(expected, minima);
 	}
@@ -150,7 +150,7 @@ public final class RegionalExtremaTest {
 				{ 0, 0 },
 				{ 1, 0 },
 		});
-		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getLabels());
+		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getResult());
 		
 		assertImageEquals(expected, minima);
 	}
@@ -167,7 +167,7 @@ public final class RegionalExtremaTest {
 				{ 0, 1, 1 },
 				{ 0, 1, 0 },
 		});
-		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getLabels());
+		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getResult());
 		
 		assertImageEquals(expected, minima);
 	}
@@ -184,7 +184,7 @@ public final class RegionalExtremaTest {
 				{ 0, 0, 0, 1 },
 				{ 0, 0, 0, 0 },
 		});
-		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getLabels());
+		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getResult());
 		
 		assertImageEquals(expected, minima);
 	}
@@ -201,7 +201,7 @@ public final class RegionalExtremaTest {
 				{ 0, 0, 0 },
 				{ 1, 0, 0 },
 		});
-		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getLabels());
+		final Image minima = binary(new RegionalMinima(image, CONNECTIVITY_4).getResult());
 		
 		assertImageEquals(expected, minima);
 	}
@@ -226,7 +226,7 @@ public final class RegionalExtremaTest {
 			debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 			
 			debugPrint("Computing minima:", new Date(timer.tic()));
-			final Image actualMinima = binary(new RegionalMinima(image, CONNECTIVITY_4).getLabels());
+			final Image actualMinima = binary(new RegionalMinima(image, CONNECTIVITY_4).getResult());
 			debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 			
 			assertImageEquals(expectedMinima, actualMinima);
@@ -238,7 +238,7 @@ public final class RegionalExtremaTest {
 			debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 			
 			debugPrint("Computing minima:", new Date(timer.tic()));
-			final Image actualMinima = binary(new RegionalMinima(image, CONNECTIVITY_8).getLabels());
+			final Image actualMinima = binary(new RegionalMinima(image, CONNECTIVITY_8).getResult());
 			debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 			
 			assertImageEquals(expectedMinima, actualMinima);

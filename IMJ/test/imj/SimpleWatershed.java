@@ -42,7 +42,7 @@ public final class SimpleWatershed extends Labeling {
 		for (int pixel = 0; pixel < this.getPixelCount(); ++pixel) {
 			final int value = this.getImage().getValue(pixel);
 			
-			if (value == this.imageMinimum && this.getLabels().getValue(pixel) == 0) {
+			if (value == this.imageMinimum && this.getResult().getValue(pixel) == 0) {
 				this.markComponent(pixel, ++labelCount);
 			}
 		}
@@ -59,7 +59,7 @@ public final class SimpleWatershed extends Labeling {
 			for (int pixel = 0; pixel < this.getPixelCount(); ++pixel) {
 				final int value = this.getImage().getValue(pixel);
 				
-				if (value == this.imageMinimum + level && this.getLabels().getValue(pixel) == 0) {
+				if (value == this.imageMinimum + level && this.getResult().getValue(pixel) == 0) {
 					this.markComponent(pixel, ++labelCount);
 				}
 			}
@@ -67,9 +67,9 @@ public final class SimpleWatershed extends Labeling {
 	}
 	
 	private final void markPixelFromNeighborAndScheduleUnmarkedNeighbors(final int pixel, final IntList todo) {
-		if (this.getLabels().getValue(pixel) == 0) {
+		if (this.getResult().getValue(pixel) == 0) {
 			final int value = this.getImage().getValue(pixel);
-			this.getLabels().setValue(pixel, this.getLabelFromNeighbor(pixel, value));
+			this.getResult().setValue(pixel, this.getLabelFromNeighbor(pixel, value));
 			this.scheduleNeighbors(pixel, value, todo);
 		}
 	}
@@ -80,7 +80,7 @@ public final class SimpleWatershed extends Labeling {
 		
 		if (this.hasNorth(rowIndex)) {
 			final int neighbor = this.north(pixel);
-			final int label = this.getLabels().getValue(neighbor);
+			final int label = this.getResult().getValue(neighbor);
 			
 			if (0 < label) {
 				return label;
@@ -89,7 +89,7 @@ public final class SimpleWatershed extends Labeling {
 		
 		if (this.hasWest(columnIndex)) {
 			final int neighbor = this.west(pixel);
-			final int label = this.getLabels().getValue(neighbor);
+			final int label = this.getResult().getValue(neighbor);
 			
 			if (0 < label) {
 				return label;
@@ -98,7 +98,7 @@ public final class SimpleWatershed extends Labeling {
 		
 		if (this.hasEast(columnIndex)) {
 			final int neighbor = this.east(pixel);
-			final int label = this.getLabels().getValue(neighbor);
+			final int label = this.getResult().getValue(neighbor);
 			
 			if (0 < label) {
 				return label;
@@ -107,7 +107,7 @@ public final class SimpleWatershed extends Labeling {
 		
 		if (this.hasSouth(rowIndex)) {
 			final int neighbor = this.south(pixel);
-			final int label = this.getLabels().getValue(neighbor);
+			final int label = this.getResult().getValue(neighbor);
 			
 			if (0 < label) {
 				return label;
@@ -125,11 +125,11 @@ public final class SimpleWatershed extends Labeling {
 		while (!todo.isEmpty()) {
 			final int p = todo.remove(0);
 			
-			if (this.getLabels().getValue(p) == 0) {
+			if (this.getResult().getValue(p) == 0) {
 				this.scheduleNeighbors(p, value, todo);
 			}
 			
-			this.getLabels().setValue(p, label);
+			this.getResult().setValue(p, label);
 		}
 	}
 	
@@ -158,7 +158,7 @@ public final class SimpleWatershed extends Labeling {
 		final int neighborValue = this.getImage().getValue(neighbor);
 		
 		if (neighborValue == value) {
-			if (this.getLabels().getValue(neighbor) == 0) {
+			if (this.getResult().getValue(neighbor) == 0) {
 				todo.add(neighbor);
 			}
 		} else if (value < neighborValue) {

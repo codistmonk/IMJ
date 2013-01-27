@@ -47,7 +47,7 @@ public abstract class LabelingStack {
 	}
 	
 	public final Image getImageLabels(final int index) {
-		return this.watersheds.get(index).getLabels();
+		return this.watersheds.get(index).getResult();
 	}
 	
 	public final Statistics[] getImageRegionStatistics(final int index) {
@@ -89,7 +89,7 @@ public abstract class LabelingStack {
 	private final void addWatershedAndStatistics(final Image image) {
 		final Labeling watershed = this.newLabeling(image);
 		this.watersheds.add(watershed);
-		this.statistics.add(getRegionStatistics(image, watershed.getLabels()));
+		this.statistics.add(getRegionStatistics(image, watershed.getResult()));
 	}
 	
 	@Deprecated
