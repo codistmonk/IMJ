@@ -2,16 +2,11 @@ package imj;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
-import java.awt.image.ColorModel;
-import java.awt.image.DataBuffer;
 import java.awt.image.WritableRaster;
 import java.lang.reflect.Array;
-
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-01-23)
@@ -31,6 +26,29 @@ public final class ImageOfBufferedImage extends Image.Abstract {
 //				this.data[i] = feature.getValue(source.getRGB(x, y), hasAlpha);
 				this.data[i] = feature.getValue(rgb(raster.getDataElements(x, y, null)), hasAlpha);
 			}
+		}
+	}
+	
+	public static final String toString(final Object array) {
+		if (array.getClass().isArray()) {
+			final StringBuilder resultBuilder = new StringBuilder();
+			final int n = Array.getLength(array);
+			
+			resultBuilder.append('[');
+			
+			if (0 < n) {
+				resultBuilder.append(Array.get(array, 0));
+				
+				for (int i = 1; i < n; ++i) {
+					resultBuilder.append(' ').append(Array.get(array, i));
+				}
+			}
+			
+			resultBuilder.append(']');
+			
+			return resultBuilder.toString();
+		} else {
+			return array.toString();
 		}
 	}
 	
@@ -57,7 +75,7 @@ public final class ImageOfBufferedImage extends Image.Abstract {
 		int result = 0;
 		final int n = Array.getLength(rgb);
 		
-		for (int i = 0; i < n; ++i) {
+		for (int i = n - 1; 0 <= i; --i) {
 			result = (result << 8) | (0x000000FF & ((Number) Array.get(rgb, i)).intValue());
 		}
 		
