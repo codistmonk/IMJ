@@ -77,7 +77,7 @@ public abstract class LabelingStack {
 	 * @return
 	 * <br>Must not be null
 	 */
-	protected abstract Labeling newWatershed(Image image);
+	protected abstract Labeling newLabeling(Image image);
 	
 	private final void addImageAndWatershedAndStatistics() {
 		final int i = this.getImageCount() - 1;
@@ -87,18 +87,20 @@ public abstract class LabelingStack {
 	}
 	
 	private final void addWatershedAndStatistics(final Image image) {
-		final Labeling watershed = this.newWatershed(image);
+		final Labeling watershed = this.newLabeling(image);
 		this.watersheds.add(watershed);
 		this.statistics.add(getRegionStatistics(image, watershed.getLabels()));
 	}
 	
-	public static final LabelingStack newInstanceFor(final Image image, final int n, final StatisticsSelector reconstructionFeature, final Class<? extends Labeling> watershedClass) {
+	@Deprecated
+	public static final LabelingStack newInstanceFor(final Image image, final int n,
+			final StatisticsSelector reconstructionFeature, final Class<? extends Labeling> labelingClass) {
 		return new LabelingStack(image, n, reconstructionFeature) {
 			
 			@Override
-			protected final Labeling newWatershed(final Image image) {
+			protected final Labeling newLabeling(final Image image) {
 				try {
-					return watershedClass.getConstructor(Image.class).newInstance(image);
+					return labelingClass.getConstructor(Image.class).newInstance(image);
 				} catch (final Exception exception) {
 					throw unchecked(exception);
 				}

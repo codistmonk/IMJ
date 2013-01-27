@@ -1,0 +1,141 @@
+package imj;
+
+import static imj.IMJTools.image;
+import static imj.Labeling.CONNECTIVITY_4;
+import static imj.RegionalExtremaTest.assertImageEquals;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.usedMemory;
+
+import imj.IMJTools.StatisticsSelector;
+import imj.ImageOfBufferedImage.Feature;
+
+import java.util.Arrays;
+import java.util.Date;
+
+import net.sourceforge.aprog.tools.Tools;
+
+import org.junit.Test;
+
+/**
+ * @author codistmonk (creation 2013-01-27)
+ */
+public final class WatershedTest {
+	
+	@Test
+	public final void test1() {
+		final Image image = image(new int[][] {
+				{ 0 }
+		});
+		final Image expected = image(new int[][] {
+				{ 1 }
+		});
+		final Image initialLabels = new RegionalMinima(image, CONNECTIVITY_4).getLabels();
+		final Image watershed = new Watershed(image, initialLabels, CONNECTIVITY_4).getLabels();
+		
+		assertImageEquals(expected, watershed);
+	}
+	
+	@Test
+	public final void test2() {
+		final Image image = image(new int[][] {
+				{ 0, 1, 1 },
+				{ 1, 1, 0 },
+		});
+		final Image expected = image(new int[][] {
+				{ 1, 1, 2 },
+				{ 1, 2, 2 },
+		});
+		final Image initialLabels = new RegionalMinima(image, CONNECTIVITY_4).getLabels();
+		final Image watershed = new Watershed(image, initialLabels, CONNECTIVITY_4).getLabels();
+		
+		assertImageEquals(expected, watershed);
+	}
+	
+	@Test
+	public final void test3() {
+		final Image image = image(new int[][] {
+				{ 1, 1, 1, 1 },
+				{ 0, 1, 1, 0 },
+				{ 1, 1, 1, 1 },
+		});
+		final Image expected = image(new int[][] {
+				{ 1, 1, 2, 2 },
+				{ 1, 1, 2, 2 },
+				{ 1, 1, 2, 2 },
+		});
+		final Image initialLabels = new RegionalMinima(image, CONNECTIVITY_4).getLabels();
+		final Image watershed = new Watershed(image, initialLabels, CONNECTIVITY_4).getLabels();
+		
+		assertImageEquals(expected, watershed);
+	}
+	
+	@Test
+	public final void test4() {
+		final Image image = image(new int[][] {
+				{ 0, 2, 2, 1, 1, 0 },
+		});
+		final Image expected = image(new int[][] {
+				{ 1, 1, 2, 2, 2, 2 },
+		});
+		final Image initialLabels = new RegionalMinima(image, CONNECTIVITY_4).getLabels();
+		final Image watershed = new Watershed(image, initialLabels, CONNECTIVITY_4).getLabels();
+		
+		assertImageEquals(expected, watershed);
+	}
+	
+	@Test
+	public final void test5() {
+		final Image image = image(new int[][] {
+				{ 3, 2, 2, 3, 3, 2, 1, 0, 3, 3, 1 },
+		});
+		final Image expected = image(new int[][] {
+				{ 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3 },
+		});
+		final Image initialLabels = new RegionalMinima(image, CONNECTIVITY_4).getLabels();
+		final Image watershed = new Watershed(image, initialLabels, CONNECTIVITY_4).getLabels();
+		
+		assertImageEquals(expected, watershed);
+	}
+	
+	@Test
+	public final void test6() {
+		final TicToc timer = new TicToc();
+//		final String imageId = "test/imj/12003.jpg";
+		final String imageId = "../Libraries/images/16088-4.png";
+		
+		debugPrint("Loading image:", new Date(timer.tic()));
+		final Image image = image(imageId, Feature.MAX_RGB);
+		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
+		
+		ImageComponent.showAdjusted(imageId, new WatershedStack(image, 4, StatisticsSelector.MEAN).getAllImages());
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-01-27)
+	 */
+	public static final class WatershedStack extends LabelingStack {
+		
+		public WatershedStack(final Image image, final int n,
+				final StatisticsSelector reconstructionFeature) {
+			super(image, n, reconstructionFeature);
+			// NOP
+		}
+		
+		@Override
+		protected final Labeling newLabeling(final Image image) {
+			final TicToc timer = new TicToc();
+			
+			debugPrint("Computing markers:", new Date(timer.tic()));
+			final Image initialLabels = new RegionalMinima(image, CONNECTIVITY_4).getLabels();
+			debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
+			
+			debugPrint("Computing watershed:", new Date(timer.tic()));
+			final Watershed result = new Watershed(image, initialLabels, CONNECTIVITY_4);
+			debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
+			
+			return result;
+		}
+		
+	}
+	
+}

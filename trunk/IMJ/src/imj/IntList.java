@@ -65,7 +65,7 @@ public final class IntList {
 		
 		final int result = this.get(index);
 		
-		System.arraycopy(this.values, index + 1, this.values, index, this.size() - index);
+		System.arraycopy(this.values, this.first + index + 1, this.values, this.first + index, this.size() - 1 - index);
 		--this.end;
 		
 		return result;

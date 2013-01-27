@@ -1,5 +1,6 @@
 package imj;
 
+
 /**
  * @author codistmonk (creation 2013-01-26)
  */
@@ -10,6 +11,8 @@ public abstract class RegionalExtrema extends Labeling {
 	private final IntList componentBorder;
 	
 	private final IntList componentOutside;
+	
+	private int labelCount;
 	
 	public RegionalExtrema(final Image image, final int[] connectivity) {
 		super(image);
@@ -88,18 +91,24 @@ public abstract class RegionalExtrema extends Labeling {
 				}
 			}
 			
-			while (!this.component.isEmpty()) {
-				final int componentPixel = this.component.remove(0);
+			if (!this.component.isEmpty()) {
+				final int componentLabel = componentStatus == STATUS_MINIMUM ? ++this.labelCount : componentStatus;
+				
+//				debugPrint(this.labelCount, this.component);
+				
+				while (!this.component.isEmpty()) {
+					final int componentPixel = this.component.remove(0);
 //					debugPrint("component:", this.component);
-				
-				if (STATUS_SCHEDULED_BORDER < this.getLabels().getValue(componentPixel)) {
+					
+					if (STATUS_SCHEDULED_BORDER < this.getLabels().getValue(componentPixel)) {
 //						debugPrint(componentPixel, this.getLabels().getValue(componentPixel));
-				}
-				
-				assert this.getLabels().getValue(componentPixel) == STATUS_PENDING;
-				
-				this.getLabels().setValue(componentPixel, componentStatus);
+					}
+					
+					assert this.getLabels().getValue(componentPixel) == STATUS_PENDING;
+					
+					this.getLabels().setValue(componentPixel, componentLabel);
 //					debugPrint("labels:", "\n" + RegionalExtremaTest.toString(this.getLabels()));
+				}
 			}
 		}
 	}
