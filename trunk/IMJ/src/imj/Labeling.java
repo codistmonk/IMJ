@@ -1,8 +1,5 @@
 package imj;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * @author codistmonk (creation 2013-01-25)
  */
@@ -10,7 +7,7 @@ public abstract class Labeling {
 	
 	private final Image image;
 	
-	private final Image labels;
+	private final Image result;
 	
 	private final int rowCount;
 	
@@ -22,22 +19,26 @@ public abstract class Labeling {
 	
 	private final int lastColumnIndex;
 	
-	public Labeling(final Image image) {
+	protected Labeling(final Image image, final Image result) {
 		this.image = image;
 		this.rowCount = image.getRowCount();
 		this.columnCount = image.getColumnCount();
 		this.pixelCount = this.rowCount * this.columnCount;
 		this.lastRowIndex = this.rowCount - 1;
 		this.lastColumnIndex = this.columnCount - 1;
-		this.labels = new ImageOfInts(this.rowCount, this.columnCount);
+		this.result = result;
+	}
+	
+	protected Labeling(final Image image) {
+		this(image, new ImageOfInts(image.getRowCount(), image.getColumnCount()));
 	}
 	
 	public final Image getImage() {
 		return this.image;
 	}
 	
-	public final Image getLabels() {
-		return this.labels;
+	public final Image getResult() {
+		return this.result;
 	}
 	
 	public final int getRowCount() {
@@ -117,7 +118,7 @@ public abstract class Labeling {
 		
 		public Neighborhood(final int... deltas) {
 			this.deltas = new IntList(deltas.length);
-			this.neighbors = new IntList();
+			this.neighbors = new IntList((deltas.length + 1) / 2);
 			
 			this.deltas.addAll(deltas);
 		}

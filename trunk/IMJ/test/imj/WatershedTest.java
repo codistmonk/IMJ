@@ -2,17 +2,14 @@ package imj;
 
 import static imj.IMJTools.image;
 import static imj.Labeling.CONNECTIVITY_4;
+import static imj.MorphologyOperations.edges8;
 import static imj.RegionalExtremaTest.assertImageEquals;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
-
 import imj.IMJTools.StatisticsSelector;
 import imj.ImageOfBufferedImage.Feature;
 
-import java.util.Arrays;
 import java.util.Date;
-
-import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -29,8 +26,8 @@ public final class WatershedTest {
 		final Image expected = image(new int[][] {
 				{ 1 }
 		});
-		final Image initialLabels = new RegionalMinima(image, CONNECTIVITY_4).getLabels();
-		final Image watershed = new Watershed(image, initialLabels, CONNECTIVITY_4).getLabels();
+		final Image initialLabels = new RegionalMinima(image, CONNECTIVITY_4).getResult();
+		final Image watershed = new Watershed(image, initialLabels, CONNECTIVITY_4).getResult();
 		
 		assertImageEquals(expected, watershed);
 	}
@@ -45,8 +42,8 @@ public final class WatershedTest {
 				{ 1, 1, 2 },
 				{ 1, 2, 2 },
 		});
-		final Image initialLabels = new RegionalMinima(image, CONNECTIVITY_4).getLabels();
-		final Image watershed = new Watershed(image, initialLabels, CONNECTIVITY_4).getLabels();
+		final Image initialLabels = new RegionalMinima(image, CONNECTIVITY_4).getResult();
+		final Image watershed = new Watershed(image, initialLabels, CONNECTIVITY_4).getResult();
 		
 		assertImageEquals(expected, watershed);
 	}
@@ -63,8 +60,8 @@ public final class WatershedTest {
 				{ 1, 1, 2, 2 },
 				{ 1, 1, 2, 2 },
 		});
-		final Image initialLabels = new RegionalMinima(image, CONNECTIVITY_4).getLabels();
-		final Image watershed = new Watershed(image, initialLabels, CONNECTIVITY_4).getLabels();
+		final Image initialLabels = new RegionalMinima(image, CONNECTIVITY_4).getResult();
+		final Image watershed = new Watershed(image, initialLabels, CONNECTIVITY_4).getResult();
 		
 		assertImageEquals(expected, watershed);
 	}
@@ -77,8 +74,8 @@ public final class WatershedTest {
 		final Image expected = image(new int[][] {
 				{ 1, 1, 2, 2, 2, 2 },
 		});
-		final Image initialLabels = new RegionalMinima(image, CONNECTIVITY_4).getLabels();
-		final Image watershed = new Watershed(image, initialLabels, CONNECTIVITY_4).getLabels();
+		final Image initialLabels = new RegionalMinima(image, CONNECTIVITY_4).getResult();
+		final Image watershed = new Watershed(image, initialLabels, CONNECTIVITY_4).getResult();
 		
 		assertImageEquals(expected, watershed);
 	}
@@ -91,8 +88,8 @@ public final class WatershedTest {
 		final Image expected = image(new int[][] {
 				{ 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3 },
 		});
-		final Image initialLabels = new RegionalMinima(image, CONNECTIVITY_4).getLabels();
-		final Image watershed = new Watershed(image, initialLabels, CONNECTIVITY_4).getLabels();
+		final Image initialLabels = new RegionalMinima(image, CONNECTIVITY_4).getResult();
+		final Image watershed = new Watershed(image, initialLabels, CONNECTIVITY_4).getResult();
 		
 		assertImageEquals(expected, watershed);
 	}
@@ -100,8 +97,8 @@ public final class WatershedTest {
 	@Test
 	public final void test6() {
 		final TicToc timer = new TicToc();
-//		final String imageId = "test/imj/12003.jpg";
-		final String imageId = "../Libraries/images/16088-4.png";
+		final String imageId = "test/imj/12003.jpg";
+//		final String imageId = "../Libraries/images/16088-4.png";
 		
 		debugPrint("Loading image:", new Date(timer.tic()));
 		final Image image = image(imageId, Feature.MAX_RGB);
@@ -125,12 +122,16 @@ public final class WatershedTest {
 		protected final Labeling newLabeling(final Image image) {
 			final TicToc timer = new TicToc();
 			
+			debugPrint("Extracting edges:", new Date(timer.tic()));
+			final Image edges = edges8(image);
+			debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
+			
 			debugPrint("Computing markers:", new Date(timer.tic()));
-			final Image initialLabels = new RegionalMinima(image, CONNECTIVITY_4).getLabels();
+			final Image initialLabels = new RegionalMinima(edges, CONNECTIVITY_4).getResult();
 			debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 			
 			debugPrint("Computing watershed:", new Date(timer.tic()));
-			final Watershed result = new Watershed(image, initialLabels, CONNECTIVITY_4);
+			final Watershed result = new Watershed(edges, initialLabels, CONNECTIVITY_4);
 			debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 			
 			return result;

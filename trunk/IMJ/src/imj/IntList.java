@@ -75,6 +75,10 @@ public final class IntList {
 		return this.size() <= 0;
 	}
 	
+	public final void sort() {
+		Arrays.sort(this.values, this.first, this.end);
+	}
+	
 	public final String toString() {
 		final StringBuilder resultBuilder = new StringBuilder();
 		

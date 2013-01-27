@@ -61,13 +61,13 @@ public final class FlowWatershed extends Labeling {
 		int labelCount = 0;
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
-			if (this.getLabels().getValue(pixel) == 0) {
+			if (this.getResult().getValue(pixel) == 0) {
 				this.computeStream(pixel);
 				final int label = this.streamLabel == -1 ? ++labelCount : this.streamLabel;
 				final int n = this.stream.size();
 				
 				for (int i = 0; i < n; ++i) {
-					this.getLabels().setValue(this.stream.get(i), label);
+					this.getResult().setValue(this.stream.get(i), label);
 				}
 			}
 		}
@@ -86,7 +86,7 @@ public final class FlowWatershed extends Labeling {
 			int pixel3 = this.findClosestUnprocessedNeighbor(pixel2);
 			
 			while (breadthFirst && 0 <= pixel3) {
-				final int label3 = this.getLabels().getValue(pixel3);
+				final int label3 = this.getResult().getValue(pixel3);
 				
 				if (label3 != 0) {
 					this.streamLabel = label3;
@@ -101,7 +101,7 @@ public final class FlowWatershed extends Labeling {
 				
 				this.stream.add(pixel3);
 				this.unexplored.add(pixel3);
-				this.getLabels().setValue(pixel3, -1);
+				this.getResult().setValue(pixel3, -1);
 			}
 		}
 		
@@ -150,7 +150,7 @@ public final class FlowWatershed extends Labeling {
 	}
 	
 	private int evaluateNeighbor(final int pixelValue, final int smallestDistance, final int neighbor) {
-		if (0 <= this.getLabels().getValue(neighbor)) {
+		if (0 <= this.getResult().getValue(neighbor)) {
 			final int distance = this.getEdgeScore(pixelValue, this.getImage().getValue(neighbor));
 			
 			if (distance == smallestDistance) {

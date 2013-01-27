@@ -22,7 +22,7 @@ public final class Watershed extends Labeling {
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
 			final int pixelLabel = initialLabels.getValue(pixel);
 			
-			this.getLabels().setValue(pixel, pixelLabel);
+			this.getResult().setValue(pixel, pixelLabel);
 			
 			if (0 != pixelLabel) {
 				neighborhood.reset(pixel);
@@ -44,7 +44,7 @@ public final class Watershed extends Labeling {
 			
 			while (!contourPixels.isEmpty()) {
 				final int pixel = contourPixels.remove(0);
-				final int pixelLabel = this.getLabels().getValue(pixel);
+				final int pixelLabel = this.getResult().getValue(pixel);
 				
 				assert 0 < pixelLabel;
 				
@@ -52,14 +52,14 @@ public final class Watershed extends Labeling {
 				
 				while (neighborhood.hasNext()) {
 					final int neighbor = neighborhood.getNext();
-					final int neighborLabel = this.getLabels().getValue(neighbor);
+					final int neighborLabel = this.getResult().getValue(neighbor);
 					
 					if (0 == neighborLabel) {
 						final int neighborValue = image.getValue(neighbor);
 						final int distance = neighborValue - level;
 						
 						if (0 == distance) {
-							this.getLabels().setValue(neighbor, pixelLabel);
+							this.getResult().setValue(neighbor, pixelLabel);
 							contourPixels.add(neighbor);
 						} else if (0 < distance) {
 							boolean closerPixelFound = false;
@@ -76,7 +76,7 @@ public final class Watershed extends Labeling {
 							}
 							
 							if (!closerPixelFound) {
-								this.getLabels().setValue(neighbor, pixelLabel);
+								this.getResult().setValue(neighbor, pixelLabel);
 								levelContours[neighborValue].add(neighbor);
 							}
 						} else {

@@ -24,7 +24,7 @@ public abstract class RegionalExtrema extends Labeling {
 		final Neighborhood neighborhood = this.new Neighborhood(connectivity);
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
-			this.getLabels().setValue(pixel, STATUS_UNKNOWN);
+			this.getResult().setValue(pixel, STATUS_UNKNOWN);
 		}
 		
 //			debugPrint("labels:", "\n" + RegionalExtremaTest.toString(this.getLabels()));
@@ -49,8 +49,8 @@ public abstract class RegionalExtrema extends Labeling {
 //					debugPrint(componentPixel);
 //					debugPrint("componentBorder:", this.componentBorder);
 				
-				if (this.getLabels().getValue(componentPixel) <= STATUS_PENDING) {
-					this.getLabels().setValue(componentPixel, STATUS_PENDING);
+				if (this.getResult().getValue(componentPixel) <= STATUS_PENDING) {
+					this.getResult().setValue(componentPixel, STATUS_PENDING);
 //						debugPrint("labels:", "\n" + RegionalExtremaTest.toString(this.getLabels()));
 					this.component.add(componentPixel);
 //						debugPrint("component:", this.component);
@@ -60,7 +60,7 @@ public abstract class RegionalExtrema extends Labeling {
 					while (neighborhood.hasNext()) {
 						final int neighbor = neighborhood.getNext();
 						final int neighborValue = image.getValue(neighbor);
-						final int neighborStatus = this.getLabels().getValue(neighbor);
+						final int neighborStatus = this.getResult().getValue(neighbor);
 						final int comparison = this.compare(neighborValue, componentValue);
 						
 						if (comparison < 0) {
@@ -69,21 +69,21 @@ public abstract class RegionalExtrema extends Labeling {
 							if (neighborStatus == STATUS_UNKNOWN) {
 								this.componentOutside.add(neighbor);
 //									debugPrint("componentOutside:", this.componentOutside);
-								this.getLabels().setValue(neighbor, STATUS_SCHEDULED_OUTSIDE);
+								this.getResult().setValue(neighbor, STATUS_SCHEDULED_OUTSIDE);
 //									debugPrint("labels:", "\n" + RegionalExtremaTest.toString(this.getLabels()));
 							}
 						} else if (0 < comparison) {
 							if (neighborStatus == STATUS_UNKNOWN) {
 								this.componentOutside.add(neighbor);
 //									debugPrint("componentOutside:", this.componentOutside);
-								this.getLabels().setValue(neighbor, STATUS_SCHEDULED_OUTSIDE);
+								this.getResult().setValue(neighbor, STATUS_SCHEDULED_OUTSIDE);
 //									debugPrint("labels:", "\n" + RegionalExtremaTest.toString(this.getLabels()));
 							}
 						} else {
 							if (neighborStatus <= STATUS_SCHEDULED_OUTSIDE) {
 								this.componentBorder.add(neighbor);
 //									debugPrint("componentBoder:", this.componentBorder);
-								this.getLabels().setValue(neighbor, STATUS_SCHEDULED_BORDER);
+								this.getResult().setValue(neighbor, STATUS_SCHEDULED_BORDER);
 //									debugPrint("labels:", "\n" + RegionalExtremaTest.toString(this.getLabels()));
 							}
 						}
@@ -100,13 +100,13 @@ public abstract class RegionalExtrema extends Labeling {
 					final int componentPixel = this.component.remove(0);
 //					debugPrint("component:", this.component);
 					
-					if (STATUS_SCHEDULED_BORDER < this.getLabels().getValue(componentPixel)) {
+					if (STATUS_SCHEDULED_BORDER < this.getResult().getValue(componentPixel)) {
 //						debugPrint(componentPixel, this.getLabels().getValue(componentPixel));
 					}
 					
-					assert this.getLabels().getValue(componentPixel) == STATUS_PENDING;
+					assert this.getResult().getValue(componentPixel) == STATUS_PENDING;
 					
-					this.getLabels().setValue(componentPixel, componentLabel);
+					this.getResult().setValue(componentPixel, componentLabel);
 //					debugPrint("labels:", "\n" + RegionalExtremaTest.toString(this.getLabels()));
 				}
 			}
