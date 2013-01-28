@@ -22,7 +22,7 @@ public final class MathOperations {
 		final int pixelCount = result.getRowCount() * result.getColumnCount();
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
-			result.setValue(pixel, operator.evaluate(left.getValue(pixel), right.getValue(pixel)));
+			result.setValue(pixel, operator.evaluate(pixel, left.getValue(pixel), right.getValue(pixel)));
 		}
 		
 		return result;
@@ -36,7 +36,7 @@ public final class MathOperations {
 		final int pixelCount = result.getRowCount() * result.getColumnCount();
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
-			result.setValue(pixel, operator.evaluate(image.getValue(pixel)));
+			result.setValue(pixel, operator.evaluate(pixel, image.getValue(pixel)));
 		}
 		
 		return result;
@@ -47,236 +47,279 @@ public final class MathOperations {
 	}
 	
 	/**
-	 * @author codistmonk (creation 2013-01-27)
+	 * @author codistmonk (creation 2013-01-28)
 	 */
-	public static enum UnaryOperator {
+	public static abstract interface UnaryOperator {
 		
-		NEGATE {
-			
-			@Override
-			public final int evaluate(final int value) {
-				return -value;
-			}
-			
-		}, COMPLEMENT {
-			
-			@Override
-			public final int evaluate(final int value) {
-				return ~value;
-			}
-			
-		}, ABSOLUTE_VALUE {
-			
-			@Override
-			public final int evaluate(final int value) {
-				return abs(value);
-			}
-			
-		}, SQUARE {
-			
-			@Override
-			public final int evaluate(final int value) {
-				return value * value;
-			}
-			
-		}, CUBE {
-			
-			@Override
-			public final int evaluate(final int value) {
-				return value * value * value;
-			}
-			
-		}, SQUARE_ROOT {
-			
-			@Override
-			public final int evaluate(final int value) {
-				return (int) sqrt(value);
-			}
-			
-		}, LOG_2 {
-			
-			@Override
-			public final int evaluate(final int value) {
-				return (int) (log(value) / LOG2);
-			}
-			
-		}, LOG_10 {
-			
-			@Override
-			public final int evaluate(final int value) {
-				return (int) (log10(value));
-			}
-			
-		}, LOG {
-			
-			@Override
-			public final int evaluate(final int value) {
-				return (int) (log(value));
-			}
-			
-		};
+		public abstract int evaluate(int pixel, int value);
 		
-		public static final double LOG2 = log(2.0);
-		
-		public abstract int evaluate(int value);
+		/**
+		 * @author codistmonk (creation 2013-01-27)
+		 */
+		public static enum Predefined implements UnaryOperator {
+			
+			NEGATE {
+				
+				@Override
+				public final int evaluate(final int pixel, final int value) {
+					return -value;
+				}
+				
+			}, COMPLEMENT {
+				
+				@Override
+				public final int evaluate(final int pixel, final int value) {
+					return ~value;
+				}
+				
+			}, ABSOLUTE_VALUE {
+				
+				@Override
+				public final int evaluate(final int pixel, final int value) {
+					return abs(value);
+				}
+				
+			}, SQUARE {
+				
+				@Override
+				public final int evaluate(final int pixel, final int value) {
+					return value * value;
+				}
+				
+			}, CUBE {
+				
+				@Override
+				public final int evaluate(final int pixel, final int value) {
+					return value * value * value;
+				}
+				
+			}, SQUARE_ROOT {
+				
+				@Override
+				public final int evaluate(final int pixel, final int value) {
+					return (int) sqrt(value);
+				}
+				
+			}, LOG_2 {
+				
+				@Override
+				public final int evaluate(final int pixel, final int value) {
+					return (int) (log(value) / LOG2);
+				}
+				
+			}, LOG_10 {
+				
+				@Override
+				public final int evaluate(final int pixel, final int value) {
+					return (int) (log10(value));
+				}
+				
+			}, LOG {
+				
+				@Override
+				public final int evaluate(final int pixel, final int value) {
+					return (int) (log(value));
+				}
+				
+			};
+			
+			public static final double LOG2 = log(2.0);
+			
+		}
 		
 	}
 	
+	
 	/**
-	 * @author codistmonk (creation 2013-01-27)
+	 * @author codistmonk (creation 2013-01-28)
 	 */
-	public static enum BinaryOperator {
+	public static abstract interface BinaryOperator {
 		
-		PLUS {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return left + right;
-			}
-			
-		}, MINUS {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return left - right;
-			}
-			
-		}, TIMES {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return left * right;
-			}
-			
-		}, DIVIDED_BY {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return left / right;
-			}
-			
-		}, MODULO {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return left % right;
-			}
-			
-		}, POWER {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return (int) pow(left, right);
-			}
-			
-		}, ROOT {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return (int) pow(left, 1.0 / (double) right);
-			}
-			
-		}, MIN {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return min(left, right);
-			}
-			
-		}, MAX {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return max(left, right);
-			}
-			
-		}, AND {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return left & right;
-			}
-			
-		}, OR {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return left | right;
-			}
-			
-		}, XOR {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return left ^ right;
-			}
-			
-		}, IS_LESS_THAN {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return left < right ? 1 : 0;
-			}
-			
-		}, IS_LESS_THAN_OR_EQUAL_TO {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return left <= right ? 1 : 0;
-			}
-			
-		}, IS_GREATER_THAN {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return left > right ? 1 : 0;
-			}
-			
-		}, IS_GREATER_THAN_OR_EQUAL_TO {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return left >= right ? 1 : 0;
-			}
-			
-		}, IS_EQUAL_TO {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return left == right ? 1 : 0;
-			}
-			
-		}, IS_NOT_EQUAL_TO {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return left != right ? 1 : 0;
-			}
-			
-		}, SHIFTED_LEFT_BY {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return left << right;
-			}
-			
-		}, SHIFTED_RIGHT_BY {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return left >> right;
-			}
-			
-		}, UNSIGNED_SHIFTED_RIGHT_BY {
-			
-			@Override
-			public final int evaluate(final int left, final int right) {
-				return left >>> right;
-			}
-			
-		};
+		public abstract int evaluate(int pixel, int left, int right);
 		
-		public abstract int evaluate(int left, int right);
+		public abstract UnaryOperator bindLeft(int pixel, int left);
+		
+		public abstract UnaryOperator bindRight(int pixel, int right);
+		
+		/**
+		 * @author codistmonk (creation 2013-01-27)
+		 */
+		public static enum Predefined implements BinaryOperator {
+			
+			PLUS {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return left + right;
+				}
+				
+			}, MINUS {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return left - right;
+				}
+				
+			}, TIMES {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return left * right;
+				}
+				
+			}, DIVIDED_BY {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return left / right;
+				}
+				
+			}, MODULO {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return left % right;
+				}
+				
+			}, POWER {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return (int) pow(left, right);
+				}
+				
+			}, ROOT {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return (int) pow(left, 1.0 / (double) right);
+				}
+				
+			}, MIN {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return min(left, right);
+				}
+				
+			}, MAX {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return max(left, right);
+				}
+				
+			}, AND {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return left & right;
+				}
+				
+			}, OR {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return left | right;
+				}
+				
+			}, XOR {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return left ^ right;
+				}
+				
+			}, IS_LESS_THAN {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return left < right ? 1 : 0;
+				}
+				
+			}, IS_LESS_THAN_OR_EQUAL_TO {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return left <= right ? 1 : 0;
+				}
+				
+			}, IS_GREATER_THAN {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return left > right ? 1 : 0;
+				}
+				
+			}, IS_GREATER_THAN_OR_EQUAL_TO {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return left >= right ? 1 : 0;
+				}
+				
+			}, IS_EQUAL_TO {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return left == right ? 1 : 0;
+				}
+				
+			}, IS_NOT_EQUAL_TO {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return left != right ? 1 : 0;
+				}
+				
+			}, SHIFTED_LEFT_BY {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return left << right;
+				}
+				
+			}, SHIFTED_RIGHT_BY {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return left >> right;
+				}
+				
+			}, UNSIGNED_SHIFTED_RIGHT_BY {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return left >>> right;
+				}
+				
+			};
+			
+			@Override
+			public final UnaryOperator bindLeft(final int pixel, final int left) {
+				return new UnaryOperator() {
+					
+					@Override
+					public final int evaluate(final int pixel, final int value) {
+						return BinaryOperator.Predefined.this.evaluate(pixel, left, value);
+					}
+					
+				};
+			}
+			
+			@Override
+			public final UnaryOperator bindRight(final int pixel, final int right) {
+				return new UnaryOperator() {
+					
+					@Override
+					public final int evaluate(final int pixel, final int value) {
+						return BinaryOperator.Predefined.this.evaluate(pixel, value, right);
+					}
+					
+				};
+			}
+			
+		}
 		
 	}
 	
