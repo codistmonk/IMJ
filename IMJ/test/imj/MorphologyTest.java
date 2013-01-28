@@ -1,6 +1,7 @@
 package imj;
 
 import static imj.IMJTools.image;
+import static imj.Labeling.CONNECTIVITY_4;
 import static imj.RegionalExtremaTest.assertImageEquals;
 
 import org.junit.Test;
@@ -15,11 +16,11 @@ public final class MorphologyTest {
 		final Image image = image(new int[][] {
 				{ 0 }
 		});
-		final Image expected = image(new int[][] {
+		final Image expectedResult = image(new int[][] {
 				{ 0 }
 		});
 		
-		assertImageEquals(expected, MorphologyOperations.erode4(image));
+		assertImageEquals(expectedResult, MorphologyOperations.erode4(image));
 	}
 	
 	@Test
@@ -27,11 +28,11 @@ public final class MorphologyTest {
 		final Image image = image(new int[][] {
 				{ 1 }
 		});
-		final Image expected = image(new int[][] {
+		final Image expectedResult = image(new int[][] {
 				{ 1 }
 		});
 		
-		assertImageEquals(expected, MorphologyOperations.erode4(image));
+		assertImageEquals(expectedResult, MorphologyOperations.erode4(image));
 	}
 	
 	@Test
@@ -41,13 +42,13 @@ public final class MorphologyTest {
 				{ 1, 2, 1 },
 				{ 1, 1, 1 },
 		});
-		final Image expected = image(new int[][] {
+		final Image expectedResult = image(new int[][] {
 				{ 1, 1, 1 },
 				{ 1, 1, 1 },
 				{ 1, 1, 1 },
 		});
 		
-		assertImageEquals(expected, MorphologyOperations.erode4(image));
+		assertImageEquals(expectedResult, MorphologyOperations.erode4(image));
 	}
 	
 	@Test
@@ -57,13 +58,83 @@ public final class MorphologyTest {
 				{ 1, 2, 1 },
 				{ 1, 1, 1 },
 		});
-		final Image expected = image(new int[][] {
+		final Image expectedResult = image(new int[][] {
 				{ 1, 2, 1 },
 				{ 2, 2, 2 },
 				{ 1, 2, 1 },
 		});
 		
-		assertImageEquals(expected, MorphologyOperations.dilate4(image));
+		assertImageEquals(expectedResult, MorphologyOperations.dilate4(image));
+	}
+	
+	@Test
+	public final void testHMinima1() {
+		final Image image = image(new int[][] {
+				{ 10,  7, 10,  3,  2,  5,  0 }
+		});
+		final int h = 4;
+		final Image expectedResult = image(new int[][] {
+				{ 10, 10, 10,  5,  5,  5,  4 }
+		});
+		final Image hMinima = MorphologyOperations.hMinima(image, h, CONNECTIVITY_4);
+		
+		assertImageEquals(expectedResult, hMinima);
+	}
+	
+	@Test
+	public final void testHMinima2() {
+		final Image image = image(new int[][] {
+				{ 10, 10, 10, 10, 10 },
+				{ 10,  7,  7, 10, 10 },
+				{ 10,  7, 10,  2, 10 },
+				{ 10, 10,  2,  2, 10 },
+				{ 10, 10, 10, 10, 10 },
+		});
+		final int h = 4;
+		final Image expectedResult = image(new int[][] {
+				{ 10, 10, 10, 10, 10 },
+				{ 10, 10, 10, 10, 10 },
+				{ 10, 10, 10,  6, 10 },
+				{ 10, 10,  6,  6, 10 },
+				{ 10, 10, 10, 10, 10 },
+		});
+		final Image hMinima = MorphologyOperations.hMinima(image, h, CONNECTIVITY_4);
+		
+		assertImageEquals(expectedResult, hMinima);
+	}
+	
+	@Test
+	public final void testHMaxima1() {
+		final Image image = image(new int[][] {
+				{ 1, 2, 1 },
+		});
+		final int h = 1;
+		final Image expectedResult = image(new int[][] {
+				{ 1, 1, 1 },
+		});
+		final Image hMaxima = MorphologyOperations.hMaxima(image, h, CONNECTIVITY_4);
+		
+		assertImageEquals(expectedResult, hMaxima);
+	}
+	
+	@Test
+	public final void testHMaxima2() {
+		final Image image = image(new int[][] {
+				{ 1, 1, 1, 1, 1 },
+				{ 1, 2, 2, 1, 3 },
+				{ 1, 2, 1, 1, 1 },
+				{ 1, 2, 2, 2, 1 },
+		});
+		final int h = 1;
+		final Image expectedResult = image(new int[][] {
+				{ 1, 1, 1, 1, 1 },
+				{ 1, 1, 1, 1, 2 },
+				{ 1, 1, 1, 1, 1 },
+				{ 1, 1, 1, 1, 1 },
+		});
+		final Image hMaxima = MorphologyOperations.hMaxima(image, h, CONNECTIVITY_4);
+		
+		assertImageEquals(expectedResult, hMaxima);
 	}
 	
 }
