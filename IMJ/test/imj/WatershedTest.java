@@ -97,14 +97,19 @@ public final class WatershedTest {
 	@Test
 	public final void test6() {
 		final TicToc timer = new TicToc();
-		final String imageId = "test/imj/12003.jpg";
-//		final String imageId = "../Libraries/images/16088-4.png";
+//		final String imageId = "test/imj/12003.jpg";
+		final String imageId = "../Libraries/images/16088-4.png";
 		
 		debugPrint("Loading image:", new Date(timer.tic()));
 		final Image image = image(imageId, Feature.MAX_RGB);
 		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
-		ImageComponent.showAdjusted(imageId, new WatershedStack(image, 4, StatisticsSelector.MEAN).getAllImages());
+		debugPrint("Extracting edges:", new Date(timer.tic()));
+		final Image edges = edges8(image);
+		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
+		
+		ImageComponent.showAdjusted(imageId, image, edges);
+//		ImageComponent.showAdjusted(imageId, new WatershedStack(image, 4, StatisticsSelector.MEAN).getAllImages());
 	}
 	
 	/**
