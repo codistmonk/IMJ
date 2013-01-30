@@ -49,7 +49,7 @@ public final class DensityTest {
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
 			final int row = pixel / columnCount;
 			final int column = pixel % columnCount;
-			protoDensity.setFloatValue(pixel, 255.0F / squareDistance(0, 0, row, column));
+			protoDensity.setFloatValue(pixel, 255.0F / (1 + squareDistance(0, 0, row, column)));
 		}
 		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
