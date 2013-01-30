@@ -22,6 +22,14 @@ public abstract interface Image {
 	
 	public abstract int setValue(int index, final int value);
 	
+	public abstract float getFloatValue(int rowIndex, int columnIndex);
+	
+	public abstract float setFloatValue(int rowIndex, int columnIndex, final float value);
+	
+	public abstract float getFloatValue(int index);
+	
+	public abstract float setFloatValue(int index, final float value);
+	
 	/**
 	 * @author codistmonk (creation 2013-01-24)
 	 */
@@ -62,6 +70,16 @@ public abstract interface Image {
 		@Override
 		public final int setValue(final int rowIndex, final int columnIndex, final int value) {
 			return this.setValue(index(this, rowIndex, columnIndex), value);
+		}
+		
+		@Override
+		public final float getFloatValue(final int rowIndex, final int columnIndex) {
+			return this.getFloatValue(index(this, rowIndex, columnIndex));
+		}
+		
+		@Override
+		public final float setFloatValue(final int rowIndex, final int columnIndex, final float value) {
+			return this.setFloatValue(index(this, rowIndex, columnIndex), value);
 		}
 		
 		public static final int index(final Image image, final int rowIndex, final int columnIndex) {

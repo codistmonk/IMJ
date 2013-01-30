@@ -196,26 +196,26 @@ public final class ImageComponent extends JComponent {
 		}
 	}
 	
-	@Listener
-	public final void modelChanged() {
+	public static final BufferedImage awtImage(final Image image, final boolean adjust, final BufferedImage result) {
+//		final BufferedImage result = new BufferedImage(image.getColumnCount(), image.getRowCount(), BufferedImage.TYPE_3BYTE_BGR);
 		final int rgb = new Color(1, 1, 1).getRGB();
 		
-		if (!this.adjust) {
-			for (int y = 0; y < this.model.getRowCount(); ++y) {
-				for (int x = 0; x < this.model.getColumnCount(); ++x) {
-					this.buffer.setRGB(x, y, this.model.getValue(y, x) * rgb);
+		if (!adjust) {
+			for (int y = 0; y < image.getRowCount(); ++y) {
+				for (int x = 0; x < image.getColumnCount(); ++x) {
+					result.setRGB(x, y, image.getValue(y, x) * rgb);
 				}
 			}
 		} else {
-			final int n = this.getModel().getRowCount()
-					* this.getModel().getColumnCount();
+			final int n = image.getRowCount()
+					* image.getColumnCount();
 			int oldMinimum = Integer.MAX_VALUE;
 			int oldMaximum = Integer.MIN_VALUE;
 			final int newMinimum = 0;
 			final int newMaximum = 255;
 			
 			for (int i = 0; i < n; ++i) {
-				final int value = this.getModel().getValue(i);
+				final int value = image.getValue(i);
 				
 				if (value < oldMinimum) {
 					oldMinimum = value;
@@ -229,23 +229,24 @@ public final class ImageComponent extends JComponent {
 			final int oldAmplitude = oldMaximum - oldMinimum;
 			final int newAmplitude = newMaximum - newMinimum;
 			
-			for (int y = 0; y < this.model.getRowCount(); ++y) {
-				for (int x = 0; x < this.model.getColumnCount(); ++x) {
+			for (int y = 0; y < image.getRowCount(); ++y) {
+				for (int x = 0; x < image.getColumnCount(); ++x) {
 					if (oldAmplitude == 0) {
-						this.buffer.setRGB(x, y, newMaximum * rgb);
+						result.setRGB(x, y, newMaximum * rgb);
 					} else {
-						this.buffer
-								.setRGB(x,
-										y,
-										(newMinimum + (this.model
-												.getValue(y, x) - oldMinimum)
-												* newAmplitude / oldAmplitude)
-												* rgb);
+						result.setRGB(x, y, (newMinimum + (image.getValue(y, x) - oldMinimum) * newAmplitude / oldAmplitude) * rgb);
 						// this.buffer.setRGB(x, y, this.model.getValue(y, x));
 					}
 				}
 			}
 		}
+		
+		return result;
+	}
+	
+	@Listener
+	public final void modelChanged() {
+		awtImage(this.getModel(), this.adjust, this.buffer);
 		
 		this.repaint();
 	}

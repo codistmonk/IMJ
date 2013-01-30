@@ -1,8 +1,12 @@
 package imj;
 
 import static imj.ImageComponent.showAdjusted;
+import static java.lang.Math.abs;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static javax.imageio.ImageIO.read;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.IMJTools.StatisticsSelector;
 import imj.ImageOfBufferedImage.Feature;
 
@@ -12,6 +16,8 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.Date;
+
+import javax.swing.ProgressMonitor;
 
 import net.sourceforge.aprog.swing.SwingTools;
 
@@ -28,12 +34,80 @@ public final class DensityTest {
 //		final String imageId = "bsds/train/12003.jpg";
 //		final String imageId = "lib/images/16088-2.png";
 		final String imageId = "test/imj/12003.jpg";
-		final Image image = new ImageOfBufferedImage(read(new File(imageId)), Feature.HUE);
-		
+		debugPrint("Loading image:", new Date(timer.tic()));
+		final Image image = new ImageOfBufferedImage(read(new File(imageId)), Feature.MAX_RGB);
+		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		debugPrint(image);
+		final int rowCount = image.getRowCount();
+		final int columnCount = image.getColumnCount();
+		final Image density = new ImageOfFloats(rowCount, columnCount);
+		final Image protoDensity = new ImageOfFloats(rowCount, columnCount);
+		final int pixelCount = rowCount * columnCount;
+		final ProgressMonitor progressMonitor = new ProgressMonitor(null, "Computing density", null, 0, columnCount);
+		
+		debugPrint("Precomputing densities:", new Date(timer.tic()));
+		for (int pixel = 0; pixel < pixelCount; ++pixel) {
+			final int row = pixel / columnCount;
+			final int column = pixel % columnCount;
+			protoDensity.setFloatValue(pixel, 255.0F / squareDistance(0, 0, row, column));
+		}
+		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
+		
+		debugPrint("Computing densities:", new Date(timer.tic()));
+		for (int out = 0; out < pixelCount; ++out) {
+			final int outRow = out / columnCount;
+			final int outColumn = out % columnCount;
+			float value = +0.0F;
+			
+			for (int in = 0; in < pixelCount && !progressMonitor.isCanceled(); ++in) {
+				final int inRow = in / columnCount;
+				final int inColumn = in % columnCount;
+				
+				value += protoDensity.getFloatValue(abs(outRow - inRow), abs(outColumn - inColumn)) * image.getFloatValue(in);
+			}
+			
+			density.setFloatValue(out, density.getFloatValue(out) + value / 255.0F);
+			
+			if (outColumn == 0) {
+				progressMonitor.setProgress(outRow);
+			}
+		}
+		progressMonitor.close();
+		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
+		
+		normalize(density, density, +0.0F, +255.0F);
 		
 //		showHistogram(image);
-		showAdjusted(imageId, image);
+		showAdjusted(imageId, image, density);
+	}
+	
+	public static final Image normalize(final Image image, final Image result, final float newMinimum, final float newMaximum) {
+		float oldMinimum = Float.POSITIVE_INFINITY;
+		float oldMaximum = Float.NEGATIVE_INFINITY;
+		final int pixelCount = image.getRowCount() * image.getColumnCount();
+		
+		for (int pixel = 0; pixel < pixelCount; ++pixel) {
+			final float value = image.getFloatValue(pixel);
+			oldMinimum = Math.min(oldMinimum, value);
+			oldMaximum = Math.max(oldMaximum, value);
+		}
+		
+		final float oldAmplitude = oldMaximum - oldMinimum;
+		final float newAmplitude = newMaximum - newMinimum;
+		
+		for (int pixel = 0; pixel < pixelCount; ++pixel) {
+			result.setFloatValue(pixel, newMinimum + (image.getValue(pixel) - oldMinimum) * newAmplitude / oldAmplitude);
+		}
+		
+		return result;
+	}
+	
+	public static final int squareDistance(final int x1, final int y1, final int x2, final int y2) {
+		return square(x2 - x1) + square(y2 - y1);
+	}
+	
+	public static final int square(final int x) {
+		return x * x;
 	}
 	
 	public static final void showHistogram(final Image image) {

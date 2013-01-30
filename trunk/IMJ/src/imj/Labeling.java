@@ -153,8 +153,16 @@ public abstract class Labeling {
 			return this.i < this.neighbors.size();
 		}
 		
+		public final int getNextDeltaIndex() {
+			return this.i++;
+		}
+		
 		public final int getNext() {
-			return this.neighbors.get(this.i++);
+			return this.get(this.getNextDeltaIndex());
+		}
+		
+		public final int get(final int deltaIndex) {
+			return this.neighbors.get(deltaIndex);
 		}
 		
 	}
