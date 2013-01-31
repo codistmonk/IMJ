@@ -41,10 +41,17 @@ public abstract interface Image {
 		
 		private final int columnCount;
 		
+		private final int pixelCount;
+		
 		protected Abstract(final int rowCount, final int columnCount) {
 			this.metadata = new LinkedHashMap<String, Object>();
 			this.rowCount = rowCount;
 			this.columnCount = columnCount;
+			this.pixelCount = rowCount * columnCount;
+		}
+		
+		public final int getPixelCount() {
+			return this.pixelCount;
 		}
 		
 		@Override
@@ -80,6 +87,18 @@ public abstract interface Image {
 		@Override
 		public final float setFloatValue(final int rowIndex, final int columnIndex, final float value) {
 			return this.setFloatValue(index(this, rowIndex, columnIndex), value);
+		}
+		
+		public final int getIndex(final int rowIndex, final int columnIndex) {
+			return index(this, rowIndex, columnIndex);
+		}
+		
+		public final int getRowIndex(final int index) {
+			return index / this.getColumnCount();
+		}
+		
+		public final int getColumnIndex(final int index) {
+			return index % this.getColumnCount();
 		}
 		
 		public static final int index(final Image image, final int rowIndex, final int columnIndex) {
