@@ -35,14 +35,16 @@ import org.junit.Test;
  */
 public final class MultiScaleTest {
 	
-//	@Test
+	@Test
 	public final void test1() throws FileNotFoundException, IOException {
 		final TicToc timer = new TicToc();
-		final String imageId = "test/imj/12003.jpg";
-//		final String imageId = "../Libraries/images/16088-4.png";
+		final String root = "test/imj/";
+		final String imageId = "12003.jpg";
+//		final String root = "../Libraries/images/";
+//		final String imageId = "16088-4.png";
 		
 		debugPrint("Loading image:", new Date(timer.tic()));
-		final Image image = image(imageId, Feature.MAX_RGB);
+		final Image image = image(root + imageId, Feature.MAX_RGB);
 		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
 		debugPrint("Extracting edges:", new Date(timer.tic()));
@@ -56,11 +58,11 @@ public final class MultiScaleTest {
 			debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 			
 			debugPrint("Computing markers:", new Date(timer.tic()));
-			final Image initialLabels = new RegionalMinima(reduced, CONNECTIVITY_4).getResult();
+			final Image initialLabels = new RegionalMinima(reduced, CONNECTIVITY_8).getResult();
 			debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 			
 			debugPrint("Computing watershed:", new Date(timer.tic()));
-			final Image labels = new Watershed(edges, initialLabels, CONNECTIVITY_8).getResult();
+			final Image labels = new Watershed(image, initialLabels, CONNECTIVITY_8).getResult();
 			debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 			
 			debugPrint("Generating result:", new Date(timer.tic()));
@@ -68,7 +70,7 @@ public final class MultiScaleTest {
 			debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 			
 			debugPrint("Writing file:", new Date(timer.tic()));
-			final String outfile = imageId + ".hminima_" + h + ".watershed8.mean.png";
+			final String outfile = "lib/" + imageId + ".hminima_" + h + ".watershed8.mean.png";
 			
 			ImageIO.write(
 					awtImage(result, false, new BufferedImage(image.getColumnCount(), image.getRowCount(), TYPE_3BYTE_BGR)),
@@ -80,7 +82,7 @@ public final class MultiScaleTest {
 //		ImageComponent.showAdjusted(imageId, marker);
 	}
 	
-	@Test
+//	@Test
 	public final void testVarianceSegmentation1() {
 		final TicToc timer = new TicToc();
 //		final String imageId = "test/imj/12003.jpg";

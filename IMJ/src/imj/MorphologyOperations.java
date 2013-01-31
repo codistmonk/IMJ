@@ -113,7 +113,7 @@ public final class MorphologyOperations {
 		return new ReconstructionByErosion(
 				image,
 				compute(PLUS.bindRight(0, h), image, new ImageOfInts(image.getRowCount(), image.getColumnCount())),
-				CONNECTIVITY_4
+				connectivity
 				).getResult();
 	}
 	
