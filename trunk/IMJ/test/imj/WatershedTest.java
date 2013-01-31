@@ -94,8 +94,8 @@ public final class WatershedTest {
 		assertImageEquals(expected, watershed);
 	}
 	
-	@Test
-	public final void test6() {
+//	@Test
+	public final void test7() {
 		final TicToc timer = new TicToc();
 //		final String imageId = "test/imj/12003.jpg";
 		final String imageId = "../Libraries/images/16088-4.png";
@@ -104,12 +104,12 @@ public final class WatershedTest {
 		final Image image = image(imageId, Feature.MAX_RGB);
 		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
-		debugPrint("Extracting edges:", new Date(timer.tic()));
-		final Image edges = edges8(image);
-		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
-		
-		ImageComponent.showAdjusted(imageId, image, edges);
-//		ImageComponent.showAdjusted(imageId, new WatershedStack(image, 4, StatisticsSelector.MEAN).getAllImages());
+//		debugPrint("Extracting edges:", new Date(timer.tic()));
+//		final Image edges = edges8(image);
+//		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
+//		
+//		ImageComponent.showAdjusted(imageId, image, edges);
+		ImageComponent.showAdjusted(imageId, new WatershedStack(image, 2, StatisticsSelector.MEAN).getAllImages());
 	}
 	
 	/**
