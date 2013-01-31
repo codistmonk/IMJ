@@ -22,6 +22,10 @@ public final class IMJTools {
 		throw new IllegalInstantiationException();
 	}
 	
+	public static final int ceilingOfRatio(final int numerator, final int denominator) {
+		return (numerator + denominator - 1) / denominator;
+	}
+	
 	public static final Image binary(final Image image) {
 		final int rowCount = image.getRowCount();
 		final int columnCount = image.getColumnCount();
