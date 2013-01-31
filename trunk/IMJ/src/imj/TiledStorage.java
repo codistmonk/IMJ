@@ -58,6 +58,9 @@ public final class TiledStorage extends Image.Abstract {
 			
 			final int tileCount = this.getRowTileCount() * this.getColumnTileCount();
 			
+			this.data.writeInt(rowCount);
+			this.data.writeInt(columnCount);
+			
 			for (int i = 0; i < tileCount; ++i) {
 				this.data.write(this.tileBytes.array());
 			}
@@ -69,6 +72,7 @@ public final class TiledStorage extends Image.Abstract {
 	@Override
 	protected final void finalize() throws Throwable {
 		try {
+			this.close();
 			this.file.delete();
 		} finally {
 			super.finalize();
@@ -158,6 +162,14 @@ public final class TiledStorage extends Image.Abstract {
 		return oldValue;
 	}
 	
+	public final void close() {
+		try {
+			this.data.close();
+		} catch (final IOException exception) {
+			throw unchecked(exception);
+		}
+	}
+	
 	public final void flush() {
 		try {
 			this.seek(this.rowTileIndex , this.columnTileIndex);
@@ -169,7 +181,9 @@ public final class TiledStorage extends Image.Abstract {
 	
 	private final void seek(final int rowTileIndex, final int columnTileIndex) {
 		try {
-			this.data.seek((rowTileIndex * this.getColumnTileCount() + columnTileIndex) *
+			final int tilesOffset = 2 * DATUM_SIZE;
+			
+			this.data.seek(tilesOffset + (rowTileIndex * this.getColumnTileCount() + columnTileIndex) *
 					this.getOptimalTilePixelCount() * DATUM_SIZE);
 		} catch (final IOException exception) {
 			throw unchecked(exception);
