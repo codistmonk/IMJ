@@ -50,7 +50,7 @@ public final class LinearStorage extends Image.Abstract {
 		super(rowCount, columnCount);
 		
 		try {
-			this.file = File.createTempFile("tiling", ".raw");
+			this.file = File.createTempFile("image", ".raw");
 			if (deleteFileOnExit) {
 				this.file.deleteOnExit();
 			}
@@ -125,8 +125,12 @@ public final class LinearStorage extends Image.Abstract {
 			final RandomAccessFile data = new RandomAccessFile(file, "rw");
 			final int rowCount = data.readInt();
 			final int columnCount = data.readInt();
+			final LinearStorage result = new LinearStorage(rowCount, columnCount, file, data);
 			
-			return new LinearStorage(rowCount, columnCount, file, data);
+			// FIXME Metadata are missing from file!
+			result.getMetadata().put("channelCount", 3);
+			
+			return result;
 		} catch (final IOException exception) {
 			throw unchecked(exception);
 		}
