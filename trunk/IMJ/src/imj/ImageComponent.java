@@ -47,12 +47,10 @@ public final class ImageComponent extends JComponent {
 	
 	private final boolean adjust;
 	
-	public ImageComponent(final Context context, final Image model,
-			final boolean adjust) {
+	public ImageComponent(final Context context, final Image model, final boolean adjust) {
 		this.context = context;
 		this.model = model;
-		this.buffer = new BufferedImage(model.getColumnCount(),
-				model.getRowCount(), BufferedImage.TYPE_3BYTE_BGR);
+		this.buffer = new BufferedImage(model.getColumnCount(), model.getRowCount(), BufferedImage.TYPE_3BYTE_BGR);
 		this.adjust = adjust;
 		
 		{
@@ -197,18 +195,18 @@ public final class ImageComponent extends JComponent {
 	}
 	
 	public static final BufferedImage awtImage(final Image image, final boolean adjust, final BufferedImage result) {
-//		final BufferedImage result = new BufferedImage(image.getColumnCount(), image.getRowCount(), BufferedImage.TYPE_3BYTE_BGR);
 		final int rgb = new Color(1, 1, 1).getRGB();
+		final Integer channelCount = (Integer) image.getMetadata().get("channelCount");
+		final boolean imageIsMonochannel = channelCount == null || channelCount == 1;
 		
 		if (!adjust) {
 			for (int y = 0; y < image.getRowCount(); ++y) {
 				for (int x = 0; x < image.getColumnCount(); ++x) {
-					result.setRGB(x, y, image.getValue(y, x) * rgb);
+					result.setRGB(x, y, image.getValue(y, x) * (imageIsMonochannel ? rgb : 1));
 				}
 			}
 		} else {
-			final int n = image.getRowCount()
-					* image.getColumnCount();
+			final int n = image.getRowCount() * image.getColumnCount();
 			int oldMinimum = Integer.MAX_VALUE;
 			int oldMaximum = Integer.MIN_VALUE;
 			final int newMinimum = 0;
@@ -235,7 +233,6 @@ public final class ImageComponent extends JComponent {
 						result.setRGB(x, y, newMaximum * rgb);
 					} else {
 						result.setRGB(x, y, (newMinimum + (image.getValue(y, x) - oldMinimum) * newAmplitude / oldAmplitude) * rgb);
-						// this.buffer.setRGB(x, y, this.model.getValue(y, x));
 					}
 				}
 			}
@@ -267,6 +264,8 @@ public final class ImageComponent extends JComponent {
 			final int x = ImageComponent.this.unscale(xy.x);
 			final int y = ImageComponent.this.unscale(xy.y);
 			final Image image = ImageComponent.this.getModel();
+			final Integer channelCount = (Integer) image.getMetadata().get("channelCount");
+			final boolean imageIsMonochannel = channelCount == null || channelCount == 1;
 			
 			if (0 <= y && y < image.getRowCount() && 0 <= x
 					&& x < image.getColumnCount()) {
@@ -274,7 +273,7 @@ public final class ImageComponent extends JComponent {
 				
 				invoke(ImageComponent.this.getRootPane().getParent(),
 						"setTitle",
-						"value(" + y + " " + x + ") = (" + value + ")"
+						"value(" + y + " " + x + ") = (" + (imageIsMonochannel ? value : "0x" + Integer.toHexString(value)) + ")"
 								+ " scale = " + ImageComponent.this.getScale()
 								* 100.0 + " %");
 			}
