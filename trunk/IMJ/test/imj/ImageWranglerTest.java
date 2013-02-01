@@ -49,9 +49,10 @@ final class ImageWrangler {
 	}
 	
 	public final Image load(final String imageId) {
-		String fileId = this.preferences.get("image:" + imageId, null);
+		final String fileId = this.preferences.get("image:" + imageId, null);
+		final File maybeExistsingFile = new File(fileId);
 		
-		if (fileId == null) {
+		if (fileId == null || !(maybeExistsingFile.exists() && maybeExistsingFile.isFile())) {
 			final IFormatReader reader = new ImageReader();
 			
 			try {
@@ -61,7 +62,7 @@ final class ImageWrangler {
 				final int columnCount = reader.getSizeX();
 				debugPrint("Allocating");
 				final LinearStorage result = new LinearStorage(rowCount, columnCount, false);
-				debugPrint("Allocating done");
+				debugPrint("Allocated in file:", result.getFile());
 				final int optimalTileRowCount = reader.getOptimalTileHeight();
 				final int optimalTileColumnCount = reader.getOptimalTileWidth();
 				final int channelCount = reader.getSizeC();
@@ -74,7 +75,6 @@ final class ImageWrangler {
 				debugPrint("rowCount:", rowCount, "columnCount:", columnCount);
 				debugPrint("channelCount:", channelCount);
 				debugPrint("optimalTileRowCount:", optimalTileRowCount, "optimalTileColumnCount:", optimalTileColumnCount);
-				debugPrint("file:", result.getFile());
 				
 				if (optimalTileRowCount < rowCount || optimalTileColumnCount < columnCount) {
 					bufferRowCount = optimalTileRowCount;
