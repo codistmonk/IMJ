@@ -50,7 +50,7 @@ final class ImageWrangler {
 	
 	public final Image load(final String imageId) {
 		final String fileId = this.preferences.get("image:" + imageId, null);
-		final File maybeExistsingFile = new File(fileId);
+		final File maybeExistsingFile = new File(fileId == null ? "" : fileId);
 		
 		if (fileId == null || !(maybeExistsingFile.exists() && maybeExistsingFile.isFile())) {
 			final IFormatReader reader = new ImageReader();
