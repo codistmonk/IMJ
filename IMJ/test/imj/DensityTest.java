@@ -2,12 +2,9 @@ package imj;
 
 import static imj.ImageComponent.showAdjusted;
 import static java.lang.Math.abs;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
 import static javax.imageio.ImageIO.read;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
-import imj.IMJTools.StatisticsSelector;
 import imj.ImageOfBufferedImage.Feature;
 
 import java.awt.Color;
@@ -31,7 +28,6 @@ public final class DensityTest {
 	@Test
 	public final void test1() throws IOException {
 		final TicToc timer = new TicToc();
-//		final String imageId = "bsds/train/12003.jpg";
 //		final String imageId = "lib/images/16088-2.png";
 		final String imageId = "test/imj/12003.jpg";
 		debugPrint("Loading image:", new Date(timer.tic()));
