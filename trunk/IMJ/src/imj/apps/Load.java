@@ -8,9 +8,9 @@ import net.sourceforge.aprog.tools.IllegalInstantiationException;
 /**
  * @author codistmonk (creation 2013-02-02)
  */
-public final class LoadImage {
+public final class Load {
 	
-	private LoadImage() {
+	private Load() {
 		throw new IllegalInstantiationException();
 	}
 	
