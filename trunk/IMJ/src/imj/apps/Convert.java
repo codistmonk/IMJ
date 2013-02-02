@@ -1,14 +1,18 @@
 package imj.apps;
 
+import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.IMJTools;
 import imj.Image;
 import imj.ImageWrangler;
+import imj.TicToc;
 
 import java.io.FileOutputStream;
+import java.util.Date;
 import java.util.Locale;
 
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-02)
@@ -55,7 +59,9 @@ public class Convert {
 	}
 	
 	public static void write(final Image image, final String imageId, final String outFormat, final int lod) {
-		System.out.println("Converting " + imageId + ":" + lod + " to " + outFormat);
+		final TicToc timer = new TicToc();
+		
+		System.out.println("Converting " + imageId + ":" + lod + " to " + outFormat + "(" + new Date(timer.tic()) + ")");
 		
 		try {
 			if ("pgm".equals(outFormat)) {
@@ -65,8 +71,10 @@ public class Convert {
 			} else {
 				throw new IllegalArgumentException(outFormat);
 			}
+			
+			System.out.println("Done: time: " + timer.toc() + " memory: " + usedMemory());
 		} catch (final Exception exception) {
-			exception.printStackTrace();
+			System.err.println(exception);
 		}
 	}
 	
