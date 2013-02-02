@@ -1,10 +1,12 @@
-package imj;
+package imj.apps;
 
 import static imj.BigViewerTools.readTile;
 import static java.util.Arrays.copyOfRange;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+import imj.ImageComponent;
+import imj.ImageOfBufferedImage;
 import imj.ImageOfBufferedImage.Feature;
 
 import java.awt.image.BufferedImage;
@@ -32,9 +34,9 @@ import net.sourceforge.aprog.tools.IllegalInstantiationException;
 /**
  * @author codistmonk (creation 2013-01-22)
  */
-public final class IMJApplication {
+public final class Experimental {
 	
-	private IMJApplication() {
+	private Experimental() {
 		throw new IllegalInstantiationException();
 	}
 	
