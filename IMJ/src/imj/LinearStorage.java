@@ -2,6 +2,8 @@ package imj;
 
 import static imj.IMJTools.ceilingOfRatio;
 import static java.lang.Math.max;
+import static java.lang.Math.min;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.io.File;
@@ -11,7 +13,10 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel.MapMode;
+
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-01-31)
@@ -22,11 +27,15 @@ public final class LinearStorage extends Image.Abstract {
 	
 	private final RandomAccessFile data;
 	
-	private final ByteBuffer chunkBytes;
+	private int absoluteBufferStartIndex;
 	
-	private final IntBuffer chunkInts;
+	private int absoluteBufferEndIndex;
 	
-	private final FloatBuffer chunkFloats;
+	private MappedByteBuffer chunkBytes;
+	
+	private IntBuffer chunkInts;
+	
+	private FloatBuffer chunkFloats;
 	
 	private LinearStorage(final int rowCount, final int columnCount, final File file, final RandomAccessFile data) {
 		super(rowCount, columnCount);
@@ -34,7 +43,10 @@ public final class LinearStorage extends Image.Abstract {
 		try {
 			this.file = file;
 			this.data = data;
-			this.chunkBytes = this.data.getChannel().map(MapMode.READ_WRITE, 0L, (HEADER_DATUM_COUNT + rowCount * columnCount) * DATUM_SIZE);
+			this.absoluteBufferStartIndex = 2;
+			this.absoluteBufferEndIndex = 2 + min(MAXIMUM_BUFFER_SIZE, rowCount * columnCount);
+			this.chunkBytes = this.data.getChannel().map(MapMode.READ_WRITE, this.absoluteBufferStartIndex * DATUM_SIZE,
+					(this.absoluteBufferEndIndex - this.absoluteBufferStartIndex) * DATUM_SIZE);
 			this.chunkInts = this.chunkBytes.asIntBuffer();
 			this.chunkFloats = this.chunkBytes.asFloatBuffer();
 		} catch (final Exception exception) {
@@ -55,7 +67,10 @@ public final class LinearStorage extends Image.Abstract {
 				this.file.deleteOnExit();
 			}
 			this.data = new RandomAccessFile(this.file, "rw");
-			this.chunkBytes = this.data.getChannel().map(MapMode.READ_WRITE, 0L, (HEADER_DATUM_COUNT + rowCount * columnCount) * DATUM_SIZE);
+			this.absoluteBufferStartIndex = 2;
+			this.absoluteBufferEndIndex = 2 + min(MAXIMUM_BUFFER_SIZE, rowCount * columnCount);
+			this.chunkBytes = this.data.getChannel().map(MapMode.READ_WRITE, this.absoluteBufferStartIndex * DATUM_SIZE,
+					(this.absoluteBufferEndIndex - this.absoluteBufferStartIndex) * DATUM_SIZE);
 			this.chunkInts = this.chunkBytes.asIntBuffer();
 			this.chunkFloats = this.chunkBytes.asFloatBuffer();
 			
@@ -90,35 +105,97 @@ public final class LinearStorage extends Image.Abstract {
 	
 	@Override
 	public final int getValue(final int index) {
-		return this.chunkInts.get(HEADER_DATUM_COUNT + index);
+		if (index < 0 || this.getPixelCount() <= index) {
+			throw new ArrayIndexOutOfBoundsException(index);
+		}
+		
+		final int absoluteIndex = index + HEADER_DATUM_COUNT;
+		
+		if (absoluteIndex < this.absoluteBufferStartIndex) {
+			this.absoluteBufferStartIndex = max(2, absoluteIndex - MAXIMUM_BUFFER_SIZE / 2);
+			this.absoluteBufferEndIndex = 2 + min(this.getPixelCount(), this.absoluteBufferStartIndex + MAXIMUM_BUFFER_SIZE);
+			try {
+				this.chunkBytes = this.data.getChannel().map(MapMode.READ_WRITE, this.absoluteBufferStartIndex * DATUM_SIZE,
+						(this.absoluteBufferEndIndex - this.absoluteBufferStartIndex) * DATUM_SIZE);
+			} catch (final IOException exception) {
+				throw unchecked(exception);
+			}
+			this.chunkInts = this.chunkBytes.asIntBuffer();
+			this.chunkFloats = this.chunkBytes.asFloatBuffer();
+		} else if (this.absoluteBufferEndIndex <= absoluteIndex) {
+			this.absoluteBufferStartIndex = absoluteIndex - MAXIMUM_BUFFER_SIZE / 2;
+			this.absoluteBufferEndIndex = 2 + min(this.getPixelCount(), this.absoluteBufferStartIndex + MAXIMUM_BUFFER_SIZE);
+			try {
+				this.chunkBytes = this.data.getChannel().map(MapMode.READ_WRITE, this.absoluteBufferStartIndex * DATUM_SIZE,
+						(this.absoluteBufferEndIndex - this.absoluteBufferStartIndex) * DATUM_SIZE);
+			} catch (final IOException exception) {
+				throw unchecked(exception);
+			}
+			this.chunkInts = this.chunkBytes.asIntBuffer();
+			this.chunkFloats = this.chunkBytes.asFloatBuffer();
+		}
+		
+		return this.chunkInts.get(absoluteIndex - this.absoluteBufferStartIndex);
 	}
 	
 	@Override
 	public final int setValue(final int index, final int value) {
 		final int oldValue = this.getValue(index);
 		
-		this.chunkInts.put(HEADER_DATUM_COUNT + index, value);
+		this.chunkInts.put(index + HEADER_DATUM_COUNT - this.absoluteBufferStartIndex, value);
 		
 		return oldValue;
 	}
 	
 	@Override
 	public final float getFloatValue(final int index) {
-		return this.chunkFloats.get(HEADER_DATUM_COUNT + index);
+		if (index < 0 || this.getPixelCount() <= index) {
+			throw new ArrayIndexOutOfBoundsException(index);
+		}
+		
+		final int absoluteIndex = index + HEADER_DATUM_COUNT;
+		
+		if (absoluteIndex < this.absoluteBufferStartIndex) {
+			this.absoluteBufferStartIndex = max(2, absoluteIndex - MAXIMUM_BUFFER_SIZE / 2);
+			this.absoluteBufferEndIndex = 2 + min(this.getPixelCount(), this.absoluteBufferStartIndex + MAXIMUM_BUFFER_SIZE);
+			try {
+				this.chunkBytes = this.data.getChannel().map(MapMode.READ_WRITE, this.absoluteBufferStartIndex * DATUM_SIZE,
+						(this.absoluteBufferEndIndex - this.absoluteBufferStartIndex) * DATUM_SIZE);
+			} catch (final IOException exception) {
+				throw unchecked(exception);
+			}
+			this.chunkInts = this.chunkBytes.asIntBuffer();
+			this.chunkFloats = this.chunkBytes.asFloatBuffer();
+		} else if (this.absoluteBufferEndIndex <= absoluteIndex) {
+			this.absoluteBufferStartIndex = absoluteIndex - MAXIMUM_BUFFER_SIZE / 2;
+			this.absoluteBufferEndIndex = 2 + min(this.getPixelCount(), this.absoluteBufferStartIndex + MAXIMUM_BUFFER_SIZE);
+			try {
+				this.chunkBytes = this.data.getChannel().map(MapMode.READ_WRITE, this.absoluteBufferStartIndex * DATUM_SIZE,
+						(this.absoluteBufferEndIndex - this.absoluteBufferStartIndex) * DATUM_SIZE);
+			} catch (final IOException exception) {
+				throw unchecked(exception);
+			}
+			this.chunkInts = this.chunkBytes.asIntBuffer();
+			this.chunkFloats = this.chunkBytes.asFloatBuffer();
+		}
+		
+		return this.chunkFloats.get(absoluteIndex - this.absoluteBufferStartIndex);
 	}
 	
 	@Override
 	public final float setFloatValue(final int index, final float value) {
 		final int oldValue = this.getValue(index);
 		
-		this.chunkFloats.put(HEADER_DATUM_COUNT + index, value);
+		this.chunkFloats.put(index + HEADER_DATUM_COUNT - this.absoluteBufferStartIndex, value);
 		
 		return oldValue;
 	}
 	
-	public static final int DATUM_SIZE = max(Integer.SIZE, Float.SIZE) / 8;
+	public static final long DATUM_SIZE = max(Integer.SIZE, Float.SIZE) / 8;
 	
 	public static final int HEADER_DATUM_COUNT = 2;
+	
+	public static final int MAXIMUM_BUFFER_SIZE = 268435456;
 	
 	public static final LinearStorage open(final File file) {
 		try {
