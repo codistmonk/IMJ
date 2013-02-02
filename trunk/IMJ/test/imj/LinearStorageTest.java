@@ -79,7 +79,7 @@ public final class LinearStorageTest {
 		final int pixelCount = n * n;
 		
 		debugPrint("Allocating image:", new Date(timer.tic()));
-		final ByteBuffer buffer = ByteBuffer.allocateDirect(n * n * LinearStorage.DATUM_SIZE);
+		final ByteBuffer buffer = ByteBuffer.allocateDirect((int) (n * n * LinearStorage.DATUM_SIZE));
 		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
 		debugPrint("Writing image:", new Date(timer.tic()));
@@ -114,7 +114,7 @@ public final class LinearStorageTest {
 		
 		debugPrint("Writing image:", new Date(timer.tic()));
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
-			map.putInt(pixel * DATUM_SIZE, pixel);
+			map.putInt((int) (pixel * DATUM_SIZE), pixel);
 		}
 		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
@@ -124,7 +124,7 @@ public final class LinearStorageTest {
 		boolean ok = true;
 		
 		for (int pixel = 0; pixel < pixelCount && ok; ++pixel) {
-			ok = pixel == map.getInt(pixel * DATUM_SIZE);
+			ok = pixel == map.getInt((int) (pixel * DATUM_SIZE));
 		}
 		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
