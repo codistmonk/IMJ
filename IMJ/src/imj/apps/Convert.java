@@ -55,6 +55,8 @@ public class Convert {
 	}
 	
 	public static void write(final Image image, final String imageId, final String outFormat, final int lod) {
+		System.out.println("Converting " + imageId + ":" + lod + " to " + outFormat);
+		
 		try {
 			if ("pgm".equals(outFormat)) {
 				IMJTools.writePGM(image, new FileOutputStream(imageId + ".lod" + lod + ".pgm"));
