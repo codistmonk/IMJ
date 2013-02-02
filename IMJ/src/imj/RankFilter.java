@@ -3,11 +3,11 @@ package imj;
 /**
  * @author codistmonk (creation 2013-01-27)
  */
-public final class RankFiltering extends Labeling {
+public final class RankFilter extends Labeling {
 	
 	private final int rank;
 	
-	public RankFiltering(final Image image, final int rank, final int[] structuringElement) {
+	public RankFilter(final Image image, final int rank, final int[] structuringElement) {
 		super(image);
 		this.rank = rank;
 		
@@ -34,7 +34,7 @@ public final class RankFiltering extends Labeling {
 		
 		public StructuringElement(final int... deltas) {
 			this.values = new IntList((deltas.length + 1) / 2);
-			this.neighborhood = RankFiltering.this.new Neighborhood(deltas);
+			this.neighborhood = RankFilter.this.new Neighborhood(deltas);
 		}
 		
 		public final int evaluate(final int pixel) {
@@ -43,14 +43,14 @@ public final class RankFiltering extends Labeling {
 			
 			while (this.neighborhood.hasNext()) {
 				final int neighbor = this.neighborhood.getNext();
-				this.values.add(RankFiltering.this.getImage().getValue(neighbor));
+				this.values.add(RankFilter.this.getImage().getValue(neighbor));
 			}
 			
 			final int n = this.values.size();
 			
 			this.values.sort();
 			
-			return this.values.get((RankFiltering.this.getRank() + n) % n);
+			return this.values.get((RankFilter.this.getRank() + n) % n);
 		}
 		
 	}
