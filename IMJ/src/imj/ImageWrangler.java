@@ -113,6 +113,7 @@ public final class ImageWrangler {
 		final File maybeExistsingFile = new File(fileId == null ? "" : fileId);
 		
 		if (fileId != null && maybeExistsingFile.exists() && maybeExistsingFile.isFile()) {
+			debugPrint("Data file exists");
 			return LinearStorage.open(maybeExistsingFile);
 		}
 		
