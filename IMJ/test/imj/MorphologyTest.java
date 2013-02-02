@@ -20,7 +20,7 @@ public final class MorphologyTest {
 				{ 0 }
 		});
 		
-		assertImageEquals(expectedResult, MorphologyOperations.erode4(image));
+		assertImageEquals(expectedResult, MorphologicalOperations.erode4(image));
 	}
 	
 	@Test
@@ -32,7 +32,7 @@ public final class MorphologyTest {
 				{ 1 }
 		});
 		
-		assertImageEquals(expectedResult, MorphologyOperations.erode4(image));
+		assertImageEquals(expectedResult, MorphologicalOperations.erode4(image));
 	}
 	
 	@Test
@@ -48,7 +48,7 @@ public final class MorphologyTest {
 				{ 1, 1, 1 },
 		});
 		
-		assertImageEquals(expectedResult, MorphologyOperations.erode4(image));
+		assertImageEquals(expectedResult, MorphologicalOperations.erode4(image));
 	}
 	
 	@Test
@@ -64,7 +64,7 @@ public final class MorphologyTest {
 				{ 1, 2, 1 },
 		});
 		
-		assertImageEquals(expectedResult, MorphologyOperations.dilate4(image));
+		assertImageEquals(expectedResult, MorphologicalOperations.dilate4(image));
 	}
 	
 	@Test
@@ -76,7 +76,7 @@ public final class MorphologyTest {
 		final Image expectedResult = image(new int[][] {
 				{ 10, 10, 10,  5,  5,  5,  4 }
 		});
-		final Image hMinima = MorphologyOperations.hMinima(image, h, CONNECTIVITY_4);
+		final Image hMinima = MorphologicalOperations.hMinima(image, h, CONNECTIVITY_4);
 		
 		assertImageEquals(expectedResult, hMinima);
 	}
@@ -98,7 +98,7 @@ public final class MorphologyTest {
 				{ 10, 10,  6,  6, 10 },
 				{ 10, 10, 10, 10, 10 },
 		});
-		final Image hMinima = MorphologyOperations.hMinima(image, h, CONNECTIVITY_4);
+		final Image hMinima = MorphologicalOperations.hMinima(image, h, CONNECTIVITY_4);
 		
 		assertImageEquals(expectedResult, hMinima);
 	}
@@ -112,7 +112,7 @@ public final class MorphologyTest {
 		final Image expectedResult = image(new int[][] {
 				{ 1, 1, 1 },
 		});
-		final Image hMaxima = MorphologyOperations.hMaxima(image, h, CONNECTIVITY_4);
+		final Image hMaxima = MorphologicalOperations.hMaxima(image, h, CONNECTIVITY_4);
 		
 		assertImageEquals(expectedResult, hMaxima);
 	}
@@ -132,7 +132,7 @@ public final class MorphologyTest {
 				{ 1, 1, 1, 1, 1 },
 				{ 1, 1, 1, 1, 1 },
 		});
-		final Image hMaxima = MorphologyOperations.hMaxima(image, h, CONNECTIVITY_4);
+		final Image hMaxima = MorphologicalOperations.hMaxima(image, h, CONNECTIVITY_4);
 		
 		assertImageEquals(expectedResult, hMaxima);
 	}
