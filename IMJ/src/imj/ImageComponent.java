@@ -2,7 +2,6 @@ package imj;
 
 import static java.lang.Math.sqrt;
 import static javax.swing.SwingUtilities.convertPoint;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.invoke;
 
 import java.awt.Color;
@@ -32,7 +31,6 @@ import net.sourceforge.aprog.events.EventManager.Event.Listener;
 import net.sourceforge.aprog.events.Variable;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
 import net.sourceforge.aprog.swing.SwingTools;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-01-23)

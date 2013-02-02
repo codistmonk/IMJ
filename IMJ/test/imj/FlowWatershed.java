@@ -2,7 +2,6 @@ package imj;
 
 import static java.lang.Math.abs;
 import static java.lang.Math.min;
-
 import loci.poi.util.IntList;
 	
 /**

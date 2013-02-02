@@ -3,7 +3,6 @@ package imj;
 import static imj.IMJTools.getRegionStatistics;
 import static imj.IMJTools.newImage;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj.IMJTools.StatisticsSelector;
 
 import java.util.ArrayList;

@@ -1,10 +1,6 @@
 package imj;
 
-import static imj.IMJTools.getRegionStatistics;
-import static imj.IMJTools.newImage;
 import static imj.ImageComponent.showAdjusted;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
 import static javax.imageio.ImageIO.read;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import imj.IMJTools.StatisticsSelector;
@@ -12,11 +8,7 @@ import imj.ImageOfBufferedImage.Feature;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
-
-import net.sourceforge.aprog.tools.MathTools.Statistics;
 
 import org.junit.Test;
 

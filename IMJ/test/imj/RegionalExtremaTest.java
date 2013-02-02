@@ -4,13 +4,10 @@ import static imj.IMJTools.binary;
 import static imj.IMJTools.image;
 import static imj.Labeling.CONNECTIVITY_4;
 import static imj.Labeling.CONNECTIVITY_8;
-import static javax.imageio.ImageIO.read;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
-
 import imj.ImageOfBufferedImage.Feature;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Date;
 

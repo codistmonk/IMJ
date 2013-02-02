@@ -2,7 +2,6 @@ package imj;
 
 import static imj.IMJTools.image;
 import static imj.ImageComponent.awtImage;
-import static imj.Labeling.CONNECTIVITY_4;
 import static imj.Labeling.CONNECTIVITY_8;
 import static imj.MorphologicalOperations.edges8;
 import static imj.MorphologicalOperations.hMinima8;
@@ -11,7 +10,6 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.IMJTools.StatisticsSelector;
 import imj.ImageOfBufferedImage.Feature;
-import imj.WatershedTest.WatershedStack;
 
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
@@ -24,7 +22,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 import javax.imageio.ImageIO;
-import javax.imageio.stream.FileImageInputStream;
 
 import net.sourceforge.aprog.tools.MathTools.Statistics;
 
