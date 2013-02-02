@@ -38,7 +38,7 @@ public final class MorphologicalOperations {
 	};
 	
 	public static final Image filterRank(final Image image, final int rank, final int[] connectivity) {
-		return new RankFiltering(image, rank, connectivity).getResult();
+		return new RankFilter(image, rank, connectivity).getResult();
 	}
 	
 	public static final Image filterRankConnectiviy4(final Image image, final int rank) {
