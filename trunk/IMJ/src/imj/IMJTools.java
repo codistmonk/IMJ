@@ -1,16 +1,18 @@
 package imj;
 
+import static imj.ImageOfBufferedImage.Feature.MAX_RGB;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static javax.imageio.ImageIO.read;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
+import imj.ImageOfBufferedImage.Feature;
+
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 
-import imj.ImageOfBufferedImage.Feature;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
 
 /**
@@ -20,6 +22,93 @@ public final class IMJTools {
 	
 	private IMJTools() {
 		throw new IllegalInstantiationException();
+	}
+	
+	public static final void writePPM(final Image image, final OutputStream output) {
+		try {
+			final int columnCount = image.getColumnCount();
+			final int rowCount = image.getRowCount();
+			
+			output.write("P6".getBytes("ASCII"));
+			output.write("\n".getBytes("ASCII"));
+			output.write(("" + columnCount).getBytes("ASCII"));
+			output.write(" ".getBytes("ASCII"));
+			output.write(("" + rowCount).getBytes("ASCII"));
+			output.write("\n".getBytes("ASCII"));
+			output.write("255".getBytes("ASCII"));
+			output.write("\n".getBytes("ASCII"));
+			
+			final byte[] buffer = new byte[columnCount * 3];
+			
+			for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex) {
+				for (int columnIndex = 0; columnIndex < columnCount; ++columnIndex) {
+					final int rgb = image.getValue(rowIndex, columnIndex);
+					buffer[3 * columnIndex + 0] = (byte) red(rgb);
+					buffer[3 * columnIndex + 1] = (byte) green(rgb);
+					buffer[3 * columnIndex + 2] = (byte) blue(rgb);
+				}
+				
+				output.write(buffer);
+			}
+			
+			output.close();
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	public static final void writePGM(final Image image, final OutputStream output) {
+		try {
+			final int columnCount = image.getColumnCount();
+			final int rowCount = image.getRowCount();
+			
+			output.write("P5".getBytes("ASCII"));
+			output.write("\n".getBytes("ASCII"));
+			output.write(("" + columnCount).getBytes("ASCII"));
+			output.write(" ".getBytes("ASCII"));
+			output.write(("" + rowCount).getBytes("ASCII"));
+			output.write("\n".getBytes("ASCII"));
+			output.write("255".getBytes("ASCII"));
+			output.write("\n".getBytes("ASCII"));
+			
+			final byte[] buffer = new byte[columnCount];
+			
+			for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex) {
+				for (int columnIndex = 0; columnIndex < columnCount; ++columnIndex) {
+					buffer[columnIndex] = (byte) MAX_RGB.getValue(image.getValue(rowIndex, columnIndex), false);
+				}
+				
+				output.write(buffer);
+			}
+			
+			output.close();
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	public static final int unsigned(final byte value) {
+		return value & 0x000000FF;
+	}
+	
+	public static final int rgba(final int alpha, final int red, final int green, final int blue) {
+		return (alpha << 24) | (red << 16) | (green << 8) | blue;
+	}
+	
+	public static final int alpha(final int rgba) {
+		return (rgba >> 24) & 0x000000FF;
+	}
+	
+	public static final int red(final int rgba) {
+		return (rgba >> 16) & 0x000000FF;
+	}
+	
+	public static final int green(final int rgba) {
+		return (rgba >> 8) & 0x000000FF;
+	}
+	
+	public static final int blue(final int rgba) {
+		return rgba & 0x000000FF;
 	}
 	
 	public static final int ceilingOfRatio(final int numerator, final int denominator) {
