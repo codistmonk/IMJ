@@ -4,7 +4,6 @@
     <target name="create_imj_jar">
         <jar destfile="imj-all.jar" filesetmanifest="mergewithoutmain">
             <manifest>
-                <attribute name="Main-Class" value="imj.IMJApplication"/>
                 <attribute name="Class-Path" value="."/>
             </manifest>
             <fileset file="imj_license.txt"/>
