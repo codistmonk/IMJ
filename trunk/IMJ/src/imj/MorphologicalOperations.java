@@ -4,8 +4,6 @@ import static imj.Labeling.CONNECTIVITY_4;
 import static imj.MathOperations.compute;
 import static imj.MathOperations.BinaryOperator.Predefined.MINUS;
 import static imj.MathOperations.BinaryOperator.Predefined.PLUS;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**

@@ -1,7 +1,6 @@
 package imj;
 
 import static imj.IMJTools.image;
-import static imj.MorphologicalOperations.edges8;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.ImageOfBufferedImage.Feature;
