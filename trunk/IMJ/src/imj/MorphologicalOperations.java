@@ -11,9 +11,9 @@ import net.sourceforge.aprog.tools.IllegalInstantiationException;
 /**
  * @author codistmonk (creation 2013-01-27)
  */
-public final class MorphologyOperations {
+public final class MorphologicalOperations {
 	
-	private MorphologyOperations() {
+	private MorphologicalOperations() {
 		throw new IllegalInstantiationException();
 	}
 	
