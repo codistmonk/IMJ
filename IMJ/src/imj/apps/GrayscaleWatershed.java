@@ -12,6 +12,7 @@ import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.IMJTools;
 import imj.Image;
 import imj.ImageComponent;
+import imj.ImageOfBufferedImage.Feature;
 import imj.ImageWrangler;
 import imj.Labeling;
 import imj.MorphologicalOperations;
@@ -77,13 +78,18 @@ public class GrayscaleWatershed {
 		}
 	}
 	
-	public static final void process(final Image image, final String imageId, final int lod,
+	public static final void process(final Image image0, final String imageId, final int lod,
 			final int connectivity, final int h) {
 		final TicToc timer = new TicToc();
 		final int[] deltas = connectivity == 4 ? CONNECTIVITY_4 : CONNECTIVITY_8;
 		
 		debugPrint("Processing:", "image:", imageId, "lod:", lod, "connectivity:", connectivity, "h:", h,
 				"date:", new Date(timer.tic()));
+		
+		debugPrint("Converting to grayscale:", new Date(timer.tic()));
+		final Image image = new VirtualImage(image0, Feature.MAX_RGB);
+		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
+		
 		debugPrint("Extracting edges:", new Date(timer.tic()));
 		final Image edges = connectivity == 4 ? edges4(image) : edges8(image);
 		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
@@ -117,6 +123,40 @@ public class GrayscaleWatershed {
 		}
 		
 		debugPrint("Processing done:", "time:", timer.getTotalTime());
+	}
+	
+	public static final class VirtualImage extends Image.Abstract {
+		
+		private final Image rgbs;
+		
+		private final Feature feature;
+		
+		public VirtualImage(final Image rgbs, final Feature feature) {
+			super(rgbs.getRowCount(), rgbs.getColumnCount());
+			this.rgbs = rgbs;
+			this.feature = feature;
+		}
+		
+		@Override
+		public final int getValue(final int index) {
+			return this.feature.getValue(this.rgbs.getValue(index), false);
+		}
+		
+		@Override
+		public final int setValue(final int index, final int value) {
+			throw new UnsupportedOperationException();
+		}
+		
+		@Override
+		public float getFloatValue(final int index) {
+			return this.getValue(index);
+		}
+		
+		@Override
+		public final float setFloatValue(final int index, final float value) {
+			throw new UnsupportedOperationException();
+		}
+		
 	}
 	
 }
