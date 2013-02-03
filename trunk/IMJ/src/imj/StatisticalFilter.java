@@ -6,11 +6,11 @@ import imj.IMJTools.StatisticsSelector;
 /**
  * @author codistmonk (creation 2013-02-03)
  */
-public final class StatisticsFilter extends SyntheticFilter {
+public final class StatisticalFilter extends SyntheticFilter {
 	
 	private final StatisticsSelector selector;
 	
-	public StatisticsFilter(final Image image, final StatisticsSelector selector, final int[] structuringElement) {
+	public StatisticalFilter(final Image image, final StatisticsSelector selector, final int[] structuringElement) {
 		super(image, structuringElement);
 		this.selector = selector;
 		
@@ -55,12 +55,12 @@ public final class StatisticsFilter extends SyntheticFilter {
 		
 		@Override
 		protected final int computeResult() {
-			return (int) StatisticsFilter.this.getSelector().getValue(this.statistics);
+			return (int) StatisticalFilter.this.getSelector().getValue(this.statistics);
 		}
 		
 		@Override
 		protected final float computeFloatResult() {
-			return (float) StatisticsFilter.this.getSelector().getValue(this.statistics);
+			return (float) StatisticalFilter.this.getSelector().getValue(this.statistics);
 		}
 		
 	}
