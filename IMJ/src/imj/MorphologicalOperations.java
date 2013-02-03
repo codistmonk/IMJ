@@ -6,18 +6,11 @@ import static imj.MathOperations.BinaryOperator.Predefined.MINUS;
 import static imj.MathOperations.BinaryOperator.Predefined.PLUS;
 import static java.lang.Math.abs;
 import static java.lang.Math.ceil;
-import static java.lang.Math.floor;
 import static java.lang.Math.max;
 import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 import imj.IMJTools.StatisticsSelector;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.MathTools.Statistics;
 
 /**
  * @author codistmonk (creation 2013-01-27)
@@ -89,7 +82,7 @@ public final class MorphologicalOperations {
 	}
 	
 	public static final Image edges(final Image image, final int[] connectivity) {
-		return new StatisticsFilter(image, StatisticsSelector.AMPLITUDE, connectivity).getResult();
+		return new StatisticalFilter(image, StatisticsSelector.AMPLITUDE, connectivity).getResult();
 	}
 	
 	public static final Image edges4(final Image image) {
