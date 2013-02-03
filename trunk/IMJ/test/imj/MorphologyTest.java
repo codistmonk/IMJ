@@ -3,6 +3,9 @@ package imj;
 import static imj.IMJTools.image;
 import static imj.Labeling.CONNECTIVITY_4;
 import static imj.RegionalExtremaTest.assertImageEquals;
+import static org.junit.Assert.assertArrayEquals;
+import imj.MorphologicalOperations.StructuringElement;
+import imj.MorphologicalOperations.StructuringElement.Distance;
 
 import org.junit.Test;
 
@@ -135,6 +138,33 @@ public final class MorphologyTest {
 		final Image hMaxima = MorphologicalOperations.hMaxima(image, h, CONNECTIVITY_4);
 		
 		assertImageEquals(expectedResult, hMaxima);
+	}
+	
+	@Test
+	public final void testEdges1() {
+		final Image image = image(new int[][] {
+				{ 0, 0, 0, 0, 0 },
+				{ 0, 1, 1, 1, 0 },
+				{ 0, 1, 1, 1, 0 },
+				{ 0, 1, 1, 1, 0 },
+				{ 0, 0, 0, 0, 0 },
+		});
+		final Image expectedResult = image(new int[][] {
+				{ 0, 1, 1, 1, 0 },
+				{ 1, 1, 1, 1, 1 },
+				{ 1, 1, 0, 1, 1 },
+				{ 1, 1, 1, 1, 1 },
+				{ 0, 1, 1, 1, 0 },
+		});
+		final Image edges = MorphologicalOperations.edges4(image);
+		
+		assertImageEquals(expectedResult, edges);
+	}
+	
+	@Test
+	public final void testStructuringElements1() {
+		assertArrayEquals(StructuringElement.SIMPLE_CONNECTIVITY_4, StructuringElement.newDisk(1.0, Distance.CITYBLOCK));
+		assertArrayEquals(StructuringElement.SIMPLE_CONNECTIVITY_8, StructuringElement.newDisk(1.0, Distance.CHESSBOARD));
 	}
 	
 }
