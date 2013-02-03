@@ -22,6 +22,7 @@ import imj.Watershed;
 import java.awt.image.BufferedImage;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Date;
 
 import javax.imageio.ImageIO;
@@ -55,21 +56,21 @@ public class GrayscaleWatershed {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String imageId = arguments.get("file", "");
 		final int[] lods = arguments.get("lod");
-		final int connectivity = arguments.get("connectivity", 8)[0];
-		final int h = arguments.get("h", 0)[0];
+		final int[] connectivities = arguments.get("connectivity", 8);
+		final int[] hs = arguments.get("h", 0);
 		
 		if (lods.length == 0) {
 			int lod = 0;
 			Image image = ImageWrangler.INSTANCE.load(imageId, lod);
-			process(image, imageId, lod, connectivity, h);
+			process(image, imageId, lod, connectivities, hs);
 			
 			while (1 < image.getRowCount() && 1 < image.getColumnCount()) {
 				image = ImageWrangler.INSTANCE.load(imageId, ++lod);
-				process(image, imageId, lod, connectivity, h);
+				process(image, imageId, lod, connectivities, hs);
 			}
 		} else {
 			for (final int lod : lods) {
-				process(ImageWrangler.INSTANCE.load(imageId, lod), imageId, lod, connectivity, h);
+				process(ImageWrangler.INSTANCE.load(imageId, lod), imageId, lod, connectivities, hs);
 			}
 		}
 	}
@@ -84,12 +85,11 @@ public class GrayscaleWatershed {
 	}
 	
 	public static final void process(final Image image0, final String imageId, final int lod,
-			final int connectivity, final int h) {
+			final int[] connectivities, final int[] hs) {
 		final TicToc timer = new TicToc();
-		final int[] deltas = connectivity == 4 ? CONNECTIVITY_4 : CONNECTIVITY_8;
 		
-		message("Processing:", "image:", imageId, "lod:", lod, "connectivity:", connectivity, "h:", h,
-				"date:", new Date(timer.tic()));
+		message("Processing:", "image:", imageId, "lod:", lod, "date:", new Date(timer.tic()));
+		
 		final int columnCount = image0.getColumnCount();
 		final int rowCount = image0.getRowCount();
 		
@@ -104,9 +104,25 @@ public class GrayscaleWatershed {
 		}
 		message("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
-		message("Extracting edges:", new Date(timer.tic()));
-		final Image edges = connectivity == 4 ? edges4(image) : edges8(image);
-		message("Done:", "time:", timer.toc(), "memory:", usedMemory());
+		for (final int connectivity : connectivities) {
+			message("Extracting edges:", new Date(timer.tic()));
+			final Image edges = connectivity == 4 ? edges4(image) : edges8(image);
+			message("Done:", "time:", timer.toc(), "memory:", usedMemory());
+			
+			for (final int h : hs) {
+				process(image, edges, imageId, lod, connectivity, h);
+			}
+		}
+		
+		message("Processing done:", "time:", timer.getTotalTime());
+	}
+	
+	public static final void process(final Image image, final Image edges, final String imageId, final int lod,
+			final int connectivity, final int h) {
+		final TicToc timer = new TicToc();
+		final int[] deltas = connectivity == 4 ? CONNECTIVITY_4 : CONNECTIVITY_8;
+		
+		message("Processing:", "connectivity:", connectivity, "h:", h, "date:", new Date(timer.tic()));
 		
 		message("Applying h-minima:", new Date(timer.tic()));
 		final Image hMinima = connectivity == 4 ? hMinima4(edges, h) : hMinima4(image, h);
@@ -126,6 +142,9 @@ public class GrayscaleWatershed {
 		
 		message("Writing result:", new Date(timer.tic()));
 		try {
+			final int columnCount = image.getColumnCount();
+			final int rowCount = image.getRowCount();
+			
 			ImageIO.write(ImageComponent.awtImage(result, true,
 					new BufferedImage(columnCount, rowCount, BufferedImage.TYPE_BYTE_GRAY)),
 					"png", new FileOutputStream(imageId + ".lod" + lod + ".hmin" + h + ".watershed.png"));
