@@ -58,7 +58,7 @@ public final class RankFilter extends SyntheticFilter {
 			
 			return this.values.get((RankFilter.this.getRank() + n) % n);
 		}
-
+		
 		@Override
 		protected final float computeFloatResult() {
 			return this.computeResult();

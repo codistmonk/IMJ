@@ -1,7 +1,7 @@
 package imj;
 
 /**
- * @author codistmonk (creation 2013-01-27)
+ * @author codistmonk (creation 2013-02-03)
  */
 public abstract class SyntheticFilter extends Labeling {
 	
@@ -33,7 +33,7 @@ public abstract class SyntheticFilter extends Labeling {
 	protected abstract Synthesizer newSynthesizer(int[] structuringElement);
 	
 	/**
-	 * @author codistmonk (creation 2013-01-27)
+	 * @author codistmonk (creation 2013-02-03)
 	 */
 	public abstract class Synthesizer {
 		

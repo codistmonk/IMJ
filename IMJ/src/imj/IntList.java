@@ -1,5 +1,7 @@
 package imj;
 
+import static java.util.Arrays.copyOfRange;
+
 import java.util.Arrays;
 
 /**
@@ -77,6 +79,10 @@ public final class IntList {
 	
 	public final void sort() {
 		Arrays.sort(this.values, this.first, this.end);
+	}
+	
+	public final int[] toArray() {
+		return copyOfRange(this.values, this.first, this.end);
 	}
 	
 	public final String toString() {
