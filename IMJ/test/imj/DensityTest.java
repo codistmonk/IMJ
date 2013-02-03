@@ -17,6 +17,7 @@ import java.util.Date;
 import javax.swing.ProgressMonitor;
 
 import net.sourceforge.aprog.swing.SwingTools;
+import net.sourceforge.aprog.tools.TicToc;
 
 import org.junit.Test;
 

@@ -24,6 +24,7 @@ import java.util.List;
 import javax.imageio.ImageIO;
 
 import net.sourceforge.aprog.tools.MathTools.Statistics;
+import net.sourceforge.aprog.tools.TicToc;
 
 import org.junit.Test;
 

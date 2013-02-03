@@ -4,7 +4,6 @@ import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.IMJTools;
 import imj.Image;
 import imj.ImageWrangler;
-import imj.TicToc;
 
 import java.io.FileOutputStream;
 import java.util.Date;
@@ -12,6 +11,7 @@ import java.util.Locale;
 
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.TicToc;
 
 /**
  * @author codistmonk (creation 2013-02-02)

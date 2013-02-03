@@ -8,24 +8,19 @@ import static imj.MorphologicalOperations.edges4;
 import static imj.MorphologicalOperations.edges8;
 import static imj.MorphologicalOperations.hMinima4;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
-
 import imj.IMJTools.StatisticsSelector;
 import imj.Image;
 import imj.ImageComponent;
 import imj.ImageOfBufferedImage.Feature;
-import imj.ImageOfInts;
 import imj.ImageWrangler;
 import imj.Labeling;
 import imj.Labeling.MemoryManagementStrategy;
-import imj.LinearStorage;
 import imj.RegionalMinima;
-import imj.TicToc;
 import imj.Watershed;
 
 import java.awt.image.BufferedImage;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
 
@@ -33,6 +28,7 @@ import javax.imageio.ImageIO;
 
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.TicToc;
 
 /**
  * @author codistmonk (creation 2013-02-02)
