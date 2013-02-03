@@ -7,27 +7,22 @@ import static imj.Labeling.CONNECTIVITY_8;
 import static imj.MorphologicalOperations.edges4;
 import static imj.MorphologicalOperations.edges8;
 import static imj.MorphologicalOperations.hMinima4;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
-import imj.IMJTools;
+
+import imj.IMJTools.StatisticsSelector;
 import imj.Image;
 import imj.ImageComponent;
 import imj.ImageOfBufferedImage.Feature;
 import imj.ImageOfInts;
 import imj.ImageWrangler;
-import imj.Labeling;
-import imj.MorphologicalOperations;
 import imj.RegionalMinima;
 import imj.TicToc;
 import imj.Watershed;
-import imj.IMJTools.StatisticsSelector;
 
 import java.awt.image.BufferedImage;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Date;
-import java.util.Locale;
 
 import javax.imageio.ImageIO;
 
@@ -79,58 +74,67 @@ public class GrayscaleWatershed {
 		}
 	}
 	
+	public static final void message(final Object... objects) {
+		for (final Object object : objects) {
+			System.out.print(object);
+			System.out.print(' ');
+		}
+		
+		System.out.println();
+	}
+	
 	public static final void process(final Image image0, final String imageId, final int lod,
 			final int connectivity, final int h) {
 		final TicToc timer = new TicToc();
 		final int[] deltas = connectivity == 4 ? CONNECTIVITY_4 : CONNECTIVITY_8;
 		
-		debugPrint("Processing:", "image:", imageId, "lod:", lod, "connectivity:", connectivity, "h:", h,
+		message("Processing:", "image:", imageId, "lod:", lod, "connectivity:", connectivity, "h:", h,
 				"date:", new Date(timer.tic()));
 		final int columnCount = image0.getColumnCount();
 		final int rowCount = image0.getRowCount();
 		
-		debugPrint("rowCount:", rowCount, "columnCount:", columnCount);
+		message("rowCount:", rowCount, "columnCount:", columnCount);
 		
-		debugPrint("Converting to grayscale:", new Date(timer.tic()));
+		message("Converting to grayscale:", new Date(timer.tic()));
 		final Image.Abstract image = new ImageOfInts(rowCount, columnCount);
 		final int pixelCount = image.getPixelCount();
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
 			image.setValue(pixel, Feature.MAX_RGB.getValue(image0.getValue(pixel), false));
 		}
-		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
+		message("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
-		debugPrint("Extracting edges:", new Date(timer.tic()));
+		message("Extracting edges:", new Date(timer.tic()));
 		final Image edges = connectivity == 4 ? edges4(image) : edges8(image);
-		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
+		message("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
-		debugPrint("Applying h-minima:", new Date(timer.tic()));
+		message("Applying h-minima:", new Date(timer.tic()));
 		final Image hMinima = connectivity == 4 ? hMinima4(edges, h) : hMinima4(image, h);
-		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
+		message("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
-		debugPrint("Computing markers:", new Date(timer.tic()));
+		message("Computing markers:", new Date(timer.tic()));
 		final Image initialLabels = new RegionalMinima(hMinima, deltas).getResult();
-		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
+		message("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
-		debugPrint("Computing watershed:", new Date(timer.tic()));
+		message("Computing watershed:", new Date(timer.tic()));
 		final Image labels = new Watershed(hMinima, initialLabels, deltas).getResult();
-		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
+		message("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
-		debugPrint("Generating result:", new Date(timer.tic()));
+		message("Generating result:", new Date(timer.tic()));
 		final Image result = newImage(labels, getRegionStatistics(image, labels), StatisticsSelector.MEAN);
-		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
+		message("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
-		debugPrint("Writing result:", new Date(timer.tic()));
+		message("Writing result:", new Date(timer.tic()));
 		try {
 			ImageIO.write(ImageComponent.awtImage(result, true,
 					new BufferedImage(columnCount, rowCount, BufferedImage.TYPE_BYTE_GRAY)),
 					"png", new FileOutputStream(imageId + ".lod" + lod + ".hmin" + h + ".watershed.png"));
-			debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
+			message("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		} catch (final IOException exception) {
 			System.err.println(exception);
 		}
 		
-		debugPrint("Processing done:", "time:", timer.getTotalTime());
+		message("Processing done:", "time:", timer.getTotalTime());
 	}
 	
 	/**
