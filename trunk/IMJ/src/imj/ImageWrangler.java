@@ -19,6 +19,7 @@ import javax.swing.ProgressMonitor;
 
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
+import net.sourceforge.aprog.tools.TicToc;
 
 /**
  * @author codistmonk (creation 2013-01-31)

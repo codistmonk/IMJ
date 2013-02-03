@@ -11,6 +11,8 @@ import imj.ImageOfBufferedImage.Feature;
 
 import java.util.Date;
 
+import net.sourceforge.aprog.tools.TicToc;
+
 import org.junit.Test;
 
 /**
