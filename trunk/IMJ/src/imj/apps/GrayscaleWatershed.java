@@ -58,8 +58,8 @@ public class GrayscaleWatershed {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String imageId = arguments.get("file", "");
 		final int[] lods = arguments.get("lod");
-		final int connectivity = arguments.get("connectivity")[0];
-		final int h = arguments.get("h")[0];
+		final int connectivity = arguments.get("connectivity", 8)[0];
+		final int h = arguments.get("h", 0)[0];
 		
 		if (lods.length == 0) {
 			int lod = 0;
