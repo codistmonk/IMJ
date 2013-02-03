@@ -7,14 +7,26 @@ import static java.lang.System.currentTimeMillis;
  */
 public final class TicToc {
 	
+	private long totalTime;
+	
+	private long ticTocTime;
+	
 	private long t0;
 	
 	public final long tic() {
+		this.totalTime += this.ticTocTime;
+		this.ticTocTime = 0L;
 		return this.t0 = currentTimeMillis();
 	}
 	
 	public final long toc() {
-		return currentTimeMillis() - this.t0;
+		this.ticTocTime = currentTimeMillis() - this.t0;
+		
+		return this.ticTocTime;
+	}
+	
+	public final long getTotalTime() {
+		return this.totalTime + this.ticTocTime;
 	}
 	
 }
