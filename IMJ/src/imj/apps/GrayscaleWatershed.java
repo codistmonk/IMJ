@@ -13,6 +13,7 @@ import imj.IMJTools;
 import imj.Image;
 import imj.ImageComponent;
 import imj.ImageOfBufferedImage.Feature;
+import imj.ImageOfInts;
 import imj.ImageWrangler;
 import imj.Labeling;
 import imj.MorphologicalOperations;
@@ -85,9 +86,18 @@ public class GrayscaleWatershed {
 		
 		debugPrint("Processing:", "image:", imageId, "lod:", lod, "connectivity:", connectivity, "h:", h,
 				"date:", new Date(timer.tic()));
+		final int columnCount = image0.getColumnCount();
+		final int rowCount = image0.getRowCount();
+		
+		debugPrint("rowCount:", rowCount, "columnCount:", columnCount);
 		
 		debugPrint("Converting to grayscale:", new Date(timer.tic()));
-		final Image image = new VirtualImage(image0, Feature.MAX_RGB);
+		final Image.Abstract image = new ImageOfInts(rowCount, columnCount);
+		final int pixelCount = image.getPixelCount();
+		
+		for (int pixel = 0; pixel < pixelCount; ++pixel) {
+			image.setValue(pixel, Feature.MAX_RGB.getValue(image0.getValue(pixel), false));
+		}
 		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
 		debugPrint("Extracting edges:", new Date(timer.tic()));
@@ -111,8 +121,6 @@ public class GrayscaleWatershed {
 		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
 		debugPrint("Writing result:", new Date(timer.tic()));
-		final int columnCount = result.getColumnCount();
-		final int rowCount = result.getRowCount();
 		try {
 			ImageIO.write(ImageComponent.awtImage(result, true,
 					new BufferedImage(columnCount, rowCount, BufferedImage.TYPE_BYTE_GRAY)),
@@ -125,6 +133,9 @@ public class GrayscaleWatershed {
 		debugPrint("Processing done:", "time:", timer.getTotalTime());
 	}
 	
+	/**
+	 * @author codistmonk (creation 2013-02-03)
+	 */
 	public static final class VirtualImage extends Image.Abstract {
 		
 		private final Image rgbs;
