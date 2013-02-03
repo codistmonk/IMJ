@@ -19,6 +19,8 @@ public final class LinearStorage extends Image.Abstract {
 	
 	private final File file;
 	
+	private final boolean deleteFileOnExit;
+	
 	private final RandomAccessFile data;
 	
 	private int absoluteBufferStartIndex;
@@ -36,6 +38,7 @@ public final class LinearStorage extends Image.Abstract {
 		
 		try {
 			this.file = file;
+			this.deleteFileOnExit = false;
 			this.data = data;
 			this.absoluteBufferStartIndex = 2;
 			this.absoluteBufferEndIndex = 2 + min(MAXIMUM_BUFFER_SIZE, rowCount * columnCount);
@@ -57,9 +60,12 @@ public final class LinearStorage extends Image.Abstract {
 		
 		try {
 			this.file = File.createTempFile("image", ".raw");
+			this.deleteFileOnExit = deleteFileOnExit;
+			
 			if (deleteFileOnExit) {
 				this.file.deleteOnExit();
 			}
+			
 			this.data = new RandomAccessFile(this.file, "rw");
 			this.absoluteBufferStartIndex = 2;
 			this.absoluteBufferEndIndex = 2 + min(MAXIMUM_BUFFER_SIZE, rowCount * columnCount);
@@ -91,7 +97,10 @@ public final class LinearStorage extends Image.Abstract {
 	protected final void finalize() throws Throwable {
 		try {
 			this.close();
-			this.file.delete();
+			
+			if (this.deleteFileOnExit) {
+				this.file.delete();
+			}
 		} finally {
 			super.finalize();
 		}
@@ -199,7 +208,7 @@ public final class LinearStorage extends Image.Abstract {
 			final LinearStorage result = new LinearStorage(rowCount, columnCount, file, data);
 			
 			// FIXME Metadata are missing from file!
-			result.getMetadata().put("channelCount", 3);
+			result.getMetadata().put("channelCount", (int) (data.length() / rowCount / columnCount));
 			
 			return result;
 		} catch (final IOException exception) {
