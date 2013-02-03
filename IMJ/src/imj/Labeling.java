@@ -30,7 +30,7 @@ public abstract class Labeling {
 	}
 	
 	protected Labeling(final Image image) {
-		this(image, new ImageOfInts(image.getRowCount(), image.getColumnCount()));
+		this(image, getMemoryManagementStrategy().newImage(image.getRowCount(), image.getColumnCount()));
 	}
 	
 	public final Image getImage() {
@@ -184,5 +184,41 @@ public abstract class Labeling {
 		+1, +0,
 		+1, +1,
 	};
+	
+	private static MemoryManagementStrategy memoryManagementStrategy = MemoryManagementStrategy.PRIORITIZE_SPEED;
+	
+	public static final MemoryManagementStrategy getMemoryManagementStrategy() {
+		return memoryManagementStrategy;
+	}
+	
+	public static final void setMemoryManagementStrategy(final MemoryManagementStrategy memoryManagementStrategy) {
+		Labeling.memoryManagementStrategy = memoryManagementStrategy;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-03)
+	 */
+	public static enum MemoryManagementStrategy {
+		
+		PRIORITIZE_SPEED {
+			
+			@Override
+			public final ImageOfInts newImage(final int rowCount, final int columnCount) {
+				return new ImageOfInts(rowCount, columnCount);
+			}
+			
+		},
+		PRIORITIZE_MEMORY {
+			
+			@Override
+			public final LinearStorage newImage(final int rowCount, final int columnCount) {
+				return new LinearStorage(rowCount, columnCount);
+			}
+			
+		};
+		
+		public abstract Image.Abstract newImage(int rowCount, int columnCount);
+		
+	}
 	
 }

@@ -15,6 +15,9 @@ import imj.ImageComponent;
 import imj.ImageOfBufferedImage.Feature;
 import imj.ImageOfInts;
 import imj.ImageWrangler;
+import imj.Labeling;
+import imj.Labeling.MemoryManagementStrategy;
+import imj.LinearStorage;
 import imj.RegionalMinima;
 import imj.TicToc;
 import imj.Watershed;
@@ -24,6 +27,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Locale;
 
 import javax.imageio.ImageIO;
 
@@ -44,11 +48,12 @@ public class GrayscaleWatershed {
 	 * <br>Must not be null
 	 */
 	public static final void main(final String[] commandLineArguments) {
-		if (commandLineArguments.length % 2 != 0 || 8 <= commandLineArguments.length) {
-			System.out.println("Arguments: file <imageId> [lod <(N|*)>] [connectivity (4|8)] [h N]");
+		if (commandLineArguments.length % 2 != 0 || 10 <= commandLineArguments.length) {
+			System.out.println("Arguments: file <imageId> [lod <N|*>] [connectivity <4|8>] [h <N>] [prioritize <speed|memory>]");
 			System.out.println("Default for lod is *");
 			System.out.println("Default for connectivity is 8");
 			System.out.println("Default for h is 0");
+			System.out.println("Default for prioritize is speed");
 			
 			return;
 		}
@@ -58,6 +63,11 @@ public class GrayscaleWatershed {
 		final int[] lods = arguments.get("lod");
 		final int[] connectivities = arguments.get("connectivity", 8);
 		final int[] hs = arguments.get("h", 0);
+		final String prioritizeWhat = arguments.get("prioritize", "speed").toLowerCase(Locale.ENGLISH);
+		
+		if ("memory".equals(prioritizeWhat)) {
+			Labeling.setMemoryManagementStrategy(MemoryManagementStrategy.PRIORITIZE_MEMORY);
+		}
 		
 		if (lods.length == 0) {
 			int lod = 0;
@@ -96,7 +106,7 @@ public class GrayscaleWatershed {
 		message("rowCount:", rowCount, "columnCount:", columnCount);
 		
 		message("Converting to grayscale:", new Date(timer.tic()));
-		final Image.Abstract image = new ImageOfInts(rowCount, columnCount);
+		final Image.Abstract image = Labeling.getMemoryManagementStrategy().newImage(rowCount, columnCount);
 		final int pixelCount = image.getPixelCount();
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
