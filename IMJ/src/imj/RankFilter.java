@@ -3,54 +3,65 @@ package imj;
 /**
  * @author codistmonk (creation 2013-01-27)
  */
-public final class RankFilter extends Labeling {
+public final class RankFilter extends SyntheticFilter {
 	
 	private final int rank;
 	
 	public RankFilter(final Image image, final int rank, final int[] structuringElement) {
-		super(image);
+		super(image, structuringElement);
 		this.rank = rank;
 		
-		final int pixelCount = this.getPixelCount();
-		final StructuringElement se = this.new StructuringElement(structuringElement);
-		
-		for (int pixel = 0; pixel < pixelCount; ++pixel) {
-			this.getResult().setValue(pixel, se.evaluate(pixel));
-		}
+		this.compute();
 	}
 	
 	public final int getRank() {
 		return this.rank;
 	}
 	
+	@Override
+	protected final Synthesizer newSynthesizer(int[] structuringElement) {
+		return this.new Sorter(structuringElement);
+	}
+	
 	/**
 	 * @author codistmonk (creation 2013-01-27)
 	 */
-	public final class StructuringElement {
+	public final class Sorter extends Synthesizer {
 		
 		private final IntList values;
 		
-		private final Neighborhood neighborhood;
-		
-		public StructuringElement(final int... deltas) {
-			this.values = new IntList((deltas.length + 1) / 2);
-			this.neighborhood = RankFilter.this.new Neighborhood(deltas);
+		public Sorter(final int... deltas) {
+			super(deltas);
+			this.values = new IntList(this.getValueCount());
 		}
 		
-		public final int evaluate(final int pixel) {
+		@Override
+		protected final void reset() {
 			this.values.clear();
-			this.neighborhood.reset(pixel);
-			
-			while (this.neighborhood.hasNext()) {
-				final int neighbor = this.neighborhood.getNext();
-				this.values.add(RankFilter.this.getImage().getValue(neighbor));
-			}
-			
+		}
+		
+		@Override
+		protected final void addValue(final int pixel, final int value) {
+			this.values.add(value);
+		}
+		
+		@Override
+		protected final void addFloatValue(final int pixel, final float value) {
+			this.values.add((int) value);
+		}
+		
+		@Override
+		protected final int computeResult() {
 			final int n = this.values.size();
 			
 			this.values.sort();
 			
 			return this.values.get((RankFilter.this.getRank() + n) % n);
+		}
+
+		@Override
+		protected final float computeFloatResult() {
+			return this.computeResult();
 		}
 		
 	}
