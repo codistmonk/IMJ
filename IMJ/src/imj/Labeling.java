@@ -1,5 +1,12 @@
 package imj;
 
+import static java.lang.Math.abs;
+import static java.lang.Math.ceil;
+import static java.lang.Math.max;
+import static java.lang.Math.sqrt;
+import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
+import net.sourceforge.aprog.tools.IllegalInstantiationException;
+
 /**
  * @author codistmonk (creation 2013-01-25)
  */
@@ -167,24 +174,6 @@ public abstract class Labeling {
 		
 	}
 	
-	public static final int[] CONNECTIVITY_4 = {
-		-1, +0,
-		+0, -1,
-		+0, +1,
-		+1, +0,
-	};
-	
-	public static final int[] CONNECTIVITY_8 = {
-		-1, -1,
-		-1, +0,
-		-1, +1,
-		+0, -1,
-		+0, +1,
-		+1, -1,
-		+1, +0,
-		+1, +1,
-	};
-	
 	private static MemoryManagementStrategy memoryManagementStrategy = MemoryManagementStrategy.PRIORITIZE_SPEED;
 	
 	public static final MemoryManagementStrategy getMemoryManagementStrategy() {
@@ -218,6 +207,76 @@ public abstract class Labeling {
 		};
 		
 		public abstract Image.Abstract newImage(int rowCount, int columnCount);
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-08)
+	 */
+	public static final class NeighborhoodShape {
+		
+		private NeighborhoodShape() {
+			throw new IllegalInstantiationException();
+		}
+		
+		public static final int[] CONNECTIVITY_4 = newDisk(1.0, Distance.CITYBLOCK);
+		
+		public static final int[] CONNECTIVITY_8 = newDisk(1.0, Distance.CHESSBOARD);
+		
+		public static final int[] newDisk(final double radius, final Distance distance) {
+			final int r = (int) ceil(radius);
+			final IntList resultBuilder = new IntList();
+			
+			for (int i = -r; i <= +r; ++i) {
+				for (int j = -r; j <= +r; ++j) {
+					if ((i != 0 || j != 0) && distance.distance(0, 0, j, i) <= radius) {
+						resultBuilder.add(i);
+						resultBuilder.add(j);
+					}
+				}
+			}
+			
+			return resultBuilder.toArray();
+		}
+		
+		public static final int[] newDisk(final double radius) {
+			return newDisk(radius, Distance.EUCLIDEAN);
+		}
+		
+		/**
+		 * @author codistmonk (creation 2013-02-03)
+		 */
+		public static enum Distance {
+			
+			CITYBLOCK {
+				
+				@Override
+				public final double distance(final int x1, final int y1, final int x2, final int y2) {
+					return abs(x2 - x1) + abs(y2 - y1);
+				}
+				
+			},
+			CHESSBOARD {
+				
+				@Override
+				public final double distance(final int x1, final int y1, final int x2, final int y2) {
+					return max(abs(x2 - x1), abs(y2 - y1));
+				}
+				
+			},
+			EUCLIDEAN {
+				
+				@Override
+				public final double distance(final int x1, final int y1, final int x2, final int y2) {
+					return sqrt(square(x2 - x1) + square(y2 - y1));
+				}
+				
+			}
+			;
+			
+			public abstract double distance(int x1, int y1, int x2, int y2);
+			
+		}
 		
 	}
 	

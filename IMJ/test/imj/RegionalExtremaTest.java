@@ -2,10 +2,11 @@ package imj;
 
 import static imj.IMJTools.binary;
 import static imj.IMJTools.image;
-import static imj.Labeling.CONNECTIVITY_4;
-import static imj.Labeling.CONNECTIVITY_8;
+import static imj.Labeling.NeighborhoodShape.CONNECTIVITY_4;
+import static imj.Labeling.NeighborhoodShape.CONNECTIVITY_8;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
+
 import imj.ImageOfBufferedImage.Feature;
 
 import java.io.IOException;
