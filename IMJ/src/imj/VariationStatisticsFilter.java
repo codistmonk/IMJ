@@ -23,6 +23,8 @@ public final class VariationStatisticsFilter extends StatisticalFilter {
 		super(image, selector, structuringElement);
 		
 		this.variation = variation;
+		
+		this.compute();
 	}
 	
 	public final Variation getVariation() {
@@ -106,14 +108,14 @@ public final class VariationStatisticsFilter extends StatisticalFilter {
 					return value1 / value2;
 				}
 					
-			}, MIN {
+			}, MININIMUM {
 				
 				@Override
 				public final int computeValue(final int pixel1, final int value1, final int pixel2, final int value2) {
 					return min(value1, value2);
 				}
 				
-			}, MAX {
+			}, MAXIMUM {
 				
 				@Override
 				public final int computeValue(final int pixel1, final int value1, final int pixel2, final int value2) {

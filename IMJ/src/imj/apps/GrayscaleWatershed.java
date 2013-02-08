@@ -147,14 +147,16 @@ public class GrayscaleWatershed {
 		final Image result = newImage(labels, getRegionStatistics(image, labels), StatisticsSelector.MEAN);
 		message("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
-		message("Writing result:", new Date(timer.tic()));
 		try {
+			message("Writing result:", new Date(timer.tic()));
+			
 			final int columnCount = image.getColumnCount();
 			final int rowCount = image.getRowCount();
 			
 			ImageIO.write(ImageComponent.awtImage(result, true,
 					new BufferedImage(columnCount, rowCount, BufferedImage.TYPE_BYTE_GRAY)),
 					"png", new FileOutputStream(imageId + ".lod" + lod + ".hmin" + h + ".watershed.png"));
+			
 			message("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		} catch (final IOException exception) {
 			System.err.println(exception);
