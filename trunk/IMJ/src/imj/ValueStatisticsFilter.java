@@ -9,6 +9,8 @@ public final class ValueStatisticsFilter extends StatisticalFilter {
 	
 	public ValueStatisticsFilter(final Image image, final StatisticsSelector selector, final int[] structuringElement) {
 		super(image, selector, structuringElement);
+		
+		this.compute();
 	}
 	
 	@Override

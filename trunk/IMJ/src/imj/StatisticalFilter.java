@@ -13,8 +13,6 @@ public abstract class StatisticalFilter extends SyntheticFilter {
 	protected StatisticalFilter(final Image image, final StatisticsSelector selector, final int[] structuringElement) {
 		super(image, structuringElement);
 		this.selector = selector;
-		
-		this.compute();
 	}
 	
 	public final StatisticsSelector getSelector() {
@@ -40,12 +38,12 @@ public abstract class StatisticalFilter extends SyntheticFilter {
 		
 		@Override
 		protected final void addValue(final int pixel, final int value) {
-			this.statistics.addValue(value);
+			this.statistics.addValue(this.getValue(pixel, value));
 		}
 		
 		@Override
 		protected final void addFloatValue(final int pixel, final float value) {
-			this.statistics.addValue(value);
+			this.statistics.addValue(this.getFloatValue(pixel, value));
 		}
 		
 		@Override
