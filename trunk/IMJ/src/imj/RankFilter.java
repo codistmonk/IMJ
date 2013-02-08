@@ -36,7 +36,7 @@ public final class RankFilter extends SyntheticFilter {
 		}
 		
 		@Override
-		protected final void reset() {
+		protected final void reset(final int pixel) {
 			this.values.clear();
 		}
 		

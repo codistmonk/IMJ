@@ -6,11 +6,11 @@ import imj.IMJTools.StatisticsSelector;
 /**
  * @author codistmonk (creation 2013-02-03)
  */
-public final class StatisticalFilter extends SyntheticFilter {
+public abstract class StatisticalFilter extends SyntheticFilter {
 	
 	private final StatisticsSelector selector;
 	
-	public StatisticalFilter(final Image image, final StatisticsSelector selector, final int[] structuringElement) {
+	protected StatisticalFilter(final Image image, final StatisticsSelector selector, final int[] structuringElement) {
 		super(image, structuringElement);
 		this.selector = selector;
 		
@@ -21,25 +21,20 @@ public final class StatisticalFilter extends SyntheticFilter {
 		return this.selector;
 	}
 	
-	@Override
-	protected final Synthesizer newSynthesizer(int[] structuringElement) {
-		return this.new Selector(structuringElement);
-	}
-	
 	/**
 	 * @author codistmonk (creation 2013-02-03)
 	 */
-	public final class Selector extends Synthesizer {
+	public abstract class Selector extends Synthesizer {
 		
 		private final Statistics statistics;
 		
-		public Selector(final int... deltas) {
+		protected Selector(final int... deltas) {
 			super(deltas);
 			this.statistics = new Statistics();
 		}
 		
 		@Override
-		protected final void reset() {
+		protected void reset(final int pixel) {
 			this.statistics.reset();
 		}
 		
@@ -62,6 +57,10 @@ public final class StatisticalFilter extends SyntheticFilter {
 		protected final float computeFloatResult() {
 			return (float) StatisticalFilter.this.getSelector().getValue(this.statistics);
 		}
+		
+		protected abstract int getValue(int pixel, int value);
+		
+		protected abstract float getFloatValue(int pixel, float value);
 		
 	}
 	

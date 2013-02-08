@@ -52,7 +52,7 @@ public abstract class SyntheticFilter extends Labeling {
 		
 		public final int compute(final int pixel) {
 			this.neighborhood.reset(pixel);
-			this.reset();
+			this.reset(pixel);
 			
 			while (this.neighborhood.hasNext()) {
 				final int neighbor = this.neighborhood.getNext();
@@ -64,7 +64,7 @@ public abstract class SyntheticFilter extends Labeling {
 		
 		public final float computeFloat(final int pixel) {
 			this.neighborhood.reset(pixel);
-			this.reset();
+			this.reset(pixel);
 			
 			while (this.neighborhood.hasNext()) {
 				final int neighbor = this.neighborhood.getNext();
@@ -74,7 +74,7 @@ public abstract class SyntheticFilter extends Labeling {
 			return this.computeFloatResult();
 		}
 		
-		protected abstract void reset();
+		protected abstract void reset(int pixel);
 		
 		protected abstract void addValue(int pixel, int value);
 		
