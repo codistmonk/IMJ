@@ -2,12 +2,13 @@ package imj;
 
 import static imj.IMJTools.image;
 import static imj.ImageComponent.awtImage;
-import static imj.Labeling.CONNECTIVITY_8;
+import static imj.Labeling.NeighborhoodShape.CONNECTIVITY_8;
 import static imj.MorphologicalOperations.edges8;
 import static imj.MorphologicalOperations.hMinima8;
 import static java.awt.image.BufferedImage.TYPE_3BYTE_BGR;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
+
 import imj.IMJTools.StatisticsSelector;
 import imj.ImageOfBufferedImage.Feature;
 

@@ -1,15 +1,12 @@
 package imj;
 
-import static imj.Labeling.CONNECTIVITY_4;
+import static imj.Labeling.NeighborhoodShape.CONNECTIVITY_4;
 import static imj.MathOperations.compute;
 import static imj.MathOperations.BinaryOperator.Predefined.MINUS;
 import static imj.MathOperations.BinaryOperator.Predefined.PLUS;
-import static java.lang.Math.abs;
 import static java.lang.Math.ceil;
-import static java.lang.Math.max;
-import static java.lang.Math.sqrt;
-import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
 import imj.IMJTools.StatisticsSelector;
+import imj.Labeling.NeighborhoodShape.Distance;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**
@@ -134,25 +131,9 @@ public final class MorphologicalOperations {
 			throw new IllegalInstantiationException();
 		}
 		
-		public static final int[] SIMPLE_CONNECTIVITY_4 = {
-			-1, +0,
-			+0, -1,
-			+0, +0,
-			+0, +1,
-			+1, +0,
-		};
+		public static final int[] SIMPLE_CONNECTIVITY_4 = newDisk(1.0, Distance.CITYBLOCK);
 		
-		public static final int[] SIMPLE_CONNECTIVITY_8 = {
-			-1, -1,
-			-1, +0,
-			-1, +1,
-			+0, -1,
-			+0, +0,
-			+0, +1,
-			+1, -1,
-			+1, +0,
-			+1, +1,
-		};
+		public static final int[] SIMPLE_CONNECTIVITY_8 = newDisk(1.0, Distance.CHESSBOARD);
 		
 		public static final int[] newDisk(final double radius, final Distance distance) {
 			final int r = (int) ceil(radius);
@@ -172,41 +153,6 @@ public final class MorphologicalOperations {
 		
 		public static final int[] newDisk(final double radius) {
 			return newDisk(radius, Distance.EUCLIDEAN);
-		}
-		
-		/**
-		 * @author codistmonk (creation 2013-02-03)
-		 */
-		public static enum Distance {
-			
-			CITYBLOCK {
-				
-				@Override
-				public final double distance(final int x1, final int y1, final int x2, final int y2) {
-					return abs(x2 - x1) + abs(y2 - y1);
-				}
-				
-			},
-			CHESSBOARD {
-				
-				@Override
-				public final double distance(final int x1, final int y1, final int x2, final int y2) {
-					return max(abs(x2 - x1), abs(y2 - y1));
-				}
-				
-			},
-			EUCLIDEAN {
-				
-				@Override
-				public final double distance(final int x1, final int y1, final int x2, final int y2) {
-					return sqrt(square(x2 - x1) + square(y2 - y1));
-				}
-				
-			}
-			;
-			
-			public abstract double distance(int x1, int y1, int x2, int y2);
-			
 		}
 		
 	}

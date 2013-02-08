@@ -1,11 +1,12 @@
 package imj;
 
 import static imj.IMJTools.image;
-import static imj.Labeling.CONNECTIVITY_4;
+import static imj.Labeling.NeighborhoodShape.CONNECTIVITY_4;
 import static imj.MorphologicalOperations.edges8;
 import static imj.RegionalExtremaTest.assertImageEquals;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
+
 import imj.IMJTools.StatisticsSelector;
 import imj.ImageOfBufferedImage.Feature;
 

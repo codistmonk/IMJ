@@ -1,11 +1,11 @@
 package imj;
 
 import static imj.IMJTools.image;
-import static imj.Labeling.CONNECTIVITY_4;
+import static imj.Labeling.NeighborhoodShape.CONNECTIVITY_4;
 import static imj.RegionalExtremaTest.assertImageEquals;
 import static org.junit.Assert.assertArrayEquals;
+import imj.Labeling.NeighborhoodShape.Distance;
 import imj.MorphologicalOperations.StructuringElement;
-import imj.MorphologicalOperations.StructuringElement.Distance;
 
 import org.junit.Test;
 

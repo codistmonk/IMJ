@@ -2,12 +2,13 @@ package imj.apps;
 
 import static imj.IMJTools.getRegionStatistics;
 import static imj.IMJTools.newImage;
-import static imj.Labeling.CONNECTIVITY_4;
-import static imj.Labeling.CONNECTIVITY_8;
+import static imj.Labeling.NeighborhoodShape.CONNECTIVITY_4;
+import static imj.Labeling.NeighborhoodShape.CONNECTIVITY_8;
 import static imj.MorphologicalOperations.edges4;
 import static imj.MorphologicalOperations.edges8;
 import static imj.MorphologicalOperations.hMinima4;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
+
 import imj.IMJTools.StatisticsSelector;
 import imj.Image;
 import imj.ImageComponent;
