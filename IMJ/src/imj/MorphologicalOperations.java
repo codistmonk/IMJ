@@ -82,7 +82,7 @@ public final class MorphologicalOperations {
 	}
 	
 	public static final Image edges(final Image image, final int[] connectivity) {
-		return new StatisticalFilter(image, StatisticsSelector.AMPLITUDE, connectivity).getResult();
+		return new ValueStatisticsFilter(image, StatisticsSelector.AMPLITUDE, connectivity).getResult();
 	}
 	
 	public static final Image edges4(final Image image) {

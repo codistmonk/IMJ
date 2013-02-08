@@ -110,6 +110,10 @@ public final class IMJTools {
 		return rgba & 0x000000FF;
 	}
 	
+	public static final int square(final int x) {
+		return x * x;
+	}
+	
 	public static final int ceilingOfRatio(final int numerator, final int denominator) {
 		return (numerator + denominator - 1) / denominator;
 	}
