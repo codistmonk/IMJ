@@ -2,6 +2,7 @@ package imj;
 
 import static imj.IMJTools.alpha;
 import static imj.IMJTools.blue;
+import static imj.IMJTools.channelValue;
 import static imj.IMJTools.green;
 import static imj.IMJTools.red;
 import static imj.IMJTools.square;
@@ -20,7 +21,7 @@ public final class VariationStatisticsFilter extends StatisticalFilter {
 	private final Variation variation;
 	
 	public VariationStatisticsFilter(final Image image, final StatisticsSelector selector, final Variation variation, final int[] structuringElement) {
-		super(image, selector, structuringElement);
+		super(image, variation.isResultMonoChannel() ? 1 : image.getChannelCount(), selector, structuringElement);
 		
 		this.variation = variation;
 		
@@ -57,13 +58,19 @@ public final class VariationStatisticsFilter extends StatisticalFilter {
 		}
 		
 		@Override
+		protected final int getValue(final int pixel, int channel, final int value) {
+			return VariationStatisticsFilter.this.getVariation().computeValue(
+					this.pixel, channelValue(this.value, channel), pixel, channelValue(value, channel));
+		}
+		
+		@Override
 		protected final int getValue(final int pixel, final int value) {
 			return VariationStatisticsFilter.this.getVariation().computeValue(this.pixel, this.value, pixel, value);
 		}
 		
 		@Override
 		protected final float getFloatValue(final int pixel, final float value) {
-			return this.getValue(pixel, (int) value);
+			return this.getValue(pixel, 0, (int) value);
 		}
 		
 	}
@@ -74,6 +81,8 @@ public final class VariationStatisticsFilter extends StatisticalFilter {
 	public static abstract interface Variation {
 		
 		public abstract int computeValue(int pixel1, int value1, int pixel2, int value2);
+		
+		public abstract boolean isResultMonoChannel();
 		
 		/**
 		 * @author codistmonk (creation 2013-02-08)
@@ -87,11 +96,33 @@ public final class VariationStatisticsFilter extends StatisticalFilter {
 					return value1 - value2;
 				}
 				
+				@Override
+				public final boolean isResultMonoChannel() {
+					return false;
+				}
+				
+			}, SQUARED_DIFFERENCE {
+				
+				@Override
+				public final int computeValue(final int pixel1, final int value1, final int pixel2, final int value2) {
+					return square(value1 - value2);
+				}
+				
+				@Override
+				public final boolean isResultMonoChannel() {
+					return false;
+				}
+				
 			}, ABSOLUTE_DIFFERENCE {
 				
 				@Override
 				public final int computeValue(final int pixel1, final int value1, final int pixel2, final int value2) {
 					return abs(value1 - value2);
+				}
+				
+				@Override
+				public final boolean isResultMonoChannel() {
+					return false;
 				}
 				
 			}, SUM {
@@ -101,11 +132,21 @@ public final class VariationStatisticsFilter extends StatisticalFilter {
 					return value1 + value2;
 				}
 				
+				@Override
+				public final boolean isResultMonoChannel() {
+					return false;
+				}
+				
 			}, PRODUCT {
 				
 				@Override
 				public final int computeValue(final int pixel1, final int value1, final int pixel2, final int value2) {
-					return value1 / value2;
+					return value1 * value2;
+				}
+				
+				@Override
+				public final boolean isResultMonoChannel() {
+					return false;
 				}
 					
 			}, MININIMUM {
@@ -115,11 +156,21 @@ public final class VariationStatisticsFilter extends StatisticalFilter {
 					return min(value1, value2);
 				}
 				
+				@Override
+				public final boolean isResultMonoChannel() {
+					return false;
+				}
+				
 			}, MAXIMUM {
 				
 				@Override
 				public final int computeValue(final int pixel1, final int value1, final int pixel2, final int value2) {
 					return max(value1, value2);
+				}
+				
+				@Override
+				public final boolean isResultMonoChannel() {
+					return false;
 				}
 				
 			}, RGB_SQUARED_EUCLIDEAN_DISTANCE {
@@ -136,11 +187,21 @@ public final class VariationStatisticsFilter extends StatisticalFilter {
 					return (int) square(r2 - r1) + square(g2 - g1) + square(b2 - b1);
 				}
 				
+				@Override
+				public final boolean isResultMonoChannel() {
+					return true;
+				}
+				
 			}, RGB_EUCLIDEAN_DISTANCE {
 				
 				@Override
 				public final int computeValue(final int pixel1, final int value1, final int pixel2, final int value2) {
 					return (int) sqrt(RGB_SQUARED_EUCLIDEAN_DISTANCE.computeValue(pixel1, value1, pixel2, value2));
+				}
+				
+				@Override
+				public final boolean isResultMonoChannel() {
+					return true;
 				}
 				
 			}, RGBA_SQUARED_EUCLIDEAN_DISTANCE {
@@ -159,11 +220,21 @@ public final class VariationStatisticsFilter extends StatisticalFilter {
 					return square(r2 - r1) + square(g2 - g1) + square(b2 - b1) + square(a2 - a1);
 				}
 				
+				@Override
+				public final boolean isResultMonoChannel() {
+					return true;
+				}
+				
 			}, RGBA_EUCLIDEAN_DISTANCE {
 				
 				@Override
 				public final int computeValue(final int pixel1, final int value1, final int pixel2, final int value2) {
 					return (int) sqrt(RGBA_SQUARED_EUCLIDEAN_DISTANCE.computeValue(pixel1, value1, pixel2, value2));
+				}
+				
+				@Override
+				public final boolean isResultMonoChannel() {
+					return true;
 				}
 				
 			};

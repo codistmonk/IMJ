@@ -1,5 +1,7 @@
 package imj;
 
+import static imj.IMJTools.channelValue;
+
 import imj.IMJTools.StatisticsSelector;
 
 /**
@@ -8,7 +10,7 @@ import imj.IMJTools.StatisticsSelector;
 public final class ValueStatisticsFilter extends StatisticalFilter {
 	
 	public ValueStatisticsFilter(final Image image, final StatisticsSelector selector, final int[] structuringElement) {
-		super(image, selector, structuringElement);
+		super(image, image.getChannelCount(), selector, structuringElement);
 		
 		this.compute();
 	}
@@ -25,6 +27,11 @@ public final class ValueStatisticsFilter extends StatisticalFilter {
 		
 		public Selector(final int... deltas) {
 			super(deltas);
+		}
+		
+		@Override
+		protected final int getValue(final int pixel, int channel, final int value) {
+			return channelValue(value, channel);
 		}
 		
 		@Override

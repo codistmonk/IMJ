@@ -7,8 +7,8 @@ public abstract class SyntheticFilter extends Labeling {
 	
 	private final Synthesizer synthesizer;
 	
-	protected SyntheticFilter(final Image image, final int[] structuringElement) {
-		super(image);
+	protected SyntheticFilter(final Image image, int resultChannelCount, final int[] structuringElement) {
+		super(image, resultChannelCount);
 		
 		this.synthesizer = this.newSynthesizer(structuringElement);
 	}

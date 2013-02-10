@@ -93,7 +93,7 @@ public final class MorphologicalOperations {
 	public static final Image hMinima(final Image image, final int h, final int[] connectivity) {
 		return new ReconstructionByErosion(
 				image,
-				compute(PLUS.bindRight(0, h), image, new ImageOfInts(image.getRowCount(), image.getColumnCount())),
+				compute(PLUS.bindRight(0, h), image, new ImageOfInts(image.getRowCount(), image.getColumnCount(), image.getChannelCount())),
 				connectivity
 				).getResult();
 	}
@@ -109,7 +109,7 @@ public final class MorphologicalOperations {
 	public static final Image hMaxima(final Image image, final int h, final int[] connectivity) {
 		return new ReconstructionByDilation(
 				image,
-				compute(MINUS.bindRight(0, h), image, new ImageOfInts(image.getRowCount(), image.getColumnCount())),
+				compute(MINUS.bindRight(0, h), image, new ImageOfInts(image.getRowCount(), image.getColumnCount(), image.getChannelCount())),
 				CONNECTIVITY_4
 				).getResult();
 	}

@@ -8,7 +8,7 @@ public final class ImageOfFloats extends Image.Abstract {
 	private final float[] data;
 	
 	public ImageOfFloats(final int rowCount, final int columnCount) {
-		super(rowCount, columnCount);
+		super(rowCount, columnCount, 1);
 		this.data = new float[rowCount * columnCount];
 	}
 	

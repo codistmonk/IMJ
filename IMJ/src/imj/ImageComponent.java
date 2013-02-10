@@ -194,8 +194,8 @@ public final class ImageComponent extends JComponent {
 	
 	public static final BufferedImage awtImage(final Image image, final boolean adjust, final BufferedImage result) {
 		final int rgb = new Color(1, 1, 1).getRGB();
-		final Integer channelCount = (Integer) image.getMetadata().get("channelCount");
-		final boolean imageIsMonochannel = channelCount == null || channelCount == 1;
+		final int channelCount = image.getChannelCount();
+		final boolean imageIsMonochannel = channelCount == 1;
 		
 		if (!adjust) {
 			for (int y = 0; y < image.getRowCount(); ++y) {
@@ -262,8 +262,8 @@ public final class ImageComponent extends JComponent {
 			final int x = ImageComponent.this.unscale(xy.x);
 			final int y = ImageComponent.this.unscale(xy.y);
 			final Image image = ImageComponent.this.getModel();
-			final Integer channelCount = (Integer) image.getMetadata().get("channelCount");
-			final boolean imageIsMonochannel = channelCount == null || channelCount == 1;
+			final int channelCount = image.getChannelCount();
+			final boolean imageIsMonochannel = channelCount == 1;
 			
 			if (0 <= y && y < image.getRowCount() && 0 <= x
 					&& x < image.getColumnCount()) {

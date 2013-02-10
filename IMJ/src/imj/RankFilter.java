@@ -8,7 +8,7 @@ public final class RankFilter extends SyntheticFilter {
 	private final int rank;
 	
 	public RankFilter(final Image image, final int rank, final int[] structuringElement) {
-		super(image, structuringElement);
+		super(image, 1, structuringElement);
 		this.rank = rank;
 		
 		this.compute();
@@ -19,7 +19,7 @@ public final class RankFilter extends SyntheticFilter {
 	}
 	
 	@Override
-	protected final Synthesizer newSynthesizer(int[] structuringElement) {
+	protected final Synthesizer newSynthesizer(final int[] structuringElement) {
 		return this.new Sorter(structuringElement);
 	}
 	

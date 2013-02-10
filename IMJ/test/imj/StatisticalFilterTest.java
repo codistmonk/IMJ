@@ -1,13 +1,11 @@
 package imj;
 
 import static imj.IMJTools.image;
-import static imj.IMJTools.StatisticsSelector.MEAN;
 import static imj.MorphologicalOperations.StructuringElement.SIMPLE_CONNECTIVITY_8;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.IMJTools.StatisticsSelector;
 import imj.ImageOfBufferedImage.Feature;
-import imj.MorphologicalOperations.StructuringElement;
 import imj.VariationStatisticsFilter.Variation;
 import imj.VariationStatisticsFilter.Variation.Predefined;
 

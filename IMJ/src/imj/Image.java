@@ -8,7 +8,7 @@ import java.util.Map;
  */
 public abstract interface Image {
 	
-	public abstract Map<String, Object> getMetadata();
+	public abstract int getChannelCount();
 	
 	public abstract int getRowCount();
 	
@@ -41,22 +41,20 @@ public abstract interface Image {
 		
 		private final int columnCount;
 		
+		private final int channelCount;
+		
 		private final int pixelCount;
 		
-		protected Abstract(final int rowCount, final int columnCount) {
+		protected Abstract(final int rowCount, final int columnCount, final int channelCount) {
 			this.metadata = new LinkedHashMap<String, Object>();
 			this.rowCount = rowCount;
 			this.columnCount = columnCount;
+			this.channelCount = channelCount;
 			this.pixelCount = rowCount * columnCount;
 		}
 		
 		public final int getPixelCount() {
 			return this.pixelCount;
-		}
-		
-		@Override
-		public final Map<String, Object> getMetadata() {
-			return this.metadata;
 		}
 		
 		@Override
@@ -67,6 +65,11 @@ public abstract interface Image {
 		@Override
 		public final int getColumnCount() {
 			return this.columnCount;
+		}
+		
+		@Override
+		public final int getChannelCount() {
+			return this.channelCount;
 		}
 		
 		@Override

@@ -7,8 +7,8 @@ public final class ImageOfInts extends Image.Abstract {
 	
 	private final int[] data;
 	
-	public ImageOfInts(final int rowCount, final int columnCount) {
-		super(rowCount, columnCount);
+	public ImageOfInts(final int rowCount, final int columnCount, final int channelCount) {
+		super(rowCount, columnCount, channelCount);
 		this.data = new int[rowCount * columnCount];
 	}
 	

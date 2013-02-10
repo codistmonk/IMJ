@@ -103,7 +103,7 @@ public class GrayscaleWatershed {
 		message("rowCount:", rowCount, "columnCount:", columnCount);
 		
 		message("Converting to grayscale:", new Date(timer.tic()));
-		final Image.Abstract image = Labeling.getMemoryManagementStrategy().newImage(rowCount, columnCount);
+		final Image.Abstract image = Labeling.getMemoryManagementStrategy().newImage(rowCount, columnCount, 1);
 		final int pixelCount = image.getPixelCount();
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
@@ -175,7 +175,7 @@ public class GrayscaleWatershed {
 		private final Feature feature;
 		
 		public VirtualImage(final Image rgbs, final Feature feature) {
-			super(rgbs.getRowCount(), rgbs.getColumnCount());
+			super(rgbs.getRowCount(), rgbs.getColumnCount(), rgbs.getChannelCount());
 			this.rgbs = rgbs;
 			this.feature = feature;
 		}
