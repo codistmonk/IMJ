@@ -1,14 +1,16 @@
 package imj.apps;
 
 import static imj.apps.GrayscaleWatershed.message;
+import static java.util.Locale.ENGLISH;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
-
 import imj.IMJTools.StatisticsSelector;
 import imj.Image;
 import imj.ImageComponent;
 import imj.ImageWrangler;
 import imj.Labeling;
 import imj.Labeling.MemoryManagementStrategy;
+import imj.Labeling.NeighborhoodShape.Distance;
 import imj.MorphologicalOperations.StructuringElement;
 import imj.ValueStatisticsFilter;
 
@@ -16,7 +18,6 @@ import java.awt.image.BufferedImage;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Date;
-import java.util.Locale;
 
 import javax.imageio.ImageIO;
 
@@ -41,14 +42,29 @@ public final class ValueStatFilter {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String imageId = arguments.get("file", "");
 		final int lod = arguments.get("lod", 0)[0];
-		final String prioritizeWhat = arguments.get("prioritize", "speed").toLowerCase(Locale.ENGLISH);
+		final String prioritizeWhat = arguments.get("prioritize", "speed").toLowerCase(ENGLISH);
 		
 		if ("memory".equals(prioritizeWhat)) {
 			Labeling.setMemoryManagementStrategy(MemoryManagementStrategy.PRIORITIZE_MEMORY);
 		}
 		
-		final StatisticsSelector selector = StatisticsSelector.MEAN;
-		final int[] structuringElement = StructuringElement.SIMPLE_CONNECTIVITY_8;
+		final StatisticsSelector selector = StatisticsSelector.valueOf(arguments.get("compute", "mean").toUpperCase(ENGLISH));
+		final int[] structuringElement;
+		
+		try {
+			final String[] structuringElementParameters = arguments.get("structuringElement", "disk,chessboard,1").split(",");
+			final Distance structuringElementDistance = Distance.valueOf(structuringElementParameters[1].toUpperCase(ENGLISH));
+			final double structuringElementRadius = Double.parseDouble(structuringElementParameters[2]);
+			
+			if ("disk".equals(structuringElementParameters[0].toLowerCase())) {
+				structuringElement = StructuringElement.newDisk(structuringElementRadius, structuringElementDistance);
+			} else {
+				throw new IllegalArgumentException("Invalid structuring element shape: " + structuringElementParameters[0]);
+			}
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+		
 		final TicToc timer = new TicToc();
 		
 		message("Loading image", imageId, "lod", lod);

@@ -66,10 +66,8 @@ public final class ImageWrangler {
 			return source;
 		}
 		
-		final LinearStorage result = new LinearStorage(rowCount, columnCount, false);
-		final int channelCount = zeroIfNull((Integer) source.getMetadata().get("channelCount"));
-		
-		result.getMetadata().put("channelCount", channelCount);
+		final LinearStorage result = new LinearStorage(rowCount, columnCount, source.getChannelCount(), false);
+		final int channelCount = source.getChannelCount();
 		
 		for (int rowIndex = 0, sourceRowIndex = 0; rowIndex < rowCount; ++rowIndex, sourceRowIndex += 2) {
 			for (int columnIndex = 0, sourceColumnIndex = 0; columnIndex < columnCount; ++columnIndex, sourceColumnIndex += 2) {
@@ -125,17 +123,15 @@ public final class ImageWrangler {
 			
 			final int rowCount = reader.getSizeY();
 			final int columnCount = reader.getSizeX();
+			final int channelCount = reader.getSizeC();
 			debugPrint("Allocating");
-			final LinearStorage result = new LinearStorage(rowCount, columnCount, false);
+			final LinearStorage result = new LinearStorage(rowCount, columnCount, channelCount, false);
 			debugPrint("Allocated in file:", result.getFile());
 			final int optimalTileRowCount = reader.getOptimalTileHeight();
 			final int optimalTileColumnCount = reader.getOptimalTileWidth();
-			final int channelCount = reader.getSizeC();
 			final int bufferRowCount;
 			final int bufferColumnCount;
 			final ProgressMonitor progressMonitor = new ProgressMonitor(null, "Loading " + imageId, null, 0, rowCount - 1);
-			
-			result.getMetadata().put("channelCount", channelCount);
 			
 			debugPrint("rowCount:", rowCount, "columnCount:", columnCount);
 			debugPrint("channelCount:", channelCount);

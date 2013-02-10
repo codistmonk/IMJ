@@ -93,7 +93,7 @@ public final class MultiScaleTest {
 		
 		final int rowCount = image.getRowCount();
 		final int columnCount = image.getColumnCount();
-		final Image result = new ImageOfInts(rowCount, columnCount);
+		final Image result = new ImageOfInts(rowCount, columnCount, 1);
 		
 		debugPrint("Performing adaptive variance analysis:", new Date(timer.tic()));
 		final double threshold = 100.0;

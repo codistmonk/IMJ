@@ -33,15 +33,15 @@ public final class LinearStorage extends Image.Abstract {
 	
 	private FloatBuffer chunkFloats;
 	
-	private LinearStorage(final int rowCount, final int columnCount, final File file, final RandomAccessFile data) {
-		super(rowCount, columnCount);
+	private LinearStorage(final int rowCount, final int columnCount, final int channelCount, final File file, final RandomAccessFile data) {
+		super(rowCount, columnCount, channelCount);
 		
 		try {
 			this.file = file;
 			this.deleteFileOnExit = false;
 			this.data = data;
-			this.absoluteBufferStartIndex = 2;
-			this.absoluteBufferEndIndex = 2 + min(MAXIMUM_BUFFER_SIZE, rowCount * columnCount);
+			this.absoluteBufferStartIndex = HEADER_DATUM_COUNT;
+			this.absoluteBufferEndIndex = HEADER_DATUM_COUNT + min(MAXIMUM_BUFFER_SIZE, rowCount * columnCount);
 			this.chunkBytes = this.data.getChannel().map(MapMode.READ_WRITE, this.absoluteBufferStartIndex * DATUM_SIZE,
 					(this.absoluteBufferEndIndex - this.absoluteBufferStartIndex) * DATUM_SIZE);
 			this.chunkInts = this.chunkBytes.asIntBuffer();
@@ -51,12 +51,12 @@ public final class LinearStorage extends Image.Abstract {
 		}
 	}
 	
-	public LinearStorage(final int rowCount, final int columnCount) {
-		this(rowCount, columnCount, true);
+	public LinearStorage(final int rowCount, final int columnCount, final int channelCount) {
+		this(rowCount, columnCount, channelCount, true);
 	}
 	
-	public LinearStorage(final int rowCount, final int columnCount, final boolean deleteFileOnExit) {
-		super(rowCount, columnCount);
+	public LinearStorage(final int rowCount, final int columnCount, final int channelCount, final boolean deleteFileOnExit) {
+		super(rowCount, columnCount, channelCount);
 		
 		try {
 			this.file = File.createTempFile("image", ".raw");
@@ -67,8 +67,8 @@ public final class LinearStorage extends Image.Abstract {
 			}
 			
 			this.data = new RandomAccessFile(this.file, "rw");
-			this.absoluteBufferStartIndex = 2;
-			this.absoluteBufferEndIndex = 2 + min(MAXIMUM_BUFFER_SIZE, rowCount * columnCount);
+			this.absoluteBufferStartIndex = HEADER_DATUM_COUNT;
+			this.absoluteBufferEndIndex = HEADER_DATUM_COUNT + min(MAXIMUM_BUFFER_SIZE, rowCount * columnCount);
 			this.chunkBytes = this.data.getChannel().map(MapMode.READ_WRITE, this.absoluteBufferStartIndex * DATUM_SIZE,
 					(this.absoluteBufferEndIndex - this.absoluteBufferStartIndex) * DATUM_SIZE);
 			this.chunkInts = this.chunkBytes.asIntBuffer();
@@ -76,6 +76,7 @@ public final class LinearStorage extends Image.Abstract {
 			
 			this.data.writeInt(rowCount);
 			this.data.writeInt(columnCount);
+			this.data.writeInt(channelCount);
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
@@ -116,7 +117,7 @@ public final class LinearStorage extends Image.Abstract {
 		
 		if (absoluteIndex < this.absoluteBufferStartIndex) {
 			this.absoluteBufferStartIndex = max(2, absoluteIndex - MAXIMUM_BUFFER_SIZE / 2);
-			this.absoluteBufferEndIndex = 2 + min(this.getPixelCount(), this.absoluteBufferStartIndex + MAXIMUM_BUFFER_SIZE);
+			this.absoluteBufferEndIndex = HEADER_DATUM_COUNT + min(this.getPixelCount(), this.absoluteBufferStartIndex + MAXIMUM_BUFFER_SIZE);
 			try {
 				this.chunkBytes = this.data.getChannel().map(MapMode.READ_WRITE, this.absoluteBufferStartIndex * DATUM_SIZE,
 						(this.absoluteBufferEndIndex - this.absoluteBufferStartIndex) * DATUM_SIZE);
@@ -127,7 +128,7 @@ public final class LinearStorage extends Image.Abstract {
 			this.chunkFloats = this.chunkBytes.asFloatBuffer();
 		} else if (this.absoluteBufferEndIndex <= absoluteIndex) {
 			this.absoluteBufferStartIndex = absoluteIndex - MAXIMUM_BUFFER_SIZE / 2;
-			this.absoluteBufferEndIndex = 2 + min(this.getPixelCount(), this.absoluteBufferStartIndex + MAXIMUM_BUFFER_SIZE);
+			this.absoluteBufferEndIndex = HEADER_DATUM_COUNT + min(this.getPixelCount(), this.absoluteBufferStartIndex + MAXIMUM_BUFFER_SIZE);
 			try {
 				this.chunkBytes = this.data.getChannel().map(MapMode.READ_WRITE, this.absoluteBufferStartIndex * DATUM_SIZE,
 						(this.absoluteBufferEndIndex - this.absoluteBufferStartIndex) * DATUM_SIZE);
@@ -159,8 +160,8 @@ public final class LinearStorage extends Image.Abstract {
 		final int absoluteIndex = index + HEADER_DATUM_COUNT;
 		
 		if (absoluteIndex < this.absoluteBufferStartIndex) {
-			this.absoluteBufferStartIndex = max(2, absoluteIndex - MAXIMUM_BUFFER_SIZE / 2);
-			this.absoluteBufferEndIndex = 2 + min(this.getPixelCount(), this.absoluteBufferStartIndex + MAXIMUM_BUFFER_SIZE);
+			this.absoluteBufferStartIndex = max(HEADER_DATUM_COUNT, absoluteIndex - MAXIMUM_BUFFER_SIZE / 2);
+			this.absoluteBufferEndIndex = HEADER_DATUM_COUNT + min(this.getPixelCount(), this.absoluteBufferStartIndex + MAXIMUM_BUFFER_SIZE);
 			try {
 				this.chunkBytes = this.data.getChannel().map(MapMode.READ_WRITE, this.absoluteBufferStartIndex * DATUM_SIZE,
 						(this.absoluteBufferEndIndex - this.absoluteBufferStartIndex) * DATUM_SIZE);
@@ -171,7 +172,7 @@ public final class LinearStorage extends Image.Abstract {
 			this.chunkFloats = this.chunkBytes.asFloatBuffer();
 		} else if (this.absoluteBufferEndIndex <= absoluteIndex) {
 			this.absoluteBufferStartIndex = absoluteIndex - MAXIMUM_BUFFER_SIZE / 2;
-			this.absoluteBufferEndIndex = 2 + min(this.getPixelCount(), this.absoluteBufferStartIndex + MAXIMUM_BUFFER_SIZE);
+			this.absoluteBufferEndIndex = HEADER_DATUM_COUNT + min(this.getPixelCount(), this.absoluteBufferStartIndex + MAXIMUM_BUFFER_SIZE);
 			try {
 				this.chunkBytes = this.data.getChannel().map(MapMode.READ_WRITE, this.absoluteBufferStartIndex * DATUM_SIZE,
 						(this.absoluteBufferEndIndex - this.absoluteBufferStartIndex) * DATUM_SIZE);
@@ -196,7 +197,7 @@ public final class LinearStorage extends Image.Abstract {
 	
 	public static final long DATUM_SIZE = max(Integer.SIZE, Float.SIZE) / 8;
 	
-	public static final int HEADER_DATUM_COUNT = 2;
+	public static final int HEADER_DATUM_COUNT = 3;
 	
 	public static final int MAXIMUM_BUFFER_SIZE = 268435456;
 	
@@ -205,10 +206,8 @@ public final class LinearStorage extends Image.Abstract {
 			final RandomAccessFile data = new RandomAccessFile(file, "rw");
 			final int rowCount = data.readInt();
 			final int columnCount = data.readInt();
-			final LinearStorage result = new LinearStorage(rowCount, columnCount, file, data);
-			
-			// FIXME Metadata are missing from file!
-			result.getMetadata().put("channelCount", (int) (data.length() / rowCount / columnCount));
+			final int channelCount = data.readInt();
+			final LinearStorage result = new LinearStorage(rowCount, columnCount, channelCount, file, data);
 			
 			return result;
 		} catch (final IOException exception) {

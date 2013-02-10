@@ -16,7 +16,7 @@ public final class ImageOfBufferedImage extends Image.Abstract {
 	private final char[] data;
 	
 	public ImageOfBufferedImage(final BufferedImage source, final Feature feature) {
-		super(source.getHeight(), source.getWidth());
+		super(source.getHeight(), source.getWidth(), feature.getResultChannelCount());
 		this.data = new char[this.getRowCount() * this.getColumnCount()];
 		final boolean hasAlpha = source.getColorModel().hasAlpha();
 		final WritableRaster raster = source.getRaster();
@@ -104,13 +104,23 @@ public final class ImageOfBufferedImage extends Image.Abstract {
 				return (char) color(rgb, hasAlpha).getRed();
 			}
 			
+			@Override
+			public final int getResultChannelCount() {
+				return 1;
+			}
+			
 		}, GREEN {
 				
-				@Override
-				public final char getValue(final int rgb, final boolean hasAlpha) {
-					return (char) color(rgb, hasAlpha).getGreen();
-				}
-				
+			@Override
+			public final char getValue(final int rgb, final boolean hasAlpha) {
+				return (char) color(rgb, hasAlpha).getGreen();
+			}
+			
+			@Override
+			public final int getResultChannelCount() {
+				return 1;
+			}
+			
 		}, BLUE {
 			
 			@Override
@@ -118,11 +128,21 @@ public final class ImageOfBufferedImage extends Image.Abstract {
 				return (char) color(rgb, hasAlpha).getBlue();
 			}
 			
+			@Override
+			public final int getResultChannelCount() {
+				return 1;
+			}
+			
 		}, ALPHA {
 			
 			@Override
 			public final char getValue(final int rgb, final boolean hasAlpha) {
 				return (char) color(rgb, hasAlpha).getAlpha();
+			}
+			
+			@Override
+			public final int getResultChannelCount() {
+				return 1;
 			}
 			
 		}, MIN_RGB {
@@ -134,6 +154,11 @@ public final class ImageOfBufferedImage extends Image.Abstract {
 				return (char) min(min(color.getRed(), color.getGreen()), color.getBlue());
 			}
 			
+			@Override
+			public final int getResultChannelCount() {
+				return 1;
+			}
+			
 		}, MIN_RGBA {
 			
 			@Override
@@ -141,6 +166,11 @@ public final class ImageOfBufferedImage extends Image.Abstract {
 				final Color color = color(rgb, hasAlpha);
 				
 				return (char) min(min(color.getRed(), color.getGreen()), min(color.getBlue(), color.getAlpha()));
+			}
+			
+			@Override
+			public final int getResultChannelCount() {
+				return 1;
 			}
 			
 		}, MAX_RGB {
@@ -152,6 +182,11 @@ public final class ImageOfBufferedImage extends Image.Abstract {
 				return (char) max(max(color.getRed(), color.getGreen()), color.getBlue());
 			}
 			
+			@Override
+			public final int getResultChannelCount() {
+				return 1;
+			}
+			
 		}, MAX_RGBA {
 			
 			@Override
@@ -161,11 +196,21 @@ public final class ImageOfBufferedImage extends Image.Abstract {
 				return (char) max(max(color.getRed(), color.getGreen()), max(color.getBlue(), color.getAlpha()));
 			}
 			
+			@Override
+			public final int getResultChannelCount() {
+				return 1;
+			}
+			
 		}, HUE {
 			
 			@Override
 			public final char getValue(final int rgb, final boolean hasAlpha) {
 				return (char) (hsb(rgb, hasAlpha)[0] * 255);
+			}
+			
+			@Override
+			public final int getResultChannelCount() {
+				return 1;
 			}
 			
 		}, SATURATION {
@@ -175,11 +220,21 @@ public final class ImageOfBufferedImage extends Image.Abstract {
 				return (char) (hsb(rgb, hasAlpha)[1] * 255);
 			}
 			
+			@Override
+			public final int getResultChannelCount() {
+				return 1;
+			}
+			
 		}, BRIGHTNESS {
 			
 			@Override
 			public final char getValue(final int rgb, final boolean hasAlpha) {
 				return (char) (hsb(rgb, hasAlpha)[2] * 255);
+			}
+			
+			@Override
+			public final int getResultChannelCount() {
+				return 1;
 			}
 			
 		}, TO_UINT_8 {
@@ -189,7 +244,14 @@ public final class ImageOfBufferedImage extends Image.Abstract {
 				return (char) (rgb & 0xFF);
 			}
 			
+			@Override
+			public final int getResultChannelCount() {
+				return 1;
+			}
+			
 		};
+		
+		public abstract int getResultChannelCount();
 		
 		public abstract char getValue(int rgb, boolean hasAlpha);
 		

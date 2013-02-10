@@ -37,7 +37,11 @@ public abstract class Labeling {
 	}
 	
 	protected Labeling(final Image image) {
-		this(image, getMemoryManagementStrategy().newImage(image.getRowCount(), image.getColumnCount()));
+		this(image, getMemoryManagementStrategy().newImage(image.getRowCount(), image.getColumnCount(), image.getChannelCount()));
+	}
+	
+	protected Labeling(final Image image, final int resultChannelCount) {
+		this(image, getMemoryManagementStrategy().newImage(image.getRowCount(), image.getColumnCount(), resultChannelCount));
 	}
 	
 	public final Image getImage() {
@@ -192,21 +196,21 @@ public abstract class Labeling {
 		PRIORITIZE_SPEED {
 			
 			@Override
-			public final ImageOfInts newImage(final int rowCount, final int columnCount) {
-				return new ImageOfInts(rowCount, columnCount);
+			public final ImageOfInts newImage(final int rowCount, final int columnCount, final int channelCount) {
+				return new ImageOfInts(rowCount, columnCount, channelCount);
 			}
 			
 		},
 		PRIORITIZE_MEMORY {
 			
 			@Override
-			public final LinearStorage newImage(final int rowCount, final int columnCount) {
-				return new LinearStorage(rowCount, columnCount);
+			public final LinearStorage newImage(final int rowCount, final int columnCount, final int channelCount) {
+				return new LinearStorage(rowCount, columnCount, channelCount);
 			}
 			
 		};
 		
-		public abstract Image.Abstract newImage(int rowCount, int columnCount);
+		public abstract Image.Abstract newImage(int rowCount, int columnCount, int channelCount);
 		
 	}
 	

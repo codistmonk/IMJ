@@ -95,19 +95,23 @@ public final class IMJTools {
 	}
 	
 	public static final int alpha(final int rgba) {
-		return (rgba >> 24) & 0x000000FF;
+		return channelValue(rgba, 3);
 	}
 	
 	public static final int red(final int rgba) {
-		return (rgba >> 16) & 0x000000FF;
+		return channelValue(rgba, 2);
 	}
 	
 	public static final int green(final int rgba) {
-		return (rgba >> 8) & 0x000000FF;
+		return channelValue(rgba, 1);
 	}
 	
 	public static final int blue(final int rgba) {
-		return rgba & 0x000000FF;
+		return channelValue(rgba, 0);
+	}
+	
+	public static final int channelValue(final int rgba, final int channelIndex) {
+		return (rgba >> (channelIndex << 3)) & 0x000000FF;
 	}
 	
 	public static final int square(final int x) {
@@ -122,7 +126,7 @@ public final class IMJTools {
 		final int rowCount = image.getRowCount();
 		final int columnCount = image.getColumnCount();
 		final int pixelCount = rowCount * columnCount;
-		final Image result = new ImageOfInts(rowCount, columnCount);
+		final Image result = new ImageOfInts(rowCount, columnCount, 1);
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
 			result.setValue(pixel, image.getValue(pixel) == 0 ? 0 : 1);
@@ -140,9 +144,13 @@ public final class IMJTools {
 	}
 	
 	public static final Image image(final int[][] data) {
+		return image(1, data);
+	}
+	
+	public static final Image image(final int channelCount, final int[][] data) {
 		final int rowCount = data.length;
 		final int columnCount = data[0].length;
-		final Image result = new ImageOfInts(rowCount, columnCount);
+		final Image result = new ImageOfInts(rowCount, columnCount, channelCount);
 		
 		for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex) {
 			for (int columnIndex = 0; columnIndex < columnCount; ++columnIndex) {
@@ -174,7 +182,7 @@ public final class IMJTools {
 		final int oldAmpltiude = oldMaximum - oldMinimum;
 		final int newAmplitude = newMaximum - newMinimum;
 		
-		return new Image.Abstract(image.getRowCount(), image.getColumnCount()) {
+		return new Image.Abstract(image.getRowCount(), image.getColumnCount(), 1) {
 			
 			@Override
 			public final int getValue(final int index) {
@@ -256,7 +264,7 @@ public final class IMJTools {
 	public static final Image newImage(final Image labels, final Statistics[] statistics, final StatisticsSelector feature) {
 		final int rowCount = labels.getRowCount();
 		final int columnCount = labels.getColumnCount();
-		final Image result = new ImageOfInts(rowCount, columnCount);
+		final Image result = new ImageOfInts(rowCount, columnCount, 1);
 		final int pixelCount = rowCount * columnCount;
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {

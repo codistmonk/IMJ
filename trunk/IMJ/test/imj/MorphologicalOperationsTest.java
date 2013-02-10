@@ -12,7 +12,7 @@ import org.junit.Test;
 /**
  * @author codistmonk (creation 2013-01-27)
  */
-public final class MorphologyTest {
+public final class MorphologicalOperationsTest {
 	
 	@Test
 	public final void testErosion1() {

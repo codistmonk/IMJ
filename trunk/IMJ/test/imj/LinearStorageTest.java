@@ -28,7 +28,7 @@ public final class LinearStorageTest {
 		final int n = 8192;
 		
 		debugPrint("Allocating image:", new Date(timer.tic()));
-		final Image.Abstract image = new ImageOfInts(n, n);
+		final Image.Abstract image = new ImageOfInts(n, n, 1);
 		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		final int pixelCount = image.getPixelCount();
 		
@@ -53,7 +53,7 @@ public final class LinearStorageTest {
 		final int n = 8192;
 		
 		debugPrint("Allocating image:", new Date(timer.tic()));
-		final Image.Abstract image = new LinearStorage(n, n);
+		final Image.Abstract image = new LinearStorage(n, n, 1);
 		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
 		final int pixelCount = image.getPixelCount();
@@ -74,7 +74,7 @@ public final class LinearStorageTest {
 		assertTrue(ok);
 	}
 	
-	@Test
+	@Test(expected=OutOfMemoryError.class)
 	public final void testDirectByteBuffer() {
 		final TicToc timer = new TicToc();
 		final int n = 8192;

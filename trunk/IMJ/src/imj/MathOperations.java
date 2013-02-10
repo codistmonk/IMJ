@@ -1,5 +1,6 @@
 package imj;
 
+import static imj.IMJTools.channelValue;
 import static java.lang.Math.abs;
 import static java.lang.Math.log;
 import static java.lang.Math.log10;
@@ -8,6 +9,7 @@ import static java.lang.Math.min;
 import static java.lang.Math.pow;
 import static java.lang.Math.sqrt;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-01-27)
@@ -20,30 +22,67 @@ public final class MathOperations {
 	
 	public static final Image compute(final Image left, final BinaryOperator operator, final Image right, final Image result) {
 		final int pixelCount = result.getRowCount() * result.getColumnCount();
+		final int channelCount = left.getChannelCount();
 		
-		for (int pixel = 0; pixel < pixelCount; ++pixel) {
-			result.setValue(pixel, operator.evaluate(pixel, left.getValue(pixel), right.getValue(pixel)));
+		if (1 < channelCount) {
+			final int alpha = channelCount < 4 ? 0xFF000000 : 0;
+			
+			for (int pixel = 0; pixel < pixelCount; ++pixel) {
+				int resultPixelValue = 0;
+				
+				for (int channel = 0; channel < channelCount; ++channel) {
+					final int leftChannelValue = channelValue(left.getValue(pixel), channel);
+					final int rightChannelValue = channelValue(right.getValue(pixel), channel);
+					
+					resultPixelValue = (resultPixelValue << 8) |
+							min(255, operator.evaluate(pixel, leftChannelValue, rightChannelValue));
+				}
+				
+				result.setValue(pixel, resultPixelValue | alpha);
+			}
+		} else {
+			for (int pixel = 0; pixel < pixelCount; ++pixel) {
+				result.setValue(pixel, operator.evaluate(pixel, left.getValue(pixel), right.getValue(pixel)));
+			}
 		}
 		
 		return result;
 	}
 	
 	public static final Image compute(final Image left, final BinaryOperator operator, final Image right) {
-		return compute(left, operator, right, new ImageOfInts(left.getRowCount(), left.getColumnCount()));
+		return compute(left, operator, right, new ImageOfInts(left.getRowCount(), left.getColumnCount(), left.getChannelCount()));
 	}
 	
 	public static final Image compute(final UnaryOperator operator, final Image image, final Image result) {
 		final int pixelCount = result.getRowCount() * result.getColumnCount();
+		final int channelCount = image.getChannelCount();
 		
-		for (int pixel = 0; pixel < pixelCount; ++pixel) {
-			result.setValue(pixel, operator.evaluate(pixel, image.getValue(pixel)));
+		if (1 < channelCount) {
+			final int alpha = channelCount < 4 ? 0xFF000000 : 0;
+			
+			for (int pixel = 0; pixel < pixelCount; ++pixel) {
+				int resultPixelValue = 0;
+				
+				for (int channel = channelCount - 1; 0 <= channel; --channel) {
+					final int channelValue = channelValue(image.getValue(pixel), channel);
+					
+					resultPixelValue = (resultPixelValue << 8) | min(255, operator.evaluate(pixel, channelValue));
+				}
+				
+				result.setValue(pixel, resultPixelValue | alpha);
+			}
+		} else {
+			for (int pixel = 0; pixel < pixelCount; ++pixel) {
+				result.setValue(pixel, operator.evaluate(pixel, image.getValue(pixel)));
+			}
 		}
+		
 		
 		return result;
 	}
 	
 	public static final Image compute(final UnaryOperator operator, final Image image) {
-		return compute(operator, image, new ImageOfInts(image.getRowCount(), image.getColumnCount()));
+		return compute(operator, image, new ImageOfInts(image.getRowCount(), image.getColumnCount(), image.getChannelCount()));
 	}
 	
 	/**

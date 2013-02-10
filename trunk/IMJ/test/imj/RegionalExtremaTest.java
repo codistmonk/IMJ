@@ -4,6 +4,7 @@ import static imj.IMJTools.binary;
 import static imj.IMJTools.image;
 import static imj.Labeling.NeighborhoodShape.CONNECTIVITY_4;
 import static imj.Labeling.NeighborhoodShape.CONNECTIVITY_8;
+import static java.lang.Integer.toHexString;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 
@@ -269,7 +270,10 @@ public final class RegionalExtremaTest {
 			final int actualPixelValue = actual.getValue(pixel);
 			
 			if (expectedPixelValue != actualPixelValue) {
-				throw new AssertionError("Mismatching pixel " + pixel + " (expected: " + expectedPixelValue + " actual: " + actualPixelValue + ")");
+				final String expectedAsString = 1 == expected.getChannelCount() ? "" + expectedPixelValue : toHexString(expectedPixelValue); 
+				final String actualAsString = 1 == actual.getChannelCount() ? "" + actualPixelValue : toHexString(actualPixelValue);
+				
+				throw new AssertionError("Mismatching pixel " + pixel + " (expected: " + expectedAsString + " actual: " + actualAsString + ")");
 			}
 		}
 	}
