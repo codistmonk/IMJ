@@ -13,6 +13,7 @@ import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import java.io.File;
 import java.io.IOException;
 import java.util.Date;
+import java.util.Locale;
 import java.util.prefs.Preferences;
 
 import javax.swing.ProgressMonitor;
@@ -146,7 +147,8 @@ public final class ImageWrangler {
 			}
 			
 			final byte[] buffer = new byte[bufferRowCount * bufferColumnCount * channelCount];
-				
+			final boolean isPGM = "portable gray map".equals(reader.getFormat().toLowerCase(Locale.ENGLISH));
+			
 			for (int y = 0; y < rowCount && !progressMonitor.isCanceled(); y += bufferRowCount) {
 				final int h = y + bufferRowCount <= rowCount ? bufferRowCount : rowCount - y;
 				final int endRowIndex = y + h;
@@ -172,9 +174,20 @@ public final class ImageWrangler {
 								// alpha
 								value = unsigned(buffer[i + (channelCount - 1) * channelSize]);
 							case 3:
-								final int red = unsigned(buffer[i + 0 * channelSize]);
-								final int green = unsigned(buffer[i + 1 * channelSize]);
-								final int blue = unsigned(buffer[i + 2 * channelSize]);
+								final int red;
+								final int green;
+								final int blue;
+								
+								if (isPGM) {
+									red = unsigned(buffer[i * channelCount + 0]);
+									green = unsigned(buffer[i * channelCount + 1]);
+									blue = unsigned(buffer[i * channelCount + 2]);
+								} else {
+									red = unsigned(buffer[i + 0 * channelSize]);
+									green = unsigned(buffer[i + 1 * channelSize]);
+									blue = unsigned(buffer[i + 2 * channelSize]);
+								}
+								
 								value = rgba(value, red, green, blue);
 								break;
 							}
