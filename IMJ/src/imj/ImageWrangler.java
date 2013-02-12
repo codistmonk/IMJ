@@ -149,6 +149,11 @@ public final class ImageWrangler {
 			final byte[] buffer = new byte[bufferRowCount * bufferColumnCount * channelCount];
 			final boolean isPGM = "portable gray map".equals(reader.getFormat().toLowerCase(Locale.ENGLISH));
 			
+			if (isPGM) {
+				// XXX This fixes a defect in Bio-Formats PPM loading, but is it always OK?
+				reader.getCoreMetadata()[0].interleaved = true;
+			}
+			
 			for (int y = 0; y < rowCount && !progressMonitor.isCanceled(); y += bufferRowCount) {
 				final int h = y + bufferRowCount <= rowCount ? bufferRowCount : rowCount - y;
 				final int endRowIndex = y + h;
