@@ -1,25 +1,34 @@
 package imj.apps;
 
+import static imj.IMJTools.blue;
+import static imj.IMJTools.green;
+import static imj.IMJTools.red;
 import static java.lang.Double.isInfinite;
 import static java.lang.Double.isNaN;
+import static net.sourceforge.aprog.af.AFTools.item;
 import static net.sourceforge.aprog.af.AFTools.newAboutItem;
 import static net.sourceforge.aprog.af.AFTools.newPreferencesItem;
 import static net.sourceforge.aprog.af.AFTools.newQuitItem;
 import static net.sourceforge.aprog.i18n.Messages.setMessagesBase;
+import static net.sourceforge.aprog.swing.SwingTools.checkAWT;
 import static net.sourceforge.aprog.swing.SwingTools.menuBar;
 import static net.sourceforge.aprog.swing.SwingTools.packAndCenter;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.useSystemLookAndFeel;
 import static net.sourceforge.aprog.swing.SwingTools.I18N.menu;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getThisPackagePath;
+import imj.IMJTools;
 import imj.Image;
 import imj.ImageWrangler;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.KeyAdapter;
@@ -27,8 +36,13 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.util.Arrays;
 
+import javax.swing.ImageIcon;
 import javax.swing.JComponent;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
@@ -38,8 +52,12 @@ import net.sourceforge.aprog.af.AFTools;
 import net.sourceforge.aprog.af.AbstractAFAction;
 import net.sourceforge.aprog.af.MacOSXTools;
 import net.sourceforge.aprog.context.Context;
+import net.sourceforge.aprog.events.Variable;
+import net.sourceforge.aprog.events.Variable.Listener;
+import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-13)
@@ -70,6 +88,11 @@ public final class Show {
 	 */
 	public static final String APPLICATION_ICON_PATH = "imj/apps/thumbnail.png";
 	
+	/**
+	 * {@value}.
+	 */
+	public static final String ACTIONS_TOGGLE_HISTOGRAMS = "actions.toggleHistograms";
+	
 	public static final Context newContext() {
 		final Context result = AFTools.newContext();
 		
@@ -89,16 +112,48 @@ public final class Show {
 			
 		};
 		
+		new AbstractAFAction(result, ACTIONS_TOGGLE_HISTOGRAMS) {
+			
+			@Override
+			public final void perform() {
+				JDialog histogramsDialog = result.get("histogramsDialog");
+				
+				if (histogramsDialog == null) {
+					final AFMainFrame mainFrame = result.get(AFConstants.Variables.MAIN_FRAME);
+					
+					histogramsDialog = new JDialog(mainFrame, "Histograms");
+					
+					histogramsDialog.add(scrollable(new HistogramsPanel(result)));
+					
+					result.set("histogramsDialog", histogramsDialog);
+				}
+				
+				histogramsDialog.setVisible(!histogramsDialog.isVisible());
+			}
+			
+		};
+		
 		result.set(AFConstants.Variables.MAIN_MENU_BAR, menuBar(
 				menu("Application",
 						newAboutItem(result),
 						null,
 						newPreferencesItem(result),
 						null,
-						newQuitItem(result))));
+						newQuitItem(result)),
+				menu("Tools",
+						newHistogramsItem(result))
+		));
+		
+		result.set("image", null, Image.class);
 		
 		return result;
 	}
+	
+    public static final JMenuItem newHistogramsItem(final Context context) {
+    	checkAWT();
+    	
+        return item("Histograms", context, ACTIONS_TOGGLE_HISTOGRAMS);
+    }
 	
 	/**
 	 * @param commandLineArguments
@@ -124,11 +179,12 @@ public final class Show {
 			
 			@Override
 			public final void run() {
-				final AFMainFrame frame = AFMainFrame.newMainFrame(newContext());
+				final Context context = newContext();
+				final AFMainFrame frame = AFMainFrame.newMainFrame(context);
 				
 				frame.setPreferredSize(new Dimension(800, 600));
 				
-				frame.add(scrollable(centered(new BigImageComponent(imageId))));
+				frame.add(scrollable(centered(new BigImageComponent(context, imageId))));
 				
 				packAndCenter(frame).setVisible(true);
 			}
@@ -147,7 +203,134 @@ public final class Show {
 	/**
 	 * @author codistmonk (creation 2013-02-13)
 	 */
+	public static final class HistogramsPanel extends JPanel {
+		
+		private final Context context;
+		
+		private final int[][] allCounts;
+		
+		private final float[] hsbBuffer;
+		
+		private final BufferedImage[] histogramImages;
+		
+		public HistogramsPanel(final Context context) {
+			super(new GridLayout(5, 1));
+			this.context = context;
+			this.allCounts = new int[5][256];
+			this.hsbBuffer = new float[3];
+			this.histogramImages = new BufferedImage[5];
+			
+			for (int i = 0; i < 5; ++i) {
+				this.histogramImages[i] = new BufferedImage(256, 200, BufferedImage.TYPE_3BYTE_BGR);
+				this.add(new JLabel(new ImageIcon(this.histogramImages[i])));
+			}
+			
+			final Variable<Image> imageVariable = context.getVariable("image");
+			
+			imageVariable.addListener(new Listener<Image>() {
+				
+				@Override
+				public final void valueChanged(final ValueChangedEvent<Image, ?> event) {
+					HistogramsPanel.this.update();
+				}
+				
+			});
+			
+			this.update();
+		}
+		
+		final void update() {
+			final Image image = this.context.get("image");
+			
+			if (image != null) {
+				final int pixelCount = image.getRowCount() * image.getColumnCount();
+				
+				this.resetCounts();
+				
+				debugPrint("Counting...");
+				
+				for (int pixel = 0; pixel < pixelCount; ++pixel) {
+					this.count(image.getValue(pixel));
+				}
+				
+				debugPrint("Done");
+				
+				debugPrint("Updating histogram images...");
+				
+				this.updateHistogramImages();
+				
+				debugPrint("Done");
+			}
+		}
+		
+		private final void resetCounts() {
+			for (final int[] counts : this.allCounts) {
+				Arrays.fill(counts, 0);
+			}
+		}
+		
+		private final void count(final int rgb) {
+			final int red = red(rgb);
+			final int green = green(rgb);
+			final int blue = blue(rgb);
+			
+			++this.allCounts[0][red];
+			++this.allCounts[1][green];
+			++this.allCounts[2][blue];
+			
+			Color.RGBtoHSB(red, green, blue, this.hsbBuffer);
+			
+			++this.allCounts[3][(int) (this.hsbBuffer[0] * 255)];
+			++this.allCounts[4][(int) (this.hsbBuffer[2] * 255)];
+		}
+		
+		private final void updateHistogramImages() {
+			for (int i = 0; i < 5; ++i) {
+				final BufferedImage image = this.histogramImages[i];
+				final int[] counts = this.allCounts[i];
+				final Graphics2D g = image.createGraphics();
+				
+				g.setColor(Color.BLACK);
+				g.fillRect(0, 0, 256, 200);
+				
+				g.setColor(Color.WHITE);
+				
+				final int maxCount = max(counts);
+				
+				if (maxCount == 0) {
+					continue;
+				}
+				
+				for (int x = 0; x < 256; ++x) {
+					g.drawLine(x, 200 - 1, x, 200 - 1 - counts[x] * 200 / maxCount);
+				}
+				
+				g.dispose();
+			}
+			
+			this.repaint();
+		}
+		
+	}
+	
+	public static final int max(final int... values) {
+		int result = values[0];
+		
+		for (final int value : values) {
+			if (result < value) {
+				result = value;
+			}
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-13)
+	 */
 	public static final class BigImageComponent extends JComponent {
+		
+		private final Context context;
 		
 		private final String imageId;
 		
@@ -161,7 +344,8 @@ public final class Show {
 		
 		private final Rectangle viewport;
 		
-		public BigImageComponent(final String imageId) {
+		public BigImageComponent(final Context context, final String imageId) {
+			this.context = context;
 			this.imageId = imageId;
 			this.viewport = new Rectangle();
 			
@@ -237,6 +421,9 @@ public final class Show {
 		
 		public final void refreshImage() {
 			this.image = ImageWrangler.INSTANCE.load(this.getImageId(), this.getLod());
+			
+			this.context.set("image", this.image);
+			
 			final Rectangle viewport = this.getVisibleRect();
 			final double scaleVariation = this.image.getColumnCount() / (double) this.getPreferredSize().getWidth();
 			
