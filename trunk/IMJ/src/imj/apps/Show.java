@@ -108,7 +108,7 @@ public final class Show {
 		if (commandLineArguments.length != 2) {
 			System.out.println("Arguments: file <imageId>");
 			
-//			return;
+			return;
 		}
 		
 		MacOSXTools.setupUI(APPLICATION_NAME, APPLICATION_ICON_PATH);
@@ -116,8 +116,7 @@ public final class Show {
 		setMessagesBase(getThisPackagePath() + "i18n/Messages");
 		
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
-//		final String imageId = arguments.get("file", "");
-		final String imageId = arguments.get("file", "../Libraries/images/16088.svs");
+		final String imageId = arguments.get("file", "");
 		
 		ImageWrangler.INSTANCE.load(imageId);
 		
