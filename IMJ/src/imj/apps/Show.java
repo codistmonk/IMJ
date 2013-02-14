@@ -18,7 +18,6 @@ import static net.sourceforge.aprog.swing.SwingTools.useSystemLookAndFeel;
 import static net.sourceforge.aprog.swing.SwingTools.I18N.menu;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getThisPackagePath;
-import imj.IMJTools;
 import imj.Image;
 import imj.ImageWrangler;
 
@@ -57,7 +56,6 @@ import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-13)
@@ -207,23 +205,33 @@ public final class Show {
 		
 		private final Context context;
 		
-		private final int[][] allCounts;
+		private final int[] redCounts;
+		
+		private final int[] greenCounts;
+		
+		private final int[] blueCounts;
+		
+		private final int[] hueCounts;
 		
 		private final float[] hsbBuffer;
 		
-		private final BufferedImage[] histogramImages;
+		private final BufferedImage redGreenBlueBrightnessHistogramImage;
+		
+		private final BufferedImage hueHistogramImage;
 		
 		public HistogramsPanel(final Context context) {
-			super(new GridLayout(5, 1));
+			super(new GridLayout(2, 1));
 			this.context = context;
-			this.allCounts = new int[5][256];
+			this.redCounts = new int[256];
+			this.greenCounts = new int[256];
+			this.blueCounts = new int[256];
+			this.hueCounts = new int[256];
 			this.hsbBuffer = new float[3];
-			this.histogramImages = new BufferedImage[5];
+			this.redGreenBlueBrightnessHistogramImage = new BufferedImage(256, 200, BufferedImage.TYPE_3BYTE_BGR);
+			this.hueHistogramImage = new BufferedImage(256, 200, BufferedImage.TYPE_3BYTE_BGR);
 			
-			for (int i = 0; i < 5; ++i) {
-				this.histogramImages[i] = new BufferedImage(256, 200, BufferedImage.TYPE_3BYTE_BGR);
-				this.add(new JLabel(new ImageIcon(this.histogramImages[i])));
-			}
+			this.add(new JLabel(new ImageIcon(this.redGreenBlueBrightnessHistogramImage)));
+			this.add(new JLabel(new ImageIcon(this.hueHistogramImage)));
 			
 			final Variable<Image> imageVariable = context.getVariable("image");
 			
@@ -264,9 +272,10 @@ public final class Show {
 		}
 		
 		private final void resetCounts() {
-			for (final int[] counts : this.allCounts) {
-				Arrays.fill(counts, 0);
-			}
+			Arrays.fill(this.redCounts, 0);
+			Arrays.fill(this.greenCounts, 0);
+			Arrays.fill(this.blueCounts, 0);
+			Arrays.fill(this.hueCounts, 0);
 		}
 		
 		private final void count(final int rgb) {
@@ -274,35 +283,67 @@ public final class Show {
 			final int green = green(rgb);
 			final int blue = blue(rgb);
 			
-			++this.allCounts[0][red];
-			++this.allCounts[1][green];
-			++this.allCounts[2][blue];
+			++this.redCounts[red];
+			++this.greenCounts[green];
+			++this.blueCounts[blue];
 			
 			Color.RGBtoHSB(red, green, blue, this.hsbBuffer);
 			
-			++this.allCounts[3][(int) (this.hsbBuffer[0] * 255)];
-			++this.allCounts[4][(int) (this.hsbBuffer[2] * 255)];
+			++this.hueCounts[(int) (this.hsbBuffer[0] * 255)];
 		}
 		
 		private final void updateHistogramImages() {
-			for (int i = 0; i < 5; ++i) {
-				final BufferedImage image = this.histogramImages[i];
-				final int[] counts = this.allCounts[i];
-				final Graphics2D g = image.createGraphics();
+			{
+				final Graphics2D g = this.redGreenBlueBrightnessHistogramImage.createGraphics();
 				
 				g.setColor(Color.BLACK);
 				g.fillRect(0, 0, 256, 200);
 				
-				g.setColor(Color.WHITE);
+				final int maxCount = max(max(this.redCounts), max(this.greenCounts), max(this.blueCounts));
 				
-				final int maxCount = max(counts);
-				
-				if (maxCount == 0) {
-					continue;
+				for (int x = 0; x < 255; ++x) {
+					final int red = this.redCounts[x];
+					final int green = this.greenCounts[x];
+					final int blue = this.blueCounts[x];
+					final int brightness = max(red, green, blue);
+					
+					g.setColor(Color.WHITE);
+					g.fillRect(x + 0, 200 - 1 - brightness * 200 / maxCount, 1, brightness);
 				}
 				
-				for (int x = 0; x < 256; ++x) {
-					g.drawLine(x, 200 - 1, x, 200 - 1 - counts[x] * 200 / maxCount);
+				for (int x = 0; x < 255; ++x) {
+					final int red = this.redCounts[x];
+					final int nextRed = this.redCounts[x + 1];
+					final int green = this.greenCounts[x];
+					final int nextGreen = this.greenCounts[x + 1];
+					final int blue = this.blueCounts[x];
+					final int nextBlue = this.blueCounts[x + 1];
+					
+					g.setColor(Color.RED);
+					g.drawLine(x + 0, 200 - 1 - red * 200 / maxCount, x + 1, 200 - 1 - nextRed * 200 / maxCount);
+					g.setColor(Color.GREEN);
+					g.drawLine(x + 0, 200 - 1 - green * 200 / maxCount, x + 1, 200 - 1 - nextGreen * 200 / maxCount);
+					g.setColor(Color.BLUE);
+					g.drawLine(x + 0, 200 - 1 - blue * 200 / maxCount, x + 1, 200 - 1 - nextBlue * 200 / maxCount);
+				}
+				
+				g.dispose();
+			}
+			
+			{
+				final Graphics2D g = this.hueHistogramImage.createGraphics();
+				
+				g.setColor(Color.BLACK);
+				g.fillRect(0, 0, 256, 200);
+				
+				final int maxCount = max(this.hueCounts);
+				
+				if (0 < maxCount) {
+					g.setColor(Color.WHITE);
+					
+					for (int x = 0; x < 256; ++x) {
+						g.drawLine(x, 200 - 1, x, 200 - 1 - this.hueCounts[x] * 200 / maxCount);
+					}
 				}
 				
 				g.dispose();
@@ -446,6 +487,8 @@ public final class Show {
 				if (scaleVariation < 1.0) {
 					this.invalidate();
 				}
+				
+				this.repaint();
 			}
 		}
 		
@@ -484,10 +527,16 @@ public final class Show {
 				}
 				
 				for (int y = newViewport.y; y < endY; ++y) {
+					if (y < 0 || this.image.getRowCount() <= y) {
+						continue;
+					}
+					
 					for (int x = newViewport.x; x < endX; ++x) {
-						if (!this.viewport.contains(x, y)) {
-							this.buffer2.setRGB(x - newViewport.x, y - newViewport.y, this.image.getValue(y, x));
+						if (y < 0 || this.image.getRowCount() <= y || this.viewport.contains(x, y)) {
+							continue;
 						}
+						
+						this.buffer2.setRGB(x - newViewport.x, y - newViewport.y, this.image.getValue(y, x));
 					}
 				}
 				
