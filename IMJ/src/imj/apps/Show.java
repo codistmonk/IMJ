@@ -16,11 +16,14 @@ import static net.sourceforge.aprog.swing.SwingTools.packAndCenter;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.useSystemLookAndFeel;
 import static net.sourceforge.aprog.swing.SwingTools.I18N.menu;
+import static net.sourceforge.aprog.tools.Tools.array;
+import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getThisPackagePath;
 import imj.Image;
 import imj.ImageWrangler;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -35,8 +38,14 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
@@ -56,6 +65,7 @@ import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-13)
@@ -143,6 +153,41 @@ public final class Show {
 		));
 		
 		result.set("image", null, Image.class);
+		result.set("lod", null, Integer.class);
+		result.set("xy", null, Point.class);
+		result.set("rgb", null, String.class);
+		result.set("hsb", null, String.class);
+		
+		final Variable<Point> xyVariable = result.getVariable("xy");
+		
+		xyVariable.addListener(new Listener<Point>() {
+			
+			private final float[] hsbBuffer = new float[4];
+			
+			@Override
+			public final void valueChanged(final ValueChangedEvent<Point, ?> event) {
+				final Image image = result.get("image");
+				
+				if (image != null) {
+					final Point xy = event.getNewValue();
+					final int rgb = image.getValue(xy.y, xy.x);
+					final int red = red(rgb);
+					final int green = green(rgb);
+					final int blue = blue(rgb);
+					
+					Color.RGBtoHSB(red, green, blue, this.hsbBuffer);
+					
+					result.set("rgb", "(" + red + " " + green + " " + blue + ")");
+					
+					final int hue = (int) (this.hsbBuffer[0] * 255);
+					final int saturation = (int) (this.hsbBuffer[1] * 255);
+					final int brightness = (int) (this.hsbBuffer[2] * 255);
+					
+					result.set("hsb", "(" + hue + " " + saturation + " " + brightness + ")");
+				}
+			}
+			
+		});
 		
 		return result;
 	}
@@ -181,13 +226,52 @@ public final class Show {
 				final AFMainFrame frame = AFMainFrame.newMainFrame(context);
 				
 				frame.setPreferredSize(new Dimension(800, 600));
+				frame.setTitle(new File(imageId).getName());
 				
-				frame.add(scrollable(centered(new BigImageComponent(context, imageId))));
+				frame.add(scrollable(centered(new BigImageComponent(context, imageId))), BorderLayout.CENTER);
+				frame.add(newStatusBar(context), BorderLayout.SOUTH);
 				
 				packAndCenter(frame).setVisible(true);
 			}
 			
 		});
+	}
+	
+	public static final String toStatusString(final Object object) {
+		final Point point = cast(Point.class, object);
+		
+		if (point != null) {
+			return "(" + point.x + " " + point.y + ")";
+		}
+		
+		return "" + object;
+	}
+	
+	public static final JPanel newStatusBar(final Context context) {
+		final JPanel result = new JPanel();
+		
+		result.setLayout(new BoxLayout(result, BoxLayout.LINE_AXIS));
+		
+		for (final String variableName : array("lod", "xy", "rgb", "hsb")) {
+			final JLabel label = new JLabel(toStatusString(context.get(variableName)));
+			
+			result.add(new JLabel(variableName.toUpperCase(Locale.ENGLISH) + ":"));
+			result.add(label);
+			result.add(Box.createHorizontalStrut(10));
+			
+			final Variable<Object> variable = context.getVariable(variableName);
+			
+			variable.addListener(new Listener<Object>() {
+				
+				@Override
+				public final void valueChanged(final ValueChangedEvent<Object, ?> event) {
+					label.setText(toStatusString(event.getNewValue()));
+				}
+				
+			});
+		}
+		
+		return result;
 	}
 	
 	public static final JComponent centered(final Component component) {
@@ -390,7 +474,7 @@ public final class Show {
 			this.imageId = imageId;
 			this.viewport = new Rectangle();
 			
-			this.refreshImage();
+			this.setLod(0);
 			
 			this.setFocusable(true);
 			
@@ -411,6 +495,11 @@ public final class Show {
 				private final Point viewportInitialLocation = new Point();
 				
 				private final Point mousePressedLocation = new Point();
+				
+				@Override
+				public final void mouseMoved(final MouseEvent event) {
+					context.set("xy", event.getPoint());
+				}
 				
 				@Override
 				public final void mousePressed(final MouseEvent event) {
@@ -455,6 +544,8 @@ public final class Show {
 		public final void setLod(final int lod) {
 			if (0 <= lod) {
 				this.lod = lod;
+				
+				this.context.set("lod", lod);
 				
 				this.refreshImage();
 			}
