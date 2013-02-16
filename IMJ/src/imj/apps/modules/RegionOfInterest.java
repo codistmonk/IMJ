@@ -42,12 +42,20 @@ public final class RegionOfInterest {
 		this.data.set(index);
 	}
 	
+	public final void set(final int index, final boolean value) {
+		this.data.set(index, value);
+	}
+	
 	public final boolean get(final int rowIndex, final int columnIndex) {
 		return this.data.get(this.getIndex(rowIndex, columnIndex));
 	}
 	
 	public final void set(final int rowIndex, final int columnIndex) {
 		this.data.set(this.getIndex(rowIndex, columnIndex));
+	}
+	
+	public final void set(final int rowIndex, final int columnIndex, final boolean value) {
+		this.data.set(this.getIndex(rowIndex, columnIndex), value);
 	}
 	
 }
