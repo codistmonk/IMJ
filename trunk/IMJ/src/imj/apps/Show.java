@@ -3,6 +3,7 @@ package imj.apps;
 import static imj.IMJTools.blue;
 import static imj.IMJTools.green;
 import static imj.IMJTools.red;
+import static java.lang.Integer.parseInt;
 import static java.util.Collections.synchronizedList;
 import static net.sourceforge.aprog.af.AFTools.item;
 import static net.sourceforge.aprog.af.AFTools.newAboutItem;
@@ -18,6 +19,7 @@ import static net.sourceforge.aprog.swing.SwingTools.I18N.menu;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.getThisPackagePath;
+import static net.sourceforge.aprog.tools.Tools.ignore;
 
 import imj.Image;
 import imj.ImageWrangler;
@@ -42,6 +44,7 @@ import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
@@ -57,6 +60,7 @@ import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-13)
@@ -91,6 +95,11 @@ public final class Show {
 	 * {@value}.
 	 */
 	public static final String ACTIONS_TOGGLE_HISTOGRAMS = "actions.toggleHistograms";
+	
+	/**
+	 * {@value}.
+	 */
+	public static final String ACTIONS_COPY_ROI_TO_LOD = "actions.copyROIToLOD";
 	
 	public static final Context newContext() {
 		final Context result = AFTools.newContext();
@@ -140,6 +149,60 @@ public final class Show {
 			
 		};
 		
+		new AbstractAFAction(result, ACTIONS_COPY_ROI_TO_LOD) {
+			
+			@Override
+			public final void perform() {
+				final String destinationLodAsString = JOptionPane.showInputDialog("LOD:");
+				
+				if (destinationLodAsString == null || destinationLodAsString.isEmpty()) {
+					return;
+				}
+				
+				final int sourceLod = result.get("lod");
+				final int destinationLod = parseInt(destinationLodAsString);
+				final RegionOfInterest[] rois = result.get("rois");
+				final RegionOfInterest source = rois[sourceLod];
+				final RegionOfInterest destination = rois[destinationLod];
+				final int sourceRowCount = source.getRowCount();
+				final int sourceColumnCount = source.getColumnCount();
+				final int destinationRowCount = destination.getRowCount();
+				final int destinationColumnCount = destination.getColumnCount();
+				final boolean sourceIsSmallerThanDestination = sourceRowCount < destinationRowCount;
+				
+				if (sourceIsSmallerThanDestination) {
+					for (int destinationRowIndex = 0; destinationRowIndex < destinationRowCount; ++destinationRowIndex) {
+						final int sourceRowIndex = destinationRowIndex * sourceRowCount / destinationRowCount;
+						
+						for (int destinationColumnIndex = 0; destinationColumnIndex < destinationColumnCount; ++destinationColumnIndex) {
+							final int sourceColumnIndex = destinationColumnIndex * sourceColumnCount / destinationColumnCount;
+							
+							destination.set(destinationRowIndex, destinationColumnIndex, source.get(sourceRowIndex, sourceColumnIndex));
+						}
+					}
+				} else {
+					for (int destinationRowIndex = 0; destinationRowIndex < destinationRowCount; ++destinationRowIndex) {
+						for (int destinationColumnIndex = 0; destinationColumnIndex < destinationColumnCount; ++destinationColumnIndex) {
+							destination.set(destinationRowIndex, destinationColumnIndex, false);
+						}
+					}
+					
+					for (int sourceRowIndex = 0; sourceRowIndex < sourceRowCount; ++sourceRowIndex) {
+						final int destinationRowIndex = sourceRowIndex * destinationRowCount / sourceRowCount;
+						
+						for (int sourceColumnIndex = 0; sourceColumnIndex < sourceColumnCount; ++sourceColumnIndex) {
+							final int destinationColumnIndex = sourceColumnIndex * destinationColumnCount / sourceColumnCount;
+							
+							if (source.get(sourceRowIndex, sourceColumnIndex)) {
+								destination.set(destinationRowIndex, destinationColumnIndex);
+							}
+						}
+					}
+				}
+			}
+			
+		};
+		
 		result.set(AFConstants.Variables.MAIN_MENU_BAR, menuBar(
 				menu("Application",
 						newAboutItem(result),
@@ -148,7 +211,9 @@ public final class Show {
 						null,
 						newQuitItem(result)),
 				menu("Tools",
-						newHistogramsItem(result))
+						newHistogramsItem(result)),
+				menu("ROIs",
+						newCopyROIItem(result))
 		));
 		
 		result.set("image", null, Image.class);
@@ -197,6 +262,12 @@ public final class Show {
     	checkAWT();
     	
         return item("Histograms", context, ACTIONS_TOGGLE_HISTOGRAMS);
+    }
+    
+    public static final JMenuItem newCopyROIItem(final Context context) {
+    	checkAWT();
+    	
+    	return item("Copy to LOD...", context, ACTIONS_COPY_ROI_TO_LOD);
     }
 	
 	public static final String toStatusString(final Object object) {
