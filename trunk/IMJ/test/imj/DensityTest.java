@@ -1,6 +1,6 @@
 package imj;
 
-import static imj.ImageComponent.showAdjusted;
+import static imj.apps.modules.ImageComponent.showAdjusted;
 import static java.lang.Math.abs;
 import static javax.imageio.ImageIO.read;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;

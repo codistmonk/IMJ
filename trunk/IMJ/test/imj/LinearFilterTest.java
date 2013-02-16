@@ -4,6 +4,7 @@ import static imj.IMJTools.image;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.ImageOfBufferedImage.Feature;
+import imj.apps.modules.ImageComponent;
 
 import java.util.Date;
 

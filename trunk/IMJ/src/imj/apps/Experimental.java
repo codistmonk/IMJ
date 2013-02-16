@@ -1,13 +1,13 @@
 package imj.apps;
 
-import static imj.BigViewerTools.readTile;
+import static imj.apps.modules.BigViewerTools.readTile;
 import static java.util.Arrays.copyOfRange;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-import imj.ImageComponent;
 import imj.ImageOfBufferedImage;
 import imj.ImageOfBufferedImage.Feature;
+import imj.apps.modules.ImageComponent;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
