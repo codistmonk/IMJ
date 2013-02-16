@@ -92,8 +92,6 @@ public final class Show {
 	 */
 	public static final String ACTIONS_TOGGLE_HISTOGRAMS = "actions.toggleHistograms";
 	
-	static final List<Timer> timers = synchronizedList(new LinkedList<Timer>());
-	
 	public static final Context newContext() {
 		final Context result = AFTools.newContext();
 		
@@ -101,6 +99,10 @@ public final class Show {
 		result.set(AFConstants.Variables.APPLICATION_VERSION, APPLICATION_VERSION);
 		result.set(AFConstants.Variables.APPLICATION_COPYRIGHT, APPLICATION_COPYRIGHT);
 		result.set(AFConstants.Variables.APPLICATION_ICON_PATH, APPLICATION_ICON_PATH);
+		
+		final List<Timer> timers = synchronizedList(new LinkedList<Timer>());
+		
+		result.set("timers", timers);
 		
 		new AbstractAFAction(result, AFConstants.Variables.ACTIONS_QUIT) {
 			
@@ -197,45 +199,6 @@ public final class Show {
         return item("Histograms", context, ACTIONS_TOGGLE_HISTOGRAMS);
     }
 	
-	/**
-	 * @param commandLineArguments
-	 * <br>Must not be null
-	 */
-	public static final void main(final String[] commandLineArguments) {
-		if (commandLineArguments.length != 2) {
-			System.out.println("Arguments: file <imageId>");
-			
-			return;
-		}
-		
-		MacOSXTools.setupUI(APPLICATION_NAME, APPLICATION_ICON_PATH);
-		useSystemLookAndFeel();
-		setMessagesBase(getThisPackagePath() + "i18n/Messages");
-		
-		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
-		final String imageId = arguments.get("file", "");
-		
-		ImageWrangler.INSTANCE.load(imageId);
-		
-		SwingUtilities.invokeLater(new Runnable() {
-			
-			@Override
-			public final void run() {
-				final Context context = newContext();
-				final AFMainFrame frame = AFMainFrame.newMainFrame(context);
-				
-				frame.setPreferredSize(new Dimension(800, 600));
-				frame.setTitle(new File(imageId).getName());
-				
-				frame.add(scrollable(centered(new BigImageComponent(context, imageId))), BorderLayout.CENTER);
-				frame.add(newStatusBar(context), BorderLayout.SOUTH);
-				
-				packAndCenter(frame).setVisible(true);
-			}
-			
-		});
-	}
-	
 	public static final String toStatusString(final Object object) {
 		final Point point = cast(Point.class, object);
 		
@@ -279,6 +242,45 @@ public final class Show {
 		result.add(component);
 		
 		return result;
+	}
+	
+	/**
+	 * @param commandLineArguments
+	 * <br>Must not be null
+	 */
+	public static final void main(final String[] commandLineArguments) {
+		if (commandLineArguments.length != 2) {
+			System.out.println("Arguments: file <imageId>");
+			
+			return;
+		}
+		
+		MacOSXTools.setupUI(APPLICATION_NAME, APPLICATION_ICON_PATH);
+		useSystemLookAndFeel();
+		setMessagesBase(getThisPackagePath() + "modules/Show");
+		
+		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
+		final String imageId = arguments.get("file", "");
+		
+		ImageWrangler.INSTANCE.load(imageId);
+		
+		SwingUtilities.invokeLater(new Runnable() {
+			
+			@Override
+			public final void run() {
+				final Context context = newContext();
+				final AFMainFrame frame = AFMainFrame.newMainFrame(context);
+				
+				frame.setPreferredSize(new Dimension(800, 600));
+				frame.setTitle(new File(imageId).getName());
+				
+				frame.add(scrollable(centered(new BigImageComponent(context, imageId))), BorderLayout.CENTER);
+				frame.add(newStatusBar(context), BorderLayout.SOUTH);
+				
+				packAndCenter(frame).setVisible(true);
+			}
+			
+		});
 	}
 	
 }
