@@ -5,6 +5,7 @@ import static imj.IMJTools.green;
 import static imj.IMJTools.red;
 import static java.lang.Double.isInfinite;
 import static java.lang.Double.isNaN;
+import static java.util.Collections.synchronizedList;
 import static net.sourceforge.aprog.af.AFTools.item;
 import static net.sourceforge.aprog.af.AFTools.newAboutItem;
 import static net.sourceforge.aprog.af.AFTools.newPreferencesItem;
@@ -40,9 +41,10 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.BitSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -53,6 +55,7 @@ import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 
 import net.sourceforge.aprog.af.AFConstants;
 import net.sourceforge.aprog.af.AFMainFrame;
@@ -65,7 +68,6 @@ import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-13)
@@ -101,6 +103,8 @@ public final class Show {
 	 */
 	public static final String ACTIONS_TOGGLE_HISTOGRAMS = "actions.toggleHistograms";
 	
+	static final List<Timer> timers = synchronizedList(new LinkedList<Timer>());
+	
 	public static final Context newContext() {
 		final Context result = AFTools.newContext();
 		
@@ -116,6 +120,10 @@ public final class Show {
 				final AFMainFrame mainFrame = result.get(AFConstants.Variables.MAIN_FRAME);
 				
 				mainFrame.dispose();
+				
+				while (!timers.isEmpty()) {
+					timers.remove(0).stop();
+				}
 			}
 			
 		};
@@ -188,6 +196,8 @@ public final class Show {
 			}
 			
 		});
+		
+		result.set("rois", new RegionOfInterest[0]);
 		
 		return result;
 	}
@@ -280,6 +290,56 @@ public final class Show {
 		result.add(component);
 		
 		return result;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-15)
+	 */
+	public static final class RegionOfInterest {
+		
+		private final int rowCount;
+		
+		private final int columnCount;
+		
+		private final BitSet data;
+		
+		public RegionOfInterest(final int rowCount, final int columnCount) {
+			this.rowCount = rowCount;
+			this.columnCount = columnCount;
+			final int pixelCount = rowCount * columnCount;
+			this.data = new BitSet(pixelCount);
+			
+			this.data.set(0, pixelCount);
+		}
+		
+		public final int getRowCount() {
+			return this.rowCount;
+		}
+		
+		public final int getColumnCount() {
+			return this.columnCount;
+		}
+		
+		public final int getIndex(final int rowIndex, final int columnIndex) {
+			return rowIndex * this.getColumnCount() + columnIndex;
+		}
+		
+		public final boolean get(final int index) {
+			return this.data.get(index);
+		}
+		
+		public final void set(final int index) {
+			this.data.set(index);
+		}
+		
+		public final boolean get(final int rowIndex, final int columnIndex) {
+			return this.data.get(this.getIndex(rowIndex, columnIndex));
+		}
+		
+		public final void set(final int rowIndex, final int columnIndex) {
+			this.data.set(this.getIndex(rowIndex, columnIndex));
+		}
+		
 	}
 	
 	/**
@@ -557,9 +617,10 @@ public final class Show {
 			this.context.set("image", this.image);
 			
 			final Rectangle viewport = this.getVisibleRect();
-			final double scaleVariation = this.image.getColumnCount() / (double) this.getPreferredSize().getWidth();
-			
-			this.setPreferredSize(new Dimension(this.image.getColumnCount(), this.image.getRowCount()));
+			final int columnCount = this.image.getColumnCount();
+			final int rowCount = this.image.getRowCount();
+			final double scaleVariation = columnCount / (double) this.getPreferredSize().getWidth();
+			this.setPreferredSize(new Dimension(columnCount, rowCount));
 			
 			this.buffer1 = null;
 			this.buffer2 = null;
@@ -581,21 +642,22 @@ public final class Show {
 				
 				this.repaint();
 			}
-		}
-		
-		public static final BufferedImage copyOf(final BufferedImage image, final int newWidth, final int newHeight) {
-			if (image == null) {
-				return new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_3BYTE_BGR);
+			
+			RegionOfInterest[] rois = this.context.get("rois");
+			
+			if (rois.length <= this.getLod()) {
+				rois = Arrays.copyOf(rois, this.getLod() + 1);
 			}
 			
-			final BufferedImage result = new BufferedImage(newWidth, newHeight, image.getType());
-			final Graphics2D g = result.createGraphics();
+			RegionOfInterest roi = rois[this.getLod()];
 			
-			g.drawImage(image, 0, 0, null);
+			if (roi == null || roi.getRowCount() != rowCount || roi.getColumnCount() != columnCount) {
+				roi = new RegionOfInterest(rowCount, columnCount);
+			}
 			
-			g.dispose();
+			rois[this.getLod()] = roi;
 			
-			return result;
+			this.context.set("rois", rois);
 		}
 		
 		public final void refreshBuffer() {
@@ -617,17 +679,25 @@ public final class Show {
 					g.dispose();
 				}
 				
+				final RegionOfInterest[] rois = this.context.get("rois");
+				
+				RegionOfInterest roi = this.getLod() < rois.length ? rois[this.getLod()] : null;
+				
 				for (int y = newViewport.y; y < endY; ++y) {
 					if (y < 0 || this.image.getRowCount() <= y) {
 						continue;
 					}
 					
+					final int yInBuffer = y - newViewport.y;
+					
 					for (int x = newViewport.x; x < endX; ++x) {
-						if (y < 0 || this.image.getRowCount() <= y || this.viewport.contains(x, y)) {
+						if (x < 0 || this.image.getColumnCount() <= x || this.viewport.contains(x, y)) {
 							continue;
 						}
 						
-						this.buffer2.setRGB(x - newViewport.x, y - newViewport.y, this.image.getValue(y, x));
+						final int xInBuffer = x - newViewport.x;
+						
+						this.buffer2.setRGB(xInBuffer, yInBuffer, roi == null || roi.get(y, x) ? this.image.getValue(y, x) : 0);
 					}
 				}
 				
@@ -639,6 +709,25 @@ public final class Show {
 			}
 			
 			this.viewport.setBounds(newViewport);
+		}
+		
+		public final Image getImage() {
+			return this.image;
+		}
+		
+		public static final BufferedImage copyOf(final BufferedImage image, final int newWidth, final int newHeight) {
+			if (image == null) {
+				return new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_3BYTE_BGR);
+			}
+			
+			final BufferedImage result = new BufferedImage(newWidth, newHeight, image.getType());
+			final Graphics2D g = result.createGraphics();
+			
+			g.drawImage(image, 0, 0, null);
+			
+			g.dispose();
+			
+			return result;
 		}
 		
 	}
