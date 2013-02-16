@@ -1,4 +1,4 @@
-package imj;
+package imj.apps.modules;
 
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.debug;

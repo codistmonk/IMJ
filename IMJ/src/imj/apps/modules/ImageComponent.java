@@ -1,8 +1,10 @@
-package imj;
+package imj.apps.modules;
 
 import static java.lang.Math.sqrt;
 import static javax.swing.SwingUtilities.convertPoint;
 import static net.sourceforge.aprog.tools.Tools.invoke;
+
+import imj.Image;
 
 import java.awt.Color;
 import java.awt.Component;

@@ -8,14 +8,13 @@ import static imj.MorphologicalOperations.edges4;
 import static imj.MorphologicalOperations.edges8;
 import static imj.MorphologicalOperations.hMinima4;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
-
 import imj.IMJTools.StatisticsSelector;
 import imj.Image;
-import imj.ImageComponent;
 import imj.ImageOfBufferedImage.Feature;
 import imj.ImageWrangler;
 import imj.Labeling;
 import imj.Labeling.MemoryManagementStrategy;
+import imj.apps.modules.ImageComponent;
 import imj.RegionalMinima;
 import imj.Watershed;
 
@@ -163,43 +162,6 @@ public class GrayscaleWatershed {
 		}
 		
 		message("Processing done:", "time:", timer.getTotalTime());
-	}
-	
-	/**
-	 * @author codistmonk (creation 2013-02-03)
-	 */
-	public static final class VirtualImage extends Image.Abstract {
-		
-		private final Image rgbs;
-		
-		private final Feature feature;
-		
-		public VirtualImage(final Image rgbs, final Feature feature) {
-			super(rgbs.getRowCount(), rgbs.getColumnCount(), rgbs.getChannelCount());
-			this.rgbs = rgbs;
-			this.feature = feature;
-		}
-		
-		@Override
-		public final int getValue(final int index) {
-			return this.feature.getValue(this.rgbs.getValue(index), false);
-		}
-		
-		@Override
-		public final int setValue(final int index, final int value) {
-			throw new UnsupportedOperationException();
-		}
-		
-		@Override
-		public float getFloatValue(final int index) {
-			return this.getValue(index);
-		}
-		
-		@Override
-		public final float setFloatValue(final int index, final float value) {
-			throw new UnsupportedOperationException();
-		}
-		
 	}
 	
 }

@@ -6,12 +6,12 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.IMJTools.StatisticsSelector;
 import imj.Image;
-import imj.ImageComponent;
 import imj.ImageWrangler;
 import imj.Labeling;
 import imj.Labeling.MemoryManagementStrategy;
 import imj.Labeling.NeighborhoodShape.Distance;
 import imj.MorphologicalOperations.StructuringElement;
+import imj.apps.modules.ImageComponent;
 import imj.ValueStatisticsFilter;
 
 import java.awt.image.BufferedImage;

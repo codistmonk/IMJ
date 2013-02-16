@@ -8,6 +8,7 @@ import imj.IMJTools.StatisticsSelector;
 import imj.ImageOfBufferedImage.Feature;
 import imj.VariationStatisticsFilter.Variation;
 import imj.VariationStatisticsFilter.Variation.Predefined;
+import imj.apps.modules.ImageComponent;
 
 import java.util.Date;
 

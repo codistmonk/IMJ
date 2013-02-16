@@ -9,6 +9,7 @@ import static net.sourceforge.aprog.tools.Tools.usedMemory;
 
 import imj.IMJTools.StatisticsSelector;
 import imj.ImageOfBufferedImage.Feature;
+import imj.apps.modules.ImageComponent;
 
 import java.util.Date;
 
