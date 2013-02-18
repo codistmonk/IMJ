@@ -18,9 +18,9 @@ import static net.sourceforge.aprog.swing.SwingTools.useSystemLookAndFeel;
 import static net.sourceforge.aprog.swing.SwingTools.I18N.menu;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getThisPackagePath;
-import static net.sourceforge.aprog.tools.Tools.ignore;
-
+import imj.IMJTools;
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.BigImageComponent;
@@ -60,7 +60,6 @@ import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-13)
@@ -95,6 +94,16 @@ public final class Show {
 	 * {@value}.
 	 */
 	public static final String ACTIONS_TOGGLE_HISTOGRAMS = "actions.toggleHistograms";
+	
+	/**
+	 * {@value}.
+	 */
+	public static final String ACTIONS_SET_VIEW_FILTER = "actions.setViewFilter";
+	
+	/**
+	 * {@value}.
+	 */
+	public static final String ACTIONS_APPLY_SIEVE = "actions.applySieve";
 	
 	/**
 	 * {@value}.
@@ -145,6 +154,24 @@ public final class Show {
 				}
 				
 				histogramsDialog.setVisible(!histogramsDialog.isVisible());
+			}
+			
+		};
+		
+		new AbstractAFAction(result, ACTIONS_SET_VIEW_FILTER) {
+			
+			@Override
+			public final void perform() {
+				debugPrint("TODO");
+			}
+			
+		};
+		
+		new AbstractAFAction(result, ACTIONS_APPLY_SIEVE) {
+			
+			@Override
+			public final void perform() {
+				debugPrint("TODO");
 			}
 			
 		};
@@ -212,7 +239,10 @@ public final class Show {
 						newQuitItem(result)),
 				menu("Tools",
 						newHistogramsItem(result)),
+				menu("View",
+						newSetViewFilterItem(result)),
 				menu("ROIs",
+						newApplySieveItem(result),
 						newCopyROIItem(result))
 		));
 		
@@ -221,6 +251,9 @@ public final class Show {
 		result.set("xy", null, Point.class);
 		result.set("rgb", null, String.class);
 		result.set("hsb", null, String.class);
+		
+		result.set("viewFilter", null, ViewFilter.class);
+		result.set("sieve", null, Sieve.class);
 		
 		final Variable<Point> xyVariable = result.getVariable("xy");
 		
@@ -262,6 +295,18 @@ public final class Show {
     	checkAWT();
     	
         return item("Histograms", context, ACTIONS_TOGGLE_HISTOGRAMS);
+    }
+    
+    public static final JMenuItem newSetViewFilterItem(final Context context) {
+    	checkAWT();
+    	
+    	return item("Set filter...", context, ACTIONS_SET_VIEW_FILTER);
+    }
+    
+    public static final JMenuItem newApplySieveItem(final Context context) {
+    	checkAWT();
+    	
+    	return item("Apply sieve...", context, ACTIONS_APPLY_SIEVE);
     }
     
     public static final JMenuItem newCopyROIItem(final Context context) {
@@ -352,6 +397,73 @@ public final class Show {
 			}
 			
 		});
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-18)
+	 */
+	public static abstract class ViewFilter {
+		
+		private final Context context;
+		
+		protected ViewFilter(final Context context) {
+			this.context = context;
+		}
+		
+		public final Context getContext() {
+			return this.context;
+		}
+		
+		public abstract int getNewValue(int x, int y, int oldValue);
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-18)
+	 */
+	public static final class RoundingViewFilter extends ViewFilter {
+		
+		private final int offset;
+		
+		private final int mask;
+		
+		public RoundingViewFilter(final Context context, final int roundedBitCount) {
+			super(context);
+			this.offset = 1 << (roundedBitCount - 1);
+			this.mask = ~(1 << roundedBitCount) & 0xFF;
+		}
+		
+		@Override
+		public final int getNewValue(final int x, final int y, final int oldValue) {
+			return IMJTools.rgba(255,
+					this.transform(red(oldValue)),
+					this.transform(green(oldValue)),
+					this.transform(blue(oldValue)));
+		}
+		
+		public final int transform(final int channelValue) {
+			return (channelValue + this.offset) & this.mask;
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-18)
+	 */
+	public static abstract class Sieve {
+		
+		private final Context context;
+		
+		protected Sieve(final Context context) {
+			this.context = context;
+		}
+		
+		public final Context getContext() {
+			return this.context;
+		}
+		
+		public abstract boolean accept(int x, int y, int value);
+		
 	}
 	
 }
