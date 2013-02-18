@@ -2,11 +2,8 @@ package imj.apps.modules;
 
 import static java.lang.Double.isInfinite;
 import static java.lang.Double.isNaN;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
-
 import imj.Image;
 import imj.ImageWrangler;
-import imj.apps.Show.ViewFilter;
 
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -23,10 +20,8 @@ import java.util.Arrays;
 import javax.swing.JComponent;
 
 import net.sourceforge.aprog.context.Context;
-import net.sourceforge.aprog.events.Variable;
 import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-13)
@@ -39,7 +34,7 @@ public final class BigImageComponent extends JComponent {
 	
 	private int lod;
 	
-	private Image image;
+	private FilteredImage image;
 	
 	private BufferedImage buffer1;
 	
@@ -142,7 +137,8 @@ public final class BigImageComponent extends JComponent {
 	}
 	
 	public final void refreshImage() {
-		this.image = ImageWrangler.INSTANCE.load(this.getImageId(), this.getLod());
+		this.image = new FilteredImage(ImageWrangler.INSTANCE.load(this.getImageId(), this.getLod()));
+		this.image.setFilter((ViewFilter) this.context.get("viewFilter"));
 		
 		this.context.set("image", this.image);
 		
@@ -191,6 +187,7 @@ public final class BigImageComponent extends JComponent {
 	}
 	
 	final void repaintAll() {
+		this.image.setFilter((ViewFilter) this.context.get("viewFilter"));
 		this.viewport.setSize(0, 0);
 		this.repaint();
 	}
@@ -217,7 +214,6 @@ public final class BigImageComponent extends JComponent {
 			final RegionOfInterest[] rois = this.context.get("rois");
 			
 			final RegionOfInterest roi = this.getLod() < rois.length ? rois[this.getLod()] : null;
-			final ViewFilter filter = this.context.get("viewFilter");
 			
 			for (int y = newViewport.y; y < endY; ++y) {
 				if (y < 0 || this.image.getRowCount() <= y) {
@@ -231,10 +227,10 @@ public final class BigImageComponent extends JComponent {
 						continue;
 					}
 					
+					final int pixel = y * this.image.getColumnCount() + x;
 					final int xInBuffer = x - newViewport.x;
 					
-					this.buffer2.setRGB(xInBuffer, yInBuffer, roi == null || roi.get(y, x) ?
-							(filter == null ? this.image.getValue(y, x) : filter.getNewValue(x, y, this.image.getValue(y, x))) : 0);
+					this.buffer2.setRGB(xInBuffer, yInBuffer, roi == null || roi.get(y, x) ? this.image.getValue(y, x) : 0);
 				}
 			}
 			
