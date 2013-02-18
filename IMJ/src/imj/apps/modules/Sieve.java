@@ -11,6 +11,6 @@ public abstract class Sieve extends Plugin {
 		super(context);
 	}
 	
-	public abstract boolean accept(int x, int y, int value);
+	public abstract boolean accept(int index, int value);
 	
 }

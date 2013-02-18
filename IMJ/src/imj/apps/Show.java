@@ -30,6 +30,7 @@ import imj.apps.modules.HistogramsPanel;
 import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.RoundingViewFilter;
 import imj.apps.modules.Sieve;
+import imj.apps.modules.SimpleSieve;
 import imj.apps.modules.ViewFilter;
 
 import java.awt.BorderLayout;
@@ -113,6 +114,11 @@ public final class Show {
 	/**
 	 * {@value}.
 	 */
+	public static final String ACTIONS_CLEAR_ROI = "actions.clearROI";
+	
+	/**
+	 * {@value}.
+	 */
 	public static final String ACTIONS_COPY_ROI_TO_LOD = "actions.copyROIToLOD";
 	
 	public static final Context newContext() {
@@ -168,7 +174,7 @@ public final class Show {
 			@Override
 			public final void perform() {
 				final ViewFilter[] filters = result.get("viewFilters");
-				final int option = showOptionDialog(null, "Select", "Set View Filter", OK_CANCEL_OPTION, PLAIN_MESSAGE, null, filters, null);
+				final int option = showOptionDialog(null, "", "Set View Filter", OK_CANCEL_OPTION, PLAIN_MESSAGE, null, filters, null);
 				
 				if (option == JOptionPane.CLOSED_OPTION) {
 					return;
@@ -192,7 +198,58 @@ public final class Show {
 			
 			@Override
 			public final void perform() {
-				debugPrint("TODO");
+				final Sieve[] sieves = result.get("sieves");
+				final int option = showOptionDialog(null, "", "Apply Sieve", OK_CANCEL_OPTION, PLAIN_MESSAGE, null, sieves, null);
+				
+				if (option == JOptionPane.CLOSED_OPTION) {
+					return;
+				}
+				
+				final Sieve sieve = sieves[option];
+				
+				if (!sieve.configure()) {
+					return;
+				}
+				
+				sieve.initialize();
+				
+				final RegionOfInterest[] rois = result.get("rois");
+				final int lod = result.get("lod");
+				final RegionOfInterest roi = lod < rois.length ? rois[lod] : null;
+				
+				if (roi != null) {
+					final int rowCount = roi.getRowCount();
+					final int columnCount = roi.getColumnCount();
+					final Image image = result.get("image");
+					
+					if (image != null && image.getRowCount() == rowCount && image.getColumnCount() == columnCount) {
+						final int pixelCount = rowCount * columnCount;
+						
+						for (int pixel = 0; pixel < pixelCount; ++pixel) {
+							if (roi.get(pixel) && !sieve.accept(pixel, image.getValue(pixel))) {
+								roi.set(pixel, false);
+							}
+						}
+						
+						result.set("sieve", null);
+						result.set("sieve", sieve);
+					}
+				}
+			}
+			
+		};
+		
+		new AbstractAFAction(result, ACTIONS_CLEAR_ROI) {
+			
+			@Override
+			public final void perform() {
+				final RegionOfInterest[] rois = result.get("rois");
+				final int lod = result.get("lod");
+				final RegionOfInterest roi = lod < rois.length ? rois[lod] : null;
+				
+				if (roi != null) {
+					roi.clear();
+				}
 			}
 			
 		};
@@ -264,6 +321,7 @@ public final class Show {
 						newSetViewFilterItem(result)),
 				menu("ROIs",
 						newApplySieveItem(result),
+						newClearROIItem(result),
 						newCopyROIItem(result))
 		));
 		
@@ -275,7 +333,7 @@ public final class Show {
 		
 		result.set("viewFilters", array(new RoundingViewFilter(result)), ViewFilter[].class);
 		result.set("viewFilter", null, ViewFilter.class);
-		result.set("sieves", array((Sieve) null), Sieve[].class);
+		result.set("sieves", array(new SimpleSieve(result)), Sieve[].class);
 		result.set("sieve", null, Sieve.class);
 		
 		final Variable<Point> xyVariable = result.getVariable("xy");
@@ -330,6 +388,12 @@ public final class Show {
     	checkAWT();
     	
     	return item("Apply sieve...", context, ACTIONS_APPLY_SIEVE);
+    }
+    
+    public static final JMenuItem newClearROIItem(final Context context) {
+    	checkAWT();
+    	
+    	return item("Clear", context, ACTIONS_CLEAR_ROI);
     }
     
     public static final JMenuItem newCopyROIItem(final Context context) {
