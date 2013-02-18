@@ -2,9 +2,11 @@ package imj.apps.modules;
 
 import static java.lang.Double.isInfinite;
 import static java.lang.Double.isNaN;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import imj.Image;
 import imj.ImageWrangler;
+import imj.apps.Show.ViewFilter;
 
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -21,6 +23,10 @@ import java.util.Arrays;
 import javax.swing.JComponent;
 
 import net.sourceforge.aprog.context.Context;
+import net.sourceforge.aprog.events.Variable;
+import net.sourceforge.aprog.events.Variable.Listener;
+import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-13)
@@ -92,6 +98,18 @@ public final class BigImageComponent extends JComponent {
 		};
 		this.addMouseListener(mouseHandler);
 		this.addMouseMotionListener(mouseHandler);
+		
+		final Listener<Object> fullRepaintNeeded = new Listener<Object>() {
+			
+			@Override
+			public final void valueChanged(final ValueChangedEvent<Object, ?> event) {
+				BigImageComponent.this.repaintAll();
+			}
+			
+		};
+		
+		context.getVariable("viewFilter").addListener(fullRepaintNeeded);
+		context.getVariable("sieve").addListener(fullRepaintNeeded);
 	}
 	
 	@Override
@@ -172,6 +190,11 @@ public final class BigImageComponent extends JComponent {
 		this.context.set("rois", rois);
 	}
 	
+	final void repaintAll() {
+		this.viewport.setSize(0, 0);
+		this.repaint();
+	}
+	
 	public final void refreshBuffer() {
 		final Rectangle newViewport = this.getVisibleRect();
 		
@@ -193,7 +216,8 @@ public final class BigImageComponent extends JComponent {
 			
 			final RegionOfInterest[] rois = this.context.get("rois");
 			
-			RegionOfInterest roi = this.getLod() < rois.length ? rois[this.getLod()] : null;
+			final RegionOfInterest roi = this.getLod() < rois.length ? rois[this.getLod()] : null;
+			final ViewFilter filter = this.context.get("viewFilter");
 			
 			for (int y = newViewport.y; y < endY; ++y) {
 				if (y < 0 || this.image.getRowCount() <= y) {
@@ -209,7 +233,8 @@ public final class BigImageComponent extends JComponent {
 					
 					final int xInBuffer = x - newViewport.x;
 					
-					this.buffer2.setRGB(xInBuffer, yInBuffer, roi == null || roi.get(y, x) ? this.image.getValue(y, x) : 0);
+					this.buffer2.setRGB(xInBuffer, yInBuffer, roi == null || roi.get(y, x) ?
+							(filter == null ? this.image.getValue(y, x) : filter.getNewValue(x, y, this.image.getValue(y, x))) : 0);
 				}
 			}
 			
