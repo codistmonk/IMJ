@@ -47,6 +47,8 @@ public final class BigImageComponent extends JComponent {
 		this.imageId = imageId;
 		this.viewport = new Rectangle();
 		
+		context.set("imageView", this);
+		
 		this.setLod(0);
 		
 		this.setFocusable(true);
@@ -186,7 +188,7 @@ public final class BigImageComponent extends JComponent {
 		this.context.set("rois", rois);
 	}
 	
-	final void repaintAll() {
+	public final void repaintAll() {
 		this.image.setFilter((ViewFilter) this.context.get("viewFilter"));
 		this.viewport.setSize(0, 0);
 		this.repaint();
