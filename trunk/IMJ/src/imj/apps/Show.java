@@ -5,9 +5,6 @@ import static imj.IMJTools.green;
 import static imj.IMJTools.red;
 import static java.lang.Integer.parseInt;
 import static java.util.Collections.synchronizedList;
-import static javax.swing.JOptionPane.OK_CANCEL_OPTION;
-import static javax.swing.JOptionPane.PLAIN_MESSAGE;
-import static javax.swing.JOptionPane.showOptionDialog;
 import static net.sourceforge.aprog.af.AFTools.item;
 import static net.sourceforge.aprog.af.AFTools.newAboutItem;
 import static net.sourceforge.aprog.af.AFTools.newPreferencesItem;
@@ -21,11 +18,11 @@ import static net.sourceforge.aprog.swing.SwingTools.useSystemLookAndFeel;
 import static net.sourceforge.aprog.swing.SwingTools.I18N.menu;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getThisPackagePath;
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.BigImageComponent;
+import imj.apps.modules.FeatureViewFilter;
 import imj.apps.modules.HistogramsPanel;
 import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.RoundingViewFilter;
@@ -46,6 +43,7 @@ import java.util.Locale;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -114,7 +112,7 @@ public final class Show {
 	/**
 	 * {@value}.
 	 */
-	public static final String ACTIONS_CLEAR_ROI = "actions.clearROI";
+	public static final String ACTIONS_RESET_ROI = "actions.resetROI";
 	
 	/**
 	 * {@value}.
@@ -174,19 +172,22 @@ public final class Show {
 			@Override
 			public final void perform() {
 				final ViewFilter[] filters = result.get("viewFilters");
-				final int option = showOptionDialog(null, "", "Set View Filter", OK_CANCEL_OPTION, PLAIN_MESSAGE, null, filters, null);
+				final JComboBox input = new JComboBox(filters);
+				final int option = JOptionPane.showConfirmDialog(null, input, "Select a filter", JOptionPane.OK_CANCEL_OPTION);
 				
-				if (option == JOptionPane.CLOSED_OPTION) {
+				if (option != JOptionPane.OK_OPTION) {
 					return;
 				}
 				
-				final ViewFilter filter = filters[option];
+				final ViewFilter filter = (ViewFilter) input.getSelectedItem();
 				
-				if (!filter.configure()) {
-					return;
+				if (filter != null) {
+					if (!filter.configure()) {
+						return;
+					}
+					
+					filter.initialize();
 				}
-				
-				filter.initialize();
 				
 				result.set("viewFilter", null);
 				result.set("viewFilter", filter);
@@ -199,13 +200,14 @@ public final class Show {
 			@Override
 			public final void perform() {
 				final Sieve[] sieves = result.get("sieves");
-				final int option = showOptionDialog(null, "", "Apply Sieve", OK_CANCEL_OPTION, PLAIN_MESSAGE, null, sieves, null);
+				final JComboBox input = new JComboBox(sieves);
+				final int option = JOptionPane.showConfirmDialog(null, input, "Select a sieve", JOptionPane.OK_CANCEL_OPTION);
 				
-				if (option == JOptionPane.CLOSED_OPTION) {
+				if (option != JOptionPane.OK_OPTION) {
 					return;
 				}
 				
-				final Sieve sieve = sieves[option];
+				final Sieve sieve = (Sieve) input.getSelectedItem();
 				
 				if (!sieve.configure()) {
 					return;
@@ -239,7 +241,7 @@ public final class Show {
 			
 		};
 		
-		new AbstractAFAction(result, ACTIONS_CLEAR_ROI) {
+		new AbstractAFAction(result, ACTIONS_RESET_ROI) {
 			
 			@Override
 			public final void perform() {
@@ -248,8 +250,13 @@ public final class Show {
 				final RegionOfInterest roi = lod < rois.length ? rois[lod] : null;
 				
 				if (roi != null) {
-					roi.clear();
+					roi.reset();
+					
+					final BigImageComponent imageView = result.get("imageView");
+					
+					imageView.repaintAll();
 				}
+				
 			}
 			
 		};
@@ -321,7 +328,7 @@ public final class Show {
 						newSetViewFilterItem(result)),
 				menu("ROIs",
 						newApplySieveItem(result),
-						newClearROIItem(result),
+						newResetROIItem(result),
 						newCopyROIItem(result))
 		));
 		
@@ -331,7 +338,7 @@ public final class Show {
 		result.set("rgb", null, String.class);
 		result.set("hsb", null, String.class);
 		
-		result.set("viewFilters", array(new RoundingViewFilter(result)), ViewFilter[].class);
+		result.set("viewFilters", array(null, new RoundingViewFilter(result), new FeatureViewFilter(result)), ViewFilter[].class);
 		result.set("viewFilter", null, ViewFilter.class);
 		result.set("sieves", array(new SimpleSieve(result)), Sieve[].class);
 		result.set("sieve", null, Sieve.class);
@@ -390,10 +397,10 @@ public final class Show {
     	return item("Apply sieve...", context, ACTIONS_APPLY_SIEVE);
     }
     
-    public static final JMenuItem newClearROIItem(final Context context) {
+    public static final JMenuItem newResetROIItem(final Context context) {
     	checkAWT();
     	
-    	return item("Clear", context, ACTIONS_CLEAR_ROI);
+    	return item("Reset", context, ACTIONS_RESET_ROI);
     }
     
     public static final JMenuItem newCopyROIItem(final Context context) {

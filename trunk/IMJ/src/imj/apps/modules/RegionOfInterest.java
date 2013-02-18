@@ -22,8 +22,8 @@ public final class RegionOfInterest {
 		this.data.set(0, pixelCount);
 	}
 	
-	public final void clear() {
-		this.data.clear();
+	public final void reset() {
+		this.data.set(0, this.data.size());
 	}
 	
 	public final int getRowCount() {
