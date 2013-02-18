@@ -3,16 +3,10 @@ package imj.apps;
 import static imj.IMJTools.blue;
 import static imj.IMJTools.green;
 import static imj.IMJTools.red;
-import static imj.IMJTools.rgba;
 import static java.lang.Integer.parseInt;
-import static java.lang.Integer.toBinaryString;
-import static java.lang.Integer.toHexString;
-import static java.lang.Math.min;
 import static java.util.Collections.synchronizedList;
-import static javax.swing.JOptionPane.CANCEL_OPTION;
 import static javax.swing.JOptionPane.OK_CANCEL_OPTION;
 import static javax.swing.JOptionPane.PLAIN_MESSAGE;
-import static javax.swing.JOptionPane.showConfirmDialog;
 import static javax.swing.JOptionPane.showOptionDialog;
 import static net.sourceforge.aprog.af.AFTools.item;
 import static net.sourceforge.aprog.af.AFTools.newAboutItem;
@@ -20,7 +14,6 @@ import static net.sourceforge.aprog.af.AFTools.newPreferencesItem;
 import static net.sourceforge.aprog.af.AFTools.newQuitItem;
 import static net.sourceforge.aprog.i18n.Messages.setMessagesBase;
 import static net.sourceforge.aprog.swing.SwingTools.checkAWT;
-import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.menuBar;
 import static net.sourceforge.aprog.swing.SwingTools.packAndCenter;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
@@ -30,12 +23,14 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getThisPackagePath;
-import imj.IMJTools;
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.BigImageComponent;
 import imj.apps.modules.HistogramsPanel;
 import imj.apps.modules.RegionOfInterest;
+import imj.apps.modules.RoundingViewFilter;
+import imj.apps.modules.Sieve;
+import imj.apps.modules.ViewFilter;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -44,12 +39,9 @@ import java.awt.Dimension;
 import java.awt.GridBagLayout;
 import java.awt.Point;
 import java.io.File;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -59,7 +51,6 @@ import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
@@ -72,10 +63,8 @@ import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.events.Variable;
 import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
-import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-13)
@@ -431,119 +420,6 @@ public final class Show {
 			}
 			
 		});
-	}
-	
-	/**
-	 * @author codistmonk (creation 2013-02-18)
-	 */
-	public static abstract class Plugin {
-		
-		private final Context context;
-		
-		private final Map<String, String> parameters;
-		
-		protected Plugin(final Context context) {
-			this.context = context;
-			this.parameters = new LinkedHashMap<String, String>();
-		}
-		
-		public final Context getContext() {
-			return this.context;
-		}
-		
-		public final Map<String, String> getParameters() {
-			return this.parameters;
-		}
-		
-		public abstract void initialize();
-		
-		public final boolean configure() {
-			final Box inputBox = Box.createVerticalBox();
-			final Map<String, JTextField> textFields = new HashMap<String, JTextField>();
-			
-			for (final Map.Entry<String, String> entry : this.getParameters().entrySet()) {
-				final JTextField textField = new JTextField(entry.getValue());
-				
-				textFields.put(entry.getKey(), textField);
-				inputBox.add(horizontalBox(new JLabel(entry.getKey()), textField));
-			}
-			
-			final int option = showConfirmDialog(null, inputBox, "Configure", OK_CANCEL_OPTION);
-			
-			if (option == CANCEL_OPTION) {
-				return false;
-			}
-			
-			for (final Map.Entry<String, JTextField> entry : textFields.entrySet()) {
-				this.getParameters().put(entry.getKey(), entry.getValue().getText());
-			}
-			
-			return true;
-		}
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2013-02-18)
-	 */
-	public static abstract class ViewFilter extends Plugin {
-		
-		protected ViewFilter(final Context context) {
-			super(context);
-		}
-		
-		public abstract int getNewValue(int x, int y, int oldValue);
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2013-02-18)
-	 */
-	public static final class RoundingViewFilter extends ViewFilter {
-		
-		private int offset;
-		
-		private int mask;
-		
-		public RoundingViewFilter(final Context context) {
-			super(context);
-			
-			this.getParameters().put("bitCount", "0");
-		}
-		
-		@Override
-		public final void initialize() {
-			final int bitCount = parseInt(this.getParameters().get("bitCount"));
-			
-			this.offset = 1 << (bitCount - 1);
-			this.mask = (~((1 << bitCount) - 1)) & 0x8FFFFFFF;
-		}
-		
-		@Override
-		public final int getNewValue(final int x, final int y, final int oldValue) {
-			return rgba(255,
-					this.transform(red(oldValue)),
-					this.transform(green(oldValue)),
-					this.transform(blue(oldValue)));
-		}
-		
-		public final int transform(final int channelValue) {
-			return min(255, (channelValue + this.offset) & this.mask);
-		}
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2013-02-18)
-	 */
-	public static abstract class Sieve extends Plugin {
-		
-		protected Sieve(final Context context) {
-			super(context);
-		}
-		
-		public abstract boolean accept(int x, int y, int value);
-		
 	}
 	
 }
