@@ -7,6 +7,7 @@ import static javax.imageio.ImageIO.read;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj.ImageOfBufferedImage.Feature;
 
+import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
