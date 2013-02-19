@@ -29,7 +29,7 @@ public final class RoundingViewFilter extends ViewFilter {
 		final int bitCount = parseInt(this.getParameters().get("bitCount"));
 		
 		this.offset = 1 << (bitCount - 1);
-		this.mask = (~((1 << bitCount) - 1)) & 0x8FFFFFFF;
+		this.mask = (~((1 << bitCount) - 1)) & 0x7FFFFFFF;
 	}
 	
 	@Override
