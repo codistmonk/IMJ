@@ -18,12 +18,12 @@ public final class LinearViewFilter extends ViewFilter.FromFilter {
 	public LinearViewFilter(final Context context) {
 		super(context);
 		
-		this.getParameters().put("kernel", "gaussian 1 15");
+		this.getParameters().put("kernel", "gaussian 1");
 	}
 	
 	@Override
 	public final void initialize() {
-		final String[] kernelParameters = this.getParameters().get("structuringElement").trim().split("\\s+");
+		final String[] kernelParameters = this.getParameters().get("kernel").trim().split("\\s+");
 		final String kernelType = kernelParameters[0].toLowerCase(Locale.ENGLISH);
 		final int[] structuringElement = this.parseStructuringElement();
 		final double[] coefficients;
@@ -45,6 +45,7 @@ public final class LinearViewFilter extends ViewFilter.FromFilter {
 		final double ks = - 2.0 * square(sigma);
 		final int n = structuringElement.length / 2;
 		final double[] result = new double[n];
+		double sum = 0.0;
 		
 		for (int i = 0; i < n; ++i) {
 			final double dy = structuringElement[i * 2 + 0];
@@ -52,10 +53,10 @@ public final class LinearViewFilter extends ViewFilter.FromFilter {
 			final double d2 = square(dx) + square(dy);
 			
 			result[i] = exp(d2 / ks) / kp;
+			sum += result[i];
 		}
 		
 		return result;
 	}
-	
 	
 }

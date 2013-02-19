@@ -4,6 +4,7 @@ import static imj.MorphologicalOperations.StructuringElement.newDisk;
 import static imj.MorphologicalOperations.StructuringElement.newRing;
 import static java.lang.Double.parseDouble;
 import static net.sourceforge.aprog.tools.Tools.cast;
+import imj.IMJTools;
 import imj.Image;
 import imj.Labeling.NeighborhoodShape.Distance;
 import imj.apps.modules.FilteredImage.Filter;
@@ -23,9 +24,6 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	
 	protected ViewFilter(final Context context) {
 		super(context);
-		
-		this.getParameters().put("inputChannels", "rgb");
-		this.getParameters().put("outputChannels", "rgb");
 	}
 	
 	/**
