@@ -1,13 +1,9 @@
 package imj.apps.modules;
 
-import java.util.Arrays;
-
 import imj.IMJTools.StatisticsSelector;
 import imj.Image;
 import imj.IntList;
-
 import net.sourceforge.aprog.tools.MathTools.Statistics;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-18)
@@ -77,7 +73,6 @@ public final class FilteredImage extends Image.Abstract {
 		private int size;
 		
 		protected StructuringElementFilter(final int[] deltas) {
-			Tools.debugPrint(Arrays.toString(deltas));
 			if ((deltas.length & 1) != 0) {
 				throw new IllegalArgumentException("deltas must have an odd number of elements");
 			}
