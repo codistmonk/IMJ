@@ -136,12 +136,24 @@ public final class MorphologicalOperations {
 		public static final int[] SIMPLE_CONNECTIVITY_8 = newDisk(1.0, Distance.CHESSBOARD);
 		
 		public static final int[] newDisk(final double radius, final Distance distance) {
-			final int r = (int) ceil(radius);
+			return newRing(0.0, radius, distance);
+		}
+		
+		public static final int[] newRing(final double innerRadius, final double outerRadius, final Distance distance) {
+			final int r1 = (int) ceil(innerRadius);
+			final int r2 = (int) ceil(outerRadius);
+			
+			if (!(0 <= r1 && r1 <= r2)) {
+				throw new IllegalArgumentException("Must have 0 <= innerRadius <= outerRadius");
+			}
+			
 			final IntList resultBuilder = new IntList();
 			
-			for (int i = -r; i <= +r; ++i) {
-				for (int j = -r; j <= +r; ++j) {
-					if (distance.distance(0, 0, j, i) <= radius) {
+			for (int i = -r2; i <= +r2; ++i) {
+				for (int j = -r2; j <= +r2; ++j) {
+					final double d = distance.distance(0, 0, j, i);
+					
+					if (innerRadius <= d && d <= outerRadius) {
 						resultBuilder.add(i);
 						resultBuilder.add(j);
 					}

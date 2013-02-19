@@ -163,8 +163,24 @@ public final class MorphologicalOperationsTest {
 	
 	@Test
 	public final void testStructuringElements1() {
-		assertArrayEquals(StructuringElement.SIMPLE_CONNECTIVITY_4, StructuringElement.newDisk(1.0, Distance.CITYBLOCK));
-		assertArrayEquals(StructuringElement.SIMPLE_CONNECTIVITY_8, StructuringElement.newDisk(1.0, Distance.CHESSBOARD));
+		assertArrayEquals(new int[] {
+				-1, +0,
+				+0, -1,
+				+0, +0,
+				+0, +1,
+				+1, +0
+		}, StructuringElement.SIMPLE_CONNECTIVITY_4);
+		assertArrayEquals(new int[] {
+				-1, -1,
+				-1, +0,
+				-1, +1,
+				+0, -1,
+				+0, +0,
+				+0, +1,
+				+1, -1,
+				+1, +0,
+				+1, +1
+		}, StructuringElement.SIMPLE_CONNECTIVITY_8);
 	}
 	
 }

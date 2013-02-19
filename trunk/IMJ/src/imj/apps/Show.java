@@ -24,10 +24,13 @@ import imj.ImageWrangler;
 import imj.apps.modules.BigImageComponent;
 import imj.apps.modules.FeatureViewFilter;
 import imj.apps.modules.HistogramsPanel;
+import imj.apps.modules.LinearViewFilter;
+import imj.apps.modules.RankViewFilter;
 import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.RoundingViewFilter;
 import imj.apps.modules.Sieve;
 import imj.apps.modules.SimpleSieve;
+import imj.apps.modules.StatisticsViewFilter;
 import imj.apps.modules.ViewFilter;
 
 import java.awt.BorderLayout;
@@ -338,7 +341,8 @@ public final class Show {
 		result.set("rgb", null, String.class);
 		result.set("hsb", null, String.class);
 		
-		result.set("viewFilters", array(null, new RoundingViewFilter(result), new FeatureViewFilter(result)), ViewFilter[].class);
+		result.set("viewFilters", array(null, new RoundingViewFilter(result), new FeatureViewFilter(result),
+				new StatisticsViewFilter(result), new LinearViewFilter(result), new RankViewFilter(result)), ViewFilter[].class);
 		result.set("viewFilter", null, ViewFilter.class);
 		result.set("sieves", array(new SimpleSieve(result)), Sieve[].class);
 		result.set("sieve", null, Sieve.class);
