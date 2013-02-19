@@ -1,9 +1,12 @@
 package imj.apps.modules;
 
+import static imj.IMJTools.channelValue;
+import static imj.IMJTools.rgba;
 import imj.IMJTools.StatisticsSelector;
 import imj.Image;
 import imj.IntList;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-18)
@@ -98,32 +101,43 @@ public final class FilteredImage extends Image.Abstract {
 		
 		@Override
 		public final int getNewValue(final int index, final int oldValue) {
-			this.reset(index, oldValue);
+			final int[] rgb = new int[3];
 			
-			final int columnCount = this.getImage().getColumnCount();
-			final int rowIndex = index / columnCount;
-			final int columnIndex = index % columnCount;
-			final int n = this.deltas.length;
-			this.size = 0;
-			
-			for (int i = 0; i < n; i += 2) {
-				final int y = rowIndex + this.deltas[i + 0];
+			for (int channelIndex = 0; channelIndex < 3; ++channelIndex) {
+				final int oldChannelValue = channelValue(oldValue, channelIndex);
 				
-				if (0 <= y && y < rowIndex) {
-					final int x = columnIndex + this.deltas[i + 1];
+				this.reset(index, oldChannelValue);
+				
+				final int rowCount = this.getImage().getRowCount();
+				final int columnCount = this.getImage().getColumnCount();
+				final int rowIndex = index / columnCount;
+				final int columnIndex = index % columnCount;
+				final int n = this.deltas.length;
+				this.size = 0;
+				
+				for (int i = 0; i < n; i += 2) {
+					final int y = rowIndex + this.deltas[i + 0];
 					
-					if (0 <= x && x < columnIndex) {
-						++this.size;
-						this.processNeighbor(index, oldValue, y * columnCount + x);
+					if (0 <= y && y < rowCount) {
+						final int x = columnIndex + this.deltas[i + 1];
+						
+						if (0 <= x && x < columnCount) {
+							++this.size;
+							final int neighborIndex = y * columnCount + x;
+							final int neighborChannelValue = channelValue(this.getImage().getValue(neighborIndex), channelIndex);
+							this.processNeighbor(index, oldChannelValue, neighborIndex, neighborChannelValue);
+						} else {
+							this.neighborIgnored();
+						}
 					} else {
 						this.neighborIgnored();
 					}
-				} else {
-					this.neighborIgnored();
 				}
+				
+				rgb[channelIndex] = this.getResult(index, oldChannelValue);
 			}
 			
-			return this.getResult(index, oldValue);
+			return rgba(255, rgb[2], rgb[1], rgb[0]);
 		}
 		
 		protected abstract void reset(int index, int oldValue);
@@ -132,7 +146,7 @@ public final class FilteredImage extends Image.Abstract {
 			// NOP
 		}
 		
-		protected abstract void processNeighbor(int index, int oldValue, int neighborIndex);
+		protected abstract void processNeighbor(int index, int oldValue, int neighborIndex, int neighborValue);
 		
 		protected abstract int getResult(int index, int oldValue);
 		
@@ -159,8 +173,8 @@ public final class FilteredImage extends Image.Abstract {
 		}
 		
 		@Override
-		protected final void processNeighbor(final int index, final int oldValue, final int neighborIndex) {
-			this.values.add(this.getImage().getValue(neighborIndex));
+		protected final void processNeighbor(final int index, final int oldValue, final int neighborIndex, final int neighborValue) {
+			this.values.add(neighborValue);
 		}
 		
 		@Override
@@ -195,8 +209,8 @@ public final class FilteredImage extends Image.Abstract {
 		}
 		
 		@Override
-		protected final void processNeighbor(final int index, final int oldValue, final int neighborIndex) {
-			this.statistics.addValue(this.getImage().getValue(neighborIndex));
+		protected final void processNeighbor(final int index, final int oldValue, final int neighborIndex, final int neighborValue) {
+			this.statistics.addValue(neighborValue);
 		}
 		
 		@Override
@@ -234,8 +248,12 @@ public final class FilteredImage extends Image.Abstract {
 		}
 		
 		@Override
-		protected final void processNeighbor(final int index, final int oldValue, final int neighborIndex) {
-			this.result += this.coefficients[this.i++] * this.getImage().getValue(neighborIndex);
+		protected final void processNeighbor(final int index, final int oldValue, final int neighborIndex, final int neighborValue) {
+			this.result += this.coefficients[this.i++] * neighborValue;
+			
+			if (index == 0) {
+				Tools.debugPrint(neighborValue, result);
+			}
 		}
 		
 		@Override
