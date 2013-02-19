@@ -12,6 +12,9 @@ import imj.apps.modules.FilteredImage.StructuringElementFilter;
 import java.util.Locale;
 
 import net.sourceforge.aprog.context.Context;
+import net.sourceforge.aprog.events.Variable;
+import net.sourceforge.aprog.events.Variable.Listener;
+import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
 
 /**
  * @author codistmonk (creation 2013-02-18)
@@ -36,6 +39,17 @@ public abstract class ViewFilter extends Plugin implements Filter {
 			super(context);
 			
 			this.getParameters().put("structuringElement", "disk 1 chessboard");
+			
+			final Variable<Image> imageVariable = context.getVariable("image");
+			
+			imageVariable.addListener(new Listener<Image>() {
+				
+				@Override
+				public final void valueChanged(final ValueChangedEvent<Image, ?> event) {
+					FromFilter.this.setFilter(FromFilter.this.getFilter());
+				}
+				
+			});
 		}
 		
 		public final Filter getFilter() {
