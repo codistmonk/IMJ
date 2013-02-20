@@ -107,7 +107,8 @@ public final class FilteredImage extends Image.Abstract {
 		@Override
 		public final int getNewValue(final int index, final int oldValue) {
 			final int[] rgb = new int[3];
-			final int channelCount = this.getImage().getChannelCount();
+//			final int channelCount = this.getImage().getChannelCount();
+			final int channelCount = 1;
 			
 			for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex) {
 				final int oldChannelValue = channelValue(oldValue, channelIndex);
@@ -147,7 +148,8 @@ public final class FilteredImage extends Image.Abstract {
 				rgb[i] = rgb[i - 1];
 			}
 			
-			return argb(255, rgb[2], rgb[1], rgb[0]);
+//			return argb(255, rgb[2], rgb[1], rgb[0]);
+			return rgb[0];
 		}
 		
 		protected abstract void reset(int index, int oldValue);
