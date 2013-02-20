@@ -28,20 +28,23 @@ public final class FeatureViewFilter extends ViewFilter {
 	
 	@Override
 	public final int getNewValue(final int index, final int oldValue, final Channel channel) {
-//		final int featureValue = this.feature.getNewValue(index, oldValue);
-//		
-//		switch (this.feature) {
-//		case RED:
-//			return argb(255, featureValue, 0, 0);
-//		case GREEN:
-//			return argb(255, 0, featureValue, 0);
-//		case BLUE:
-//			return argb(255, 0, 0, featureValue);
-//		default:
-//			return argb(255, featureValue, featureValue, featureValue);
-//		}
+		final int featureValue = this.feature.getNewValue(index, oldValue);
 		
-		return this.feature.toString().equals(channel.toString()) ? channel.getValue(oldValue) : 0;
+		switch (this.feature) {
+		case RED:
+			return argb(255, featureValue, 0, 0);
+		case GREEN:
+			return argb(255, 0, featureValue, 0);
+		case BLUE:
+			return argb(255, 0, 0, featureValue);
+		default:
+			return argb(255, featureValue, featureValue, featureValue);
+		}
+	}
+	
+	@Override
+	protected final boolean splitInputChannels() {
+		return false;
 	}
 	
 }

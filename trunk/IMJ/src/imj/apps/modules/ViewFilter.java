@@ -56,6 +56,10 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	
 	@Override
 	public final int getNewValue(final int index, final int oldValue) {
+		if (!this.splitInputChannels()) {
+			return this.getNewValue(index, oldValue, null);
+		}
+		
 		this.buffer[3] = 255;
 		
 		for (final Channel channel : this.inputChannels) {
@@ -74,6 +78,10 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	}
 	
 	public abstract int getNewValue(final int index, final int oldValue, final Channel channel);
+	
+	protected boolean splitInputChannels() {
+		return true;
+	}
 	
 	@Override
 	public final void apply() {
