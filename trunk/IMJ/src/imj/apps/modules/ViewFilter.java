@@ -1,7 +1,14 @@
 package imj.apps.modules;
 
-import static imj.IMJTools.*;
+import static imj.IMJTools.alpha;
+import static imj.IMJTools.argb;
+import static imj.IMJTools.blue;
+import static imj.IMJTools.brightness;
+import static imj.IMJTools.channelValue;
+import static imj.IMJTools.green;
+import static imj.IMJTools.hue;
 import static imj.IMJTools.red;
+import static imj.IMJTools.saturation;
 import static imj.MorphologicalOperations.StructuringElement.newDisk;
 import static imj.MorphologicalOperations.StructuringElement.newRing;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.ALPHA;
@@ -15,7 +22,7 @@ import static java.lang.Double.parseDouble;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.ignore;
-import imj.IMJTools;
+
 import imj.Image;
 import imj.Labeling.NeighborhoodShape.Distance;
 import imj.apps.modules.FilteredImage.Filter;
@@ -25,7 +32,6 @@ import imj.apps.modules.ViewFilter.Channel.Synthetic;
 
 import java.awt.Color;
 import java.util.Collection;
-import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 
@@ -33,7 +39,6 @@ import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.events.Variable;
 import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-18)
@@ -60,16 +65,26 @@ public abstract class ViewFilter extends Plugin implements Filter {
 			return this.getNewValue(index, oldValue, null);
 		}
 		
-		this.buffer[3] = 255;
-		
-		for (final Channel channel : this.inputChannels) {
-			this.buffer[channel.getIndex()] = this.getNewValue(index, oldValue, channel);
-		}
-		
 		if (this.inputChannelClass == Primitive.class) {
+			for (int i = 0; i < 4; ++i) {
+				this.buffer[i] = channelValue(oldValue, i);
+			}
+			
+			for (final Channel channel : this.inputChannels) {
+				this.buffer[channel.getIndex()] = this.getNewValue(index, oldValue, channel);
+			}
+			
 			return argb(this.buffer[ALPHA.getIndex()],
 					this.buffer[RED.getIndex()], this.buffer[GREEN.getIndex()], this.buffer[BLUE.getIndex()]);
 		} else if (this.inputChannelClass == Synthetic.class) {
+			this.buffer[0] = hue(oldValue);
+			this.buffer[1] = saturation(oldValue);
+			this.buffer[2] = brightness(oldValue);
+			
+			for (final Channel channel : this.inputChannels) {
+				this.buffer[channel.getIndex()] = this.getNewValue(index, oldValue, channel);
+			}
+			
 			return Color.HSBtoRGB(this.buffer[HUE.getIndex()] / 255F,
 					this.buffer[SATURATION.getIndex()] / 255F, this.buffer[BRIGHTNESS.getIndex()] / 255F);
 		}
