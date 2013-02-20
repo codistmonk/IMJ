@@ -1,6 +1,6 @@
 package imj.apps.modules;
 
-import static imj.IMJTools.rgba;
+import static imj.IMJTools.argb;
 
 import imj.apps.modules.SimpleSieve.Feature;
 
@@ -27,19 +27,21 @@ public final class FeatureViewFilter extends ViewFilter {
 	}
 	
 	@Override
-	public final int getNewValue(final int index, final int oldValue) {
-		final int featureValue = this.feature.getNewValue(index, oldValue);
+	public final int getNewValue(final int index, final int oldValue, final Channel channel) {
+//		final int featureValue = this.feature.getNewValue(index, oldValue);
+//		
+//		switch (this.feature) {
+//		case RED:
+//			return argb(255, featureValue, 0, 0);
+//		case GREEN:
+//			return argb(255, 0, featureValue, 0);
+//		case BLUE:
+//			return argb(255, 0, 0, featureValue);
+//		default:
+//			return argb(255, featureValue, featureValue, featureValue);
+//		}
 		
-		switch (this.feature) {
-		case RED:
-			return rgba(255, featureValue, 0, 0);
-		case GREEN:
-			return rgba(255, 0, featureValue, 0);
-		case BLUE:
-			return rgba(255, 0, 0, featureValue);
-		default:
-			return rgba(255, featureValue, featureValue, featureValue);
-		}
+		return this.feature.toString().equals(channel.toString()) ? channel.getValue(oldValue) : 0;
 	}
 	
 }

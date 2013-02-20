@@ -3,7 +3,7 @@ package imj.apps.modules;
 import static imj.IMJTools.blue;
 import static imj.IMJTools.green;
 import static imj.IMJTools.red;
-import static imj.IMJTools.rgba;
+import static imj.IMJTools.argb;
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.min;
 
@@ -33,11 +33,12 @@ public final class RoundingViewFilter extends ViewFilter {
 	}
 	
 	@Override
-	public final int getNewValue(final int index, final int oldValue) {
-		return rgba(255,
-				this.transform(red(oldValue)),
-				this.transform(green(oldValue)),
-				this.transform(blue(oldValue)));
+	public final int getNewValue(final int index, final int oldValue,  final Channel channel) {
+//		return argb(255,
+//				this.transform(red(oldValue)),
+//				this.transform(green(oldValue)),
+//				this.transform(blue(oldValue)));
+		return this.transform(channel.getValue(oldValue));
 	}
 	
 	public final int transform(final int channelValue) {

@@ -1,7 +1,7 @@
 package imj.apps.modules;
 
 import static imj.IMJTools.channelValue;
-import static imj.IMJTools.rgba;
+import static imj.IMJTools.argb;
 import imj.IMJTools.StatisticsSelector;
 import imj.Image;
 import imj.IntList;
@@ -36,8 +36,13 @@ public final class FilteredImage extends Image.Abstract {
 	
 	@Override
 	public final int getValue(final int index) {
-		return this.getFilter() == null ? this.getSource().getValue(index) :
-			this.getFilter().getNewValue(index, this.getSource().getValue(index));
+		if (this.getFilter() == null) {
+			final int value = this.getSource().getValue(index);
+			
+			return 1 < this.getChannelCount() ? value : argb(255, value, value, value);
+		}
+		
+		return this.getFilter().getNewValue(index, this.getSource().getValue(index));
 	}
 	
 	@Override
@@ -102,8 +107,9 @@ public final class FilteredImage extends Image.Abstract {
 		@Override
 		public final int getNewValue(final int index, final int oldValue) {
 			final int[] rgb = new int[3];
+			final int channelCount = this.getImage().getChannelCount();
 			
-			for (int channelIndex = 0; channelIndex < 3; ++channelIndex) {
+			for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex) {
 				final int oldChannelValue = channelValue(oldValue, channelIndex);
 				
 				this.reset(index, oldChannelValue);
@@ -137,7 +143,11 @@ public final class FilteredImage extends Image.Abstract {
 				rgb[channelIndex] = this.getResult(index, oldChannelValue);
 			}
 			
-			return rgba(255, rgb[2], rgb[1], rgb[0]);
+			for (int i = channelCount; i < rgb.length; ++i) {
+				rgb[i] = rgb[i - 1];
+			}
+			
+			return argb(255, rgb[2], rgb[1], rgb[0]);
 		}
 		
 		protected abstract void reset(int index, int oldValue);
