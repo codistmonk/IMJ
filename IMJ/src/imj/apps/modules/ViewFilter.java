@@ -31,6 +31,7 @@ import imj.apps.modules.ViewFilter.Channel.Primitive;
 import imj.apps.modules.ViewFilter.Channel.Synthetic;
 
 import java.awt.Color;
+import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Locale;
@@ -50,6 +51,8 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	private Class<? extends Channel> inputChannelClass;
 	
 	private final int[] buffer;
+	
+	private ViewFilter backup;
 	
 	protected ViewFilter(final Context context) {
 		super(context);
@@ -127,6 +130,21 @@ public abstract class ViewFilter extends Plugin implements Filter {
 		
 		context.set("viewFilter", null);
 		context.set("viewFilter", this);
+	}
+	
+	@Override
+	public final void backup() {
+		this.backup = this.getContext().get("viewFilter");
+	}
+	
+	@Override
+	public final void cancel() {
+		this.getContext().set("viewFilter", this.backup);
+	}
+	
+	@Override
+	public final void clearBackup() {
+		this.backup = null;
 	}
 	
 	/**

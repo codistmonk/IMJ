@@ -185,12 +185,14 @@ public final class Show {
 				final ViewFilter filter = (ViewFilter) input.getSelectedItem();
 				
 				if (filter != null) {
-					if (!filter.configure()) {
-						return;
-					}
+//					final ViewFilter previousFilter = result.get("viewFilter");
 					
-					filter.initialize();
-					filter.apply();
+//					if (!filter.configureAndApply()) {
+//						result.set("viewFilter", previousFilter);
+//						
+//						return;
+//					}
+					filter.configureAndApply();
 				} else {
 					result.set("viewFilter", null);
 				}
@@ -211,13 +213,20 @@ public final class Show {
 				}
 				
 				final Sieve sieve = (Sieve) input.getSelectedItem();
+//				final RegionOfInterest roi = sieve.getROI();
+//				final RegionOfInterest backup = new RegionOfInterest(roi.getRowCount(), roi.getColumnCount());
+//				final Sieve previousSieve = result.get("sieve");
 				
-				if (!sieve.configure()) {
-					return;
-				}
+//				roi.copyTo(backup);
 				
-				sieve.initialize();
-				sieve.apply();
+//				if (!sieve.configureAndApply()) {
+//					backup.copyTo(roi);
+//					result.set("sieve", previousSieve);
+					
+//					return;
+//				}
+				
+				sieve.configureAndApply();
 			}
 			
 		};
@@ -255,43 +264,8 @@ public final class Show {
 				final int sourceLod = result.get("lod");
 				final int destinationLod = parseInt(destinationLodAsString);
 				final RegionOfInterest[] rois = result.get("rois");
-				final RegionOfInterest source = rois[sourceLod];
-				final RegionOfInterest destination = rois[destinationLod];
-				final int sourceRowCount = source.getRowCount();
-				final int sourceColumnCount = source.getColumnCount();
-				final int destinationRowCount = destination.getRowCount();
-				final int destinationColumnCount = destination.getColumnCount();
-				final boolean sourceIsSmallerThanDestination = sourceRowCount < destinationRowCount;
 				
-				if (sourceIsSmallerThanDestination) {
-					for (int destinationRowIndex = 0; destinationRowIndex < destinationRowCount; ++destinationRowIndex) {
-						final int sourceRowIndex = destinationRowIndex * sourceRowCount / destinationRowCount;
-						
-						for (int destinationColumnIndex = 0; destinationColumnIndex < destinationColumnCount; ++destinationColumnIndex) {
-							final int sourceColumnIndex = destinationColumnIndex * sourceColumnCount / destinationColumnCount;
-							
-							destination.set(destinationRowIndex, destinationColumnIndex, source.get(sourceRowIndex, sourceColumnIndex));
-						}
-					}
-				} else {
-					for (int destinationRowIndex = 0; destinationRowIndex < destinationRowCount; ++destinationRowIndex) {
-						for (int destinationColumnIndex = 0; destinationColumnIndex < destinationColumnCount; ++destinationColumnIndex) {
-							destination.set(destinationRowIndex, destinationColumnIndex, false);
-						}
-					}
-					
-					for (int sourceRowIndex = 0; sourceRowIndex < sourceRowCount; ++sourceRowIndex) {
-						final int destinationRowIndex = sourceRowIndex * destinationRowCount / sourceRowCount;
-						
-						for (int sourceColumnIndex = 0; sourceColumnIndex < sourceColumnCount; ++sourceColumnIndex) {
-							final int destinationColumnIndex = sourceColumnIndex * destinationColumnCount / sourceColumnCount;
-							
-							if (source.get(sourceRowIndex, sourceColumnIndex)) {
-								destination.set(destinationRowIndex, destinationColumnIndex);
-							}
-						}
-					}
-				}
+				rois[sourceLod].copyTo(rois[destinationLod]);
 			}
 			
 		};

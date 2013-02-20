@@ -62,4 +62,42 @@ public final class RegionOfInterest {
 		this.data.set(this.getIndex(rowIndex, columnIndex), value);
 	}
 	
+	public final void copyTo(final RegionOfInterest destination) {
+		final int sourceRowCount = this.getRowCount();
+		final int sourceColumnCount = this.getColumnCount();
+		final int destinationRowCount = destination.getRowCount();
+		final int destinationColumnCount = destination.getColumnCount();
+		final boolean sourceIsSmallerThanDestination = sourceRowCount < destinationRowCount;
+		
+		if (sourceIsSmallerThanDestination) {
+			for (int destinationRowIndex = 0; destinationRowIndex < destinationRowCount; ++destinationRowIndex) {
+				final int sourceRowIndex = destinationRowIndex * sourceRowCount / destinationRowCount;
+				
+				for (int destinationColumnIndex = 0; destinationColumnIndex < destinationColumnCount; ++destinationColumnIndex) {
+					final int sourceColumnIndex = destinationColumnIndex * sourceColumnCount / destinationColumnCount;
+					
+					destination.set(destinationRowIndex, destinationColumnIndex, this.get(sourceRowIndex, sourceColumnIndex));
+				}
+			}
+		} else {
+			for (int destinationRowIndex = 0; destinationRowIndex < destinationRowCount; ++destinationRowIndex) {
+				for (int destinationColumnIndex = 0; destinationColumnIndex < destinationColumnCount; ++destinationColumnIndex) {
+					destination.set(destinationRowIndex, destinationColumnIndex, false);
+				}
+			}
+			
+			for (int sourceRowIndex = 0; sourceRowIndex < sourceRowCount; ++sourceRowIndex) {
+				final int destinationRowIndex = sourceRowIndex * destinationRowCount / sourceRowCount;
+				
+				for (int sourceColumnIndex = 0; sourceColumnIndex < sourceColumnCount; ++sourceColumnIndex) {
+					final int destinationColumnIndex = sourceColumnIndex * destinationColumnCount / sourceColumnCount;
+					
+					if (this.get(sourceRowIndex, sourceColumnIndex)) {
+						destination.set(destinationRowIndex, destinationColumnIndex);
+					}
+				}
+			}
+		}
+	}
+	
 }
