@@ -190,10 +190,10 @@ public final class Show {
 					}
 					
 					filter.initialize();
+					filter.apply();
+				} else {
+					result.set("viewFilter", null);
 				}
-				
-				result.set("viewFilter", null);
-				result.set("viewFilter", filter);
 			}
 			
 		};
@@ -217,29 +217,7 @@ public final class Show {
 				}
 				
 				sieve.initialize();
-				
-				final RegionOfInterest[] rois = result.get("rois");
-				final int lod = result.get("lod");
-				final RegionOfInterest roi = lod < rois.length ? rois[lod] : null;
-				
-				if (roi != null) {
-					final int rowCount = roi.getRowCount();
-					final int columnCount = roi.getColumnCount();
-					final Image image = result.get("image");
-					
-					if (image != null && image.getRowCount() == rowCount && image.getColumnCount() == columnCount) {
-						final int pixelCount = rowCount * columnCount;
-						
-						for (int pixel = 0; pixel < pixelCount; ++pixel) {
-							if (roi.get(pixel) && !sieve.accept(pixel, image.getValue(pixel))) {
-								roi.set(pixel, false);
-							}
-						}
-						
-						result.set("sieve", null);
-						result.set("sieve", sieve);
-					}
-				}
+				sieve.apply();
 			}
 			
 		};

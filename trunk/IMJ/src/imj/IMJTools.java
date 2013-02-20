@@ -1,5 +1,8 @@
 package imj;
 
+import static imj.IMJTools.blue;
+import static imj.IMJTools.green;
+import static imj.IMJTools.red;
 import static imj.ImageOfBufferedImage.Feature.MAX_RGB;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -91,7 +94,7 @@ public final class IMJTools {
 		return value & 0x000000FF;
 	}
 	
-	public static final int rgba(final int alpha, final int red, final int green, final int blue) {
+	public static final int argb(final int alpha, final int red, final int green, final int blue) {
 		return (alpha << 24) | (red << 16) | (green << 8) | blue;
 	}
 	
@@ -109,6 +112,73 @@ public final class IMJTools {
 	
 	public static final int blue(final int rgba) {
 		return channelValue(rgba, 0);
+	}
+	
+	public static final int hue(final int rgba) {
+		final int red = red(rgba);
+		final int green = green(rgba);
+		final int blue = blue(rgba);
+		int brightness = red < green ? green : red;
+		int darkness = red < green ? red : green;
+		
+		if (brightness < blue) {
+			brightness = blue;
+		} else if (blue < darkness) {
+			darkness = blue;
+		}
+		
+		final int amplitude = brightness - darkness;
+		final int saturation = brightness == 0 ? 0 : amplitude * 255 / brightness;
+		
+		if (saturation == 0) {
+			return 0;
+		}
+		
+		final float redc = (float) (brightness - red) / amplitude;
+		final float greenc = (float) (brightness - green) / amplitude;
+		final float bluec = (float) (brightness - blue) / amplitude;
+		float hue;
+		
+	    if (red == brightness) {
+	    	hue = bluec - greenc;
+	    } else if (green == brightness) {
+	    	hue = 2F + redc - bluec;
+	    } else {
+	    	hue = 4F + greenc - redc;
+	    }
+	    
+	    hue /= 6F;
+	    
+	    return (int) ((hue < 0F ? hue + 1F : hue) * 255F);
+	}
+	
+	public static final int saturation(final int rgba) {
+		final int red = red(rgba);
+		final int green = green(rgba);
+		final int blue = blue(rgba);
+		int brightness = red < green ? green : red;
+		int darkness = red < green ? red : green;
+		
+		if (brightness < blue) {
+			brightness = blue;
+		} else if (blue < darkness) {
+			darkness = blue;
+		}
+		
+		return brightness == 0 ? 0 : (brightness - darkness) * 255 / brightness;
+	}
+	
+	public static final int brightness(final int rgba) {
+		final int red = red(rgba);
+		final int green = green(rgba);
+		final int blue = blue(rgba);
+		int result = red < green ? green : red;
+		
+		if (result < blue) {
+			result = blue;
+		}
+		
+		return result;
 	}
 	
 	public static final int channelValue(final int rgba, final int channelIndex) {

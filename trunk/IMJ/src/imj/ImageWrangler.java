@@ -4,7 +4,7 @@ import static imj.IMJTools.alpha;
 import static imj.IMJTools.blue;
 import static imj.IMJTools.green;
 import static imj.IMJTools.red;
-import static imj.IMJTools.rgba;
+import static imj.IMJTools.argb;
 import static imj.IMJTools.unsigned;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
@@ -93,7 +93,7 @@ public final class ImageWrangler {
 					final int green = (green(value00) + green(value01) + green(value10) + green(value11)) / 4;
 					final int blue = (blue(value00) + blue(value01) + blue(value10) + blue(value11)) / 4;
 					
-					result.setValue(rowIndex, columnIndex, rgba(alpha, red, green, blue));
+					result.setValue(rowIndex, columnIndex, argb(alpha, red, green, blue));
 					
 					break;
 				}
@@ -193,7 +193,7 @@ public final class ImageWrangler {
 									blue = unsigned(buffer[i + 2 * channelSize]);
 								}
 								
-								value = rgba(value, red, green, blue);
+								value = argb(value, red, green, blue);
 								break;
 							}
 							

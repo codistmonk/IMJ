@@ -1,29 +1,232 @@
 package imj.apps.modules;
 
+import static imj.IMJTools.*;
+import static imj.IMJTools.red;
 import static imj.MorphologicalOperations.StructuringElement.newDisk;
 import static imj.MorphologicalOperations.StructuringElement.newRing;
+import static imj.apps.modules.ViewFilter.Channel.Primitive.ALPHA;
+import static imj.apps.modules.ViewFilter.Channel.Primitive.BLUE;
+import static imj.apps.modules.ViewFilter.Channel.Primitive.GREEN;
+import static imj.apps.modules.ViewFilter.Channel.Primitive.RED;
+import static imj.apps.modules.ViewFilter.Channel.Synthetic.BRIGHTNESS;
+import static imj.apps.modules.ViewFilter.Channel.Synthetic.HUE;
+import static imj.apps.modules.ViewFilter.Channel.Synthetic.SATURATION;
 import static java.lang.Double.parseDouble;
 import static net.sourceforge.aprog.tools.Tools.cast;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.ignore;
 import imj.IMJTools;
 import imj.Image;
 import imj.Labeling.NeighborhoodShape.Distance;
 import imj.apps.modules.FilteredImage.Filter;
 import imj.apps.modules.FilteredImage.StructuringElementFilter;
+import imj.apps.modules.ViewFilter.Channel.Primitive;
+import imj.apps.modules.ViewFilter.Channel.Synthetic;
 
+import java.awt.Color;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.LinkedHashSet;
 import java.util.Locale;
 
 import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.events.Variable;
 import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-18)
  */
 public abstract class ViewFilter extends Plugin implements Filter {
 	
+	private Collection<Channel> inputChannels;
+	
+	private Class<? extends Channel> inputChannelClass;
+	
+	private final int[] buffer;
+	
 	protected ViewFilter(final Context context) {
 		super(context);
+		this.buffer = new int[4];
+		
+		this.getParameters().put("inputChannels", "red green blue");
+		this.inputChannelClass = Primitive.class;
+	}
+	
+	@Override
+	public final int getNewValue(final int index, final int oldValue) {
+		this.buffer[3] = 255;
+		
+		for (final Channel channel : this.inputChannels) {
+			this.buffer[channel.getIndex()] = this.getNewValue(index, oldValue, channel);
+		}
+		
+		if (this.inputChannelClass == Primitive.class) {
+			return argb(this.buffer[ALPHA.getIndex()],
+					this.buffer[RED.getIndex()], this.buffer[GREEN.getIndex()], this.buffer[BLUE.getIndex()]);
+		} else if (this.inputChannelClass == Synthetic.class) {
+			return Color.HSBtoRGB(this.buffer[HUE.getIndex()] / 255F,
+					this.buffer[SATURATION.getIndex()] / 255F, this.buffer[BRIGHTNESS.getIndex()] / 255F);
+		}
+		
+		return 0;
+	}
+	
+	public abstract int getNewValue(final int index, final int oldValue, final Channel channel);
+	
+	@Override
+	public final void apply() {
+		{
+			final String[] inputChannelAsStrings = this.getParameters().get("inputChannels").split("\\s+");
+			final int n = inputChannelAsStrings.length;
+			final Collection<Channel> newInputChannels = new LinkedHashSet<Channel>();
+			Class<? extends Channel> newInputChannelClass = Channel.class;
+			
+			for (int i = 0; i < n; ++i) {
+				final Channel channel = parseChannel(inputChannelAsStrings[i].toUpperCase());
+				
+				if (!newInputChannelClass.isAssignableFrom(channel.getClass())) {
+					debugPrint(newInputChannelClass, channel.getClass());
+					throw new IllegalArgumentException("All input channels must be of the same type (primitive xor synthetic)");
+				}
+				
+				newInputChannels.add(channel);
+				
+				newInputChannelClass = (Class<? extends Channel>) channel.getClass().getSuperclass();
+			}
+			
+			this.inputChannels = newInputChannels;
+			this.inputChannelClass = newInputChannelClass;
+		}
+		
+		final Context context = this.getContext();
+		
+		context.set("viewFilter", null);
+		context.set("viewFilter", this);
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-20)
+	 */
+	public static interface Channel {
+		
+		public abstract int getIndex();
+		
+		public abstract int getValue(final int rgba);
+		
+		/**
+		 * @author codistmonk (creation 2013-02-20)
+		 */
+		public static enum Primitive implements Channel {
+			
+			RED {
+				
+				@Override
+				public final int getIndex() {
+					return 0;
+				}
+				
+				@Override
+				public final int getValue(final int rgba) {
+					return red(rgba);
+				}
+				
+			}, GREEN {
+				
+				@Override
+				public final int getIndex() {
+					return 1;
+				}
+				
+				@Override
+				public final int getValue(final int rgba) {
+					return green(rgba);
+				}
+				
+			}, BLUE {
+				
+				@Override
+				public final int getIndex() {
+					return 2;
+				}
+				
+				@Override
+				public final int getValue(final int rgba) {
+					return blue(rgba);
+				}
+				
+			}, ALPHA {
+				
+				@Override
+				public final int getIndex() {
+					return 3;
+				}
+				
+				@Override
+				public final int getValue(final int rgba) {
+					return alpha(rgba);
+				}
+				
+			};
+			
+		}
+		
+		/**
+		 * @author codistmonk (creation 2013-02-20)
+		 */
+		public static enum Synthetic implements Channel {
+			
+			HUE {
+				
+				@Override
+				public final int getIndex() {
+					return 0;
+				}
+				
+				@Override
+				public final int getValue(final int rgba) {
+					return hue(rgba);
+				}
+				
+			}, SATURATION {
+				
+				@Override
+				public final int getIndex() {
+					return 1;
+				}
+				
+				@Override
+				public final int getValue(final int rgba) {
+					return saturation(rgba);
+				}
+				
+			}, BRIGHTNESS {
+				
+				@Override
+				public final int getIndex() {
+					return 2;
+				}
+				
+				@Override
+				public final int getValue(final int rgba) {
+					return brightness(rgba);
+				}
+				
+			};
+			
+		}
+		
+	}
+	
+	public static final Channel parseChannel(final String string) {
+		try {
+			return Channel.Primitive.valueOf(string);
+		} catch (final Exception exception) {
+			ignore(exception);
+			
+			return Channel.Synthetic.valueOf(string);
+		}
 	}
 	
 	/**
@@ -66,8 +269,8 @@ public abstract class ViewFilter extends Plugin implements Filter {
 		}
 		
 		@Override
-		public final int getNewValue(final int index, final int oldValue) {
-			return this.getFilter().getNewValue(index, oldValue);
+		public final int getNewValue(final int index, final int oldValue, final Channel channel) {
+			return this.getFilter().getNewValue(index, channel.getValue(oldValue));
 		}
 		
 		public final int[] parseStructuringElement() {

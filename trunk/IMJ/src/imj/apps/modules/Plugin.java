@@ -63,6 +63,8 @@ public abstract class Plugin {
 		return true;
 	}
 	
+	public abstract void apply();
+	
 	@Override
 	public final String toString() {
 		return this.getClass().getName();

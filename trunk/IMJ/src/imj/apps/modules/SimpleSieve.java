@@ -1,13 +1,15 @@
 package imj.apps.modules;
 
-import static imj.IMJTools.alpha;
+import static imj.IMJTools.*;
 import static imj.IMJTools.blue;
+import static imj.IMJTools.brightness;
 import static imj.IMJTools.green;
 import static imj.IMJTools.red;
-import static imj.IMJTools.rgba;
+import static imj.IMJTools.argb;
 import static java.lang.Integer.parseInt;
 import static java.util.Locale.ENGLISH;
 
+import imj.IMJTools;
 import imj.apps.modules.FilteredImage.Filter;
 
 import java.awt.Color;
@@ -92,76 +94,21 @@ public final class SimpleSieve extends Sieve {
 			
 			@Override
 			public final int getNewValue(final int index, final int oldValue) {
-				final int red = red(oldValue);
-				final int green = green(oldValue);
-				final int blue = blue(oldValue);
-				int result = red < green ? green : red;
-				
-				if (result < blue) {
-					result = blue;
-				}
-				
-				return result;
+				return brightness(oldValue);
 			}
 			
 		}, SATURATION {
 			
 			@Override
 			public final int getNewValue(final int index, final int oldValue) {
-				final int red = red(oldValue);
-				final int green = green(oldValue);
-				final int blue = blue(oldValue);
-				int brightness = red < green ? green : red;
-				int darkness = red < green ? red : green;
-				
-				if (brightness < blue) {
-					brightness = blue;
-				} else if (blue < darkness) {
-					darkness = blue;
-				}
-				
-				return brightness == 0 ? 0 : (brightness - darkness) * 255 / brightness;
+				return saturation(oldValue);
 			}
 			
 		}, HUE {
 			
 			@Override
 			public final int getNewValue(final int index, final int oldValue) {
-				final int red = red(oldValue);
-				final int green = green(oldValue);
-				final int blue = blue(oldValue);
-				int brightness = red < green ? green : red;
-				int darkness = red < green ? red : green;
-				
-				if (brightness < blue) {
-					brightness = blue;
-				} else if (blue < darkness) {
-					darkness = blue;
-				}
-				
-				final int amplitude = brightness - darkness;
-				final int saturation = brightness == 0 ? 0 : amplitude * 255 / brightness;
-				
-				if (saturation == 0) {
-					return 0;
-				}
-				
-				final float redc = (float) (brightness - red) / amplitude;
-				final float greenc = (float) (brightness - green) / amplitude;
-				final float bluec = (float) (brightness - blue) / amplitude;
-				float hue;
-				
-			    if (red == brightness) {
-			    	hue = bluec - greenc;
-			    } else if (green == brightness) {
-			    	hue = 2F + redc - bluec;
-			    } else {
-			    	hue = 4F + greenc - redc;
-			    }
-			    
-			    hue /= 6F;
-			    
-			    return (int) ((hue < 0F ? hue + 1F : hue) * 255F);
+				return hue(oldValue);
 			}
 			
 		};
@@ -174,7 +121,7 @@ public final class SimpleSieve extends Sieve {
 					for (int b = 0; b < 256; b += 2) {
 						Color.RGBtoHSB(r, g, b, hsb);
 						
-						if (HUE.getNewValue(0, rgba(255, r, g, b)) != (int) (hsb[0] * 255F)) {
+						if (HUE.getNewValue(0, argb(255, r, g, b)) != (int) (hsb[0] * 255F)) {
 							throw new RuntimeException();
 						}
 					}
