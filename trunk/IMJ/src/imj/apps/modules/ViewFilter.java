@@ -19,12 +19,15 @@ import static imj.apps.modules.ViewFilter.Channel.Synthetic.BRIGHTNESS;
 import static imj.apps.modules.ViewFilter.Channel.Synthetic.HUE;
 import static imj.apps.modules.ViewFilter.Channel.Synthetic.SATURATION;
 import static java.lang.Double.parseDouble;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 
 import imj.Image;
 import imj.Labeling.NeighborhoodShape.Distance;
+import imj.apps.modules.FilteredImage.ChannelFilter;
 import imj.apps.modules.FilteredImage.Filter;
 import imj.apps.modules.FilteredImage.StructuringElementFilter;
 import imj.apps.modules.ViewFilter.Channel.Primitive;
@@ -32,6 +35,7 @@ import imj.apps.modules.ViewFilter.Channel.Synthetic;
 
 import java.awt.Color;
 import java.lang.ref.WeakReference;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Locale;
@@ -40,6 +44,7 @@ import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.events.Variable;
 import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-18)
@@ -85,7 +90,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 			this.buffer[2] = brightness(oldValue);
 			
 			for (final Channel channel : this.inputChannels) {
-				this.buffer[channel.getIndex()] = this.getNewValue(index, oldValue, channel);
+				this.buffer[channel.getIndex()] = max(0, min(255, this.getNewValue(index, oldValue, channel)));
 			}
 			
 			return Color.HSBtoRGB(this.buffer[HUE.getIndex()] / 255F,
@@ -275,7 +280,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	 */
 	public static abstract class FromFilter extends ViewFilter {
 		
-		private Filter filter;
+		private ChannelFilter filter;
 		
 		protected FromFilter(final Context context) {
 			super(context);
@@ -294,11 +299,11 @@ public abstract class ViewFilter extends Plugin implements Filter {
 			});
 		}
 		
-		public final Filter getFilter() {
+		public final ChannelFilter getFilter() {
 			return this.filter;
 		}
 		
-		public final void setFilter(final Filter filter) {
+		public final void setFilter(final ChannelFilter filter) {
 			this.filter = filter;
 			
 			if (filter instanceof StructuringElementFilter) {
@@ -311,7 +316,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 		
 		@Override
 		public final int getNewValue(final int index, final int oldValue, final Channel channel) {
-			return this.getFilter().getNewValue(index, channel.getValue(oldValue));
+			return this.getFilter().getNewValue(index, oldValue, channel);
 		}
 		
 		public final int[] parseStructuringElement() {

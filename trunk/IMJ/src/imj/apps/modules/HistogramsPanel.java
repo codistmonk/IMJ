@@ -63,7 +63,9 @@ public final class HistogramsPanel extends JPanel {
 			
 			@Override
 			public final void valueChanged(final ValueChangedEvent<Image, ?> event) {
-				HistogramsPanel.this.update();
+				if (HistogramsPanel.this.isShowing()) {
+					HistogramsPanel.this.update();
+				}
 			}
 			
 		});

@@ -6,6 +6,7 @@ import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
 import imj.apps.modules.FilteredImage.LinearFilter;
 
+import java.util.Arrays;
 import java.util.Locale;
 
 import net.sourceforge.aprog.context.Context;
@@ -31,6 +32,8 @@ public final class LinearViewFilter extends ViewFilter.FromFilter {
 		if ("gaussian".equals(kernelType)) {
 			final double sigma = parseDouble(kernelParameters[1]);
 			coefficients = gaussian(structuringElement, sigma);
+		} else if ("mean".equals(kernelType)) {
+			coefficients = mean(structuringElement);
 		} else {
 			throw new IllegalArgumentException("Invalid kernel type: " + kernelType);
 		}
@@ -45,7 +48,6 @@ public final class LinearViewFilter extends ViewFilter.FromFilter {
 		final double ks = - 2.0 * square(sigma);
 		final int n = structuringElement.length / 2;
 		final double[] result = new double[n];
-		double sum = 0.0;
 		
 		for (int i = 0; i < n; ++i) {
 			final double dy = structuringElement[i * 2 + 0];
@@ -53,8 +55,16 @@ public final class LinearViewFilter extends ViewFilter.FromFilter {
 			final double d2 = square(dx) + square(dy);
 			
 			result[i] = exp(d2 / ks) / kp;
-			sum += result[i];
 		}
+		
+		return result;
+	}
+	
+	public static final double[] mean(final int[] structuringElement) {
+		final int n = structuringElement.length / 2;
+		final double[] result = new double[n];
+		
+		Arrays.fill(result, 1.0 / (double) n);
 		
 		return result;
 	}
