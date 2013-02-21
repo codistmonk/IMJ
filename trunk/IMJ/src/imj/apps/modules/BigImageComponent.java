@@ -32,6 +32,8 @@ public final class BigImageComponent extends JComponent {
 	
 	private final String imageId;
 	
+	private int scale;
+	
 	private int lod;
 	
 	private FilteredImage image;
@@ -45,22 +47,49 @@ public final class BigImageComponent extends JComponent {
 	public BigImageComponent(final Context context, final String imageId) {
 		this.context = context;
 		this.imageId = imageId;
+		this.scale = 1;
 		this.viewport = new Rectangle();
 		
 		context.set("imageView", this);
 		
 		this.setLod(0);
+		this.setScale(1);
 		
 		this.setFocusable(true);
+		
+		context.set("autoAdjustScale", false);
 		
 		this.addKeyListener(new KeyAdapter() {
 			
 			@Override
 			public final void keyTyped(final KeyEvent event) {
-				if ('+' == event.getKeyChar()) {
-					BigImageComponent.this.setLod(BigImageComponent.this.getLod() - 1);
-				} else if ('-' == event.getKeyChar()) {
-					BigImageComponent.this.setLod(BigImageComponent.this.getLod() + 1);
+				final int oldScale = BigImageComponent.this.getScale();
+				
+				if ('s' == event.getKeyChar()) {
+					context.set("autoAdjustScale", false);
+				} else if ('S' == event.getKeyChar()) {
+					context.set("autoAdjustScale", true);
+				} else if ('*' == event.getKeyChar()) {
+					BigImageComponent.this.setScale(oldScale * 2);
+				} else if ('/' == event.getKeyChar()) {
+					BigImageComponent.this.setScale(oldScale / 2);
+				} else {
+					final int oldLod = BigImageComponent.this.getLod();
+					final boolean adjustScale = context.get("autoAdjustScale");
+					
+					if ('+' == event.getKeyChar()) {
+						BigImageComponent.this.setLod(oldLod - 1);
+						
+						if (adjustScale && 0 < oldLod) {
+							BigImageComponent.this.setScale(oldScale / 2);
+						}
+					} else if ('-' == event.getKeyChar()) {
+						BigImageComponent.this.setLod(oldLod + 1);
+						
+						if (adjustScale) {
+							BigImageComponent.this.setScale(oldScale * 2);
+						}
+					}
 				}
 			}
 			
@@ -73,7 +102,10 @@ public final class BigImageComponent extends JComponent {
 			
 			@Override
 			public final void mouseMoved(final MouseEvent event) {
-				context.set("xy", event.getPoint());
+				final int unscaledX = BigImageComponent.this.unscale(event.getX());
+				final int unscaledY = BigImageComponent.this.unscale(event.getY());
+				
+				context.set("xy", new Point(unscaledX, unscaledY));
 			}
 			
 			@Override
@@ -138,6 +170,28 @@ public final class BigImageComponent extends JComponent {
 		}
 	}
 	
+	public final int getScale() {
+		return this.scale;
+	}
+	
+	public final void setScale(final int scale) {
+		if (1 <= scale) {
+			this.scale = scale;
+			
+			this.context.set("scale", scale);
+			
+			this.refreshImage();
+		}
+	}
+	
+	public final int scale(final int value) {
+		return value * this.getScale();
+	}
+	
+	public final int unscale(final int value) {
+		return value / this.getScale();
+	}
+	
 	public final void refreshImage() {
 		this.image = new FilteredImage(ImageWrangler.INSTANCE.load(this.getImageId(), this.getLod()));
 		this.image.setFilter((ViewFilter) this.context.get("viewFilter"));
@@ -147,8 +201,8 @@ public final class BigImageComponent extends JComponent {
 		final Rectangle viewport = this.getVisibleRect();
 		final int columnCount = this.image.getColumnCount();
 		final int rowCount = this.image.getRowCount();
-		final double scaleVariation = columnCount / (double) this.getPreferredSize().getWidth();
-		this.setPreferredSize(new Dimension(columnCount, rowCount));
+		final double scaleVariation = this.scale(columnCount) / (double) this.getPreferredSize().getWidth();
+		this.setPreferredSize(new Dimension(this.scale(columnCount), this.scale(rowCount)));
 		
 		this.buffer1 = null;
 		this.buffer2 = null;
@@ -218,21 +272,26 @@ public final class BigImageComponent extends JComponent {
 			final RegionOfInterest roi = this.getLod() < rois.length ? rois[this.getLod()] : null;
 			
 			for (int y = newViewport.y; y < endY; ++y) {
-				if (y < 0 || this.image.getRowCount() <= y) {
+				final int unscaledY = this.unscale(y);
+				
+				if (unscaledY < 0 || this.image.getRowCount() <= unscaledY) {
 					continue;
 				}
 				
 				final int yInBuffer = y - newViewport.y;
 				
 				for (int x = newViewport.x; x < endX; ++x) {
-					if (x < 0 || this.image.getColumnCount() <= x || this.viewport.contains(x, y)) {
+					final int unscaledX = this.unscale(x);
+					
+					if (unscaledX < 0 || this.image.getColumnCount() <= unscaledX || this.viewport.contains(x, y)) {
 						continue;
 					}
 					
-					final int pixel = y * this.image.getColumnCount() + x;
 					final int xInBuffer = x - newViewport.x;
 					
-					this.buffer2.setRGB(xInBuffer, yInBuffer, roi == null || roi.get(y, x) ? this.image.getValue(y, x) : 0);
+//					this.buffer2.setRGB(xInBuffer, yInBuffer, roi == null || roi.get(y, x) ? this.image.getValue(y, x) : 0);
+					this.buffer2.setRGB(xInBuffer, yInBuffer, roi == null || roi.get(unscaledY, unscaledX) ?
+							this.image.getValue(unscaledY, unscaledX) : 0);
 				}
 			}
 			
