@@ -3,6 +3,7 @@ package imj.apps.modules;
 import static javax.swing.Box.createHorizontalGlue;
 import static javax.swing.Box.createVerticalGlue;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
+import static net.sourceforge.aprog.tools.Tools.cast;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -26,6 +27,7 @@ import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 
 import net.sourceforge.aprog.context.Context;
+import net.sourceforge.aprog.events.AtomicVariable;
 import net.sourceforge.aprog.tools.Tools;
 
 /**
@@ -168,6 +170,15 @@ public abstract class Plugin {
 	@Override
 	public final String toString() {
 		return this.getClass().getName();
+	}
+	
+	public static final void fireUpdate(final Context context, final String variableName) {
+		final Object value = context.get(variableName);
+		final AtomicVariable<Object> variable = cast(AtomicVariable.class, context.getVariable(variableName));
+		
+		if (variable != null) {
+			variable.new ValueChangedEvent(value, value).fire();
+		}
 	}
 	
 }

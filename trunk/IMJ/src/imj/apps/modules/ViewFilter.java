@@ -24,7 +24,6 @@ import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.ignore;
-
 import imj.Image;
 import imj.Labeling.NeighborhoodShape.Distance;
 import imj.apps.modules.FilteredImage.ChannelFilter;
@@ -34,8 +33,6 @@ import imj.apps.modules.ViewFilter.Channel.Primitive;
 import imj.apps.modules.ViewFilter.Channel.Synthetic;
 
 import java.awt.Color;
-import java.lang.ref.WeakReference;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Locale;
@@ -44,7 +41,6 @@ import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.events.Variable;
 import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-18)
@@ -79,7 +75,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 			}
 			
 			for (final Channel channel : this.inputChannels) {
-				this.buffer[channel.getIndex()] = this.getNewValue(index, oldValue, channel);
+				this.buffer[channel.getIndex()] = max(0, min(255, this.getNewValue(index, oldValue, channel)));
 			}
 			
 			return argb(this.buffer[ALPHA.getIndex()],
@@ -135,6 +131,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 		
 		context.set("viewFilter", null);
 		context.set("viewFilter", this);
+		fireUpdate(this.getContext(), "image");
 	}
 	
 	@Override
@@ -145,6 +142,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	@Override
 	public final void cancel() {
 		this.getContext().set("viewFilter", this.backup);
+		fireUpdate(this.getContext(), "image");
 	}
 	
 	@Override

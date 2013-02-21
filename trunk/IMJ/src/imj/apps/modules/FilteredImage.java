@@ -259,14 +259,14 @@ public final class FilteredImage extends Image.Abstract {
 		@Override
 		protected final void processNeighbor(final int index, final int oldValue, final int neighborIndex, final int neighborValue) {
 			this.result += this.coefficients[this.i++] * neighborValue;
-			
-			if (index == 0) {
-				Tools.debugPrint(neighborValue, result);
-			}
 		}
 		
 		@Override
 		protected final int getResult(final int index, final int oldValue) {
+			if (index == 0) {
+				Tools.debugPrint((int) this.result);
+			}
+			
 			return (int) this.result;
 		}
 		

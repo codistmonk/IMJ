@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.Locale;
 
 import net.sourceforge.aprog.context.Context;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-18)
@@ -48,6 +49,7 @@ public final class LinearViewFilter extends ViewFilter.FromFilter {
 		final double ks = - 2.0 * square(sigma);
 		final int n = structuringElement.length / 2;
 		final double[] result = new double[n];
+		double sum = 0.0;
 		
 		for (int i = 0; i < n; ++i) {
 			final double dy = structuringElement[i * 2 + 0];
@@ -55,6 +57,13 @@ public final class LinearViewFilter extends ViewFilter.FromFilter {
 			final double d2 = square(dx) + square(dy);
 			
 			result[i] = exp(d2 / ks) / kp;
+			sum += result[i];
+		}
+		
+		if (sum != 0.0) {
+			for (int i = 0; i < n; ++i) {
+				result[i] /= sum;
+			}
 		}
 		
 		return result;
