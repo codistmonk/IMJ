@@ -185,13 +185,6 @@ public final class Show {
 				final ViewFilter filter = (ViewFilter) input.getSelectedItem();
 				
 				if (filter != null) {
-//					final ViewFilter previousFilter = result.get("viewFilter");
-					
-//					if (!filter.configureAndApply()) {
-//						result.set("viewFilter", previousFilter);
-//						
-//						return;
-//					}
 					filter.configureAndApply();
 				} else {
 					result.set("viewFilter", null);
@@ -213,18 +206,6 @@ public final class Show {
 				}
 				
 				final Sieve sieve = (Sieve) input.getSelectedItem();
-//				final RegionOfInterest roi = sieve.getROI();
-//				final RegionOfInterest backup = new RegionOfInterest(roi.getRowCount(), roi.getColumnCount());
-//				final Sieve previousSieve = result.get("sieve");
-				
-//				roi.copyTo(backup);
-				
-//				if (!sieve.configureAndApply()) {
-//					backup.copyTo(roi);
-//					result.set("sieve", previousSieve);
-					
-//					return;
-//				}
 				
 				sieve.configureAndApply();
 			}
@@ -289,6 +270,8 @@ public final class Show {
 		
 		result.set("image", null, Image.class);
 		result.set("lod", null, Integer.class);
+		result.set("scale", null, Integer.class);
+		result.set("autoAdjustScale", null, Boolean.class);
 		result.set("xy", null, Point.class);
 		result.set("rgb", null, String.class);
 		result.set("hsb", null, String.class);
@@ -380,7 +363,7 @@ public final class Show {
 		
 		result.setLayout(new BoxLayout(result, BoxLayout.LINE_AXIS));
 		
-		for (final String variableName : array("lod", "xy", "rgb", "hsb")) {
+		for (final String variableName : array("lod", "scale", "autoAdjustScale", "xy", "rgb", "hsb")) {
 			final JLabel label = new JLabel(toStatusString(context.get(variableName)));
 			
 			result.add(new JLabel(variableName.toUpperCase(Locale.ENGLISH) + ":"));

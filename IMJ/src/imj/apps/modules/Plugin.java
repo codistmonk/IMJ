@@ -1,6 +1,7 @@
 package imj.apps.modules;
 
 import static javax.swing.Box.createHorizontalGlue;
+import static javax.swing.Box.createVerticalGlue;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 
 import java.awt.event.ActionEvent;
@@ -14,6 +15,7 @@ import java.util.Map;
 
 import javax.imageio.ImageIO;
 import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -86,6 +88,7 @@ public abstract class Plugin {
 		final JButton cancelButton = new JButton("Cancel");
 		final JButton okButton = new JButton("OK");
 		
+		inputBox.add(createVerticalGlue());
 		inputBox.add(horizontalBox(cancelButton, createHorizontalGlue(), previewButton, okButton));
 		
 		final JPanel panel = new JPanel();
@@ -93,6 +96,7 @@ public abstract class Plugin {
 		final JDialog dialog = new JDialog(mainFrame, false);
 		
 		try {
+			panel.setLayout(new BoxLayout(panel, BoxLayout.LINE_AXIS));
 			panel.add(new JLabel(new ImageIcon(ImageIO.read(Tools.getResourceAsStream("imj/apps/thumbnail.png")))));
 			panel.add(inputBox);
 			
@@ -146,6 +150,7 @@ public abstract class Plugin {
 			
 			Plugin.this.backup();
 			
+			dialog.pack();
 			dialog.setVisible(true);
 		} catch (IOException exception) {
 			exception.printStackTrace();
