@@ -5,6 +5,7 @@ import static imj.IMJTools.argb;
 import imj.IMJTools.StatisticsSelector;
 import imj.Image;
 import imj.IntList;
+import imj.apps.modules.ViewFilter.Channel;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -70,9 +71,18 @@ public final class FilteredImage extends Image.Abstract {
 	}
 	
 	/**
+	 * @author codistmonk (creation 2013-02-18)
+	 */
+	public static abstract interface ChannelFilter {
+		
+		public abstract int getNewValue(int index, int oldValue, Channel channel);
+		
+	}
+	
+	/**
 	 * @author codistmonk (creation 2013-02-19)
 	 */
-	public static abstract class StructuringElementFilter implements Filter {
+	public static abstract class StructuringElementFilter implements ChannelFilter {
 		
 		private final int[] deltas;
 		
@@ -105,62 +115,49 @@ public final class FilteredImage extends Image.Abstract {
 		}
 		
 		@Override
-		public final int getNewValue(final int index, final int oldValue) {
-			final int[] rgb = new int[3];
-//			final int channelCount = this.getImage().getChannelCount();
-			final int channelCount = 1;
+		public final int getNewValue(final int index, final int oldValue, final Channel channel) {
+			final int oldChannelValue = channel.getValue(oldValue);
 			
-			for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex) {
-				final int oldChannelValue = channelValue(oldValue, channelIndex);
+			this.reset(index, oldChannelValue);
+			
+			final int rowCount = this.getImage().getRowCount();
+			final int columnCount = this.getImage().getColumnCount();
+			final int rowIndex = index / columnCount;
+			final int columnIndex = index % columnCount;
+			final int n = this.deltas.length;
+			this.size = 0;
+			
+			for (int i = 0; i < n; i += 2) {
+				final int y = rowIndex + this.deltas[i + 0];
 				
-				this.reset(index, oldChannelValue);
-				
-				final int rowCount = this.getImage().getRowCount();
-				final int columnCount = this.getImage().getColumnCount();
-				final int rowIndex = index / columnCount;
-				final int columnIndex = index % columnCount;
-				final int n = this.deltas.length;
-				this.size = 0;
-				
-				for (int i = 0; i < n; i += 2) {
-					final int y = rowIndex + this.deltas[i + 0];
+				if (0 <= y && y < rowCount) {
+					final int x = columnIndex + this.deltas[i + 1];
 					
-					if (0 <= y && y < rowCount) {
-						final int x = columnIndex + this.deltas[i + 1];
-						
-						if (0 <= x && x < columnCount) {
-							++this.size;
-							final int neighborIndex = y * columnCount + x;
-							final int neighborChannelValue = channelValue(this.getImage().getValue(neighborIndex), channelIndex);
-							this.processNeighbor(index, oldChannelValue, neighborIndex, neighborChannelValue);
-						} else {
-							this.neighborIgnored();
-						}
+					if (0 <= x && x < columnCount) {
+						++this.size;
+						final int neighborIndex = y * columnCount + x;
+						final int neighborChannelValue = channel.getValue(this.getImage().getValue(neighborIndex));
+						this.processNeighbor(index, oldChannelValue, neighborIndex, neighborChannelValue);
 					} else {
 						this.neighborIgnored();
 					}
+				} else {
+					this.neighborIgnored();
 				}
-				
-				rgb[channelIndex] = this.getResult(index, oldChannelValue);
 			}
 			
-			for (int i = channelCount; i < rgb.length; ++i) {
-				rgb[i] = rgb[i - 1];
-			}
-			
-//			return argb(255, rgb[2], rgb[1], rgb[0]);
-			return rgb[0];
+			return this.getResult(index, oldChannelValue);
 		}
 		
-		protected abstract void reset(int index, int oldValue);
+		protected abstract void reset(int index, int oldChannelValue);
 		
 		protected void neighborIgnored() {
 			// NOP
 		}
 		
-		protected abstract void processNeighbor(int index, int oldValue, int neighborIndex, int neighborValue);
+		protected abstract void processNeighbor(int index, int oldChannelValue, int neighborIndex, int neighborChannelValue);
 		
-		protected abstract int getResult(int index, int oldValue);
+		protected abstract int getResult(int index, int oldChannelValue);
 		
 	}
 	
