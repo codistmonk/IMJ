@@ -59,12 +59,6 @@ public final class BigImageComponent extends JComponent {
 		this.rowValueReady = new boolean[0];
 		
 		context.set("imageView", this);
-		
-		this.setLod(0);
-		this.setScale(1);
-		
-		this.setFocusable(true);
-		
 		context.set("autoAdjustScale", false);
 		
 		this.addKeyListener(new KeyAdapter() {
@@ -72,30 +66,29 @@ public final class BigImageComponent extends JComponent {
 			@Override
 			public final void keyTyped(final KeyEvent event) {
 				final int oldScale = BigImageComponent.this.getScale();
+				final boolean adjustScale = context.get("autoAdjustScale");
 				
 				if ('s' == event.getKeyChar()) {
-					context.set("autoAdjustScale", false);
-				} else if ('S' == event.getKeyChar()) {
-					context.set("autoAdjustScale", true);
+					context.set("autoAdjustScale", !adjustScale);
 				} else if ('*' == event.getKeyChar()) {
 					BigImageComponent.this.setScale(oldScale * 2);
 				} else if ('/' == event.getKeyChar()) {
 					BigImageComponent.this.setScale(oldScale / 2);
 				} else {
 					final int oldLod = BigImageComponent.this.getLod();
-					final boolean adjustScale = context.get("autoAdjustScale");
 					
 					if ('+' == event.getKeyChar()) {
-						BigImageComponent.this.setLod(oldLod - 1);
 						
-						if (adjustScale && 0 < oldLod) {
-							BigImageComponent.this.setScale(oldScale / 2);
+						if (adjustScale && 0 < oldLod && 1 < oldScale) {
+							BigImageComponent.this.setLodAndScale(oldLod - 1, oldScale / 2);
+						} else {
+							BigImageComponent.this.setLod(oldLod - 1);
 						}
 					} else if ('-' == event.getKeyChar()) {
-						BigImageComponent.this.setLod(oldLod + 1);
-						
 						if (adjustScale) {
-							BigImageComponent.this.setScale(oldScale * 2);
+							BigImageComponent.this.setLodAndScale(oldLod + 1, oldScale * 2);
+						} else {
+							BigImageComponent.this.setLod(oldLod + 1);
 						}
 					}
 				}
@@ -148,7 +141,9 @@ public final class BigImageComponent extends JComponent {
 		context.getVariable("viewFilter").addListener(fullRepaintNeeded);
 		context.getVariable("sieve").addListener(fullRepaintNeeded);
 		
+		this.setFocusable(true);
 		this.setDoubleBuffered(false);
+		this.setLodAndScale(0, 1);
 	}
 	
 	@Override
@@ -188,6 +183,18 @@ public final class BigImageComponent extends JComponent {
 		if (1 <= scale) {
 			this.scale = scale;
 			
+			this.context.set("scale", scale);
+			
+			this.refreshImage();
+		}
+	}
+	
+	public final void setLodAndScale(final int lod, final int scale) {
+		if (0 <= lod && 1 <= scale) {
+			this.lod = lod;
+			this.scale = scale;
+			
+			this.context.set("lod", lod);
 			this.context.set("scale", scale);
 			
 			this.refreshImage();
