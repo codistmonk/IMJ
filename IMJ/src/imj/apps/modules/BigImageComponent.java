@@ -298,23 +298,25 @@ public final class BigImageComponent extends JComponent {
 			}
 			
 			for (int unscaledY = firstUnscaledY, y = newViewport.y; unscaledY <= lastUnscaledY || y < endY; ++unscaledY) {
+				final int nextEndY = min(endY, this.scale(unscaledY + 1));
+				
 				if (unscaledY < 0 || this.image.getRowCount() <= unscaledY) {
+					y = nextEndY;
 					continue;
 				}
 				
 				fill(this.rowValueReady, false);
 				
-				final int nextEndY = min(endY, this.scale(unscaledY + 1));
-				
 				while (y < nextEndY) {
 					final int yInBuffer = y - newViewport.y;
 					
 					for (int unscaledX = firstUnscaledX, x = newViewport.x, i = 0; unscaledX <= lastUnscaledX || x < endX; ++unscaledX, ++i) {
+						final int nextEndX = min(endX, this.scale(unscaledX + 1));
+						
 						if (unscaledX < 0 || this.image.getColumnCount() <= unscaledX) {
+							x = nextEndX;
 							continue;
 						}
-						
-						final int nextEndX = min(endX, this.scale(unscaledX + 1));
 						
 						while (x < nextEndX) {
 							if (this.viewport.contains(x, y)) {
