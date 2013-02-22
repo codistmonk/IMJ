@@ -1,12 +1,17 @@
 package imj.apps.modules;
 
+import static java.lang.Double.parseDouble;
+import static java.lang.Integer.parseInt;
 import static javax.swing.Box.createHorizontalGlue;
 import static javax.swing.Box.createVerticalGlue;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.cast;
+import static net.sourceforge.aprog.tools.Tools.ignore;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
@@ -85,6 +90,46 @@ public abstract class Plugin {
 			inputBox.add(horizontalBox(new JLabel(entry.getKey()), textField));
 			
 			textField.addActionListener(applyAction);
+			
+			textField.addKeyListener(new KeyAdapter() {
+				
+				@Override
+				public final void keyPressed(final KeyEvent event) {
+					int increment = 0;
+					
+					switch (event.getKeyCode()) {
+					case KeyEvent.VK_UP:
+					case KeyEvent.VK_KP_UP:
+						increment = +1;
+						break;
+					case KeyEvent.VK_DOWN:
+					case KeyEvent.VK_KP_DOWN:
+						increment = -1;
+						break;
+					default:
+						break;
+					}
+					
+					if (increment != 0) {
+						try {
+							final String updatedNumber = "" + (parseInt(textField.getSelectedText()) + increment);
+							final int i = textField.getSelectionStart();
+							final int j = textField.getSelectionEnd();
+							
+							textField.setText(textField.getText().substring(0, i) + updatedNumber + textField.getText().substring(j));
+							textField.setSelectionStart(i);
+							textField.setSelectionEnd(i + updatedNumber.length());
+							
+							event.consume();
+							
+							applyAction.actionPerformed(null);
+						} catch (final Exception exception) {
+							ignore(exception);
+						}
+					}
+				}
+				
+			});
 		}
 		
 		final JButton cancelButton = new JButton("Cancel");
