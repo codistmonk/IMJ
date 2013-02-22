@@ -5,6 +5,7 @@ import static imj.IMJTools.green;
 import static imj.IMJTools.red;
 import static java.lang.Integer.parseInt;
 import static java.util.Collections.synchronizedList;
+import static javax.swing.JOptionPane.OK_CANCEL_OPTION;
 import static net.sourceforge.aprog.af.AFTools.item;
 import static net.sourceforge.aprog.af.AFTools.newAboutItem;
 import static net.sourceforge.aprog.af.AFTools.newPreferencesItem;
@@ -50,6 +51,7 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -65,6 +67,7 @@ import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.events.Variable;
 import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
+import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
@@ -175,14 +178,14 @@ public final class Show {
 			@Override
 			public final void perform() {
 				final ViewFilter[] filters = result.get("viewFilters");
-				final JComboBox input = new JComboBox(filters);
-				final int option = JOptionPane.showConfirmDialog(null, input, "Select a filter", JOptionPane.OK_CANCEL_OPTION);
+				final JList input = new JList(filters);
+				final int option = JOptionPane.showConfirmDialog(null, scrollable(input), "Select a filter", OK_CANCEL_OPTION);
 				
 				if (option != JOptionPane.OK_OPTION) {
 					return;
 				}
 				
-				final ViewFilter filter = (ViewFilter) input.getSelectedItem();
+				final ViewFilter filter = (ViewFilter) input.getSelectedValue();
 				
 				if (filter != null) {
 					filter.configureAndApply();
@@ -198,14 +201,14 @@ public final class Show {
 			@Override
 			public final void perform() {
 				final Sieve[] sieves = result.get("sieves");
-				final JComboBox input = new JComboBox(sieves);
-				final int option = JOptionPane.showConfirmDialog(null, input, "Select a sieve", JOptionPane.OK_CANCEL_OPTION);
+				final JList input = new JList(sieves);
+				final int option = JOptionPane.showConfirmDialog(null, scrollable(input), "Select a sieve", OK_CANCEL_OPTION);
 				
 				if (option != JOptionPane.OK_OPTION) {
 					return;
 				}
 				
-				final Sieve sieve = (Sieve) input.getSelectedItem();
+				final Sieve sieve = (Sieve) input.getSelectedValue();
 				
 				sieve.configureAndApply();
 			}
