@@ -1,13 +1,11 @@
 package imj.apps.modules;
 
-import static imj.IMJTools.channelValue;
 import static imj.IMJTools.argb;
 import imj.IMJTools.StatisticsSelector;
 import imj.Image;
 import imj.IntList;
 import imj.apps.modules.ViewFilter.Channel;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-18)
@@ -263,10 +261,6 @@ public final class FilteredImage extends Image.Abstract {
 		
 		@Override
 		protected final int getResult(final int index, final int oldValue) {
-			if (index == 0) {
-				Tools.debugPrint((int) this.result);
-			}
-			
 			return (int) this.result;
 		}
 		
