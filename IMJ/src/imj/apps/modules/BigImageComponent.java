@@ -2,6 +2,8 @@ package imj.apps.modules;
 
 import static java.lang.Double.isInfinite;
 import static java.lang.Double.isNaN;
+import static java.lang.Math.min;
+import static java.util.Arrays.fill;
 import imj.Image;
 import imj.ImageWrangler;
 
@@ -44,11 +46,17 @@ public final class BigImageComponent extends JComponent {
 	
 	private final Rectangle viewport;
 	
+	private int[] rowValues;
+	
+	private boolean[] rowValueReady;
+	
 	public BigImageComponent(final Context context, final String imageId) {
 		this.context = context;
 		this.imageId = imageId;
 		this.scale = 1;
 		this.viewport = new Rectangle();
+		this.rowValues = new int[0];
+		this.rowValueReady = new boolean[0];
 		
 		context.set("imageView", this);
 		
@@ -139,6 +147,8 @@ public final class BigImageComponent extends JComponent {
 		
 		context.getVariable("viewFilter").addListener(fullRepaintNeeded);
 		context.getVariable("sieve").addListener(fullRepaintNeeded);
+		
+		this.setDoubleBuffered(false);
 	}
 	
 	@Override
@@ -268,30 +278,58 @@ public final class BigImageComponent extends JComponent {
 			}
 			
 			final RegionOfInterest[] rois = this.context.get("rois");
-			
 			final RegionOfInterest roi = this.getLod() < rois.length ? rois[this.getLod()] : null;
+			final int firstUnscaledY = this.unscale(newViewport.y);
+			final int lastUnscaledY = this.unscale(endY - 1);
+			final int firstUnscaledX = this.unscale(newViewport.x);
+			final int lastUnscaledX = this.unscale(endX - 1);
+			final int n = 1 + lastUnscaledX - firstUnscaledX;
 			
-			for (int y = newViewport.y; y < endY; ++y) {
-				final int unscaledY = this.unscale(y);
-				
+			if (this.rowValues.length <= n) {
+				this.rowValues = new int[n];
+				this.rowValueReady = new boolean[n];
+			}
+			
+			for (int unscaledY = firstUnscaledY, y = newViewport.y; unscaledY <= lastUnscaledY || y < endY; ++unscaledY) {
 				if (unscaledY < 0 || this.image.getRowCount() <= unscaledY) {
 					continue;
 				}
 				
-				final int yInBuffer = y - newViewport.y;
+				fill(this.rowValueReady, false);
 				
-				for (int x = newViewport.x; x < endX; ++x) {
-					final int unscaledX = this.unscale(x);
+				final int nextEndY = min(endY, this.scale(unscaledY + 1));
+				
+				while (y < nextEndY) {
+					final int yInBuffer = y - newViewport.y;
 					
-					if (unscaledX < 0 || this.image.getColumnCount() <= unscaledX || this.viewport.contains(x, y)) {
-						continue;
+					for (int unscaledX = firstUnscaledX, x = newViewport.x, i = 0; unscaledX <= lastUnscaledX || x < endX; ++unscaledX, ++i) {
+						if (unscaledX < 0 || this.image.getColumnCount() <= unscaledX) {
+							continue;
+						}
+						
+						final int nextEndX = min(endX, this.scale(unscaledX + 1));
+						
+						while (x < nextEndX) {
+							if (this.viewport.contains(x, y)) {
+								++x;
+								continue;
+							}
+							
+							if (!this.rowValueReady[i]) {
+								this.rowValueReady[i] = true;
+								this.rowValues[i] = roi == null || roi.get(unscaledY, unscaledX) ?
+										this.image.getValue(unscaledY, unscaledX) : 0;
+							}
+							
+							final int xInBuffer = x - newViewport.x;
+							
+							this.buffer2.setRGB(xInBuffer, yInBuffer, this.rowValues[i]);
+							
+							++x;
+						}
 					}
 					
-					final int xInBuffer = x - newViewport.x;
-					
-//					this.buffer2.setRGB(xInBuffer, yInBuffer, roi == null || roi.get(y, x) ? this.image.getValue(y, x) : 0);
-					this.buffer2.setRGB(xInBuffer, yInBuffer, roi == null || roi.get(unscaledY, unscaledX) ?
-							this.image.getValue(unscaledY, unscaledX) : 0);
+					++y;
 				}
 			}
 			
