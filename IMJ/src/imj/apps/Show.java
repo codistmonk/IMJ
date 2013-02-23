@@ -6,6 +6,8 @@ import static imj.IMJTools.red;
 import static java.lang.Integer.parseInt;
 import static java.util.Collections.synchronizedList;
 import static javax.swing.JOptionPane.OK_CANCEL_OPTION;
+import static javax.swing.JOptionPane.OK_OPTION;
+import static javax.swing.JOptionPane.showConfirmDialog;
 import static net.sourceforge.aprog.af.AFTools.item;
 import static net.sourceforge.aprog.af.AFTools.newAboutItem;
 import static net.sourceforge.aprog.af.AFTools.newPreferencesItem;
@@ -26,6 +28,7 @@ import imj.apps.modules.BigImageComponent;
 import imj.apps.modules.FeatureViewFilter;
 import imj.apps.modules.HistogramsPanel;
 import imj.apps.modules.LinearViewFilter;
+import imj.apps.modules.ROIMorphologyPlugin;
 import imj.apps.modules.RankViewFilter;
 import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.RoundingViewFilter;
@@ -125,6 +128,11 @@ public final class Show {
 	 */
 	public static final String ACTIONS_COPY_ROI_TO_LOD = "actions.copyROIToLOD";
 	
+	/**
+	 * {@value}.
+	 */
+	public static final String ACTIONS_APPLY_MORPHOLOGICAL_OPERATION_TO_ROI = "actions.applyMorphologicalOperationToROI";
+	
 	public static final Context newContext() {
 		final Context result = AFTools.newContext();
 		
@@ -202,15 +210,26 @@ public final class Show {
 			public final void perform() {
 				final Sieve[] sieves = result.get("sieves");
 				final JList input = new JList(sieves);
-				final int option = JOptionPane.showConfirmDialog(null, scrollable(input), "Select a sieve", OK_CANCEL_OPTION);
+				final int option = showConfirmDialog(null, scrollable(input), "Select a sieve", OK_CANCEL_OPTION);
 				
-				if (option != JOptionPane.OK_OPTION) {
+				if (option != OK_OPTION) {
 					return;
 				}
 				
 				final Sieve sieve = (Sieve) input.getSelectedValue();
 				
 				sieve.configureAndApply();
+			}
+			
+		};
+		
+		new AbstractAFAction(result, ACTIONS_APPLY_MORPHOLOGICAL_OPERATION_TO_ROI) {
+			
+			private final ROIMorphologyPlugin plugin = new ROIMorphologyPlugin(result);
+			
+			@Override
+			public final void perform() {
+				this.plugin.configureAndApply();
 			}
 			
 		};
@@ -267,6 +286,7 @@ public final class Show {
 						newSetViewFilterItem(result)),
 				menu("ROIs",
 						newApplySieveItem(result),
+						newApplyMorphologicalOperationToROIItem(result),
 						newResetROIItem(result),
 						newCopyROIItem(result))
 		));
@@ -337,6 +357,12 @@ public final class Show {
     	checkAWT();
     	
     	return item("Apply sieve...", context, ACTIONS_APPLY_SIEVE);
+    }
+    
+    public static final JMenuItem newApplyMorphologicalOperationToROIItem(final Context context) {
+    	checkAWT();
+    	
+    	return item("Apply morphological operation...", context, ACTIONS_APPLY_MORPHOLOGICAL_OPERATION_TO_ROI);
     }
     
     public static final JMenuItem newResetROIItem(final Context context) {

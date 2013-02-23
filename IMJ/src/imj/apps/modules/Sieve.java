@@ -23,11 +23,7 @@ public abstract class Sieve extends Plugin {
 	}
 	
 	public final RegionOfInterest getROI() {
-		final Context context = this.getContext();
-		final RegionOfInterest[] rois = context.get("rois");
-		final int lod = context.get("lod");
-		
-		return lod < rois.length ? rois[lod] : null;
+		return Sieve.getROI(this.getContext());
 	}
 	
 	@Override
@@ -85,5 +81,12 @@ public abstract class Sieve extends Plugin {
 	}
 	
 	public abstract boolean accept(int index, int value);
+	
+	public static final RegionOfInterest getROI(final Context context) {
+		final RegionOfInterest[] rois = context.get("rois");
+		final int lod = context.get("lod");
+		
+		return lod < rois.length ? rois[lod] : null;
+	}
 	
 }
