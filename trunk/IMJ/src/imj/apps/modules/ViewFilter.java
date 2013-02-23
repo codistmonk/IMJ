@@ -212,6 +212,18 @@ public abstract class ViewFilter extends Plugin implements Filter {
 					return alpha(rgba);
 				}
 				
+			}, INT {
+				
+				@Override
+				public final int getIndex() {
+					return 0;
+				}
+				
+				@Override
+				public final int getValue(final int rgba) {
+					return rgba;
+				}
+				
 			};
 			
 		}
@@ -318,27 +330,31 @@ public abstract class ViewFilter extends Plugin implements Filter {
 		}
 		
 		public final int[] parseStructuringElement() {
-			final String[] structuringElementParameters = this.getParameters().get("structuringElement").trim().split("\\s+");
-			final String shape = structuringElementParameters[0];
-			
-			if ("ring".equals(shape)) {
-				final double innerRadius = parseDouble(structuringElementParameters[1]);
-				final double outerRadius = parseDouble(structuringElementParameters[2]);
-				final Distance distance = Distance.valueOf(structuringElementParameters[3].toUpperCase(Locale.ENGLISH));
-				
-				return newRing(innerRadius, outerRadius, distance);
-			}
-			
-			if ("disk".equals(shape)) {
-				final double radius = parseDouble(structuringElementParameters[1]);
-				final Distance distance = Distance.valueOf(structuringElementParameters[2].toUpperCase(Locale.ENGLISH));
-				
-				return newDisk(radius, distance);
-			}
-			
-			throw new IllegalArgumentException("Invalid structuring element shape: " + shape);
+			return ViewFilter.parseStructuringElement(this.getParameters().get("structuringElement"));
 		}
 		
+	}
+	
+	public static final int[] parseStructuringElement(final String structuringElementParametersAsString) {
+		final String[] structuringElementParameters = structuringElementParametersAsString.trim().split("\\s+");
+		final String shape = structuringElementParameters[0];
+		
+		if ("ring".equals(shape)) {
+			final double innerRadius = parseDouble(structuringElementParameters[1]);
+			final double outerRadius = parseDouble(structuringElementParameters[2]);
+			final Distance distance = Distance.valueOf(structuringElementParameters[3].toUpperCase(Locale.ENGLISH));
+			
+			return newRing(innerRadius, outerRadius, distance);
+		}
+		
+		if ("disk".equals(shape)) {
+			final double radius = parseDouble(structuringElementParameters[1]);
+			final Distance distance = Distance.valueOf(structuringElementParameters[2].toUpperCase(Locale.ENGLISH));
+			
+			return newDisk(radius, distance);
+		}
+		
+		throw new IllegalArgumentException("Invalid structuring element shape: " + shape);
 	}
 	
 }

@@ -1,15 +1,14 @@
 package imj.apps.modules;
 
-import static imj.IMJTools.*;
+import static imj.IMJTools.alpha;
+import static imj.IMJTools.argb;
 import static imj.IMJTools.blue;
 import static imj.IMJTools.brightness;
-import static imj.IMJTools.green;
+import static imj.IMJTools.hue;
 import static imj.IMJTools.red;
-import static imj.IMJTools.argb;
+import static imj.IMJTools.saturation;
 import static java.lang.Integer.parseInt;
 import static java.util.Locale.ENGLISH;
-
-import imj.IMJTools;
 import imj.apps.modules.FilteredImage.Filter;
 
 import java.awt.Color;

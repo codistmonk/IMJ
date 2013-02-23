@@ -1,41 +1,50 @@
 package imj.apps.modules;
 
+import imj.Image.Abstract;
+
 import java.util.BitSet;
 
 /**
  * @author codistmonk (creation 2013-02-15)
  */
-public final class RegionOfInterest {
-	
-	private final int rowCount;
-	
-	private final int columnCount;
+public final class RegionOfInterest extends Abstract {
 	
 	private final BitSet data;
 	
 	public RegionOfInterest(final int rowCount, final int columnCount) {
-		this.rowCount = rowCount;
-		this.columnCount = columnCount;
-		final int pixelCount = rowCount * columnCount;
+		super(rowCount, columnCount, 1);
+		final int pixelCount = this.getPixelCount();
 		this.data = new BitSet(pixelCount);
 		
 		this.data.set(0, pixelCount);
 	}
 	
+	@Override
+	public final int getValue(final int index) {
+		return this.get(index) ? 1 : 0;
+	}
+	
+	@Override
+	public final int setValue(final int index, final int value) {
+		final int result = this.getValue(index);
+		
+		this.set(index, value != 0);
+		
+		return result;
+	}
+
+	@Override
+	public final float getFloatValue(final int index) {
+		return this.getValue(index);
+	}
+
+	@Override
+	public final float setFloatValue(final int index, final float value) {
+		return this.setValue(index, (int) value);
+	}
+	
 	public final void reset() {
 		this.data.set(0, this.data.size());
-	}
-	
-	public final int getRowCount() {
-		return this.rowCount;
-	}
-	
-	public final int getColumnCount() {
-		return this.columnCount;
-	}
-	
-	public final int getIndex(final int rowIndex, final int columnIndex) {
-		return rowIndex * this.getColumnCount() + columnIndex;
 	}
 	
 	public final boolean get(final int index) {
