@@ -1,9 +1,10 @@
 package imj.apps.modules;
 
+import static java.awt.event.InputEvent.SHIFT_DOWN_MASK;
 import static java.lang.Double.parseDouble;
-import static java.lang.Integer.parseInt;
+import static java.lang.Math.abs;
 import static javax.swing.Box.createHorizontalGlue;
-import static javax.swing.Box.createVerticalGlue;
+import static javax.swing.JOptionPane.showInputDialog;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
@@ -93,26 +94,65 @@ public abstract class Plugin {
 			
 			textField.addKeyListener(new KeyAdapter() {
 				
+				private String operation = "+";
+				
+				private double increment = +1.0;
+				
 				@Override
 				public final void keyPressed(final KeyEvent event) {
-					int increment = 0;
+					switch (event.getKeyCode()) {
+					case KeyEvent.VK_UP:
+					case KeyEvent.VK_KP_UP:
+					case KeyEvent.VK_DOWN:
+					case KeyEvent.VK_KP_DOWN:
+						if ((event.getModifiersEx() & SHIFT_DOWN_MASK) == SHIFT_DOWN_MASK) {
+							final String userInput = showInputDialog("Operation and increment", "+ 1");
+							
+							if (userInput != null) {
+								final String[] operationAndIncrement = userInput.trim().split("\\s+");
+								this.operation = operationAndIncrement[0];
+								this.increment = parseDouble(operationAndIncrement[1]);
+							}
+						}
+						break;
+					default:
+						return;
+					}
 					
 					switch (event.getKeyCode()) {
 					case KeyEvent.VK_UP:
 					case KeyEvent.VK_KP_UP:
-						increment = +1;
+						this.increment = abs(this.increment);
 						break;
 					case KeyEvent.VK_DOWN:
 					case KeyEvent.VK_KP_DOWN:
-						increment = -1;
+						this.increment = -abs(this.increment);
 						break;
 					default:
 						break;
 					}
 					
-					if (increment != 0) {
+					if (this.increment != 0) {
 						try {
-							final String updatedNumber = "" + (parseInt(textField.getSelectedText()) + increment);
+							final double value = parseDouble(textField.getSelectedText());
+							final double newValue;
+							
+							if ("+".equals(this.operation)) {
+								newValue = value + this.increment;
+							} else if ("*".equals(this.operation)) {
+								newValue = 0 <= this.increment ? value * this.increment : value / abs(this.increment);
+							} else {
+								throw new IllegalArgumentException("Invalid operation: " + this.operation);
+							}
+							
+							final String updatedNumber;
+							
+							if (value == (int) value && this.increment == (int) this.increment) {
+								updatedNumber = "" + (int) (newValue);
+							} else {
+								updatedNumber = "" + (newValue);
+							}
+							
 							final int i = textField.getSelectionStart();
 							final int j = textField.getSelectionEnd();
 							
@@ -135,7 +175,6 @@ public abstract class Plugin {
 		final JButton cancelButton = new JButton("Cancel");
 		final JButton okButton = new JButton("OK");
 		
-		inputBox.add(createVerticalGlue());
 		inputBox.add(horizontalBox(cancelButton, createHorizontalGlue(), previewButton, okButton));
 		
 		final JPanel panel = new JPanel();
