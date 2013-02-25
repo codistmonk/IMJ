@@ -27,7 +27,6 @@ import imj.ImageWrangler;
 import imj.apps.modules.BigImageComponent;
 import imj.apps.modules.FeatureViewFilter;
 import imj.apps.modules.HistogramPanel;
-import imj.apps.modules.HistogramsPanel;
 import imj.apps.modules.LinearViewFilter;
 import imj.apps.modules.ROIMorphologyPlugin;
 import imj.apps.modules.RankViewFilter;
@@ -51,7 +50,6 @@ import java.util.Locale;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -71,7 +69,6 @@ import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.events.Variable;
 import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
-import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
@@ -172,7 +169,6 @@ public final class Show {
 					
 					histogramsDialog = new JDialog(mainFrame, "Histogram");
 					
-//					histogramsDialog.add(scrollable(new HistogramsPanel(result)));
 					histogramsDialog.add(scrollable(new HistogramPanel(result)));
 					
 					histogramsDialog.pack();
