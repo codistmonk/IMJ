@@ -14,7 +14,11 @@ public final class ROIMorphologyPlugin extends Plugin {
 	
 	private RankFilter filter;
 	
+	private RankFilter filter2;
+	
 	private RegionOfInterest backup;
+	
+	private RegionOfInterest tmp;
 	
 	public ROIMorphologyPlugin(final Context context) {
 		super(context);
@@ -30,10 +34,22 @@ public final class ROIMorphologyPlugin extends Plugin {
 	@Override
 	public final void initialize() {
 		final String[] operationParameters = this.getParameters().get("operation").trim().split("\\s+");
+		final String operationType = operationParameters[0].toLowerCase(Locale.ENGLISH);
 		final int rank;
+		int rank2 = Integer.MIN_VALUE;
 		
-		if ("rank".equals(operationParameters[0].toLowerCase(Locale.ENGLISH))) {
+		if ("rank".equals(operationType)) {
 			rank = Integer.parseInt(operationParameters[1]);
+		} else if ("dilate".equals(operationType)) {
+			rank = -1;
+		} else if ("erode".equals(operationType)) {
+			rank = 0;
+		} else if ("open".equals(operationType)) {
+			rank = 0;
+			rank2 = -1;
+		} else if ("close".equals(operationType)) {
+			rank = -1;
+			rank2 = 0;
 		} else {
 			throw new IllegalArgumentException("Invalid operation: " + operationParameters[0]);
 		}
@@ -41,6 +57,14 @@ public final class ROIMorphologyPlugin extends Plugin {
 		final int[] structuringElement = ViewFilter.parseStructuringElement(this.getParameters().get("structuringElement"));
 		
 		this.filter = new RankFilter(structuringElement, rank);
+		
+		if (rank2 != Integer.MIN_VALUE) {
+			this.filter2 = new RankFilter(structuringElement, rank2);
+			final RegionOfInterest roi = this.getROI();
+			this.tmp = new RegionOfInterest(roi.getRowCount(), roi.getColumnCount());
+		} else {
+			this.filter2 = null;
+		}
 	}
 	
 	@Override
@@ -55,10 +79,24 @@ public final class ROIMorphologyPlugin extends Plugin {
 		final RegionOfInterest roi = this.getROI();
 		final int pixelCount = roi.getPixelCount();
 		
-		this.filter.setImage(this.backup);
-		
-		for (int pixel = 0; pixel < pixelCount; ++pixel) {
-			roi.setValue(pixel, this.filter.getNewValue(pixel, this.backup.getValue(pixel), Channel.Primitive.INT));
+		if (this.filter2 != null) {
+			this.filter.setImage(this.backup);
+			
+			for (int pixel = 0; pixel < pixelCount; ++pixel) {
+				this.tmp.setValue(pixel, this.filter.getNewValue(pixel, this.backup.getValue(pixel), Channel.Primitive.INT));
+			}
+			
+			this.filter2.setImage(this.tmp);
+			
+			for (int pixel = 0; pixel < pixelCount; ++pixel) {
+				roi.setValue(pixel, this.filter2.getNewValue(pixel, this.tmp.getValue(pixel), Channel.Primitive.INT));
+			}
+		} else {
+			this.filter.setImage(this.backup);
+			
+			for (int pixel = 0; pixel < pixelCount; ++pixel) {
+				roi.setValue(pixel, this.filter.getNewValue(pixel, this.backup.getValue(pixel), Channel.Primitive.INT));
+			}
 		}
 		
 		fireUpdate(this.getContext(), "sieve");
@@ -73,6 +111,8 @@ public final class ROIMorphologyPlugin extends Plugin {
 	@Override
 	public final void clearBackup() {
 		this.backup = null;
+		this.filter = null;
+		this.filter2 = null;
 	}
 	
 }
