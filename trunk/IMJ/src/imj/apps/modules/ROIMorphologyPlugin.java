@@ -105,7 +105,7 @@ public final class ROIMorphologyPlugin extends Plugin {
 	@Override
 	public final void cancel() {
 		this.backup.copyTo(this.getROI());
-		Plugin.fireUpdate(this.getContext(), "rois");
+		Plugin.fireUpdate(this.getContext(), "sieve");
 	}
 	
 	@Override
