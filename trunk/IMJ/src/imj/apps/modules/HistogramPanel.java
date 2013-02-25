@@ -1,44 +1,33 @@
 package imj.apps.modules;
 
 import static imj.IMJTools.argb;
-import static imj.IMJTools.blue;
-import static imj.IMJTools.green;
-import static imj.IMJTools.red;
 import static java.awt.Color.BLACK;
-import static java.awt.Color.WHITE;
-import static java.lang.Math.min;
+import static java.awt.Color.YELLOW;
 import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-
-import imj.IMJTools;
 import imj.Image;
 import imj.apps.modules.ViewFilter.Channel;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.GridLayout;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
-import java.util.Arrays;
 import java.util.Locale;
 
-import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
 import net.sourceforge.aprog.context.Context;
-import net.sourceforge.aprog.events.Variable;
 import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
-import net.sourceforge.aprog.swing.SwingTools;
 
 /**
  * @author codistmonk (creation 2013-02-25)
@@ -49,6 +38,8 @@ public final class HistogramPanel extends JPanel {
 	
 	private final JTextField channelsTextField;
 	
+	private final JLabel statusLabel;
+	
 	private final Histogram1Component histogram1Component;
 	
 	private final Histogram2Component histogram2Component;
@@ -57,10 +48,48 @@ public final class HistogramPanel extends JPanel {
 		super(new BorderLayout());
 		this.context = context;
 		this.channelsTextField = new JTextField("brightness");
+		this.statusLabel = new JLabel();
 		this.histogram1Component = new Histogram1Component();
 		this.histogram2Component = new Histogram2Component();
 		
+		this.histogram1Component.addMouseMotionListener(new MouseAdapter() {
+			
+			@Override
+			public final void mouseExited(final MouseEvent event) {
+				HistogramPanel.this.setStatusText("");
+			}
+			
+			@Override
+			public final void mouseMoved(final MouseEvent event) {
+				final Histogram1Component h1 = HistogramPanel.this.getHistogram1Component();
+				final int datumIndex = h1.getDatumIndex(event.getX());
+				
+				HistogramPanel.this.setStatusText("(" + datumIndex + " " + h1.getValue(datumIndex) + ")");
+			}
+			
+		});
+		
+		this.histogram2Component.addMouseMotionListener(new MouseAdapter() {
+			
+			@Override
+			public final void mouseExited(final MouseEvent event) {
+				HistogramPanel.this.setStatusText("");
+			}
+			
+			@Override
+			public final void mouseMoved(final MouseEvent event) {
+				final Histogram2Component h2 = HistogramPanel.this.getHistogram2Component();
+				final int datumColumnIndex = h2.getDatumColumnIndex(event.getX());
+				final int datumRowIndex = h2.getDatumRowIndex(event.getY());
+				
+				HistogramPanel.this.setStatusText("(" + datumColumnIndex + " " + datumRowIndex + " " +
+						h2.getValue(datumColumnIndex, datumRowIndex) + ")");
+			}
+			
+		});
+		
 		this.add(horizontalBox(new JLabel("Channels:"), this.channelsTextField), BorderLayout.NORTH);
+		this.add(this.statusLabel, BorderLayout.SOUTH);
 		
 		this.channelsTextField.addActionListener(new ActionListener() {
 			
@@ -88,6 +117,18 @@ public final class HistogramPanel extends JPanel {
 		this.setPreferredSize(new Dimension(256, 256));
 		
 		this.update();
+	}
+	
+	public final Histogram1Component getHistogram1Component() {
+		return this.histogram1Component;
+	}
+	
+	public final Histogram2Component getHistogram2Component() {
+		return this.histogram2Component;
+	}
+	
+	final void setStatusText(final String text) {
+		this.statusLabel.setText(text);
 	}
 	
 	final void update() {
@@ -119,6 +160,7 @@ public final class HistogramPanel extends JPanel {
 			debugPrint("Done");
 			
 			this.validate();
+			this.invalidate();
 			this.repaint();
 		}
 	}
@@ -175,6 +217,14 @@ public final class HistogramPanel extends JPanel {
 			this.repaint();
 		}
 		
+		public final int getValue(final int datumIndex) {
+			return this.data[datumIndex];
+		}
+		
+		public final int getDatumIndex(final int x) {
+			return x * 256 / this.getWidth();
+		}
+		
 		@Override
 		protected final void paintComponent(final Graphics g) {
 			super.paintComponent(g);
@@ -183,15 +233,13 @@ public final class HistogramPanel extends JPanel {
 			final int endX = viewport.x + viewport.width;
 			final int lastY = viewport.y + viewport.height - 1;
 			
-			debugPrint(viewport);
-			
 			g.setColor(BLACK);
 			g.fillRect(viewport.x, viewport.y, viewport.width, viewport.height);
 			
-			g.setColor(WHITE);
+			g.setColor(YELLOW);
 			
 			for (int x = viewport.x; x < endX; ++x) {
-				final int h = this.data[x * 256 / viewport.width] * viewport.height / this.max;
+				final int h = this.getValue(this.getDatumIndex(x)) * viewport.height / this.max;
 				
 				g.drawLine(x, lastY, x, lastY - h);
 			}
@@ -216,6 +264,18 @@ public final class HistogramPanel extends JPanel {
 			this.data = new int[256][256];
 			this.setDoubleBuffered(false);
 			this.setPreferredSize(new Dimension(256, 256));
+		}
+		
+		public final int getValue(final int datumColumnIndex, final int datumRowIndex) {
+			return this.data[datumRowIndex][datumColumnIndex];
+		}
+		
+		public final int getDatumRowIndex(final int y) {
+			return 255 - y * 256 / this.getHeight();
+		}
+		
+		public final int getDatumColumnIndex(final int x) {
+			return x * 256 / this.getWidth();
 		}
 		
 		public final void update(final Image image, final Channel channel0, final Channel channel1) {
@@ -251,8 +311,8 @@ public final class HistogramPanel extends JPanel {
 			
 			final int endX = viewport.x + viewport.width;
 			final int endY = viewport.y + viewport.height;
-			final int grayMin = 96;
-			final int grayAmplitude = 255 - grayMin;
+			final int colorMin = 96;
+			final int colorAmplitude = 255 - colorMin;
 			final int countAmplitude = this.max - this.nonZeroMin;
 			
 			for (int y = viewport.y; y < endY; ++y) {
@@ -260,10 +320,10 @@ public final class HistogramPanel extends JPanel {
 				
 				for (int x = viewport.x; x < endX; ++x) {
 					final int datumColumnIndex = x * 256 / viewport.width;
-					final int count = this.data[datumColumnIndex][datumRowIndex];
-					final int gray = count == 0 ? 0 : grayMin + (count - this.nonZeroMin) * grayAmplitude / countAmplitude;
+					final int count = this.getValue(datumColumnIndex, datumRowIndex);
+					final int color = count == 0 ? 0 : colorMin + (count - this.nonZeroMin) * colorAmplitude / countAmplitude;
 					
-					this.buffer.setRGB(x, y, argb(255, gray, gray, gray));
+					this.buffer.setRGB(x, y, argb(255, color, color, 0));
 				}
 			}
 		}
@@ -271,29 +331,6 @@ public final class HistogramPanel extends JPanel {
 		@Override
 		protected final void paintComponent(final Graphics g) {
 			super.paintComponent(g);
-			
-//			final Rectangle viewport = this.getVisibleRect();
-//			final int endX = viewport.x + viewport.width;
-//			final int endY = viewport.y + viewport.height;
-//			
-//			debugPrint(viewport);
-//			
-//			for (int y = viewport.y; y < endY; ++y) {
-//				final int datumRowIndex = y * 256 / viewport.height;
-//				
-//				for (int x = viewport.x; x < endX; ++x) {
-//					final int datumColumnIndex = x * 256 / viewport.width;
-//					final int h = this.data[datumColumnIndex][datumRowIndex] * 255 / this.max;
-//					
-//					if (this.data[datumColumnIndex][datumRowIndex] == this.max) {
-//						debugPrint(h, x, y, new Color(argb(255, h, h, h)));
-//					}
-//					
-//					g.setColor(new Color(argb(255, h, h, h)));
-//					
-//					g.drawLine(x, y, x, y);
-//				}
-//			}
 			
 			this.updateBuffer();
 			
