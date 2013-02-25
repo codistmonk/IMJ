@@ -19,6 +19,11 @@ public final class StatisticsViewFilter extends ViewFilter.FromFilter {
 	}
 	
 	@Override
+	protected final boolean isOutputMonochannel() {
+		return true;
+	}
+	
+	@Override
 	public final void initialize() {
 		final StatisticsSelector feature = StatisticsSelector.valueOf(
 				this.getParameters().get("statistic").toUpperCase(Locale.ENGLISH));

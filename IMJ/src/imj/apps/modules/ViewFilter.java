@@ -63,6 +63,10 @@ public abstract class ViewFilter extends Plugin implements Filter {
 		this.inputChannelClass = Primitive.class;
 	}
 	
+	protected boolean isOutputMonochannel() {
+		return false;
+	}
+	
 	@Override
 	public final int getNewValue(final int index, final int oldValue) {
 		if (!this.splitInputChannels()) {
@@ -74,8 +78,15 @@ public abstract class ViewFilter extends Plugin implements Filter {
 				this.buffer[i] = channelValue(oldValue, i);
 			}
 			
+			int value = 0;
+			
 			for (final Channel channel : this.inputChannels) {
-				this.buffer[channel.getIndex()] = max(0, min(255, this.getNewValue(index, oldValue, channel)));
+				value = max(0, min(255, this.getNewValue(index, oldValue, channel)));
+				this.buffer[channel.getIndex()] = value;
+			}
+			
+			if (this.isOutputMonochannel() && this.inputChannels.size() == 1) {
+				return argb(255, value, value, value);
 			}
 			
 			return argb(this.buffer[ALPHA.getIndex()],
@@ -85,8 +96,15 @@ public abstract class ViewFilter extends Plugin implements Filter {
 			this.buffer[1] = saturation(oldValue);
 			this.buffer[2] = brightness(oldValue);
 			
+			int value = 0;
+			
 			for (final Channel channel : this.inputChannels) {
-				this.buffer[channel.getIndex()] = max(0, min(255, this.getNewValue(index, oldValue, channel)));
+				value = max(0, min(255, this.getNewValue(index, oldValue, channel)));
+				this.buffer[channel.getIndex()] = value;
+			}
+			
+			if (this.isOutputMonochannel() && this.inputChannels.size() == 1) {
+				return argb(255, value, value, value);
 			}
 			
 			return Color.HSBtoRGB(this.buffer[HUE.getIndex()] / 255F,
