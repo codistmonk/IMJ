@@ -26,6 +26,7 @@ import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.BigImageComponent;
 import imj.apps.modules.FeatureViewFilter;
+import imj.apps.modules.HistogramPanel;
 import imj.apps.modules.HistogramsPanel;
 import imj.apps.modules.LinearViewFilter;
 import imj.apps.modules.ROIMorphologyPlugin;
@@ -169,9 +170,12 @@ public final class Show {
 				if (histogramsDialog == null) {
 					final AFMainFrame mainFrame = result.get(AFConstants.Variables.MAIN_FRAME);
 					
-					histogramsDialog = new JDialog(mainFrame, "Histograms");
+					histogramsDialog = new JDialog(mainFrame, "Histogram");
 					
-					histogramsDialog.add(scrollable(new HistogramsPanel(result)));
+//					histogramsDialog.add(scrollable(new HistogramsPanel(result)));
+					histogramsDialog.add(scrollable(new HistogramPanel(result)));
+					
+					histogramsDialog.pack();
 					
 					result.set("histogramsDialog", histogramsDialog);
 				}
