@@ -3,6 +3,7 @@ package imj.apps.modules;
 import static imj.IMJTools.argb;
 import static java.awt.Color.BLACK;
 import static java.awt.Color.YELLOW;
+import static java.lang.Math.min;
 import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -200,7 +201,6 @@ public final class HistogramPanel extends JPanel {
 		
 		public Histogram1Component() {
 			this.data = new int[256];
-			this.setPreferredSize(new Dimension(256, 128));
 		}
 		
 		public final void update(final Image image, final Channel channel) {
@@ -239,6 +239,14 @@ public final class HistogramPanel extends JPanel {
 			g.setColor(YELLOW);
 			
 			for (int x = viewport.x; x < endX; ++x) {
+//				int h = 0;
+//				
+//				for (int i = this.getDatumIndex(x), j = min(255, this.getDatumIndex(x + 1)); i <= j; ++i) {
+//					h = Math.max(h, this.getValue(i));
+//				}
+//				
+//				h = (h * viewport.height) / this.max;
+				
 				final int h = this.getValue(this.getDatumIndex(x)) * viewport.height / this.max;
 				
 				g.drawLine(x, lastY, x, lastY - h);
@@ -263,19 +271,18 @@ public final class HistogramPanel extends JPanel {
 		public Histogram2Component() {
 			this.data = new int[256][256];
 			this.setDoubleBuffered(false);
-			this.setPreferredSize(new Dimension(256, 256));
 		}
 		
 		public final int getValue(final int datumColumnIndex, final int datumRowIndex) {
-			return this.data[datumRowIndex][datumColumnIndex];
-		}
-		
-		public final int getDatumRowIndex(final int y) {
-			return 255 - y * 256 / this.getHeight();
+			return this.data[datumColumnIndex][datumRowIndex];
 		}
 		
 		public final int getDatumColumnIndex(final int x) {
 			return x * 256 / this.getWidth();
+		}
+		
+		public final int getDatumRowIndex(final int y) {
+			return 255 - y * 256 / this.getHeight();
 		}
 		
 		public final void update(final Image image, final Channel channel0, final Channel channel1) {
@@ -316,10 +323,10 @@ public final class HistogramPanel extends JPanel {
 			final int countAmplitude = this.max - this.nonZeroMin;
 			
 			for (int y = viewport.y; y < endY; ++y) {
-				final int datumRowIndex = 255 - y * 256 / viewport.height;
+				final int datumRowIndex = this.getDatumRowIndex(y);
 				
 				for (int x = viewport.x; x < endX; ++x) {
-					final int datumColumnIndex = x * 256 / viewport.width;
+					final int datumColumnIndex = this.getDatumColumnIndex(x);
 					final int count = this.getValue(datumColumnIndex, datumRowIndex);
 					final int color = count == 0 ? 0 : colorMin + (count - this.nonZeroMin) * colorAmplitude / countAmplitude;
 					
