@@ -3,6 +3,7 @@ package imj.apps;
 import static imj.IMJTools.blue;
 import static imj.IMJTools.green;
 import static imj.IMJTools.red;
+import static imj.apps.modules.Plugin.fireUpdate;
 import static java.lang.Integer.parseInt;
 import static java.util.Collections.synchronizedList;
 import static javax.swing.JOptionPane.OK_CANCEL_OPTION;
@@ -44,6 +45,8 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridBagLayout;
 import java.awt.Point;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
@@ -199,6 +202,20 @@ public final class Show {
 					dialog = new JDialog(mainFrame, "Annotations");
 					
 					dialog.add(scrollable(new AnnotationsPanel(result)));
+					
+					dialog.addComponentListener(new ComponentAdapter() {
+						
+						@Override
+						public final void componentShown(final ComponentEvent event) {
+							fireUpdate(result, "sieve");
+						}
+						
+						@Override
+						public final void componentHidden(final ComponentEvent event) {
+							fireUpdate(result, "sieve");
+						}
+						
+					});
 					
 					dialog.pack();
 					

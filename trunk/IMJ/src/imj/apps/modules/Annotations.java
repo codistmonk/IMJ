@@ -1,12 +1,14 @@
 package imj.apps.modules;
 
 import static java.lang.Double.parseDouble;
+import static java.lang.Long.parseLong;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.IntList;
 import imj.apps.modules.Annotations.Annotation.Region;
 
+import java.awt.Color;
 import java.awt.Polygon;
 import java.awt.Shape;
 import java.io.File;
@@ -85,16 +87,16 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 					public final void startElement(final String uri, final String localName,
 							final String qName, final Attributes attributes) throws SAXException {
 						if ("Annotation".equals(qName)) {
-							this.annotation = new Annotation();
-							result.getAnnotations().add(this.annotation);
+							this.annotation = result.new Annotation();
+							this.annotation.setLineColor(new Color((int) parseLong(attributes.getValue("LineColor"))));
 						} else if ("Region".equals(qName)) {
 							this.region = this.annotation.new Region();
 							this.region.setZoom(parseDouble(attributes.getValue("Zoom")));
 							this.xs.clear();
 							this.ys.clear();
 						} else if ("Vertex".equals(qName)) {
-							this.xs.add((int) (parseDouble(attributes.getValue("X")) * this.region.getZoom()));
-							this.ys.add((int) (parseDouble(attributes.getValue("Y")) * this.region.getZoom()));
+							this.xs.add((int) (parseDouble(attributes.getValue("X"))));
+							this.ys.add((int) (parseDouble(attributes.getValue("Y"))));
 						}
 					}
 					
@@ -109,16 +111,6 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 				});
 				
 				debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
-				
-//					debugPrint("annotationCount:", result.getAnnotations().size());
-//					
-//					for (final Annotation annotation : result.getAnnotations()) {
-//						debugPrint("regionCount:", annotation.getRegions().size());
-//						
-//						for (final Region region : annotation.getRegions()) {
-//							debugPrint("regionShape:", region.getShape());
-//						}
-//					}
 			} catch (final Exception exception) {
 				throw unchecked(exception);
 			}
@@ -130,10 +122,25 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 	/**
 	 * @author codistmonk (creation 2013-02-26)
 	 */
-	public static final class Annotation extends GenericTreeNode<Region> {
+	public final class Annotation extends GenericTreeNode<Region> {
+		
+		private Color lineColor;
+		
+		public Annotation() {
+			Annotations.this.getAnnotations().add(this);
+			this.setUserObject(this.getClass().getSimpleName() + " " + (Annotations.this.getAnnotations().indexOf(this) + 1));
+		}
 		
 		public final List<Region> getRegions() {
 			return this.getItems();
+		}
+		
+		public final Color getLineColor() {
+			return this.lineColor;
+		}
+		
+		public final void setLineColor(final Color lineColor) {
+			this.lineColor = lineColor;
 		}
 		
 		/**
@@ -155,7 +162,7 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 			
 			public Region() {
 				Annotation.this.getRegions().add(this);
-				this.setUserObject(Annotation.this.getRegions().indexOf(this) + 1);
+				this.setUserObject(this.getClass().getSimpleName() + " " + (Annotation.this.getRegions().indexOf(this) + 1));
 			}
 			
 			public final double getZoom() {
