@@ -5,12 +5,14 @@ import static java.lang.Long.parseLong;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
+
 import imj.IntList;
 import imj.apps.modules.Annotations.Annotation.Region;
 
 import java.awt.Color;
 import java.awt.Polygon;
 import java.awt.Shape;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;

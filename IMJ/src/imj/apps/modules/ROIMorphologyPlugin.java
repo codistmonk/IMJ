@@ -61,7 +61,7 @@ public final class ROIMorphologyPlugin extends Plugin {
 		if (rank2 != Integer.MIN_VALUE) {
 			this.filter2 = new RankFilter(structuringElement, rank2);
 			final RegionOfInterest roi = this.getROI();
-			this.tmp = new RegionOfInterest(roi.getRowCount(), roi.getColumnCount());
+			this.tmp = RegionOfInterest.newInstance(roi.getRowCount(), roi.getColumnCount());
 		} else {
 			this.filter2 = null;
 		}
@@ -70,7 +70,7 @@ public final class ROIMorphologyPlugin extends Plugin {
 	@Override
 	public final void backup() {
 		final RegionOfInterest roi = this.getROI();
-		this.backup = new RegionOfInterest(roi.getRowCount(), roi.getColumnCount());
+		this.backup = RegionOfInterest.newInstance(roi.getRowCount(), roi.getColumnCount());
 		roi.copyTo(this.backup);
 	}
 	

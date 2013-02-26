@@ -245,7 +245,7 @@ public final class BigImageComponent extends JComponent {
 		RegionOfInterest roi = rois[this.getLod()];
 		
 		if (roi == null || roi.getRowCount() != rowCount || roi.getColumnCount() != columnCount) {
-			roi = new RegionOfInterest(rowCount, columnCount);
+			roi = RegionOfInterest.newInstance(rowCount, columnCount);
 		}
 		
 		rois[this.getLod()] = roi;

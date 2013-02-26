@@ -62,7 +62,7 @@ public abstract class Sieve extends Plugin {
 	@Override
 	public final void backup() {
 		final RegionOfInterest roi = this.getROI();
-		this.backupROI = new RegionOfInterest(roi.getRowCount(), roi.getColumnCount());
+		this.backupROI = RegionOfInterest.newInstance(roi.getRowCount(), roi.getColumnCount());
 		this.backupSieve = this.getContext().get("sieve");
 		
 		roi.copyTo(this.backupROI);

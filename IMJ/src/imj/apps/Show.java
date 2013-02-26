@@ -47,6 +47,8 @@ import java.awt.GridBagLayout;
 import java.awt.Point;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.image.SampleModel;
+import java.awt.image.WritableRaster;
 import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
@@ -465,6 +467,15 @@ public final class Show {
 		final int lastDotIndex = fileName.lastIndexOf('.');
 		
 		return lastDotIndex < 0 ? fileName : fileName.substring(0, lastDotIndex);
+	}
+	
+	public static final class R extends WritableRaster {
+		
+		protected R(SampleModel sampleModel, Point origin) {
+			super(sampleModel, origin);
+			// TODO Auto-generated constructor stub
+		}
+		
 	}
 	
 	/**
