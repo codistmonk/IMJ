@@ -4,8 +4,8 @@ import static java.lang.Double.parseDouble;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
-
 import imj.IntList;
+import imj.apps.modules.Annotations.Annotation.Region;
 
 import java.awt.Polygon;
 import java.awt.Shape;
@@ -13,10 +13,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import javax.swing.tree.DefaultMutableTreeNode;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
@@ -29,18 +29,12 @@ import org.xml.sax.helpers.DefaultHandler;
 /**
  * @author codistmonk (creation 2013-02-26)
  */
-public final class Annotations {
-	
-	private final List<Annotation> annotations;
+public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotations.Annotation> {;
 	
 	private double micronsPerPixel;
 	
-	public Annotations() {
-		this.annotations = new ArrayList<Annotation>();
-	}
-	
 	public final List<Annotation> getAnnotations() {
-		return this.annotations;
+		return this.getItems();
 	}
 	
 	public final double getMicronsPerPixel() {
@@ -94,8 +88,7 @@ public final class Annotations {
 							this.annotation = new Annotation();
 							result.getAnnotations().add(this.annotation);
 						} else if ("Region".equals(qName)) {
-							this.region = new Region();
-							this.annotation.getRegions().add(this.region);
+							this.region = this.annotation.new Region();
 							this.region.setZoom(parseDouble(attributes.getValue("Zoom")));
 							this.xs.clear();
 							this.ys.clear();
@@ -137,83 +130,82 @@ public final class Annotations {
 	/**
 	 * @author codistmonk (creation 2013-02-26)
 	 */
-	public static final class Annotation {
-		
-		private final List<Region> regions;
-		
-		public Annotation() {
-			this.regions = new ArrayList<Region>();
-		}
+	public static final class Annotation extends GenericTreeNode<Region> {
 		
 		public final List<Region> getRegions() {
-			return this.regions;
+			return this.getItems();
 		}
 		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2013-02-26)
-	 */
-	public static final class Region {
-		
-		private double zoom;
-		
-		private double length;
-		
-		private double area;
-		
-		private double lengthInMicrons;
-		
-		private double areaInSquareMicrons;
-		
-		private Shape shape;
-		
-		public final double getZoom() {
-			return this.zoom;
-		}
-		
-		public final void setZoom(final double zoom) {
-			this.zoom = zoom;
-		}
-		
-		public final double getLength() {
-			return this.length;
-		}
-		
-		public final void setLength(final double length) {
-			this.length = length;
-		}
-		
-		public final double getArea() {
-			return this.area;
-		}
-		
-		public final void setArea(final double area) {
-			this.area = area;
-		}
-		
-		public final double getLengthInMicrons() {
-			return this.lengthInMicrons;
-		}
-		
-		public final void setLengthInMicrons(final double lengthInMicrons) {
-			this.lengthInMicrons = lengthInMicrons;
-		}
-		
-		public final double getAreaInSquareMicrons() {
-			return this.areaInSquareMicrons;
-		}
-		
-		public final void setAreaInSquareMicrons(final double areaInSquareMicrons) {
-			this.areaInSquareMicrons = areaInSquareMicrons;
-		}
-		
-		public final Shape getShape() {
-			return this.shape;
-		}
-		
-		public final void setShape(final Shape shape) {
-			this.shape = shape;
+		/**
+		 * @author codistmonk (creation 2013-02-26)
+		 */
+		public final class Region extends DefaultMutableTreeNode {
+			
+			private double zoom;
+			
+			private double length;
+			
+			private double area;
+			
+			private double lengthInMicrons;
+			
+			private double areaInSquareMicrons;
+			
+			private Shape shape;
+			
+			public Region() {
+				Annotation.this.getRegions().add(this);
+				this.setUserObject(Annotation.this.getRegions().indexOf(this) + 1);
+			}
+			
+			public final double getZoom() {
+				return this.zoom;
+			}
+			
+			public final void setZoom(final double zoom) {
+				this.zoom = zoom;
+			}
+			
+			public final double getLength() {
+				return this.length;
+			}
+			
+			public final void setLength(final double length) {
+				this.length = length;
+			}
+			
+			public final double getArea() {
+				return this.area;
+			}
+			
+			public final void setArea(final double area) {
+				this.area = area;
+			}
+			
+			public final double getLengthInMicrons() {
+				return this.lengthInMicrons;
+			}
+			
+			public final void setLengthInMicrons(final double lengthInMicrons) {
+				this.lengthInMicrons = lengthInMicrons;
+			}
+			
+			public final double getAreaInSquareMicrons() {
+				return this.areaInSquareMicrons;
+			}
+			
+			public final void setAreaInSquareMicrons(final double areaInSquareMicrons) {
+				this.areaInSquareMicrons = areaInSquareMicrons;
+			}
+			
+			public final Shape getShape() {
+				return this.shape;
+			}
+			
+			public final void setShape(final Shape shape) {
+				this.shape = shape;
+			}
+			
 		}
 		
 	}

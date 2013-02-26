@@ -3,7 +3,6 @@ package imj.apps.modules;
 import static imj.IMJTools.argb;
 import static java.awt.Color.BLACK;
 import static java.awt.Color.YELLOW;
-import static java.lang.Math.min;
 import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;

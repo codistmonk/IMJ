@@ -13,7 +13,6 @@ import static net.sourceforge.aprog.af.AFTools.newAboutItem;
 import static net.sourceforge.aprog.af.AFTools.newPreferencesItem;
 import static net.sourceforge.aprog.af.AFTools.newQuitItem;
 import static net.sourceforge.aprog.i18n.Messages.setMessagesBase;
-import static net.sourceforge.aprog.swing.SwingTools.checkAWT;
 import static net.sourceforge.aprog.swing.SwingTools.menuBar;
 import static net.sourceforge.aprog.swing.SwingTools.packAndCenter;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
@@ -25,6 +24,7 @@ import static net.sourceforge.aprog.tools.Tools.getThisPackagePath;
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
+import imj.apps.modules.AnnotationsPanel;
 import imj.apps.modules.BigImageComponent;
 import imj.apps.modules.FeatureViewFilter;
 import imj.apps.modules.HistogramPanel;
@@ -105,7 +105,12 @@ public final class Show {
 	/**
 	 * {@value}.
 	 */
-	public static final String ACTIONS_TOGGLE_HISTOGRAMS = "actions.toggleHistograms";
+	public static final String ACTIONS_TOGGLE_HISTOGRAM = "actions.toggleHistogram";
+	
+	/**
+	 * {@value}.
+	 */
+	public static final String ACTIONS_TOGGLE_ANNOTATIONS = "actions.toggleAnnotations";
 	
 	/**
 	 * {@value}.
@@ -159,25 +164,48 @@ public final class Show {
 			
 		};
 		
-		new AbstractAFAction(result, ACTIONS_TOGGLE_HISTOGRAMS) {
+		new AbstractAFAction(result, ACTIONS_TOGGLE_HISTOGRAM) {
 			
 			@Override
 			public final void perform() {
-				JDialog histogramsDialog = result.get("histogramsDialog");
+				JDialog dialog = result.get("histogramDialog");
 				
-				if (histogramsDialog == null) {
+				if (dialog == null) {
 					final AFMainFrame mainFrame = result.get(AFConstants.Variables.MAIN_FRAME);
 					
-					histogramsDialog = new JDialog(mainFrame, "Histogram");
+					dialog = new JDialog(mainFrame, "Histogram");
 					
-					histogramsDialog.add(scrollable(new HistogramPanel(result)));
+					dialog.add(scrollable(new HistogramPanel(result)));
 					
-					histogramsDialog.pack();
+					dialog.pack();
 					
-					result.set("histogramsDialog", histogramsDialog);
+					result.set("histogramDialog", dialog);
 				}
 				
-				histogramsDialog.setVisible(!histogramsDialog.isVisible());
+				dialog.setVisible(!dialog.isVisible());
+			}
+			
+		};
+		
+		new AbstractAFAction(result, ACTIONS_TOGGLE_ANNOTATIONS) {
+			
+			@Override
+			public final void perform() {
+				JDialog dialog = result.get("annotationsDialog");
+				
+				if (dialog == null) {
+					final AFMainFrame mainFrame = result.get(AFConstants.Variables.MAIN_FRAME);
+					
+					dialog = new JDialog(mainFrame, "Annotations");
+					
+					dialog.add(scrollable(new AnnotationsPanel(result)));
+					
+					dialog.pack();
+					
+					result.set("annotationsDialog", dialog);
+				}
+				
+				dialog.setVisible(!dialog.isVisible());
 			}
 			
 		};
@@ -282,7 +310,8 @@ public final class Show {
 						null,
 						newQuitItem(result)),
 				menu("Tools",
-						newHistogramsItem(result)),
+						newHistogramItem(result),
+						newAnnotationsItem(result)),
 				menu("View",
 						newSetViewFilterItem(result)),
 				menu("ROIs",
@@ -342,39 +371,31 @@ public final class Show {
 		return result;
 	}
 	
-    public static final JMenuItem newHistogramsItem(final Context context) {
-    	checkAWT();
-    	
-        return item("Histograms", context, ACTIONS_TOGGLE_HISTOGRAMS);
+    public static final JMenuItem newHistogramItem(final Context context) {
+        return item("Histogram", context, ACTIONS_TOGGLE_HISTOGRAM);
+    }
+    
+    public static final JMenuItem newAnnotationsItem(final Context context) {
+    	return item("Annotations", context, ACTIONS_TOGGLE_ANNOTATIONS);
     }
     
     public static final JMenuItem newSetViewFilterItem(final Context context) {
-    	checkAWT();
-    	
     	return item("Set filter...", context, ACTIONS_SET_VIEW_FILTER);
     }
     
     public static final JMenuItem newApplySieveItem(final Context context) {
-    	checkAWT();
-    	
     	return item("Apply sieve...", context, ACTIONS_APPLY_SIEVE);
     }
     
     public static final JMenuItem newApplyMorphologicalOperationToROIItem(final Context context) {
-    	checkAWT();
-    	
     	return item("Apply morphological operation...", context, ACTIONS_APPLY_MORPHOLOGICAL_OPERATION_TO_ROI);
     }
     
     public static final JMenuItem newResetROIItem(final Context context) {
-    	checkAWT();
-    	
     	return item("Reset", context, ACTIONS_RESET_ROI);
     }
     
     public static final JMenuItem newCopyROIItem(final Context context) {
-    	checkAWT();
-    	
     	return item("Copy to LOD...", context, ACTIONS_COPY_ROI_TO_LOD);
     }
 	
