@@ -24,6 +24,7 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.getThisPackagePath;
 import imj.Image;
 import imj.ImageWrangler;
+import imj.apps.modules.Annotations;
 import imj.apps.modules.BigImageComponent;
 import imj.apps.modules.FeatureViewFilter;
 import imj.apps.modules.HistogramPanel;
@@ -422,6 +423,12 @@ public final class Show {
 		return result;
 	}
 	
+	public static final String baseName(final String fileName) {
+		final int lastDotIndex = fileName.lastIndexOf('.');
+		
+		return lastDotIndex < 0 ? fileName : fileName.substring(0, lastDotIndex);
+	}
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
@@ -447,6 +454,9 @@ public final class Show {
 			@Override
 			public final void run() {
 				final Context context = newContext();
+				
+				context.set("annotations", Annotations.fromXML(arguments.get("annotations", baseName(imageId) + ".xml")));
+				
 				final AFMainFrame frame = AFMainFrame.newMainFrame(context);
 				
 				frame.setPreferredSize(new Dimension(800, 600));
