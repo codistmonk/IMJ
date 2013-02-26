@@ -3,14 +3,19 @@ package imj.apps.modules;
 import static java.lang.Double.isInfinite;
 import static java.lang.Double.isNaN;
 import static java.lang.Math.min;
+import static java.lang.Math.pow;
 import static java.util.Arrays.fill;
 import imj.Image;
 import imj.ImageWrangler;
+import imj.apps.modules.Annotations.Annotation;
+import imj.apps.modules.Annotations.Annotation.Region;
 
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -78,7 +83,6 @@ public final class BigImageComponent extends JComponent {
 					final int oldLod = BigImageComponent.this.getLod();
 					
 					if ('+' == event.getKeyChar()) {
-						
 						if (adjustScale && 0 < oldLod && 1 < oldScale) {
 							BigImageComponent.this.setLodAndScale(oldLod - 1, oldScale / 2);
 						} else {
@@ -95,6 +99,7 @@ public final class BigImageComponent extends JComponent {
 			}
 			
 		});
+		
 		final MouseAdapter mouseHandler = new MouseAdapter() {
 			
 			private final Point viewportInitialLocation = new Point();
@@ -144,17 +149,6 @@ public final class BigImageComponent extends JComponent {
 		this.setFocusable(true);
 		this.setDoubleBuffered(false);
 		this.setLodAndScale(0, 1);
-	}
-	
-	@Override
-	protected final void paintComponent(final Graphics g) {
-		super.paintComponent(g);
-		
-		this.refreshBuffer();
-		
-		final Rectangle viewport = this.getVisibleRect();
-		
-		g.drawImage(this.buffer1, viewport.x, viewport.y, null);
 	}
 	
 	public final String getImageId() {
@@ -354,6 +348,40 @@ public final class BigImageComponent extends JComponent {
 	
 	public final Image getImage() {
 		return this.image;
+	}
+	
+	@Override
+	protected final void paintComponent(final Graphics g) {
+		super.paintComponent(g);
+		
+		this.refreshBuffer();
+		
+		final Rectangle viewport = this.getVisibleRect();
+		
+		g.drawImage(this.buffer1, viewport.x, viewport.y, null);
+		
+		this.drawAnnotations((Graphics2D) g);
+	}
+	
+	private final void drawAnnotations(final Graphics2D g) {
+		final Component annotationsDialog = this.context.get("annotationsDialog");
+		
+		if (annotationsDialog != null && annotationsDialog.isShowing()) {
+			final Annotations annotations = this.context.get("annotations");
+			final double s = this.getScale() * pow(2.0, -this.getLod());
+			
+			g.scale(s, s);
+			
+			for (final Annotation annotation : annotations.getAnnotations()) {
+				g.setColor(annotation.getLineColor());
+				
+				for (final Region region : annotation.getRegions()) {
+					final Polygon shape = (Polygon) region.getShape();
+					
+					g.drawPolyline(shape.xpoints, shape.ypoints, shape.npoints);
+				}
+			}
+		}
 	}
 	
 	public static final BufferedImage copyOf(final BufferedImage image, final int newWidth, final int newHeight) {
