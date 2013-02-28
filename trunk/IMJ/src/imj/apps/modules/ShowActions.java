@@ -2,17 +2,27 @@ package imj.apps.modules;
 
 import static imj.apps.modules.Plugin.fireUpdate;
 import static java.lang.Integer.parseInt;
+import static java.lang.Math.pow;
 import static javax.swing.JOptionPane.OK_CANCEL_OPTION;
 import static javax.swing.JOptionPane.OK_OPTION;
 import static javax.swing.JOptionPane.showConfirmDialog;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
+import static net.sourceforge.aprog.tools.Tools.cast;
+import imj.IntList;
+import imj.apps.modules.Annotations.Annotation;
+import imj.apps.modules.Annotations.Annotation.Region;
 
+import java.awt.BasicStroke;
+import java.awt.Graphics2D;
+import java.awt.Polygon;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.image.BufferedImage;
 
 import javax.swing.JDialog;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
+import javax.swing.tree.TreePath;
 
 import net.sourceforge.aprog.af.AFConstants;
 import net.sourceforge.aprog.af.AFMainFrame;
@@ -63,6 +73,11 @@ public final class ShowActions {
 	 * {@value}.
 	 */
 	public static final String ACTIONS_APPLY_MORPHOLOGICAL_OPERATION_TO_ROI = "actions.applyMorphologicalOperationToROI";
+	
+	/**
+	 * {@value}.
+	 */
+	public static final String ACTIONS_USE_ANNOTATION_AS_ROI = "actions.useAnnotationAsROI";
 	
 	/**
 	 * @author codistmonk (creation 2013-02-28)
@@ -262,6 +277,137 @@ public final class ShowActions {
 			rois[sourceLod].copyTo(rois[destinationLod]);
 		}
 		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-28)
+	 */
+	public static final class UseAnnotationAsROI extends AbstractAFAction {
+		
+		public UseAnnotationAsROI(final Context context) {
+			super(context, ACTIONS_USE_ANNOTATION_AS_ROI);
+		}
+		
+		@Override
+		public final void perform() {
+			final TreePath[] selectedAnnotations = this.getContext().get("selectedAnnotations");
+			
+			if (selectedAnnotations == null) {
+				return;
+			}
+			
+			for (final TreePath path : selectedAnnotations) {
+				final Annotation annotation = cast(Annotation.class, path.getLastPathComponent());
+				
+				if (annotation == null) {
+					continue;
+				}
+				
+				final RegionOfInterest roi = Sieve.getROI(this.getContext());
+				
+				if (roi == null) {
+					continue;
+				}
+				
+				final int rowCount = roi.getRowCount();
+				final int columnCount = roi.getColumnCount();
+				final BufferedImage buffer = new BufferedImage(columnCount, rowCount, BufferedImage.TYPE_BYTE_BINARY);
+				final Graphics2D g = buffer.createGraphics();
+				final int scale = this.getContext().get("scale");
+				final int lod = this.getContext().get("lod");
+				final double s = scale * pow(2.0, -lod);
+				
+				g.scale(s, s);
+				g.setStroke(new BasicStroke((float) (3.0 / s)));
+				
+				for (final Region region : annotation.getRegions()) {
+					final Polygon shape = (Polygon) region.getShape();
+					
+					g.drawPolyline(shape.xpoints, shape.ypoints, shape.npoints);
+				}
+				
+				for (int y = 0; y < rowCount; ++y) {
+					for (int x = 0; x < columnCount; ++x) {
+						roi.set(y, x, (buffer.getRGB(x, y) & 0x00FFFFFF) != 0);
+					}
+				}
+				
+				g.dispose();
+				
+				fillContours(roi);
+				
+				fireUpdate(this.getContext(), "sieve");
+			}
+		}
+		
+	}
+	
+	public static final void fillContours(final RegionOfInterest roi) {
+		final int rowCount = roi.getRowCount();
+		final int columnCount = roi.getColumnCount();
+		final int lastRowIndex = rowCount - 1;
+		final int lastColumnIndex = columnCount - 1;
+		final RegionOfInterest done = new RegionOfInterest.UsingBitSet(rowCount, columnCount, false);
+		final IntList todo = new IntList();
+		
+		for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex) {
+			todo.add(roi.getIndex(rowIndex, 0));
+			todo.add(roi.getIndex(rowIndex, lastColumnIndex));
+		}
+		
+		for (int columnIndex = 0; columnIndex < columnCount; ++columnIndex) {
+			todo.add(roi.getIndex(0, columnIndex));
+			todo.add(roi.getIndex(lastRowIndex, columnIndex));
+		}
+		
+		while (!todo.isEmpty()) {
+			final int pixel = todo.remove(0);
+			
+			if (!roi.get(pixel)) {
+				roi.set(pixel);
+				
+				final int rowIndex = roi.getRowIndex(pixel);
+				final int columnIndex = roi.getColumnIndex(pixel);
+				
+				if (0 < rowIndex) {
+					final int neighbor = roi.getIndex(rowIndex - 1, columnIndex);
+					
+					if (!done.get(neighbor)) {
+						done.set(neighbor);
+						todo.add(neighbor);
+					}
+				}
+				
+				if (0 < columnIndex) {
+					final int neighbor = roi.getIndex(rowIndex, columnIndex - 1);
+					
+					if (!done.get(neighbor)) {
+						done.set(neighbor);
+						todo.add(neighbor);
+					}
+				}
+				
+				if (columnIndex < lastColumnIndex) {
+					final int neighbor = roi.getIndex(rowIndex, columnIndex + 1);
+					
+					if (!done.get(neighbor)) {
+						done.set(neighbor);
+						todo.add(neighbor);
+					}
+				}
+				
+				if (rowIndex < lastRowIndex) {
+					final int neighbor = roi.getIndex(rowIndex + 1, columnIndex);
+					
+					if (!done.get(neighbor)) {
+						done.set(neighbor);
+						todo.add(neighbor);
+					}
+				}
+			}
+		}
+		
+		roi.invert();
 	}
 	
 }

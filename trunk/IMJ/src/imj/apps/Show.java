@@ -24,7 +24,6 @@ import static net.sourceforge.aprog.swing.SwingTools.I18N.menu;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.getThisPackagePath;
-
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
@@ -46,8 +45,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridBagLayout;
 import java.awt.Point;
-import java.awt.image.SampleModel;
-import java.awt.image.WritableRaster;
 import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
@@ -137,6 +134,7 @@ public final class Show {
 		new ShowActions.ApplyMorphologicalOperationToROI(result);
 		new ShowActions.ResetROI(result);
 		new ShowActions.CopyROIToLOD(result);
+		new ShowActions.UseAnnotationAsROI(result);
 		
 		result.set(AFConstants.Variables.MAIN_MENU_BAR, menuBar(
 				menu("Application",
@@ -286,6 +284,18 @@ public final class Show {
 		return lastDotIndex < 0 ? fileName : fileName.substring(0, lastDotIndex);
 	}
 	
+	public static final AFMainFrame newMainFrame(final String imageId, final Context context) {
+		final AFMainFrame result = AFMainFrame.newMainFrame(context);
+		
+		result.setPreferredSize(new Dimension(800, 600));
+		result.setTitle(new File(imageId).getName());
+		
+		result.add(scrollable(centered(new BigImageComponent(context, imageId))), BorderLayout.CENTER);
+		result.add(newStatusBar(context), BorderLayout.SOUTH);
+		
+		return result;
+	}
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
@@ -314,15 +324,7 @@ public final class Show {
 				
 				context.set("annotations", Annotations.fromXML(arguments.get("annotations", baseName(imageId) + ".xml")));
 				
-				final AFMainFrame frame = AFMainFrame.newMainFrame(context);
-				
-				frame.setPreferredSize(new Dimension(800, 600));
-				frame.setTitle(new File(imageId).getName());
-				
-				frame.add(scrollable(centered(new BigImageComponent(context, imageId))), BorderLayout.CENTER);
-				frame.add(newStatusBar(context), BorderLayout.SOUTH);
-				
-				packAndCenter(frame).setVisible(true);
+				packAndCenter(newMainFrame(imageId, context)).setVisible(true);
 			}
 			
 		});
