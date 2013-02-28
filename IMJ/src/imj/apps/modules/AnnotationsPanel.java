@@ -3,7 +3,6 @@ package imj.apps.modules;
 import static imj.apps.modules.Plugin.fireUpdate;
 import static javax.swing.SwingUtilities.isRightMouseButton;
 import static net.sourceforge.aprog.af.AFTools.item;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.awt.BorderLayout;
 import java.awt.event.MouseAdapter;
@@ -12,13 +11,11 @@ import java.awt.event.MouseEvent;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JTree;
-import javax.swing.SwingUtilities;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.TreeNode;
 
 import net.sourceforge.aprog.context.Context;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-26)
