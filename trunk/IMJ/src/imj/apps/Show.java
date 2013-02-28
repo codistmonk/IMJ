@@ -22,6 +22,7 @@ import static net.sourceforge.aprog.swing.SwingTools.I18N.menu;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.getThisPackagePath;
+
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
