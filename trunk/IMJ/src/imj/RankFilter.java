@@ -14,6 +14,13 @@ public final class RankFilter extends SyntheticFilter {
 		this.compute();
 	}
 	
+	public RankFilter(final Image image, final Image result, final int rank, final int[] structuringElement) {
+		super(image, result, structuringElement);
+		this.rank = rank;
+		
+		this.compute();
+	}
+	
 	public final int getRank() {
 		return this.rank;
 	}
