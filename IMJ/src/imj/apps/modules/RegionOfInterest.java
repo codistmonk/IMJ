@@ -5,6 +5,8 @@ import imj.Image.Abstract;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.awt.image.ByteLookupTable;
+import java.awt.image.LookupOp;
 import java.util.BitSet;
 
 /**
@@ -15,6 +17,8 @@ public abstract class RegionOfInterest extends Abstract {
 	protected RegionOfInterest(final int rowCount, final int columnCount) {
 		super(rowCount, columnCount, 1);
 	}
+	
+	public abstract void invert();
 	
 	public abstract void reset();
 	
@@ -45,11 +49,17 @@ public abstract class RegionOfInterest extends Abstract {
 		private final BitSet data;
 		
 		public UsingBitSet(final int rowCount, final int columnCount) {
+			this(rowCount, columnCount, true);
+		}
+		
+		public UsingBitSet(final int rowCount, final int columnCount, final boolean initialState) {
 			super(rowCount, columnCount);
 			final int pixelCount = this.getPixelCount();
 			this.data = new BitSet(pixelCount);
 			
-			this.reset();
+			if (initialState) {
+				this.reset();
+			}
 		}
 		
 		@Override
@@ -74,6 +84,11 @@ public abstract class RegionOfInterest extends Abstract {
 		@Override
 		public final float setFloatValue(final int index, final float value) {
 			return this.setValue(index, (int) value);
+		}
+		
+		@Override
+		public final void invert() {
+			this.data.flip(0, this.data.size());
 		}
 		
 		public final void reset() {
@@ -191,6 +206,11 @@ public abstract class RegionOfInterest extends Abstract {
 		@Override
 		public final float setFloatValue(final int index, final float value) {
 			return this.setValue(index, (int) value);
+		}
+		
+		@Override
+		public final void invert() {
+			new LookupOp(new ByteLookupTable(0, new byte[] { 1, 0 }), null).filter(this.getData(), this.getData());
 		}
 		
 		public final void reset() {
