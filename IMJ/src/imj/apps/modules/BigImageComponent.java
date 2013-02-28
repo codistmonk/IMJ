@@ -10,6 +10,7 @@ import imj.ImageWrangler;
 import imj.apps.modules.Annotations.Annotation;
 import imj.apps.modules.Annotations.Annotation.Region;
 
+import java.awt.BasicStroke;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -22,9 +23,12 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 
 import javax.swing.JComponent;
+import javax.swing.tree.TreePath;
 
 import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.events.Variable.Listener;
@@ -369,14 +373,26 @@ public final class BigImageComponent extends JComponent {
 		if (annotationsDialog != null && annotationsDialog.isShowing()) {
 			final Annotations annotations = this.context.get("annotations");
 			final double s = this.getScale() * pow(2.0, -this.getLod());
+			final TreePath[] selectedPaths = this.context.get("selectedAnnotations");
+			final Collection<Object> selection = new ArrayList<Object>(selectedPaths == null ? 0 : selectedPaths.length);
+			
+			if (selectedPaths != null) {
+				for (final TreePath path : selectedPaths) {
+					selection.add(path.getLastPathComponent());
+				}
+			}
 			
 			g.scale(s, s);
 			
 			for (final Annotation annotation : annotations.getAnnotations()) {
 				g.setColor(annotation.getLineColor());
 				
+				final boolean annotationSelected = selection.contains(annotation);
+				
 				for (final Region region : annotation.getRegions()) {
 					final Polygon shape = (Polygon) region.getShape();
+					
+					g.setStroke(new BasicStroke(annotationSelected || selection.contains(region) ? 3F / (float) s : 1F));
 					
 					g.drawPolyline(shape.xpoints, shape.ypoints, shape.npoints);
 				}
