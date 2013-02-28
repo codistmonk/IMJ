@@ -3,12 +3,14 @@ package imj.apps;
 import static imj.IMJTools.blue;
 import static imj.IMJTools.green;
 import static imj.IMJTools.red;
-import static imj.apps.modules.Plugin.fireUpdate;
-import static java.lang.Integer.parseInt;
+import static imj.apps.modules.ShowActions.ACTIONS_APPLY_MORPHOLOGICAL_OPERATION_TO_ROI;
+import static imj.apps.modules.ShowActions.ACTIONS_APPLY_SIEVE;
+import static imj.apps.modules.ShowActions.ACTIONS_COPY_ROI_TO_LOD;
+import static imj.apps.modules.ShowActions.ACTIONS_RESET_ROI;
+import static imj.apps.modules.ShowActions.ACTIONS_SET_VIEW_FILTER;
+import static imj.apps.modules.ShowActions.ACTIONS_TOGGLE_ANNOTATIONS;
+import static imj.apps.modules.ShowActions.ACTIONS_TOGGLE_HISTOGRAM;
 import static java.util.Collections.synchronizedList;
-import static javax.swing.JOptionPane.OK_CANCEL_OPTION;
-import static javax.swing.JOptionPane.OK_OPTION;
-import static javax.swing.JOptionPane.showConfirmDialog;
 import static net.sourceforge.aprog.af.AFTools.item;
 import static net.sourceforge.aprog.af.AFTools.newAboutItem;
 import static net.sourceforge.aprog.af.AFTools.newPreferencesItem;
@@ -26,15 +28,13 @@ import static net.sourceforge.aprog.tools.Tools.getThisPackagePath;
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
-import imj.apps.modules.AnnotationsPanel;
 import imj.apps.modules.BigImageComponent;
 import imj.apps.modules.FeatureViewFilter;
-import imj.apps.modules.HistogramPanel;
 import imj.apps.modules.LinearViewFilter;
-import imj.apps.modules.ROIMorphologyPlugin;
 import imj.apps.modules.RankViewFilter;
 import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.RoundingViewFilter;
+import imj.apps.modules.ShowActions;
 import imj.apps.modules.Sieve;
 import imj.apps.modules.SimpleSieve;
 import imj.apps.modules.StatisticsViewFilter;
@@ -46,8 +46,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridBagLayout;
 import java.awt.Point;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.awt.image.SampleModel;
 import java.awt.image.WritableRaster;
 import java.io.File;
@@ -58,11 +56,8 @@ import java.util.Locale;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JComponent;
-import javax.swing.JDialog;
 import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
@@ -108,41 +103,6 @@ public final class Show {
 	 */
 	public static final String APPLICATION_ICON_PATH = "imj/apps/thumbnail.png";
 	
-	/**
-	 * {@value}.
-	 */
-	public static final String ACTIONS_TOGGLE_HISTOGRAM = "actions.toggleHistogram";
-	
-	/**
-	 * {@value}.
-	 */
-	public static final String ACTIONS_TOGGLE_ANNOTATIONS = "actions.toggleAnnotations";
-	
-	/**
-	 * {@value}.
-	 */
-	public static final String ACTIONS_SET_VIEW_FILTER = "actions.setViewFilter";
-	
-	/**
-	 * {@value}.
-	 */
-	public static final String ACTIONS_APPLY_SIEVE = "actions.applySieve";
-	
-	/**
-	 * {@value}.
-	 */
-	public static final String ACTIONS_RESET_ROI = "actions.resetROI";
-	
-	/**
-	 * {@value}.
-	 */
-	public static final String ACTIONS_COPY_ROI_TO_LOD = "actions.copyROIToLOD";
-	
-	/**
-	 * {@value}.
-	 */
-	public static final String ACTIONS_APPLY_MORPHOLOGICAL_OPERATION_TO_ROI = "actions.applyMorphologicalOperationToROI";
-	
 	public static final Context newContext() {
 		final Context result = AFTools.newContext();
 		
@@ -170,157 +130,13 @@ public final class Show {
 			
 		};
 		
-		new AbstractAFAction(result, ACTIONS_TOGGLE_HISTOGRAM) {
-			
-			@Override
-			public final void perform() {
-				JDialog dialog = result.get("histogramDialog");
-				
-				if (dialog == null) {
-					final AFMainFrame mainFrame = result.get(AFConstants.Variables.MAIN_FRAME);
-					
-					dialog = new JDialog(mainFrame, "Histogram");
-					
-					dialog.add(scrollable(new HistogramPanel(result)));
-					
-					dialog.pack();
-					
-					result.set("histogramDialog", dialog);
-				}
-				
-				dialog.setVisible(!dialog.isVisible());
-			}
-			
-		};
-		
-		new AbstractAFAction(result, ACTIONS_TOGGLE_ANNOTATIONS) {
-			
-			@Override
-			public final void perform() {
-				JDialog dialog = result.get("annotationsDialog");
-				
-				if (dialog == null) {
-					final AFMainFrame mainFrame = result.get(AFConstants.Variables.MAIN_FRAME);
-					
-					dialog = new JDialog(mainFrame, "Annotations");
-					
-					dialog.add(scrollable(new AnnotationsPanel(result)));
-					
-					dialog.addComponentListener(new ComponentAdapter() {
-						
-						@Override
-						public final void componentShown(final ComponentEvent event) {
-							fireUpdate(result, "sieve");
-						}
-						
-						@Override
-						public final void componentHidden(final ComponentEvent event) {
-							fireUpdate(result, "sieve");
-						}
-						
-					});
-					
-					dialog.pack();
-					
-					result.set("annotationsDialog", dialog);
-				}
-				
-				dialog.setVisible(!dialog.isVisible());
-			}
-			
-		};
-		
-		new AbstractAFAction(result, ACTIONS_SET_VIEW_FILTER) {
-			
-			@Override
-			public final void perform() {
-				final ViewFilter[] filters = result.get("viewFilters");
-				final JList input = new JList(filters);
-				final int option = JOptionPane.showConfirmDialog(null, scrollable(input), "Select a filter", OK_CANCEL_OPTION);
-				
-				if (option != JOptionPane.OK_OPTION) {
-					return;
-				}
-				
-				final ViewFilter filter = (ViewFilter) input.getSelectedValue();
-				
-				if (filter != null) {
-					filter.configureAndApply();
-				} else {
-					result.set("viewFilter", null);
-				}
-			}
-			
-		};
-		
-		new AbstractAFAction(result, ACTIONS_APPLY_SIEVE) {
-			
-			@Override
-			public final void perform() {
-				final Sieve[] sieves = result.get("sieves");
-				final JList input = new JList(sieves);
-				final int option = showConfirmDialog(null, scrollable(input), "Select a sieve", OK_CANCEL_OPTION);
-				
-				if (option != OK_OPTION) {
-					return;
-				}
-				
-				final Sieve sieve = (Sieve) input.getSelectedValue();
-				
-				sieve.configureAndApply();
-			}
-			
-		};
-		
-		new AbstractAFAction(result, ACTIONS_APPLY_MORPHOLOGICAL_OPERATION_TO_ROI) {
-			
-			private final ROIMorphologyPlugin plugin = new ROIMorphologyPlugin(result);
-			
-			@Override
-			public final void perform() {
-				this.plugin.configureAndApply();
-			}
-			
-		};
-		
-		new AbstractAFAction(result, ACTIONS_RESET_ROI) {
-			
-			@Override
-			public final void perform() {
-				final RegionOfInterest[] rois = result.get("rois");
-				final int lod = result.get("lod");
-				final RegionOfInterest roi = lod < rois.length ? rois[lod] : null;
-				
-				if (roi != null) {
-					roi.reset();
-					
-					final BigImageComponent imageView = result.get("imageView");
-					
-					imageView.repaintAll();
-				}
-				
-			}
-			
-		};
-		
-		new AbstractAFAction(result, ACTIONS_COPY_ROI_TO_LOD) {
-			
-			@Override
-			public final void perform() {
-				final String destinationLodAsString = JOptionPane.showInputDialog("LOD:");
-				
-				if (destinationLodAsString == null || destinationLodAsString.isEmpty()) {
-					return;
-				}
-				
-				final int sourceLod = result.get("lod");
-				final int destinationLod = parseInt(destinationLodAsString);
-				final RegionOfInterest[] rois = result.get("rois");
-				
-				rois[sourceLod].copyTo(rois[destinationLod]);
-			}
-			
-		};
+		new ShowActions.ToggleHistogram(result);
+		new ShowActions.ToggleAnnotations(result);
+		new ShowActions.SetViewFilter(result);
+		new ShowActions.ApplySieve(result);
+		new ShowActions.ApplyMorphologicalOperationToROI(result);
+		new ShowActions.ResetROI(result);
+		new ShowActions.CopyROIToLOD(result);
 		
 		result.set(AFConstants.Variables.MAIN_MENU_BAR, menuBar(
 				menu("Application",
@@ -468,15 +284,6 @@ public final class Show {
 		final int lastDotIndex = fileName.lastIndexOf('.');
 		
 		return lastDotIndex < 0 ? fileName : fileName.substring(0, lastDotIndex);
-	}
-	
-	public static final class R extends WritableRaster {
-		
-		protected R(SampleModel sampleModel, Point origin) {
-			super(sampleModel, origin);
-			// TODO Auto-generated constructor stub
-		}
-		
 	}
 	
 	/**
