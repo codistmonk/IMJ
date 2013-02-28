@@ -135,6 +135,7 @@ public final class Show {
 		new ShowActions.ResetROI(result);
 		new ShowActions.CopyROIToLOD(result);
 		new ShowActions.UseAnnotationAsROI(result);
+		new ShowActions.PickAnnotationColor(result);
 		
 		result.set(AFConstants.Variables.MAIN_MENU_BAR, menuBar(
 				menu("Application",

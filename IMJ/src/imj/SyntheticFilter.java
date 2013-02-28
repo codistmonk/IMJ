@@ -13,6 +13,12 @@ public abstract class SyntheticFilter extends Labeling {
 		this.synthesizer = this.newSynthesizer(structuringElement);
 	}
 	
+	protected SyntheticFilter(final Image image, final Image result, final int[] structuringElement) {
+		super(image, result);
+		
+		this.synthesizer = this.newSynthesizer(structuringElement);
+	}
+	
 	/**
 	 * Must be called in derived classes.
 	 */

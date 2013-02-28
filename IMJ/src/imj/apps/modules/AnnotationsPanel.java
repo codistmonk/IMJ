@@ -1,6 +1,7 @@
 package imj.apps.modules;
 
 import static imj.apps.modules.Plugin.fireUpdate;
+import static imj.apps.modules.ShowActions.ACTIONS_PICK_ANNOTATION_COLOR;
 import static imj.apps.modules.ShowActions.ACTIONS_USE_ANNOTATION_AS_ROI;
 import static javax.swing.SwingUtilities.isRightMouseButton;
 import static net.sourceforge.aprog.af.AFTools.item;
@@ -59,6 +60,7 @@ public final class AnnotationsPanel extends JPanel {
 				this.popup = new JPopupMenu();
 				
 				this.popup.add(item("Use as ROI", context, ACTIONS_USE_ANNOTATION_AS_ROI));
+				this.popup.add(item("Pick color...", context, ACTIONS_PICK_ANNOTATION_COLOR));
 			}
 			
 			@Override

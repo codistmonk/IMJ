@@ -1,6 +1,7 @@
 package imj.apps.modules;
 
 import static imj.apps.modules.Plugin.fireUpdate;
+import static imj.apps.modules.Sieve.getROI;
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.pow;
 import static javax.swing.JOptionPane.OK_CANCEL_OPTION;
@@ -9,16 +10,21 @@ import static javax.swing.JOptionPane.showConfirmDialog;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import imj.IntList;
+import imj.MorphologicalOperations;
+import imj.MorphologicalOperations.StructuringElement;
+import imj.RankFilter;
 import imj.apps.modules.Annotations.Annotation;
 import imj.apps.modules.Annotations.Annotation.Region;
 
 import java.awt.BasicStroke;
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Polygon;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 
+import javax.swing.JColorChooser;
 import javax.swing.JDialog;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
@@ -78,6 +84,16 @@ public final class ShowActions {
 	 * {@value}.
 	 */
 	public static final String ACTIONS_USE_ANNOTATION_AS_ROI = "actions.useAnnotationAsROI";
+	
+	/**
+	 * {@value}.
+	 */
+	public static final String ACTIONS_PICK_ANNOTATION_COLOR = "actions.pickAnnotationColor";
+	
+	/**
+	 * {@value}.
+	 */
+	public static final String ACTIONS_CREATE_ANNOTATION_FROM_ROI = "actions.createAnnotationFromROI";
 	
 	/**
 	 * @author codistmonk (creation 2013-02-28)
@@ -303,7 +319,7 @@ public final class ShowActions {
 					continue;
 				}
 				
-				final RegionOfInterest roi = Sieve.getROI(this.getContext());
+				final RegionOfInterest roi = getROI(this.getContext());
 				
 				if (roi == null) {
 					continue;
@@ -338,6 +354,78 @@ public final class ShowActions {
 				
 				fireUpdate(this.getContext(), "sieve");
 			}
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-28)
+	 */
+	public static final class PickAnnotationColor extends AbstractAFAction {
+		
+		public PickAnnotationColor(final Context context) {
+			super(context, ACTIONS_PICK_ANNOTATION_COLOR);
+		}
+		
+		@Override
+		public final void perform() {
+			final TreePath[] selectedAnnotations = this.getContext().get("selectedAnnotations");
+			
+			if (selectedAnnotations == null) {
+				return;
+			}
+			
+			Color newColor = null;
+			
+			for (final TreePath path : selectedAnnotations) {
+				final Annotation annotation = cast(Annotation.class, path.getLastPathComponent());
+				
+				if (annotation == null) {
+					continue;
+				}
+				
+				if (newColor == null) {
+					newColor = JColorChooser.showDialog(null, "Pick a color", annotation.getLineColor());
+				}
+				
+				if (newColor == null) {
+					break;
+				}
+				
+				annotation.setLineColor(newColor);
+			}
+			
+			if (newColor != null) {
+				fireUpdate(this.getContext(), "sieve");
+			}
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-28)
+	 */
+	public static final class CreateAnnotationFromROI extends AbstractAFAction {
+		
+		public CreateAnnotationFromROI(final Context context) {
+			super(context, ACTIONS_CREATE_ANNOTATION_FROM_ROI);
+		}
+		
+		@Override
+		public final void perform() {
+			final RegionOfInterest roi = getROI(this.getContext());
+			
+			if (roi == null) {
+				return;
+			}
+			
+			final Annotations annotations = this.getContext().get("annotations");
+			final Annotation annotation = annotations.new Annotation();
+			final RegionOfInterest tmp = new RegionOfInterest.UsingBitSet(roi.getRowCount(), roi.getColumnCount());
+			
+			new RankFilter(roi, tmp, 0, StructuringElement.SIMPLE_CONNECTIVITY_8);
+			
+			// TODO extract contours
 		}
 		
 	}
