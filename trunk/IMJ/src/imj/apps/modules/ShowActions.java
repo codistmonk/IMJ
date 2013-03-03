@@ -1,5 +1,6 @@
 package imj.apps.modules;
 
+import static imj.apps.modules.BigImageComponent.drawOutline;
 import static imj.apps.modules.Plugin.fireUpdate;
 import static imj.apps.modules.Sieve.getROI;
 import static java.lang.Integer.parseInt;
@@ -10,19 +11,18 @@ import static javax.swing.JOptionPane.showConfirmDialog;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import imj.IntList;
-import imj.MorphologicalOperations;
-import imj.MorphologicalOperations.StructuringElement;
-import imj.RankFilter;
 import imj.apps.modules.Annotations.Annotation;
 import imj.apps.modules.Annotations.Annotation.Region;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
-import java.awt.Polygon;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import javax.swing.JColorChooser;
 import javax.swing.JDialog;
@@ -337,9 +337,7 @@ public final class ShowActions {
 				g.setStroke(new BasicStroke((float) (3.0 / s)));
 				
 				for (final Region region : annotation.getRegions()) {
-					final Polygon shape = (Polygon) region.getShape();
-					
-					g.drawPolyline(shape.xpoints, shape.ypoints, shape.npoints);
+					drawOutline(region, g);
 				}
 				
 				for (int y = 0; y < rowCount; ++y) {
@@ -421,13 +419,194 @@ public final class ShowActions {
 			
 			final Annotations annotations = this.getContext().get("annotations");
 			final Annotation annotation = annotations.new Annotation();
-			final RegionOfInterest tmp = new RegionOfInterest.UsingBitSet(roi.getRowCount(), roi.getColumnCount());
+			final int rowCount = roi.getRowCount();
+			final int columnCount = roi.getColumnCount();
+			final int lod = this.getContext().get("lod");
+			final float scale = (float) pow(2.0, lod);
+			final Map<Point2D.Float, Point2D.Float> joints = new LinkedHashMap<Point2D.Float, Point2D.Float>();
 			
-			new RankFilter(roi, tmp, 0, StructuringElement.SIMPLE_CONNECTIVITY_8);
+			for (int rowIndex = 0; rowIndex < rowCount - 1; ++rowIndex) {
+				for (int columnIndex = 0; columnIndex < columnCount - 1; ++columnIndex) {
+					connectEdges(roi, rowIndex, columnIndex, scale, joints);
+				}
+			}
 			
-			// TODO extract contours
+			while (!joints.isEmpty()) {
+				final Region region = annotation.new Region();
+				final Point2D.Float start = joints.keySet().iterator().next();
+				Point2D.Float edge = joints.remove(start);
+				
+				region.getShape().add(start);
+				
+				while (edge != null && !start.equals(edge)) {
+					region.getShape().add(edge);
+					edge = joints.remove(edge);
+				}
+				
+				if (edge != null) {
+					region.getShape().add(start);
+				}
+			}
+			
+			fireUpdate(this.getContext(), "annotations");
 		}
 		
+	}
+	
+	/**
+	 * {@value}.
+	 */
+	private static final int NEIGHBORHOOD_PATTERN_01_11 = 0 | 4 | 2 | 1;
+	
+	/**
+	 * {@value}.
+	 */
+	private static final int NEIGHBORHOOD_PATTERN_11_01 = 8 | 4 | 0 | 1;
+	
+	/**
+	 * {@value}.
+	 */
+	private static final int NEIGHBORHOOD_PATTERN_11_10 = 8 | 4 | 2 | 0;
+	
+	/**
+	 * {@value}.
+	 */
+	private static final int NEIGHBORHOOD_PATTERN_10_11 = 8 | 0 | 2 | 1;
+	
+	/**
+	 * {@value}.
+	 */
+	private static final int NEIGHBORHOOD_PATTERN_11_00 = 8 | 4 | 0 | 0;
+	
+	/**
+	 * {@value}.
+	 */
+	private static final int NEIGHBORHOOD_PATTERN_01_01 = 0 | 4 | 0 | 1;
+	
+	/**
+	 * {@value}.
+	 */
+	private static final int NEIGHBORHOOD_PATTERN_00_11 = 0 | 0 | 2 | 1;
+	
+	/**
+	 * {@value}.
+	 */
+	private static final int NEIGHBORHOOD_PATTERN_10_10 = 8 | 0 | 2 | 0;
+	
+	/**
+	 * {@value}.
+	 */
+	private static final int NEIGHBORHOOD_PATTERN_01_10 = 0 | 4 | 2 | 0;
+	
+	/**
+	 * {@value}.
+	 */
+	private static final int NEIGHBORHOOD_PATTERN_10_01 = 8 | 0 | 0 | 1;
+	
+	/**
+	 * {@value}.
+	 */
+	private static final int NEIGHBORHOOD_PATTERN_10_00 = 8 | 0 | 0 | 0;
+	
+	/**
+	 * {@value}.
+	 */
+	private static final int NEIGHBORHOOD_PATTERN_00_10 = 0 | 0 | 2 | 0;
+	
+	/**
+	 * {@value}.
+	 */
+	private static final int NEIGHBORHOOD_PATTERN_00_01 = 0 | 0 | 0 | 1;
+	
+	/**
+	 * {@value}.
+	 */
+	private static final int NEIGHBORHOOD_PATTERN_01_00 = 0 | 4 | 0 | 0;
+	
+	/**
+	 * Updates <code>joints</code> so that foreground has 8-connectivity, using a 2x2 window with top left corner at
+	 * <code>(rowIndex, columnIndex)</code>.
+	 * @param image
+	 * <br>Not null
+	 * @param rowIndex
+	 * <br>Range: <code>[0 .. image.getRowCount() - 1]</code>
+	 * @param columnIndex
+	 * <br>Range: <code>[0 .. image.getColumnCount() - 1]</code>
+	 * @param scale
+	 * <br>Range: <code>[Float.MIN_VALUE .. Float.MAX_VALUE]</code>
+	 * @param joints
+	 * <br>Not null
+	 * <br>Input-output
+	 */
+	public static final void connectEdges(final RegionOfInterest image, final int rowIndex, final int columnIndex,
+			final float scale, final Map<Point2D.Float, Point2D.Float> joints) {
+		final int neighborhood = (image.get(rowIndex, columnIndex) ? 8 : 0) | (image.get(rowIndex, columnIndex + 1) ? 4 : 0) |
+				(image.get(rowIndex + 1, columnIndex) ? 2 : 0) | (image.get(rowIndex + 1, columnIndex + 1) ? 1 : 0);
+		
+		switch (neighborhood) {
+		case NEIGHBORHOOD_PATTERN_01_11:
+			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)),
+					new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)));
+			break;
+		case NEIGHBORHOOD_PATTERN_11_01:
+			joints.put(new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)),
+					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)));
+			break;
+		case NEIGHBORHOOD_PATTERN_11_10:
+			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)),
+					new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)));
+			break;
+		case NEIGHBORHOOD_PATTERN_10_11:
+			joints.put(new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)),
+					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)));
+			break;
+		case NEIGHBORHOOD_PATTERN_11_00:
+			joints.put(new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)),
+					new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)));
+			break;
+		case NEIGHBORHOOD_PATTERN_01_01:
+			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)),
+					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)));
+			break;
+		case NEIGHBORHOOD_PATTERN_00_11:
+			joints.put(new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)),
+					new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)));
+			break;
+		case NEIGHBORHOOD_PATTERN_10_10:
+			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)),
+					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)));
+			break;
+		case NEIGHBORHOOD_PATTERN_01_10:
+			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)),
+					new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)));
+			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)),
+					new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)));
+			break;
+		case NEIGHBORHOOD_PATTERN_10_01:
+			joints.put(new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)),
+					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)));
+			joints.put(new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)),
+					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)));
+			break;
+		case NEIGHBORHOOD_PATTERN_10_00:
+			joints.put(new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)),
+					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)));
+			break;
+		case NEIGHBORHOOD_PATTERN_00_10:
+			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)),
+					new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)));
+			break;
+		case NEIGHBORHOOD_PATTERN_00_01:
+			joints.put(new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)),
+					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)));
+			break;
+		case NEIGHBORHOOD_PATTERN_01_00:
+			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)),
+					new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)));
+			break;
+		default:
+			break;
+		}
 	}
 	
 	public static final void fillContours(final RegionOfInterest roi) {

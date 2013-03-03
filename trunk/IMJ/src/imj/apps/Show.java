@@ -3,7 +3,7 @@ package imj.apps;
 import static imj.IMJTools.blue;
 import static imj.IMJTools.green;
 import static imj.IMJTools.red;
-import static imj.apps.modules.ShowActions.ACTIONS_APPLY_MORPHOLOGICAL_OPERATION_TO_ROI;
+import static imj.apps.modules.ShowActions.*;
 import static imj.apps.modules.ShowActions.ACTIONS_APPLY_SIEVE;
 import static imj.apps.modules.ShowActions.ACTIONS_COPY_ROI_TO_LOD;
 import static imj.apps.modules.ShowActions.ACTIONS_RESET_ROI;
@@ -134,6 +134,7 @@ public final class Show {
 		new ShowActions.ApplyMorphologicalOperationToROI(result);
 		new ShowActions.ResetROI(result);
 		new ShowActions.CopyROIToLOD(result);
+		new ShowActions.CreateAnnotationFromROI(result);
 		new ShowActions.UseAnnotationAsROI(result);
 		new ShowActions.PickAnnotationColor(result);
 		
@@ -152,8 +153,11 @@ public final class Show {
 				menu("ROIs",
 						newApplySieveItem(result),
 						newApplyMorphologicalOperationToROIItem(result),
+						null,
 						newResetROIItem(result),
-						newCopyROIItem(result))
+						newCopyROIItem(result),
+						null,
+						newCreateAnnotationFromROIItem(result))
 		));
 		
 		result.set("image", null, Image.class);
@@ -232,6 +236,10 @@ public final class Show {
     
     public static final JMenuItem newCopyROIItem(final Context context) {
     	return item("Copy to LOD...", context, ACTIONS_COPY_ROI_TO_LOD);
+    }
+    
+    public static final JMenuItem newCreateAnnotationFromROIItem(final Context context) {
+    	return item("Create annotation", context, ACTIONS_CREATE_ANNOTATION_FROM_ROI);
     }
 	
 	public static final String toStatusString(final Object object) {

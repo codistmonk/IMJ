@@ -12,11 +12,13 @@ import imj.apps.modules.Annotations.Annotation.Region;
 import java.awt.Color;
 import java.awt.Polygon;
 import java.awt.Shape;
+import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -97,16 +99,9 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 							this.xs.clear();
 							this.ys.clear();
 						} else if ("Vertex".equals(qName)) {
-							this.xs.add((int) (parseDouble(attributes.getValue("X"))));
-							this.ys.add((int) (parseDouble(attributes.getValue("Y"))));
-						}
-					}
-					
-					@Override
-					public final void endElement(final String uri, final String localName,
-							final String qName) throws SAXException {
-						if ("Region".equals(qName)) {
-							this.region.setShape(new Polygon(this.xs.toArray(), this.ys.toArray(), this.xs.size()));
+							this.region.getShape().add(new Point2D.Float(
+									(float) (parseDouble(attributes.getValue("X"))),
+									(float) (parseDouble(attributes.getValue("Y")))));
 						}
 					}
 					
@@ -160,9 +155,10 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 			
 			private double areaInSquareMicrons;
 			
-			private Shape shape;
+			private final List<Point2D.Float> shape;
 			
 			public Region() {
+				this.shape = new ArrayList<Point2D.Float>();
 				Annotation.this.getRegions().add(this);
 				this.setUserObject(this.getClass().getSimpleName() + " " + (Annotation.this.getRegions().indexOf(this) + 1));
 			}
@@ -207,12 +203,8 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 				this.areaInSquareMicrons = areaInSquareMicrons;
 			}
 			
-			public final Shape getShape() {
+			public final List<Point2D.Float> getShape() {
 				return this.shape;
-			}
-			
-			public final void setShape(final Shape shape) {
-				this.shape = shape;
 			}
 			
 		}
