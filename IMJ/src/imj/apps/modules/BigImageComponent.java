@@ -16,12 +16,12 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
-import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -390,14 +390,27 @@ public final class BigImageComponent extends JComponent {
 				final boolean annotationSelected = selection.contains(annotation);
 				
 				for (final Region region : annotation.getRegions()) {
-					final Polygon shape = (Polygon) region.getShape();
-					
 					g.setStroke(new BasicStroke(annotationSelected || selection.contains(region) ? 3F / (float) s : 1F));
 					
-					g.drawPolyline(shape.xpoints, shape.ypoints, shape.npoints);
+					drawOutline(region, g);
 				}
 			}
 		}
+	}
+	
+	public static final void drawOutline(final Region region, final Graphics2D g) {
+		final int n = region.getShape().size();
+		final int[] xs = new int[n];
+		final int[] ys = new int[n];
+		int i = 0;
+		
+		for (final Point2D.Float vertex : region.getShape()) {
+			xs[i] = (int) vertex.x;
+			ys[i] = (int) vertex.y;
+			++i;
+		}
+		
+		g.drawPolyline(xs, ys, n);
 	}
 	
 	public static final BufferedImage copyOf(final BufferedImage image, final int newWidth, final int newHeight) {

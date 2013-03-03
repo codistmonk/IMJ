@@ -17,9 +17,12 @@ import javax.swing.JPopupMenu;
 import javax.swing.JTree;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
+import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeNode;
 
 import net.sourceforge.aprog.context.Context;
+import net.sourceforge.aprog.events.Variable.Listener;
+import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
 
 /**
  * @author codistmonk (creation 2013-02-26)
@@ -73,6 +76,15 @@ public final class AnnotationsPanel extends JPanel {
 						this.popup.show(event.getComponent(), event.getX(), event.getY());
 					}
 				}
+			}
+			
+		});
+		
+		context.getVariable("annotations").addListener(new Listener<Object>() {
+			
+			@Override
+			public final void valueChanged(final ValueChangedEvent<Object, ?> event) {
+				((DefaultTreeModel) tree.getModel()).reload();
 			}
 			
 		});
