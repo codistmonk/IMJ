@@ -45,7 +45,6 @@ import net.sourceforge.aprog.af.AFConstants;
 import net.sourceforge.aprog.af.AFMainFrame;
 import net.sourceforge.aprog.af.AbstractAFAction;
 import net.sourceforge.aprog.context.Context;
-import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**
@@ -523,6 +522,8 @@ public final class ShowActions {
 				Point2D.Float previousEdge = start;
 				boolean previousEdgeIsHorizontal = isEdgeHorizontal(start.x / scale, start.y / scale);
 				int spin = 0;
+				int segmentLength = 0;
+				final int maximumSegmentLength = 5;
 				
 				while (edge != null && !start.equals(edge)) {
 					final boolean edgeIsHorizontal = isEdgeHorizontal(edge.x / scale, edge.y / scale);
@@ -533,7 +534,16 @@ public final class ShowActions {
 						spin += (previousEdge.x < edge.x) == (previousEdge.y < edge.y) ? -1 : +1;
 					}
 					
-					region.getShape().add(edge);
+					if (segmentLength < 1) {
+						region.getShape().add(edge);
+						++segmentLength;
+					} else if (maximumSegmentLength < segmentLength) {
+						region.getShape().add(edge);
+						segmentLength = 1;
+					} else {
+						region.getShape().set(region.getShape().size() - 1, edge);
+						++segmentLength;
+					}
 					area += det(previousEdge, edge);
 					length += scale;
 					previousEdge = edge;
@@ -551,7 +561,12 @@ public final class ShowActions {
 						spin += (previousEdge.x < edge.x) == (previousEdge.y < edge.y) ? -1 : +1;
 					}
 					
-					region.getShape().add(start);
+					if (segmentLength < 1 || maximumSegmentLength < segmentLength) {
+						region.getShape().add(edge);
+					} else {
+						region.getShape().set(region.getShape().size() - 1, edge);
+					}
+					
 					area += det(previousEdge, edge);
 				}
 				
@@ -563,7 +578,7 @@ public final class ShowActions {
 				region.setNegative(spin < 0);
 				region.setArea(abs(area));
 				region.setAreaInSquareMicrons(region.getArea() * square(annotations.getMicronsPerPixel()));
-				region.setLength(scale);
+				region.setLength(length);
 				region.setLengthInMicrons(region.getLength() * annotations.getMicronsPerPixel());
 			}
 			
