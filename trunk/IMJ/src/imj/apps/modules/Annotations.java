@@ -41,6 +41,10 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 	
 	private double micronsPerPixel;
 	
+	public Annotations() {
+		this.setMicronsPerPixel(0.5);
+	}
+	
 	public final List<Annotation> getAnnotations() {
 		return this.getItems();
 	}
