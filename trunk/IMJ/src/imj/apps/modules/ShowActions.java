@@ -1,6 +1,6 @@
 package imj.apps.modules;
 
-import static imj.apps.modules.BigImageComponent.drawOutline;
+import static imj.apps.modules.BigImageComponent.drawRegionOutline;
 import static imj.apps.modules.Plugin.fireUpdate;
 import static imj.apps.modules.ShowActions.EdgeNeighborhood.computeNeighborhood;
 import static imj.apps.modules.Sieve.getROI;
@@ -9,6 +9,7 @@ import static java.lang.Math.abs;
 import static java.lang.Math.floor;
 import static java.lang.Math.pow;
 import static java.lang.Math.round;
+import static java.util.Collections.sort;
 import static javax.swing.JOptionPane.OK_CANCEL_OPTION;
 import static javax.swing.JOptionPane.OK_OPTION;
 import static javax.swing.JOptionPane.showConfirmDialog;
@@ -28,7 +29,10 @@ import java.awt.event.ComponentEvent;
 import java.awt.geom.Point2D;
 import java.awt.geom.Point2D.Float;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.swing.JColorChooser;
@@ -41,9 +45,8 @@ import net.sourceforge.aprog.af.AFConstants;
 import net.sourceforge.aprog.af.AFMainFrame;
 import net.sourceforge.aprog.af.AbstractAFAction;
 import net.sourceforge.aprog.context.Context;
+import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.MathTools.Statistics;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-28)
@@ -338,27 +341,95 @@ public final class ShowActions {
 				final int columnCount = roi.getColumnCount();
 				final BufferedImage buffer = new BufferedImage(columnCount, rowCount, BufferedImage.TYPE_BYTE_BINARY);
 				final Graphics2D g = buffer.createGraphics();
-				final int scale = this.getContext().get("scale");
 				final int lod = this.getContext().get("lod");
-				final double s = scale * pow(2.0, -lod);
+				final double s = pow(2.0, -lod);
 				
 				g.scale(s, s);
 				g.setStroke(new BasicStroke((float) (3.0 / s)));
 				
-				for (final Region region : annotation.getRegions()) {
-					drawOutline(region, g);
-				}
+				boolean regionsAreClosed = true;
 				
-				for (int y = 0; y < rowCount; ++y) {
-					for (int x = 0; x < columnCount; ++x) {
-						roi.set(y, x, (buffer.getRGB(x, y) & 0x00FFFFFF) != 0);
+				for (final Region region : annotation.getRegions()) {
+					final List<Float> shape = region.getShape();
+					
+					if (!shape.isEmpty() && region.getLength() / 3 < shape.get(0).distance(shape.get(shape.size() - 1))) {
+						regionsAreClosed = false;
+						break;
 					}
 				}
 				
-				g.dispose();
+				if (regionsAreClosed) {
+					final List<Region> sortedRegions = new ArrayList<Region>(annotation.getRegions());
+					
+					sort(sortedRegions, DECREASING_AREA);
+					
+					final int pixelCount = roi.getPixelCount();
+					final RegionOfInterest tmp = new RegionOfInterest.UsingBitSet(rowCount, columnCount, false);
+					
+					roi.reset();
+					roi.invert();
+					
+					for (final Region region : sortedRegions) {
+						g.setColor(Color.BLACK);
+						g.fillRect(0, 0, (int) (columnCount / s), (int) (rowCount / s));
+						g.setColor(Color.WHITE);
+						
+						drawRegionOutline(region, g);
+						
+						tmp.reset();
+						tmp.invert();
+						
+						for (int y = 0; y < rowCount; ++y) {
+							for (int x = 0; x < columnCount; ++x) {
+								if ((buffer.getRGB(x, y) & 0x00FFFFFF) != 0) {
+									tmp.set(y, x);
+								}
+							}
+						}
+						
+						fillContours(tmp);
+						
+						for (int pixel = 0; pixel < pixelCount; ++pixel) {
+							if (tmp.get(pixel)) {
+								roi.set(pixel, !region.isNegative());
+							}
+						}
+					}
+				} else {
+					debugPrint("Result may be incorrect because some regions are not closed");
+					
+					for (final Region region : annotation.getRegions()) {
+						if (region.isNegative()) {
+							drawRegionOutline(region, g);
+						}
+					}
+					
+					for (int y = 0; y < rowCount; ++y) {
+						for (int x = 0; x < columnCount; ++x) {
+							roi.set(y, x, (buffer.getRGB(x, y) & 0x00FFFFFF) != 0);
+						}
+					}
+					
+					fillContours(roi);
+					
+					for (final Region region : annotation.getRegions()) {
+						if (!region.isNegative()) {
+							drawRegionOutline(region, g);
+						}
+					}
+					
+					for (int y = 0; y < rowCount; ++y) {
+						for (int x = 0; x < columnCount; ++x) {
+							if ((buffer.getRGB(x, y) & 0x00FFFFFF) != 0) {
+								roi.set(y, x);
+							}
+						}
+					}
+					
+					fillContours(roi);
+				}
 				
-				fillContours(roi);
-				// TODO handle negative regions
+				g.dispose();
 				
 				fireUpdate(this.getContext(), "sieve");
 			}
@@ -597,6 +668,24 @@ public final class ShowActions {
 		
 		roi.invert();
 	}
+	
+	public static final Comparator<Region> INCREASING_AREA = new Comparator<Region>() {
+		
+		@Override
+		public final int compare(final Region r1, final Region r2) {
+			return Double.compare(r1.getArea(), r2.getArea());
+		}
+		
+	};
+	
+	public static final Comparator<Region> DECREASING_AREA = new Comparator<Region>() {
+		
+		@Override
+		public final int compare(final Region r1, final Region r2) {
+			return Double.compare(r2.getArea(), r1.getArea());
+		}
+		
+	};
 	
 	/**
 	 * @author codistmonk (creation 2013-03-04)

@@ -415,7 +415,7 @@ public final class ImageComponent extends JComponent {
 					image, false))));
 		}
 		
-		SwingTools.show(panel, title, true);
+		SwingTools.show(panel, title, !SwingUtilities.isEventDispatchThread());
 	}
 	
 	public static final void showAdjusted(final String title,
