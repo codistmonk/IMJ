@@ -5,12 +5,16 @@ import static imj.apps.modules.Plugin.fireUpdate;
 import static imj.apps.modules.ShowActions.EdgeNeighborhood.computeNeighborhood;
 import static imj.apps.modules.Sieve.getROI;
 import static java.lang.Integer.parseInt;
+import static java.lang.Math.abs;
+import static java.lang.Math.floor;
 import static java.lang.Math.pow;
+import static java.lang.Math.round;
 import static javax.swing.JOptionPane.OK_CANCEL_OPTION;
 import static javax.swing.JOptionPane.OK_OPTION;
 import static javax.swing.JOptionPane.showConfirmDialog;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.cast;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import imj.IntList;
 import imj.apps.modules.Annotations.Annotation;
 import imj.apps.modules.Annotations.Annotation.Region;
@@ -37,6 +41,7 @@ import net.sourceforge.aprog.af.AFMainFrame;
 import net.sourceforge.aprog.af.AbstractAFAction;
 import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-28)
@@ -439,23 +444,53 @@ public final class ShowActions {
 				Point2D.Float edge = joints.remove(start);
 				
 				region.getShape().add(start);
+				Point2D.Float previousEdge = start;
+				boolean previousEdgeIsHorizontal = isEdgeHorizontal(start.x / scale, start.y / scale);
+				int spin = 0;
 				
 				while (edge != null && !start.equals(edge)) {
+					final boolean edgeIsHorizontal = isEdgeHorizontal(edge.x / scale, edge.y / scale);
+					
+					if (previousEdgeIsHorizontal && !edgeIsHorizontal) {
+						spin += (previousEdge.x < edge.x) == (edge.y < previousEdge.y) ? -1 : +1;
+					} else if (!previousEdgeIsHorizontal && edgeIsHorizontal) {
+						spin += (previousEdge.x < edge.x) == (previousEdge.y < edge.y) ? -1 : +1;
+					}
+					
 					region.getShape().add(edge);
+					previousEdge = edge;
+					previousEdgeIsHorizontal = edgeIsHorizontal;
 					edge = joints.remove(edge);
 				}
 				
 				if (edge != null) {
+					edge = start;
+					final boolean edgeIsHorizontal = isEdgeHorizontal(edge.x / scale, edge.y / scale);
+					
+					if (previousEdgeIsHorizontal && !edgeIsHorizontal) {
+						spin += (previousEdge.x < edge.x) == (edge.y < previousEdge.y) ? -1 : +1;
+					} else if (!previousEdgeIsHorizontal && edgeIsHorizontal) {
+						spin += (previousEdge.x < edge.x) == (previousEdge.y < edge.y) ? -1 : +1;
+					}
+					
 					region.getShape().add(start);
 				}
 				
-				// TODO
-				region.setNegative(false);
+				if ((abs(spin) % 4) != 0) {
+					debugPrint("Possible defect detected");
+					debugPrint("spin:", spin);
+				}
+				
+				region.setNegative(spin < 0);
 			}
 			
 			fireUpdate(this.getContext(), "annotations");
 		}
 		
+	}
+	
+	public static final boolean isEdgeHorizontal(final float edgeX, final float edgeY) {
+		return round(edgeX + 0.1F) == (int) floor(edgeX);
 	}
 	
 	/**

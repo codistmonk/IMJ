@@ -384,13 +384,21 @@ public final class BigImageComponent extends JComponent {
 			
 			g.scale(s, s);
 			
+	        final float[] dash = { (float) (5.0 / s), (float) (5.0 / s) };
+			
 			for (final Annotation annotation : annotations.getAnnotations()) {
 				g.setColor(annotation.getLineColor());
 				
 				final boolean annotationSelected = selection.contains(annotation);
 				
 				for (final Region region : annotation.getRegions()) {
-					g.setStroke(new BasicStroke(annotationSelected || selection.contains(region) ? 3F / (float) s : 1F));
+					final float strokeWidth = annotationSelected || selection.contains(region) ? 3F / (float) s : 1F;
+					
+					if (region.isNegative()) {
+						g.setStroke(new BasicStroke(strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER, 1F, dash, 0F));
+					} else {
+						g.setStroke(new BasicStroke(strokeWidth));
+					}
 					
 					drawOutline(region, g);
 				}
