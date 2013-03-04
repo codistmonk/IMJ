@@ -84,15 +84,6 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 					
 					private Region region;
 					
-					private final IntList xs;
-					
-					private final IntList ys;
-					
-					{
-						this.xs = new IntList();
-						this.ys = new IntList();
-					}
-					
 					@Override
 					public final void startElement(final String uri, final String localName,
 							final String qName, final Attributes attributes) throws SAXException {
@@ -102,8 +93,10 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 						} else if ("Region".equals(qName)) {
 							this.region = this.annotation.new Region();
 							this.region.setZoom(parseDouble(attributes.getValue("Zoom")));
-							this.xs.clear();
-							this.ys.clear();
+							this.region.setArea(parseDouble(attributes.getValue("Area")));
+							this.region.setAreaInSquareMicrons(parseDouble(attributes.getValue("AreaMicrons")));
+							this.region.setLength(parseDouble(attributes.getValue("Length")));
+							this.region.setLengthInMicrons(parseDouble(attributes.getValue("LengthMicrons")));
 							final String negative = attributes.getValue("NegativeROA").trim().toLowerCase(ENGLISH);
 							this.region.setNegative(!("0".equals(negative) || "false".equals(negative) || "no".equals(negative)));
 						} else if ("Vertex".equals(qName)) {

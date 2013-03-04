@@ -400,13 +400,13 @@ public final class BigImageComponent extends JComponent {
 						g.setStroke(new BasicStroke(strokeWidth));
 					}
 					
-					drawOutline(region, g);
+					drawRegionOutline(region, g);
 				}
 			}
 		}
 	}
 	
-	public static final void drawOutline(final Region region, final Graphics2D g) {
+	public static final void drawRegionOutline(final Region region, final Graphics2D g) {
 		final int n = region.getShape().size();
 		final int[] xs = new int[n];
 		final int[] ys = new int[n];
