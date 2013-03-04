@@ -181,6 +181,8 @@ public abstract class Plugin {
 		final JFrame mainFrame = this.getContext().get("mainFrame");
 		final JDialog dialog = new JDialog(mainFrame, false);
 		
+		dialog.setTitle(this.getClass().getSimpleName());
+		
 		try {
 			panel.setLayout(new BoxLayout(panel, BoxLayout.LINE_AXIS));
 			panel.add(new JLabel(new ImageIcon(ImageIO.read(Tools.getResourceAsStream("imj/apps/thumbnail.png")))));

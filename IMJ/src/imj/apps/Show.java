@@ -29,6 +29,7 @@ import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.BigImageComponent;
 import imj.apps.modules.FeatureViewFilter;
+import imj.apps.modules.LODStatisticsViewFilter;
 import imj.apps.modules.LinearViewFilter;
 import imj.apps.modules.RankViewFilter;
 import imj.apps.modules.RegionOfInterest;
@@ -167,9 +168,14 @@ public final class Show {
 		result.set("xy", null, Point.class);
 		result.set("rgb", null, String.class);
 		result.set("hsb", null, String.class);
-		
-		result.set("viewFilters", array(null, new RoundingViewFilter(result), new FeatureViewFilter(result),
-				new StatisticsViewFilter(result), new LinearViewFilter(result), new RankViewFilter(result)), ViewFilter[].class);
+		result.set("viewFilters", array(
+				null, new RoundingViewFilter(result),
+				new FeatureViewFilter(result),
+				new StatisticsViewFilter(result),
+				new LODStatisticsViewFilter(result),
+				new LinearViewFilter(result),
+				new RankViewFilter(result)),
+		ViewFilter[].class);
 		result.set("viewFilter", null, ViewFilter.class);
 		result.set("sieves", array(new SimpleSieve(result)), Sieve[].class);
 		result.set("sieve", null, Sieve.class);
@@ -331,6 +337,7 @@ public final class Show {
 			public final void run() {
 				final Context context = newContext();
 				
+				context.set("imageId", imageId);
 				context.set("annotations", Annotations.fromXML(arguments.get("annotations", baseName(imageId) + ".xml")));
 				
 				packAndCenter(newMainFrame(imageId, context)).setVisible(true);
