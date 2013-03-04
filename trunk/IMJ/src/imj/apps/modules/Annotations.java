@@ -2,6 +2,7 @@ package imj.apps.modules;
 
 import static java.lang.Double.parseDouble;
 import static java.lang.Long.parseLong;
+import static java.util.Locale.ENGLISH;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
@@ -21,6 +22,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.xml.parsers.SAXParser;
@@ -98,6 +100,8 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 							this.region.setZoom(parseDouble(attributes.getValue("Zoom")));
 							this.xs.clear();
 							this.ys.clear();
+							final String negative = attributes.getValue("NegativeROA").trim().toLowerCase(ENGLISH);
+							this.region.setNegative(!("0".equals(negative) || "false".equals(negative) || "no".equals(negative)));
 						} else if ("Vertex".equals(qName)) {
 							this.region.getShape().add(new Point2D.Float(
 									(float) (parseDouble(attributes.getValue("X"))),
@@ -157,6 +161,8 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 			
 			private final List<Point2D.Float> shape;
 			
+			private boolean negative;
+			
 			public Region() {
 				this.shape = new ArrayList<Point2D.Float>();
 				Annotation.this.getRegions().add(this);
@@ -205,6 +211,14 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 			
 			public final List<Point2D.Float> getShape() {
 				return this.shape;
+			}
+			
+			public final boolean isNegative() {
+				return this.negative;
+			}
+			
+			public final void setNegative(final boolean negative) {
+				this.negative = negative;
 			}
 			
 		}

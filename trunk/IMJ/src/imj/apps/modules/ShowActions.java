@@ -446,6 +446,9 @@ public final class ShowActions {
 				if (edge != null) {
 					region.getShape().add(start);
 				}
+				
+				// TODO
+				region.setNegative(false);
 			}
 			
 			fireUpdate(this.getContext(), "annotations");
@@ -545,62 +548,78 @@ public final class ShowActions {
 		
 		switch (neighborhood) {
 		case NEIGHBORHOOD_PATTERN_01_11:
+			// right turn
 			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)),
 					new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)));
 			break;
 		case NEIGHBORHOOD_PATTERN_11_01:
+			// right turn
 			joints.put(new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)),
 					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)));
 			break;
 		case NEIGHBORHOOD_PATTERN_11_10:
+			// right turn
 			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)),
 					new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)));
 			break;
 		case NEIGHBORHOOD_PATTERN_10_11:
+			// right turn
 			joints.put(new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)),
 					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)));
 			break;
 		case NEIGHBORHOOD_PATTERN_11_00:
+			// no turn
 			joints.put(new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)),
 					new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)));
 			break;
 		case NEIGHBORHOOD_PATTERN_01_01:
+			// no turn
 			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)),
 					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)));
 			break;
 		case NEIGHBORHOOD_PATTERN_00_11:
+			// no turn
 			joints.put(new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)),
 					new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)));
 			break;
 		case NEIGHBORHOOD_PATTERN_10_10:
+			// no turn
 			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)),
 					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)));
 			break;
 		case NEIGHBORHOOD_PATTERN_01_10:
+			// right turn
 			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)),
 					new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)));
+			// right turn, (dc, dr) == (+0, +0)
 			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)),
 					new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)));
 			break;
 		case NEIGHBORHOOD_PATTERN_10_01:
+			// right turn, (dx, dy) == (+0.5, +0.5), (dc, dr) == (+1, +0)
 			joints.put(new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)),
 					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)));
+			// right turn, (dx, dy) == (-0.5, -0.5), (dc, dr) == (+0, -1)
 			joints.put(new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)),
 					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)));
 			break;
 		case NEIGHBORHOOD_PATTERN_10_00:
+			// left turn, (dx, dy) == (+0.5, -0.5), (dc, dr) == (+1, -1)
 			joints.put(new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)),
 					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)));
 			break;
 		case NEIGHBORHOOD_PATTERN_00_10:
+			// left turn, (dx, dy) == (-0.5, -0.5), (dc, dr) == (-1, +0)
 			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)),
 					new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)));
 			break;
 		case NEIGHBORHOOD_PATTERN_00_01:
+			// left turn, (dx, dy) == (-0.5, +0.5), (dc, dr) == (+0, +0)
 			joints.put(new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)),
 					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)));
 			break;
 		case NEIGHBORHOOD_PATTERN_01_00:
+			// left turn, (dx, dy) == (+0.5, +1.0), (dc, dr) == (+0, +1)
 			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)),
 					new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)));
 			break;
