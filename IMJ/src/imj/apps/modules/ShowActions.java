@@ -13,6 +13,7 @@ import static javax.swing.JOptionPane.OK_CANCEL_OPTION;
 import static javax.swing.JOptionPane.OK_OPTION;
 import static javax.swing.JOptionPane.showConfirmDialog;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
+import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import imj.IntList;
@@ -41,6 +42,7 @@ import net.sourceforge.aprog.af.AFMainFrame;
 import net.sourceforge.aprog.af.AbstractAFAction;
 import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.Tools;
 
 /**
@@ -356,6 +358,7 @@ public final class ShowActions {
 				g.dispose();
 				
 				fillContours(roi);
+				// TODO handle negative regions
 				
 				fireUpdate(this.getContext(), "sieve");
 			}
@@ -441,6 +444,8 @@ public final class ShowActions {
 			while (!joints.isEmpty()) {
 				final Region region = annotation.new Region();
 				final Point2D.Float start = joints.keySet().iterator().next();
+				float area = 0F;
+				float length = 0F;
 				Point2D.Float edge = joints.remove(start);
 				
 				region.getShape().add(start);
@@ -458,6 +463,8 @@ public final class ShowActions {
 					}
 					
 					region.getShape().add(edge);
+					area += det(previousEdge, edge);
+					length += scale;
 					previousEdge = edge;
 					previousEdgeIsHorizontal = edgeIsHorizontal;
 					edge = joints.remove(edge);
@@ -474,6 +481,7 @@ public final class ShowActions {
 					}
 					
 					region.getShape().add(start);
+					area += det(previousEdge, edge);
 				}
 				
 				if ((abs(spin) % 4) != 0) {
@@ -482,11 +490,19 @@ public final class ShowActions {
 				}
 				
 				region.setNegative(spin < 0);
+				region.setArea(abs(area));
+				region.setAreaInSquareMicrons(region.getArea() * square(annotations.getMicronsPerPixel()));
+				region.setLength(scale);
+				region.setLengthInMicrons(region.getLength() * annotations.getMicronsPerPixel());
 			}
 			
 			fireUpdate(this.getContext(), "annotations");
 		}
 		
+	}
+	
+	public static final float det(final Point2D.Float v1, final Point2D.Float v2) {
+		return v1.x * v2.y - v1.y * v2.x;
 	}
 	
 	public static final boolean isEdgeHorizontal(final float edgeX, final float edgeY) {
