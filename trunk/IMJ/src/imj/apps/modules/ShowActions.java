@@ -2,6 +2,7 @@ package imj.apps.modules;
 
 import static imj.apps.modules.BigImageComponent.drawOutline;
 import static imj.apps.modules.Plugin.fireUpdate;
+import static imj.apps.modules.ShowActions.EdgeNeighborhood.computeNeighborhood;
 import static imj.apps.modules.Sieve.getROI;
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.pow;
@@ -20,6 +21,7 @@ import java.awt.Graphics2D;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.geom.Point2D;
+import java.awt.geom.Point2D.Float;
 import java.awt.image.BufferedImage;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -457,76 +459,6 @@ public final class ShowActions {
 	}
 	
 	/**
-	 * {@value}.
-	 */
-	private static final int NEIGHBORHOOD_PATTERN_01_11 = 0 | 4 | 2 | 1;
-	
-	/**
-	 * {@value}.
-	 */
-	private static final int NEIGHBORHOOD_PATTERN_11_01 = 8 | 4 | 0 | 1;
-	
-	/**
-	 * {@value}.
-	 */
-	private static final int NEIGHBORHOOD_PATTERN_11_10 = 8 | 4 | 2 | 0;
-	
-	/**
-	 * {@value}.
-	 */
-	private static final int NEIGHBORHOOD_PATTERN_10_11 = 8 | 0 | 2 | 1;
-	
-	/**
-	 * {@value}.
-	 */
-	private static final int NEIGHBORHOOD_PATTERN_11_00 = 8 | 4 | 0 | 0;
-	
-	/**
-	 * {@value}.
-	 */
-	private static final int NEIGHBORHOOD_PATTERN_01_01 = 0 | 4 | 0 | 1;
-	
-	/**
-	 * {@value}.
-	 */
-	private static final int NEIGHBORHOOD_PATTERN_00_11 = 0 | 0 | 2 | 1;
-	
-	/**
-	 * {@value}.
-	 */
-	private static final int NEIGHBORHOOD_PATTERN_10_10 = 8 | 0 | 2 | 0;
-	
-	/**
-	 * {@value}.
-	 */
-	private static final int NEIGHBORHOOD_PATTERN_01_10 = 0 | 4 | 2 | 0;
-	
-	/**
-	 * {@value}.
-	 */
-	private static final int NEIGHBORHOOD_PATTERN_10_01 = 8 | 0 | 0 | 1;
-	
-	/**
-	 * {@value}.
-	 */
-	private static final int NEIGHBORHOOD_PATTERN_10_00 = 8 | 0 | 0 | 0;
-	
-	/**
-	 * {@value}.
-	 */
-	private static final int NEIGHBORHOOD_PATTERN_00_10 = 0 | 0 | 2 | 0;
-	
-	/**
-	 * {@value}.
-	 */
-	private static final int NEIGHBORHOOD_PATTERN_00_01 = 0 | 0 | 0 | 1;
-	
-	/**
-	 * {@value}.
-	 */
-	private static final int NEIGHBORHOOD_PATTERN_01_00 = 0 | 4 | 0 | 0;
-	
-	/**
 	 * Updates <code>joints</code> so that foreground has 8-connectivity, using a 2x2 window with top left corner at
 	 * <code>(rowIndex, columnIndex)</code>.
 	 * @param image
@@ -543,89 +475,8 @@ public final class ShowActions {
 	 */
 	public static final void connectEdges(final RegionOfInterest image, final int rowIndex, final int columnIndex,
 			final float scale, final Map<Point2D.Float, Point2D.Float> joints) {
-		final int neighborhood = (image.get(rowIndex, columnIndex) ? 8 : 0) | (image.get(rowIndex, columnIndex + 1) ? 4 : 0) |
-				(image.get(rowIndex + 1, columnIndex) ? 2 : 0) | (image.get(rowIndex + 1, columnIndex + 1) ? 1 : 0);
-		
-		switch (neighborhood) {
-		case NEIGHBORHOOD_PATTERN_01_11:
-			// right turn
-			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)),
-					new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)));
-			break;
-		case NEIGHBORHOOD_PATTERN_11_01:
-			// right turn
-			joints.put(new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)),
-					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)));
-			break;
-		case NEIGHBORHOOD_PATTERN_11_10:
-			// right turn
-			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)),
-					new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)));
-			break;
-		case NEIGHBORHOOD_PATTERN_10_11:
-			// right turn
-			joints.put(new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)),
-					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)));
-			break;
-		case NEIGHBORHOOD_PATTERN_11_00:
-			// no turn
-			joints.put(new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)),
-					new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)));
-			break;
-		case NEIGHBORHOOD_PATTERN_01_01:
-			// no turn
-			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)),
-					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)));
-			break;
-		case NEIGHBORHOOD_PATTERN_00_11:
-			// no turn
-			joints.put(new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)),
-					new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)));
-			break;
-		case NEIGHBORHOOD_PATTERN_10_10:
-			// no turn
-			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)),
-					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)));
-			break;
-		case NEIGHBORHOOD_PATTERN_01_10:
-			// right turn
-			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)),
-					new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)));
-			// right turn, (dc, dr) == (+0, +0)
-			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)),
-					new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)));
-			break;
-		case NEIGHBORHOOD_PATTERN_10_01:
-			// right turn, (dx, dy) == (+0.5, +0.5), (dc, dr) == (+1, +0)
-			joints.put(new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)),
-					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)));
-			// right turn, (dx, dy) == (-0.5, -0.5), (dc, dr) == (+0, -1)
-			joints.put(new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)),
-					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)));
-			break;
-		case NEIGHBORHOOD_PATTERN_10_00:
-			// left turn, (dx, dy) == (+0.5, -0.5), (dc, dr) == (+1, -1)
-			joints.put(new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)),
-					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)));
-			break;
-		case NEIGHBORHOOD_PATTERN_00_10:
-			// left turn, (dx, dy) == (-0.5, -0.5), (dc, dr) == (-1, +0)
-			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)),
-					new Point2D.Float(scale * (columnIndex + 0.5F), scale * (rowIndex + 1.0F)));
-			break;
-		case NEIGHBORHOOD_PATTERN_00_01:
-			// left turn, (dx, dy) == (-0.5, +0.5), (dc, dr) == (+0, +0)
-			joints.put(new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)),
-					new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 1.5F)));
-			break;
-		case NEIGHBORHOOD_PATTERN_01_00:
-			// left turn, (dx, dy) == (+0.5, +1.0), (dc, dr) == (+0, +1)
-			joints.put(new Point2D.Float(scale * (columnIndex + 1.0F), scale * (rowIndex + 0.5F)),
-					new Point2D.Float(scale * (columnIndex + 1.5F), scale * (rowIndex + 1.0F)));
-			break;
-		default:
-			break;
-		}
+		EdgeNeighborhood.values()[computeNeighborhood(image, rowIndex, columnIndex)]
+				.updateJoints(columnIndex, rowIndex, scale, joints);
 	}
 	
 	public static final void fillContours(final RegionOfInterest roi) {
@@ -694,6 +545,143 @@ public final class ShowActions {
 		}
 		
 		roi.invert();
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-03-04)
+	 */
+	public static enum EdgeNeighborhood {
+		
+		PATTERN_00_00 {
+			
+			@Override
+			public final void updateJoints(final int x, final int y, final float scale, final Map<Float, Float> joints) {
+				// NOP
+			}
+			
+		}, PATTERN_00_01 {
+			
+			@Override
+			public final void updateJoints(final int x, final int y, final float scale, final Map<Float, Float> joints) {
+				EdgeNeighborhood.addJoint(x, y, +1.5F, +1.0F, +1.0F, +1.5F, scale, joints);
+			}
+			
+		}, PATTERN_00_10 {
+			
+			@Override
+			public final void updateJoints(final int x, final int y, final float scale, final Map<Float, Float> joints) {
+				EdgeNeighborhood.addJoint(x, y, +1.0F, +1.5F, +0.5F, +1.0F, scale, joints);
+			}
+			
+		}, PATTERN_00_11 {
+			
+			@Override
+			public final void updateJoints(final int x, final int y, final float scale, final Map<Float, Float> joints) {
+				EdgeNeighborhood.addJoint(x, y, +1.5F, +1.0F, +0.5F, +1.0F, scale, joints);
+			}
+			
+		}, PATTERN_01_00 {
+			
+			@Override
+			public final void updateJoints(final int x, final int y, final float scale, final Map<Float, Float> joints) {
+				EdgeNeighborhood.addJoint(x, y, +1.0F, +0.5F, +1.5F, +1.0F, scale, joints);
+			}
+			
+		}, PATTERN_01_01 {
+			
+			@Override
+			public final void updateJoints(final int x, final int y, final float scale, final Map<Float, Float> joints) {
+				EdgeNeighborhood.addJoint(x, y, +1.0F, +0.5F, +1.0F, +1.5F, scale, joints);
+			}
+			
+		}, PATTERN_01_10 {
+			
+			@Override
+			public final void updateJoints(final int x, final int y, final float scale, final Map<Float, Float> joints) {
+				EdgeNeighborhood.addJoint(x, y, +1.0F, +0.5F, +0.5F, +1.0F, scale, joints);
+				EdgeNeighborhood.addJoint(x, y, +1.0F, +1.5F, +1.5F, +1.0F, scale, joints);
+			}
+			
+		}, PATTERN_01_11 {
+			
+			@Override
+			public final void updateJoints(final int x, final int y, final float scale, final Map<Float, Float> joints) {
+				EdgeNeighborhood.addJoint(x, y, +1.0F, +0.5F, +0.5F, +1.0F, scale, joints);
+			}
+			
+		}, PATTERN_10_00 {
+			
+			@Override
+			public final void updateJoints(final int x, final int y, final float scale, final Map<Float, Float> joints) {
+				EdgeNeighborhood.addJoint(x, y, +0.5F, +1.0F, +1.0F, +0.5F, scale, joints);
+			}
+			
+		}, PATTERN_10_01 {
+			
+			@Override
+			public final void updateJoints(final int x, final int y, final float scale, final Map<Float, Float> joints) {
+				EdgeNeighborhood.addJoint(x, y, +0.5F, +1.0F, +1.0F, +1.5F, scale, joints);
+				EdgeNeighborhood.addJoint(x, y, +1.5F, +1.0F, +1.0F, +0.5F, scale, joints);
+			}
+			
+		}, PATTERN_10_10 {
+			
+			@Override
+			public final void updateJoints(final int x, final int y, final float scale, final Map<Float, Float> joints) {
+				EdgeNeighborhood.addJoint(x, y, +1.0F, +1.5F, +1.0F, +0.5F, scale, joints);
+			}
+			
+		}, PATTERN_10_11 {
+			
+			@Override
+			public final void updateJoints(final int x, final int y, final float scale, final Map<Float, Float> joints) {
+				EdgeNeighborhood.addJoint(x, y, +1.5F, +1.0F, +1.0F, +0.5F, scale, joints);
+			}
+			
+		}, PATTERN_11_00 {
+			
+			@Override
+			public final void updateJoints(final int x, final int y, final float scale, final Map<Float, Float> joints) {
+				EdgeNeighborhood.addJoint(x, y, +0.5F, +1.0F, +1.5F, +1.0F, scale, joints);
+			}
+			
+		}, PATTERN_11_01 {
+			
+			@Override
+			public final void updateJoints(final int x, final int y, final float scale, final Map<Float, Float> joints) {
+				EdgeNeighborhood.addJoint(x, y, +0.5F, +1.0F, +1.0F, +1.5F, scale, joints);
+			}
+			
+		}, PATTERN_11_10 {
+			
+			@Override
+			public final void updateJoints(final int x, final int y, final float scale, final Map<Float, Float> joints) {
+				EdgeNeighborhood.addJoint(x, y, +1.0F, +1.5F, +1.5F, +1.0F, scale, joints);
+			}
+			
+		}, PATTERN_11_11 {
+			
+			@Override
+			public final void updateJoints(final int x, final int y, final float scale, final Map<Float, Float> joints) {
+				// NOP
+			}
+			
+		};
+		
+		public abstract void updateJoints(int x, int y, float scale, Map<Point2D.Float, Point2D.Float> joints);
+		
+		public static final int computeNeighborhood(final RegionOfInterest image, final int rowIndex, final int columnIndex) {
+			return (image.get(rowIndex, columnIndex) ? 8 : 0) | (image.get(rowIndex, columnIndex + 1) ? 4 : 0) |
+					(image.get(rowIndex + 1, columnIndex) ? 2 : 0) | (image.get(rowIndex + 1, columnIndex + 1) ? 1 : 0);
+		}
+		
+		public static final void addJoint(final int x, final int y,
+				final float dx1, final float dy1, final float dx2, final float dy2,
+				final float scale, final Map<Point2D.Float, Point2D.Float> joints) {
+			joints.put(new Point2D.Float(scale * (x + dx1), scale * (y + dy1)),
+					new Point2D.Float(scale * (x + dx2), scale * (y + dy2)));
+		}
+		
 	}
 	
 }
