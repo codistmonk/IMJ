@@ -28,6 +28,7 @@ import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.BigImageComponent;
+import imj.apps.modules.LinearColorViewFilter;
 import imj.apps.modules.FeatureViewFilter;
 import imj.apps.modules.LODStatisticsViewFilter;
 import imj.apps.modules.LinearViewFilter;
@@ -171,6 +172,7 @@ public final class Show {
 		result.set("viewFilters", array(
 				null, new RoundingViewFilter(result),
 				new FeatureViewFilter(result),
+				new LinearColorViewFilter(result),
 				new StatisticsViewFilter(result),
 				new LODStatisticsViewFilter(result),
 				new LinearViewFilter(result),
