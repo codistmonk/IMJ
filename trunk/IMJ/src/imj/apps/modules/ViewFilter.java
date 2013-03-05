@@ -55,12 +55,41 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	
 	private ViewFilter backup;
 	
+	private boolean backingUp;
+	
 	protected ViewFilter(final Context context) {
 		super(context);
 		this.buffer = new int[4];
 		
 		this.getParameters().put("inputChannels", "red green blue");
 		this.inputChannelClass = Primitive.class;
+		
+		context.getVariable("image").addListener(new Listener<Object>() {
+			
+			@Override
+			public final void valueChanged(final ValueChangedEvent<Object, ?> event) {
+				if (event.getOldValue() == event.getNewValue()) {
+					return;
+				}
+				
+				final boolean thisViewFilterIsApplying = context.get("viewFilter") == ViewFilter.this;
+				
+				if (thisViewFilterIsApplying) {
+					ViewFilter.this.cancel();
+				}
+				
+				if (ViewFilter.this.isBackingUp()) {
+					ViewFilter.this.clearBackup();
+					ViewFilter.this.backup();
+				}
+				
+				if (thisViewFilterIsApplying) {
+					ViewFilter.this.initialize();
+					ViewFilter.this.apply();
+				}
+			}
+			
+		});
 	}
 	
 	protected boolean isOutputMonochannel() {
@@ -155,6 +184,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	@Override
 	public final void backup() {
 		this.backup = this.getContext().get("viewFilter");
+		this.backingUp = true;
 	}
 	
 	@Override
@@ -166,6 +196,11 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	@Override
 	public final void clearBackup() {
 		this.backup = null;
+		this.backingUp = false;
+	}
+	
+	public final boolean isBackingUp() {
+		return this.backingUp;
 	}
 	
 	/**

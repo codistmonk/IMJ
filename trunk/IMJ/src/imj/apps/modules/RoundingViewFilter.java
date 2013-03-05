@@ -34,10 +34,6 @@ public final class RoundingViewFilter extends ViewFilter {
 	
 	@Override
 	public final int getNewValue(final int index, final int oldValue,  final Channel channel) {
-//		return argb(255,
-//				this.transform(red(oldValue)),
-//				this.transform(green(oldValue)),
-//				this.transform(blue(oldValue)));
 		return this.transform(channel.getValue(oldValue));
 	}
 	

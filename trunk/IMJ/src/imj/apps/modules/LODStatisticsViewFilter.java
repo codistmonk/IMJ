@@ -1,13 +1,12 @@
 package imj.apps.modules;
 
 import static java.lang.Integer.parseInt;
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.pow;
 import imj.IMJTools.StatisticsSelector;
 import imj.Image;
-import imj.Image.Abstract;
 import imj.ImageWrangler;
-import imj.apps.modules.FilteredImage.StatisticsFilter;
 
 import java.util.Locale;
 
@@ -36,7 +35,7 @@ public final class LODStatisticsViewFilter extends ViewFilter {
 		this.statistics = new Statistics();
 		
 		this.getParameters().put("statistic", "mean");
-		this.getParameters().put("lod", "0");
+		this.getParameters().put("lod", "-1");
 	}
 	
 	@Override
@@ -47,10 +46,15 @@ public final class LODStatisticsViewFilter extends ViewFilter {
 	@Override
 	public final void initialize() {
 		final String imageId = this.getContext().get("imageId");
-		this.sourceLOD = parseInt(this.getParameters().get("lod"));
-		this.sourceImage = ImageWrangler.INSTANCE.load(imageId, this.sourceLOD);
 		this.currentLOD = this.getContext().get("lod");
 		this.currentImage = this.getContext().get("image");
+		this.sourceLOD = parseInt(this.getParameters().get("lod"));
+		
+		if (this.sourceLOD < 0) {
+			this.sourceLOD = max(0, this.currentLOD + this.sourceLOD);
+		}
+		
+		this.sourceImage = ImageWrangler.INSTANCE.load(imageId, this.sourceLOD);
 		this.feature = StatisticsSelector.valueOf(this.getParameters().get("statistic").toUpperCase(Locale.ENGLISH));
 	}
 	
@@ -72,7 +76,7 @@ public final class LODStatisticsViewFilter extends ViewFilter {
 			}
 		}
 		
-		return (int) this.feature.getValue(statistics);
+		return (int) this.feature.getValue(this.statistics);
 	}
 	
 }

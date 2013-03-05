@@ -10,7 +10,6 @@ import java.util.Arrays;
 import java.util.Locale;
 
 import net.sourceforge.aprog.context.Context;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-18)
