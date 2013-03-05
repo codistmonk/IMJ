@@ -143,6 +143,7 @@ public abstract class Plugin {
 					Plugin.this.backup();
 					
 					if (previewButton.isSelected()) {
+						finalActionPerformed[0] = false;
 						previewAction.actionPerformed(event);
 					}
 				}
@@ -230,7 +231,7 @@ public abstract class Plugin {
 				case KeyEvent.VK_DOWN:
 				case KeyEvent.VK_KP_DOWN:
 					if ((event.getModifiersEx() & SHIFT_DOWN_MASK) == SHIFT_DOWN_MASK) {
-						final String userInput = showInputDialog("Operation and increment", this.operation + " " + this.increment);
+						final String userInput = showInputDialog("Operation and increment", this.operation + " " + abs(this.increment));
 						
 						if (userInput != null) {
 							final String[] operationAndIncrement = userInput.trim().split("\\s+");
