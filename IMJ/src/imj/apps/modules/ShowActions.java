@@ -229,7 +229,9 @@ public final class ShowActions {
 			
 			final Sieve sieve = (Sieve) input.getSelectedValue();
 			
-			sieve.configureAndApply();
+			if (sieve != null) {
+				sieve.configureAndApply();
+			}
 		}
 		
 	}
