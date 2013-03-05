@@ -29,6 +29,9 @@ import java.awt.event.ComponentEvent;
 import java.awt.geom.Point2D;
 import java.awt.geom.Point2D.Float;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -37,6 +40,7 @@ import java.util.Map;
 
 import javax.swing.JColorChooser;
 import javax.swing.JDialog;
+import javax.swing.JFileChooser;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.tree.TreePath;
@@ -55,6 +59,11 @@ public final class ShowActions {
 	private ShowActions() {
 		throw new IllegalInstantiationException();
 	}
+	
+	/**
+	 * {@value}.
+	 */
+	public static final String ACTIONS_EXPORT_ANNOTATIONS = "actions.exportAnnotations";
 	
 	/**
 	 * {@value}.
@@ -105,6 +114,130 @@ public final class ShowActions {
 	 * {@value}.
 	 */
 	public static final String ACTIONS_CREATE_ANNOTATION_FROM_ROI = "actions.createAnnotationFromROI";
+	
+	public static final String baseName(final String fileName) {
+		final int lastDotIndex = fileName.lastIndexOf('.');
+		
+		return lastDotIndex < 0 ? fileName : fileName.substring(0, lastDotIndex);
+	}
+	
+	public static final String attribute(final String name, final Object value) {
+		return " " + name + "=\"" + value + "\"";
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-28)
+	 */
+	public static final class ExportAnnotations extends AbstractAFAction {
+		
+		public ExportAnnotations(final Context context) {
+			super(context, ACTIONS_EXPORT_ANNOTATIONS);
+		}
+		
+		@Override
+		public final void perform() {
+			final String imageId = this.getContext().get("imageId");
+			final JFileChooser fileChooser = new JFileChooser(imageId);
+			
+			fileChooser.setSelectedFile(new File(baseName(imageId) + ".xml"));
+			
+			if (JFileChooser.APPROVE_OPTION == fileChooser.showSaveDialog(null)) {
+				final Annotations annotations = this.getContext().get("annotations");
+				final File xmlFile = fileChooser.getSelectedFile();
+				PrintStream out = null;
+				
+				try {
+					out = new PrintStream(xmlFile);
+					
+					out.println("<Annotations" + attribute("MicronsPerPixel", annotations.getMicronsPerPixel()) + ">");
+					
+					int annotationId = 1;
+					
+					for (final Annotation annotation : annotations.getAnnotations()) {
+						out.println("  <Annotation" +
+								attribute("Id", annotationId) + 
+								attribute("ReadOnly", 0) +
+								attribute("NameReadOnly", 0) +
+								attribute("LineColorReadOnly", 0) +
+								attribute("Incremental", 0) +
+								attribute("Type", 4) +
+								attribute("LineColor", annotation.getLineColor().getRGB() & 0x00FFFFFF) +
+								attribute("Visible", 1) +
+								attribute("Selected", 0) +
+								attribute("MarkupImagePath", "") +
+								attribute("MacroName", "") +
+						">");
+						
+						out.println("    <Attributes>");
+						out.println("      <Attribute" +
+								attribute("Name", "Description") + attribute("Id", 0) + attribute("Value", "") + "/>");
+						out.println("    </Attributes>");
+						
+						out.println("    <Regions>");
+						out.println("      <RegionAttributeHeaders>");
+						out.println("        <AttributeHeader" +
+								attribute("Id", 9999) + attribute("Name", "Region") + attribute("ColumnWidth", -1) + "/>");
+						out.println("        <AttributeHeader" +
+								attribute("Id", 9997) + attribute("Name", "Length") + attribute("ColumnWidth", -1) + "/>");
+						out.println("        <AttributeHeader" +
+								attribute("Id", 9996) + attribute("Name", "Area") + attribute("ColumnWidth", -1) + "/>");
+						out.println("        <AttributeHeader" +
+								attribute("Id", 9998) + attribute("Name", "Text") + attribute("ColumnWidth", -1) + "/>");
+						out.println("        <AttributeHeader" +
+								attribute("Id", 1) + attribute("Name", "Description") + attribute("ColumnWidth", -1) + "/>");
+						out.println("      </RegionAttributeHeaders>");
+						
+						int regionId = 1;
+						
+						for (final Region region : annotation.getRegions()) {
+							out.println("      <Region" +
+									attribute("Id", regionId) +
+									attribute("Zoom", 0) +
+									attribute("Selected", 0) +
+									attribute("ImageLocation", "") +
+									attribute("ImageFocus", 0) +
+									attribute("Length", region.getLength()) +
+									attribute("Area", region.getArea()) +
+									attribute("LengthMicrons", region.getLengthInMicrons()) +
+									attribute("AreaMicrons", region.getAreaInSquareMicrons()) +
+									attribute("Text", "") +
+									attribute("NegativeROA", region.isNegative() ? "1" : "0") +
+									attribute("InputRegionId", 0) +
+									attribute("Analyze", 1) +
+									attribute("DisplayId", regionId) +
+							">");
+							
+							out.println("        <Attributes/>");
+							
+							out.println("        <Vertices>");
+							
+							for (final Point2D vertex : region.getVertices()) {
+								out.println("          <Vertex" + attribute("X", vertex.getX()) + attribute("Y", vertex.getY()) + "/>");
+							}
+							
+							out.println("        </Vertices>");
+							
+							out.println("      </Region>");
+						}
+						
+						out.println("    </Regions>");
+						out.println("    <Posts/>");
+						out.println("  </Annotation>");
+						
+						++annotationId;
+					}
+					
+					out.println("</Annotations>");
+				} catch (final FileNotFoundException exception) {
+					exception.printStackTrace();
+				} finally {
+					if (out != null) {
+						out.close();
+					}
+				}
+			}
+		}
+	}
 	
 	/**
 	 * @author codistmonk (creation 2013-02-28)
@@ -351,7 +484,7 @@ public final class ShowActions {
 				boolean regionsAreClosed = true;
 				
 				for (final Region region : annotation.getRegions()) {
-					final List<Float> shape = region.getShape();
+					final List<Float> shape = region.getVertices();
 					
 					if (!shape.isEmpty() && region.getLength() / 3 < shape.get(0).distance(shape.get(shape.size() - 1))) {
 						regionsAreClosed = false;
@@ -520,7 +653,7 @@ public final class ShowActions {
 				float length = 0F;
 				Point2D.Float edge = joints.remove(start);
 				
-				region.getShape().add(start);
+				region.getVertices().add(start);
 				Point2D.Float previousEdge = start;
 				boolean previousEdgeIsHorizontal = isEdgeHorizontal(start.x / scale, start.y / scale);
 				int spin = 0;
@@ -537,13 +670,13 @@ public final class ShowActions {
 					}
 					
 					if (segmentLength < 1) {
-						region.getShape().add(edge);
+						region.getVertices().add(edge);
 						++segmentLength;
 					} else if (maximumSegmentLength < segmentLength) {
-						region.getShape().add(edge);
+						region.getVertices().add(edge);
 						segmentLength = 1;
 					} else {
-						region.getShape().set(region.getShape().size() - 1, edge);
+						region.getVertices().set(region.getVertices().size() - 1, edge);
 						++segmentLength;
 					}
 					area += det(previousEdge, edge);
@@ -564,9 +697,9 @@ public final class ShowActions {
 					}
 					
 					if (segmentLength < 1 || maximumSegmentLength < segmentLength) {
-						region.getShape().add(edge);
+						region.getVertices().add(edge);
 					} else {
-						region.getShape().set(region.getShape().size() - 1, edge);
+						region.getVertices().set(region.getVertices().size() - 1, edge);
 					}
 					
 					area += det(previousEdge, edge);
