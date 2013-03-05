@@ -3,7 +3,6 @@ package imj.apps.modules;
 import static java.lang.Math.sqrt;
 import static javax.swing.SwingUtilities.convertPoint;
 import static net.sourceforge.aprog.tools.Tools.invoke;
-
 import imj.Image;
 
 import java.awt.Color;
@@ -64,8 +63,7 @@ public final class ImageComponent extends JComponent {
 			variable.addListener(new Variable.Listener<Double>() {
 				
 				@Override
-				public final void valueChanged(
-						final ValueChangedEvent<Double, ?> event) {
+				public final void valueChanged(final ValueChangedEvent<Double, ?> event) {
 					ImageComponent.this.scaleChanged();
 				}
 				
@@ -74,8 +72,7 @@ public final class ImageComponent extends JComponent {
 		
 		this.addAncestorListener(this.new ScrollSynchonizer());
 		
-		this.setPreferredSize(new Dimension(model.getColumnCount(), model
-				.getRowCount()));
+		this.setPreferredSize(new Dimension(model.getColumnCount(), model.getRowCount()));
 		
 		this.modelChanged();
 	}
@@ -93,15 +90,14 @@ public final class ImageComponent extends JComponent {
 	}
 	
 	final void scaleChanged() {
-		this.setPreferredSize(new Dimension(this.scale(this.getModel()
-				.getColumnCount()), this.scale(this.getModel().getRowCount())));
+		this.setPreferredSize(new Dimension(
+				this.scale(this.getModel().getColumnCount()), this.scale(this.getModel().getRowCount())));
 		this.revalidate();
 		this.repaint();
 		
 		final JScrollPane scrollPane = getAncestorJScrollPane(this);
 		final JScrollBar verticalScrollBar = scrollPane.getVerticalScrollBar();
-		final JScrollBar horizontalScrollBar = scrollPane
-				.getHorizontalScrollBar();
+		final JScrollBar horizontalScrollBar = scrollPane.getHorizontalScrollBar();
 		final double xRatio = getRatio(horizontalScrollBar);
 		final double yRatio = getRatio(verticalScrollBar);
 		
@@ -172,12 +168,8 @@ public final class ImageComponent extends JComponent {
 						for (double x = firstX; x < xEnd; x += step) {
 							final int columnIndex = this.unscale(x);
 							
-							if (0 <= columnIndex
-									&& columnIndex < this.model
-											.getColumnCount()) {
-								final String text = ""
-										+ this.model.getValue(rowIndex,
-												columnIndex);
+							if (0 <= columnIndex && columnIndex < this.model.getColumnCount()) {
+								final String text = ""+ this.model.getValue(rowIndex, columnIndex);
 								
 								g.setColor(Color.BLACK);
 								g.drawString(text, (int) (x + 1), (int) (y + step));
@@ -232,7 +224,8 @@ public final class ImageComponent extends JComponent {
 					if (oldAmplitude == 0) {
 						result.setRGB(x, y, newMaximum * rgb);
 					} else {
-						result.setRGB(x, y, (newMinimum + (image.getValue(y, x) - oldMinimum) * newAmplitude / oldAmplitude) * rgb);
+						result.setRGB(x, y,
+								(newMinimum + (image.getValue(y, x) - oldMinimum) * newAmplitude / oldAmplitude) * rgb);
 					}
 				}
 			}
@@ -259,8 +252,7 @@ public final class ImageComponent extends JComponent {
 		
 		@Override
 		public final void mouseMoved(final MouseEvent event) {
-			final Point xy = convertPoint((Component) event.getSource(),
-					event.getPoint(), ImageComponent.this);
+			final Point xy = convertPoint((Component) event.getSource(), event.getPoint(), ImageComponent.this);
 			final int x = ImageComponent.this.unscale(xy.x);
 			final int y = ImageComponent.this.unscale(xy.y);
 			final Image image = ImageComponent.this.getModel();
@@ -369,8 +361,7 @@ public final class ImageComponent extends JComponent {
 				/ (maximum - minimum);
 	}
 	
-	public static final void setRatio(final JScrollBar scrollBar,
-			final double ratio) {
+	public static final void setRatio(final JScrollBar scrollBar, final double ratio) {
 		final int halfExtent = scrollBar.getVisibleAmount() / 2;
 		final int minimum = scrollBar.getMinimum() + halfExtent;
 		final int maximum = scrollBar.getMaximum() - halfExtent;
@@ -379,13 +370,11 @@ public final class ImageComponent extends JComponent {
 				.setValue((int) (minimum + ratio * (maximum - minimum) - halfExtent));
 	}
 	
-	public static final JScrollPane getAncestorJScrollPane(
-			final Component component) {
+	public static final JScrollPane getAncestorJScrollPane(final Component component) {
 		return getAncestor(component, JScrollPane.class);
 	}
 	
-	public static final <T> T getAncestor(final Component component,
-			final Class<T> ancestorClass) {
+	public static final <T> T getAncestor(final Component component, final Class<T> ancestorClass) {
 		Component result = component;
 		
 		while (result != null
@@ -411,23 +400,20 @@ public final class ImageComponent extends JComponent {
 		final Context context = new Context();
 		
 		for (final Image image : images) {
-			panel.add(new JScrollPane(centered(new ImageComponent(context,
-					image, false))));
+			panel.add(new JScrollPane(centered(new ImageComponent(context, image, false))));
 		}
 		
 		SwingTools.show(panel, title, !SwingUtilities.isEventDispatchThread());
 	}
 	
-	public static final void showAdjusted(final String title,
-			final Image... images) {
+	public static final void showAdjusted(final String title, final Image... images) {
 		final int rowCount = (int) sqrt(images.length);
 		final int columnCount = images.length / rowCount;
 		final JPanel panel = new JPanel(new GridLayout(rowCount, columnCount));
 		final Context context = new Context();
 		
 		for (final Image image : images) {
-			panel.add(new JScrollPane(centered(new ImageComponent(context,
-					image, true))));
+			panel.add(new JScrollPane(centered(new ImageComponent(context, image, true))));
 		}
 		
 		SwingTools.show(panel, title, true);
