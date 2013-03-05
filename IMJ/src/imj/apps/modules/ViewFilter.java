@@ -61,7 +61,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 		super(context);
 		this.buffer = new int[4];
 		
-		this.getParameters().put("inputChannels", "red green blue");
+		this.getParameters().put(PARAMETER_CHANNELS, "red green blue");
 		this.inputChannelClass = Primitive.class;
 		
 		context.getVariable("image").addListener(new Listener<Object>() {
@@ -152,7 +152,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	@Override
 	public final void apply() {
 		{
-			final String[] inputChannelAsStrings = this.getParameters().get("inputChannels").split("\\s+");
+			final String[] inputChannelAsStrings = this.getParameters().get(PARAMETER_CHANNELS).split("\\s+");
 			final int n = inputChannelAsStrings.length;
 			final Collection<Channel> newInputChannels = new LinkedHashSet<Channel>();
 			Class<? extends Channel> newInputChannelClass = Channel.class;
@@ -328,6 +328,11 @@ public abstract class ViewFilter extends Plugin implements Filter {
 		
 	}
 	
+	/**
+	 * {@value}.
+	 */
+	public static final String PARAMETER_CHANNELS = "channels";
+	
 	public static final Channel parseChannel(final String string) {
 		try {
 			return Channel.Primitive.valueOf(string);
@@ -336,6 +341,28 @@ public abstract class ViewFilter extends Plugin implements Filter {
 			
 			return Channel.Synthetic.valueOf(string);
 		}
+	}
+	
+	public static final int[] parseStructuringElement(final String structuringElementParametersAsString) {
+		final String[] structuringElementParameters = structuringElementParametersAsString.trim().split("\\s+");
+		final String shape = structuringElementParameters[0];
+		
+		if ("ring".equals(shape)) {
+			final double innerRadius = parseDouble(structuringElementParameters[1]);
+			final double outerRadius = parseDouble(structuringElementParameters[2]);
+			final Distance distance = Distance.valueOf(structuringElementParameters[3].toUpperCase(Locale.ENGLISH));
+			
+			return newRing(innerRadius, outerRadius, distance);
+		}
+		
+		if ("disk".equals(shape)) {
+			final double radius = parseDouble(structuringElementParameters[1]);
+			final Distance distance = Distance.valueOf(structuringElementParameters[2].toUpperCase(Locale.ENGLISH));
+			
+			return newDisk(radius, distance);
+		}
+		
+		throw new IllegalArgumentException("Invalid structuring element shape: " + shape);
 	}
 	
 	/**
@@ -386,28 +413,6 @@ public abstract class ViewFilter extends Plugin implements Filter {
 			return ViewFilter.parseStructuringElement(this.getParameters().get("structuringElement"));
 		}
 		
-	}
-	
-	public static final int[] parseStructuringElement(final String structuringElementParametersAsString) {
-		final String[] structuringElementParameters = structuringElementParametersAsString.trim().split("\\s+");
-		final String shape = structuringElementParameters[0];
-		
-		if ("ring".equals(shape)) {
-			final double innerRadius = parseDouble(structuringElementParameters[1]);
-			final double outerRadius = parseDouble(structuringElementParameters[2]);
-			final Distance distance = Distance.valueOf(structuringElementParameters[3].toUpperCase(Locale.ENGLISH));
-			
-			return newRing(innerRadius, outerRadius, distance);
-		}
-		
-		if ("disk".equals(shape)) {
-			final double radius = parseDouble(structuringElementParameters[1]);
-			final Distance distance = Distance.valueOf(structuringElementParameters[2].toUpperCase(Locale.ENGLISH));
-			
-			return newDisk(radius, distance);
-		}
-		
-		throw new IllegalArgumentException("Invalid structuring element shape: " + shape);
 	}
 	
 }
