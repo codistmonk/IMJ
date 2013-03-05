@@ -129,6 +129,7 @@ public final class Show {
 			
 		};
 		
+		new ShowActions.ExportAnnotations(result);
 		new ShowActions.ToggleHistogram(result);
 		new ShowActions.ToggleAnnotations(result);
 		new ShowActions.SetViewFilter(result);
@@ -147,6 +148,8 @@ public final class Show {
 						newPreferencesItem(result),
 						null,
 						newQuitItem(result)),
+				menu("File",
+						newExportAnnotationsItem(result)),
 				menu("Tools",
 						newHistogramItem(result),
 						newAnnotationsItem(result)),
@@ -222,6 +225,10 @@ public final class Show {
         return item("Histogram", context, ACTIONS_TOGGLE_HISTOGRAM);
     }
     
+    public static final JMenuItem newExportAnnotationsItem(final Context context) {
+    	return item("Export annotations...", context, ACTIONS_EXPORT_ANNOTATIONS);
+    }
+    
     public static final JMenuItem newAnnotationsItem(final Context context) {
     	return item("Annotations", context, ACTIONS_TOGGLE_ANNOTATIONS);
     }
@@ -293,12 +300,6 @@ public final class Show {
 		result.add(component);
 		
 		return result;
-	}
-	
-	public static final String baseName(final String fileName) {
-		final int lastDotIndex = fileName.lastIndexOf('.');
-		
-		return lastDotIndex < 0 ? fileName : fileName.substring(0, lastDotIndex);
 	}
 	
 	public static final AFMainFrame newMainFrame(final String imageId, final Context context) {

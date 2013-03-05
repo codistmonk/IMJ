@@ -6,15 +6,10 @@ import static java.util.Locale.ENGLISH;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
-
-import imj.IntList;
 import imj.apps.modules.Annotations.Annotation.Region;
 
 import java.awt.Color;
-import java.awt.Polygon;
-import java.awt.Shape;
 import java.awt.geom.Point2D;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -22,7 +17,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.xml.parsers.SAXParser;
@@ -87,7 +81,9 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 					@Override
 					public final void startElement(final String uri, final String localName,
 							final String qName, final Attributes attributes) throws SAXException {
-						if ("Annotation".equals(qName)) {
+						if ("Annotations".equals(qName)) {
+							result.setMicronsPerPixel(parseDouble(attributes.getValue("MicronsPerPixel")));
+						} else if ("Annotation".equals(qName)) {
 							this.annotation = result.new Annotation();
 							this.annotation.setLineColor(new Color((int) parseLong(attributes.getValue("LineColor"))));
 						} else if ("Region".equals(qName)) {
@@ -100,7 +96,7 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 							final String negative = attributes.getValue("NegativeROA").trim().toLowerCase(ENGLISH);
 							this.region.setNegative(!("0".equals(negative) || "false".equals(negative) || "no".equals(negative)));
 						} else if ("Vertex".equals(qName)) {
-							this.region.getShape().add(new Point2D.Float(
+							this.region.getVertices().add(new Point2D.Float(
 									(float) (parseDouble(attributes.getValue("X"))),
 									(float) (parseDouble(attributes.getValue("Y")))));
 						}
@@ -156,12 +152,12 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 			
 			private double areaInSquareMicrons;
 			
-			private final List<Point2D.Float> shape;
+			private final List<Point2D.Float> vertices;
 			
 			private boolean negative;
 			
 			public Region() {
-				this.shape = new ArrayList<Point2D.Float>();
+				this.vertices = new ArrayList<Point2D.Float>();
 				Annotation.this.getRegions().add(this);
 				this.setUserObject(this.getClass().getSimpleName() + " " + (Annotation.this.getRegions().indexOf(this) + 1));
 			}
@@ -206,8 +202,8 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 				this.areaInSquareMicrons = areaInSquareMicrons;
 			}
 			
-			public final List<Point2D.Float> getShape() {
-				return this.shape;
+			public final List<Point2D.Float> getVertices() {
+				return this.vertices;
 			}
 			
 			public final boolean isNegative() {

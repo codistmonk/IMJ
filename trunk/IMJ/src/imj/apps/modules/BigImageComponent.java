@@ -407,12 +407,12 @@ public final class BigImageComponent extends JComponent {
 	}
 	
 	public static final void drawRegionOutline(final Region region, final Graphics2D g) {
-		final int n = region.getShape().size();
+		final int n = region.getVertices().size();
 		final int[] xs = new int[n];
 		final int[] ys = new int[n];
 		int i = 0;
 		
-		for (final Point2D.Float vertex : region.getShape()) {
+		for (final Point2D.Float vertex : region.getVertices()) {
 			xs[i] = (int) vertex.x;
 			ys[i] = (int) vertex.y;
 			++i;
