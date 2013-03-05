@@ -5,8 +5,10 @@ import static java.lang.Double.parseDouble;
 import static java.lang.Math.abs;
 import static javax.swing.Box.createHorizontalGlue;
 import static javax.swing.JOptionPane.showInputDialog;
+import static net.sourceforge.aprog.i18n.Messages.translate;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.cast;
+import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 
 import java.awt.event.ActionEvent;
@@ -34,7 +36,6 @@ import javax.swing.JToggleButton;
 
 import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.events.AtomicVariable;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-18)
@@ -63,8 +64,8 @@ public abstract class Plugin {
 	public final void configureAndApply() {
 		final Box inputBox = Box.createVerticalBox();
 		final Map<String, JTextField> textFields = new HashMap<String, JTextField>();
-		final JToggleButton previewButton = new JToggleButton("Preview");
-		final ActionListener applyAction = new ActionListener() {
+		final JToggleButton previewButton = translate(new JToggleButton("Preview"));
+		final ActionListener previewAction = new ActionListener() {
 			
 			@Override
 			public final void actionPerformed(final ActionEvent event) {
@@ -82,100 +83,20 @@ public abstract class Plugin {
 			
 		};
 		
-		previewButton.addActionListener(applyAction);
+		previewButton.addActionListener(previewAction);
 		
 		for (final Map.Entry<String, String> entry : this.getParameters().entrySet()) {
-			final JTextField textField = new JTextField(entry.getValue());
+			final JTextField textField = newSpinnerTextField(entry.getValue(), previewAction);
 			
 			textFields.put(entry.getKey(), textField);
 			inputBox.add(horizontalBox(new JLabel(entry.getKey()), textField));
-			
-			textField.addActionListener(applyAction);
-			
-			textField.addKeyListener(new KeyAdapter() {
-				
-				private String operation = "+";
-				
-				private double increment = +1.0;
-				
-				@Override
-				public final void keyPressed(final KeyEvent event) {
-					switch (event.getKeyCode()) {
-					case KeyEvent.VK_UP:
-					case KeyEvent.VK_KP_UP:
-					case KeyEvent.VK_DOWN:
-					case KeyEvent.VK_KP_DOWN:
-						if ((event.getModifiersEx() & SHIFT_DOWN_MASK) == SHIFT_DOWN_MASK) {
-							final String userInput = showInputDialog("Operation and increment", "+ 1");
-							
-							if (userInput != null) {
-								final String[] operationAndIncrement = userInput.trim().split("\\s+");
-								this.operation = operationAndIncrement[0];
-								this.increment = parseDouble(operationAndIncrement[1]);
-							}
-						}
-						break;
-					default:
-						return;
-					}
-					
-					switch (event.getKeyCode()) {
-					case KeyEvent.VK_UP:
-					case KeyEvent.VK_KP_UP:
-						this.increment = abs(this.increment);
-						break;
-					case KeyEvent.VK_DOWN:
-					case KeyEvent.VK_KP_DOWN:
-						this.increment = -abs(this.increment);
-						break;
-					default:
-						break;
-					}
-					
-					if (this.increment != 0) {
-						try {
-							final double value = parseDouble(textField.getSelectedText());
-							final double newValue;
-							
-							if ("+".equals(this.operation)) {
-								newValue = value + this.increment;
-							} else if ("*".equals(this.operation)) {
-								newValue = 0 <= this.increment ? value * this.increment : value / abs(this.increment);
-							} else {
-								throw new IllegalArgumentException("Invalid operation: " + this.operation);
-							}
-							
-							final String updatedNumber;
-							
-							if (value == (int) value && this.increment == (int) this.increment) {
-								updatedNumber = "" + (int) (newValue);
-							} else {
-								updatedNumber = "" + (newValue);
-							}
-							
-							final int i = textField.getSelectionStart();
-							final int j = textField.getSelectionEnd();
-							
-							textField.setText(textField.getText().substring(0, i) + updatedNumber + textField.getText().substring(j));
-							textField.setSelectionStart(i);
-							textField.setSelectionEnd(i + updatedNumber.length());
-							
-							event.consume();
-							
-							applyAction.actionPerformed(null);
-						} catch (final Exception exception) {
-							ignore(exception);
-						}
-					}
-				}
-				
-			});
 		}
 		
-		final JButton cancelButton = new JButton("Cancel");
-		final JButton okButton = new JButton("OK");
+		final JButton cancelButton = translate(new JButton("Cancel"));
+		final JButton applyButton = translate(new JButton("Apply"));
+		final JButton okButton = translate(new JButton("OK"));
 		
-		inputBox.add(horizontalBox(cancelButton, createHorizontalGlue(), previewButton, okButton));
+		inputBox.add(horizontalBox(cancelButton, createHorizontalGlue(), previewButton, applyButton, okButton));
 		
 		final JPanel panel = new JPanel();
 		final JFrame mainFrame = this.getContext().get("mainFrame");
@@ -185,7 +106,7 @@ public abstract class Plugin {
 		
 		try {
 			panel.setLayout(new BoxLayout(panel, BoxLayout.LINE_AXIS));
-			panel.add(new JLabel(new ImageIcon(ImageIO.read(Tools.getResourceAsStream("imj/apps/thumbnail.png")))));
+			panel.add(new JLabel(new ImageIcon(ImageIO.read(getResourceAsStream("imj/apps/thumbnail.png")))));
 			panel.add(inputBox);
 			
 			dialog.add(panel);
@@ -206,6 +127,29 @@ public abstract class Plugin {
 				}
 				
 			});
+			
+			final ActionListener applyButtonAction = new ActionListener() {
+				
+				@Override
+				public final void actionPerformed(final ActionEvent event) {
+					finalActionPerformed[0] = true;
+					
+					if (!previewButton.isSelected()) {
+						Plugin.this.initialize();
+						Plugin.this.apply();
+					}
+					
+					Plugin.this.clearBackup();
+					Plugin.this.backup();
+					
+					if (previewButton.isSelected()) {
+						previewAction.actionPerformed(event);
+					}
+				}
+				
+			};
+			
+			applyButton.addActionListener(applyButtonAction);
 			
 			okButton.addActionListener(new ActionListener() {
 				
@@ -265,6 +209,93 @@ public abstract class Plugin {
 		if (variable != null) {
 			variable.new ValueChangedEvent(value, value).fire();
 		}
+	}
+	
+	public static final JTextField newSpinnerTextField(final String initialText, final ActionListener action) {
+		final JTextField result = new JTextField(initialText);
+		
+		result.addActionListener(action);
+		
+		result.addKeyListener(new KeyAdapter() {
+			
+			private String operation = "+";
+			
+			private double increment = +1.0;
+			
+			@Override
+			public final void keyPressed(final KeyEvent event) {
+				switch (event.getKeyCode()) {
+				case KeyEvent.VK_UP:
+				case KeyEvent.VK_KP_UP:
+				case KeyEvent.VK_DOWN:
+				case KeyEvent.VK_KP_DOWN:
+					if ((event.getModifiersEx() & SHIFT_DOWN_MASK) == SHIFT_DOWN_MASK) {
+						final String userInput = showInputDialog("Operation and increment", this.operation + " " + this.increment);
+						
+						if (userInput != null) {
+							final String[] operationAndIncrement = userInput.trim().split("\\s+");
+							this.operation = operationAndIncrement[0];
+							this.increment = parseDouble(operationAndIncrement[1]);
+						}
+					}
+					break;
+				default:
+					return;
+				}
+				
+				switch (event.getKeyCode()) {
+				case KeyEvent.VK_UP:
+				case KeyEvent.VK_KP_UP:
+					this.increment = abs(this.increment);
+					break;
+				case KeyEvent.VK_DOWN:
+				case KeyEvent.VK_KP_DOWN:
+					this.increment = -abs(this.increment);
+					break;
+				default:
+					break;
+				}
+				
+				if (this.increment != 0) {
+					try {
+						final double value = parseDouble(result.getSelectedText());
+						final double newValue;
+						
+						if ("+".equals(this.operation)) {
+							newValue = value + this.increment;
+						} else if ("*".equals(this.operation)) {
+							newValue = 0 <= this.increment ? value * this.increment : value / abs(this.increment);
+						} else {
+							throw new IllegalArgumentException("Invalid operation: " + this.operation);
+						}
+						
+						final String updatedNumber;
+						
+						if (value == (int) value && this.increment == (int) this.increment) {
+							updatedNumber = "" + (int) (newValue);
+						} else {
+							updatedNumber = "" + (newValue);
+						}
+						
+						final int i = result.getSelectionStart();
+						final int j = result.getSelectionEnd();
+						
+						result.setText(result.getText().substring(0, i) + updatedNumber + result.getText().substring(j));
+						result.setSelectionStart(i);
+						result.setSelectionEnd(i + updatedNumber.length());
+						
+						event.consume();
+						
+						action.actionPerformed(null);
+					} catch (final Exception exception) {
+						ignore(exception);
+					}
+				}
+			}
+			
+		});
+		
+		return result;
 	}
 	
 }
