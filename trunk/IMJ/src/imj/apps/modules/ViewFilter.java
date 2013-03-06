@@ -151,7 +151,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	
 	@Override
 	public final void apply() {
-		{
+		if (this.splitInputChannels()) {
 			final String[] inputChannelAsStrings = this.getParameters().get(PARAMETER_CHANNELS).split("\\s+");
 			final int n = inputChannelAsStrings.length;
 			final Collection<Channel> newInputChannels = new LinkedHashSet<Channel>();
@@ -172,12 +172,16 @@ public abstract class ViewFilter extends Plugin implements Filter {
 			
 			this.inputChannels = newInputChannels;
 			this.inputChannelClass = newInputChannelClass;
+		} else {
+			this.inputChannels = null;
+			this.inputChannelClass = null;
 		}
 		
 		final Context context = this.getContext();
 		
 		context.set("viewFilter", null);
 		context.set("viewFilter", this);
+		
 		fireUpdate(this.getContext(), "image");
 	}
 	

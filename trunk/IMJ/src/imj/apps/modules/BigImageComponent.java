@@ -11,7 +11,6 @@ import imj.apps.modules.Annotations.Annotation;
 import imj.apps.modules.Annotations.Annotation.Region;
 
 import java.awt.BasicStroke;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -368,44 +367,40 @@ public final class BigImageComponent extends JComponent {
 	}
 	
 	private final void drawAnnotations(final Graphics2D g) {
-		final Component annotationsDialog = this.context.get("annotationsDialog");
+		final Annotations annotations = this.context.get("annotations");
+		final TreePath[] selectedPaths = this.context.get("selectedAnnotations");
+		final Collection<Object> selection = new ArrayList<Object>(selectedPaths == null ? 0 : selectedPaths.length);
 		
-		if (annotationsDialog != null && annotationsDialog.isShowing()) {
-			final Annotations annotations = this.context.get("annotations");
-			final double s = this.getScale() * pow(2.0, -this.getLod());
-			final TreePath[] selectedPaths = this.context.get("selectedAnnotations");
-			final Collection<Object> selection = new ArrayList<Object>(selectedPaths == null ? 0 : selectedPaths.length);
-			
-			if (selectedPaths != null) {
-				for (final TreePath path : selectedPaths) {
-					selection.add(path.getLastPathComponent());
-				}
+		if (selectedPaths != null) {
+			for (final TreePath path : selectedPaths) {
+				selection.add(path.getLastPathComponent());
+			}
+		}
+		
+		final double s = this.getScale() * pow(2.0, -this.getLod());
+		final float[] dash = { (float) (5.0 / s), (float) (5.0 / s) };
+		
+		g.scale(s, s);
+		
+		for (final Annotation annotation : annotations.getAnnotations()) {
+			if (!annotation.isVisible()) {
+				continue;
 			}
 			
-			g.scale(s, s);
+			g.setColor(annotation.getLineColor());
 			
-	        final float[] dash = { (float) (5.0 / s), (float) (5.0 / s) };
+			final boolean annotationSelected = selection.contains(annotation);
 			
-			for (final Annotation annotation : annotations.getAnnotations()) {
-				if (!annotation.isVisible()) {
-					continue;
+			for (final Region region : annotation.getRegions()) {
+				final float strokeWidth = annotationSelected || selection.contains(region) ? 3F / (float) s : 1F;
+				
+				if (region.isNegative()) {
+					g.setStroke(new BasicStroke(strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER, 1F, dash, 0F));
+				} else {
+					g.setStroke(new BasicStroke(strokeWidth));
 				}
 				
-				g.setColor(annotation.getLineColor());
-				
-				final boolean annotationSelected = selection.contains(annotation);
-				
-				for (final Region region : annotation.getRegions()) {
-					final float strokeWidth = annotationSelected || selection.contains(region) ? 3F / (float) s : 1F;
-					
-					if (region.isNegative()) {
-						g.setStroke(new BasicStroke(strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER, 1F, dash, 0F));
-					} else {
-						g.setStroke(new BasicStroke(strokeWidth));
-					}
-					
-					drawRegionOutline(region, g);
-				}
+				drawRegionOutline(region, g);
 			}
 		}
 	}
