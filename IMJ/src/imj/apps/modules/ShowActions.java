@@ -4,7 +4,7 @@ import static imj.apps.modules.BigImageComponent.drawRegionOutline;
 import static imj.apps.modules.Plugin.fireUpdate;
 import static imj.apps.modules.ShowActions.EdgeNeighborhood.computeNeighborhood;
 import static imj.apps.modules.Sieve.getROI;
-import static java.lang.Integer.parseInt;
+import static java.awt.Color.GREEN;
 import static java.lang.Math.abs;
 import static java.lang.Math.floor;
 import static java.lang.Math.pow;
@@ -49,6 +49,7 @@ import net.sourceforge.aprog.af.AFConstants;
 import net.sourceforge.aprog.af.AFMainFrame;
 import net.sourceforge.aprog.af.AbstractAFAction;
 import net.sourceforge.aprog.context.Context;
+import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**
@@ -113,6 +114,11 @@ public final class ShowActions {
 	/**
 	 * {@value}.
 	 */
+	public static final String ACTIONS_TOGGLE_ANNOTATION_VISIBILITY = "actions.toggleAnnotationVisibility";
+	
+	/**
+	 * {@value}.
+	 */
 	public static final String ACTIONS_CREATE_ANNOTATION_FROM_ROI = "actions.createAnnotationFromROI";
 	
 	public static final String baseName(final String fileName) {
@@ -149,85 +155,7 @@ public final class ShowActions {
 				try {
 					out = new PrintStream(xmlFile);
 					
-					out.println("<Annotations" + attribute("MicronsPerPixel", annotations.getMicronsPerPixel()) + ">");
-					
-					int annotationId = 1;
-					
-					for (final Annotation annotation : annotations.getAnnotations()) {
-						out.println("  <Annotation" +
-								attribute("Id", annotationId) + 
-								attribute("ReadOnly", 0) +
-								attribute("NameReadOnly", 0) +
-								attribute("LineColorReadOnly", 0) +
-								attribute("Incremental", 0) +
-								attribute("Type", 4) +
-								attribute("LineColor", annotation.getLineColor().getRGB() & 0x00FFFFFF) +
-								attribute("Visible", 1) +
-								attribute("Selected", 0) +
-								attribute("MarkupImagePath", "") +
-								attribute("MacroName", "") +
-						">");
-						
-						out.println("    <Attributes>");
-						out.println("      <Attribute" +
-								attribute("Name", "Description") + attribute("Id", 0) + attribute("Value", "") + "/>");
-						out.println("    </Attributes>");
-						
-						out.println("    <Regions>");
-						out.println("      <RegionAttributeHeaders>");
-						out.println("        <AttributeHeader" +
-								attribute("Id", 9999) + attribute("Name", "Region") + attribute("ColumnWidth", -1) + "/>");
-						out.println("        <AttributeHeader" +
-								attribute("Id", 9997) + attribute("Name", "Length") + attribute("ColumnWidth", -1) + "/>");
-						out.println("        <AttributeHeader" +
-								attribute("Id", 9996) + attribute("Name", "Area") + attribute("ColumnWidth", -1) + "/>");
-						out.println("        <AttributeHeader" +
-								attribute("Id", 9998) + attribute("Name", "Text") + attribute("ColumnWidth", -1) + "/>");
-						out.println("        <AttributeHeader" +
-								attribute("Id", 1) + attribute("Name", "Description") + attribute("ColumnWidth", -1) + "/>");
-						out.println("      </RegionAttributeHeaders>");
-						
-						int regionId = 1;
-						
-						for (final Region region : annotation.getRegions()) {
-							out.println("      <Region" +
-									attribute("Id", regionId) +
-									attribute("Zoom", 0) +
-									attribute("Selected", 0) +
-									attribute("ImageLocation", "") +
-									attribute("ImageFocus", 0) +
-									attribute("Length", region.getLength()) +
-									attribute("Area", region.getArea()) +
-									attribute("LengthMicrons", region.getLengthInMicrons()) +
-									attribute("AreaMicrons", region.getAreaInSquareMicrons()) +
-									attribute("Text", "") +
-									attribute("NegativeROA", region.isNegative() ? "1" : "0") +
-									attribute("InputRegionId", 0) +
-									attribute("Analyze", 1) +
-									attribute("DisplayId", regionId) +
-							">");
-							
-							out.println("        <Attributes/>");
-							
-							out.println("        <Vertices>");
-							
-							for (final Point2D vertex : region.getVertices()) {
-								out.println("          <Vertex" + attribute("X", vertex.getX()) + attribute("Y", vertex.getY()) + "/>");
-							}
-							
-							out.println("        </Vertices>");
-							
-							out.println("      </Region>");
-						}
-						
-						out.println("    </Regions>");
-						out.println("    <Posts/>");
-						out.println("  </Annotation>");
-						
-						++annotationId;
-					}
-					
-					out.println("</Annotations>");
+					Annotations.toXML(annotations, out);
 				} catch (final FileNotFoundException exception) {
 					exception.printStackTrace();
 				} finally {
@@ -237,6 +165,7 @@ public final class ShowActions {
 				}
 			}
 		}
+		
 	}
 	
 	/**
@@ -426,17 +355,19 @@ public final class ShowActions {
 		
 		@Override
 		public final void perform() {
-			final String destinationLodAsString = JOptionPane.showInputDialog("LOD:");
+			final String lods = JOptionPane.showInputDialog("LOD:");
 			
-			if (destinationLodAsString == null || destinationLodAsString.isEmpty()) {
+			if (lods == null || lods.isEmpty()) {
 				return;
 			}
 			
 			final int sourceLod = this.getContext().get("lod");
-			final int destinationLod = parseInt(destinationLodAsString);
+			final CommandLineArgumentsParser parser = new CommandLineArgumentsParser("lods", lods);
 			final RegionOfInterest[] rois = this.getContext().get("rois");
 			
-			rois[sourceLod].copyTo(rois[destinationLod]);
+			for (final int destinationLod : parser.get("lods")) {
+				rois[sourceLod].copyTo(rois[destinationLod]);
+			}
 		}
 		
 	}
@@ -618,6 +549,38 @@ public final class ShowActions {
 	/**
 	 * @author codistmonk (creation 2013-02-28)
 	 */
+	public static final class ToggleAnnotationVisibility extends AbstractAFAction {
+		
+		public ToggleAnnotationVisibility(final Context context) {
+			super(context, ACTIONS_TOGGLE_ANNOTATION_VISIBILITY);
+		}
+		
+		@Override
+		public final void perform() {
+			final TreePath[] selectedAnnotations = this.getContext().get("selectedAnnotations");
+			
+			if (selectedAnnotations == null) {
+				return;
+			}
+			
+			for (final TreePath path : selectedAnnotations) {
+				final Annotation annotation = cast(Annotation.class, path.getLastPathComponent());
+				
+				if (annotation == null) {
+					continue;
+				}
+				
+				annotation.setVisible(!annotation.isVisible());
+			}
+			
+			fireUpdate(this.getContext(), "sieve");
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-28)
+	 */
 	public static final class CreateAnnotationFromROI extends AbstractAFAction {
 		
 		public CreateAnnotationFromROI(final Context context) {
@@ -632,8 +595,6 @@ public final class ShowActions {
 				return;
 			}
 			
-			final Annotations annotations = this.getContext().get("annotations");
-			final Annotation annotation = annotations.new Annotation();
 			final int rowCount = roi.getRowCount();
 			final int columnCount = roi.getColumnCount();
 			final int lod = this.getContext().get("lod");
@@ -645,6 +606,11 @@ public final class ShowActions {
 					connectEdges(roi, rowIndex, columnIndex, scale, joints);
 				}
 			}
+			
+			final Annotations annotations = this.getContext().get("annotations");
+			final Annotation annotation = annotations.new Annotation();
+			
+			annotation.setLineColor(GREEN);
 			
 			while (!joints.isEmpty()) {
 				final Region region = annotation.new Region();

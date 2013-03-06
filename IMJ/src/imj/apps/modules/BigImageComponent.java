@@ -387,6 +387,10 @@ public final class BigImageComponent extends JComponent {
 	        final float[] dash = { (float) (5.0 / s), (float) (5.0 / s) };
 			
 			for (final Annotation annotation : annotations.getAnnotations()) {
+				if (!annotation.isVisible()) {
+					continue;
+				}
+				
 				g.setColor(annotation.getLineColor());
 				
 				final boolean annotationSelected = selection.contains(annotation);

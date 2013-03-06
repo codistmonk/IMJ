@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -86,6 +87,8 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 						} else if ("Annotation".equals(qName)) {
 							this.annotation = result.new Annotation();
 							this.annotation.setLineColor(new Color((int) parseLong(attributes.getValue("LineColor"))));
+							this.annotation.setSelected(parseBoolean(attributes.getValue("Selected").trim().toLowerCase(ENGLISH)));
+							this.annotation.setVisible(parseBoolean(attributes.getValue("Visible").trim().toLowerCase(ENGLISH)));
 						} else if ("Region".equals(qName)) {
 							this.region = this.annotation.new Region();
 							this.region.setZoom(parseDouble(attributes.getValue("Zoom")));
@@ -94,7 +97,7 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 							this.region.setLength(parseDouble(attributes.getValue("Length")));
 							this.region.setLengthInMicrons(parseDouble(attributes.getValue("LengthMicrons")));
 							final String negative = attributes.getValue("NegativeROA").trim().toLowerCase(ENGLISH);
-							this.region.setNegative(!("0".equals(negative) || "false".equals(negative) || "no".equals(negative)));
+							this.region.setNegative(parseBoolean(negative));
 						} else if ("Vertex".equals(qName)) {
 							this.region.getVertices().add(new Point2D.Float(
 									(float) (parseDouble(attributes.getValue("X"))),
@@ -113,12 +116,112 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 		return result;
 	}
 	
+	public static final void toXML(final Annotations annotations, final PrintStream out) {
+		out.println("<Annotations" + attribute("MicronsPerPixel", annotations.getMicronsPerPixel()) + ">");
+		
+		int annotationId = 1;
+		
+		for (final Annotation annotation : annotations.getAnnotations()) {
+			out.println("  <Annotation" +
+					attribute("Id", annotationId) + 
+					attribute("ReadOnly", 0) +
+					attribute("NameReadOnly", 0) +
+					attribute("LineColorReadOnly", 0) +
+					attribute("Incremental", 0) +
+					attribute("Type", 4) +
+					attribute("LineColor", annotation.getLineColor().getRGB() & 0x00FFFFFF) +
+					attribute("Visible", formatBoolean01(annotation.isVisible())) +
+					attribute("Selected", formatBoolean01(annotation.isSelected())) +
+					attribute("MarkupImagePath", "") +
+					attribute("MacroName", "") +
+			">");
+			
+			out.println("    <Attributes>");
+			out.println("      <Attribute" +
+					attribute("Name", "Description") + attribute("Id", 0) + attribute("Value", "") + "/>");
+			out.println("    </Attributes>");
+			
+			out.println("    <Regions>");
+			out.println("      <RegionAttributeHeaders>");
+			out.println("        <AttributeHeader" +
+					attribute("Id", 9999) + attribute("Name", "Region") + attribute("ColumnWidth", -1) + "/>");
+			out.println("        <AttributeHeader" +
+					attribute("Id", 9997) + attribute("Name", "Length") + attribute("ColumnWidth", -1) + "/>");
+			out.println("        <AttributeHeader" +
+					attribute("Id", 9996) + attribute("Name", "Area") + attribute("ColumnWidth", -1) + "/>");
+			out.println("        <AttributeHeader" +
+					attribute("Id", 9998) + attribute("Name", "Text") + attribute("ColumnWidth", -1) + "/>");
+			out.println("        <AttributeHeader" +
+					attribute("Id", 1) + attribute("Name", "Description") + attribute("ColumnWidth", -1) + "/>");
+			out.println("      </RegionAttributeHeaders>");
+			
+			int regionId = 1;
+			
+			for (final Region region : annotation.getRegions()) {
+				out.println("      <Region" +
+						attribute("Id", regionId) +
+						attribute("Zoom", 0) +
+						attribute("Selected", 0) +
+						attribute("ImageLocation", "") +
+						attribute("ImageFocus", 0) +
+						attribute("Length", region.getLength()) +
+						attribute("Area", region.getArea()) +
+						attribute("LengthMicrons", region.getLengthInMicrons()) +
+						attribute("AreaMicrons", region.getAreaInSquareMicrons()) +
+						attribute("Text", "") +
+						attribute("NegativeROA", formatBoolean01(region.isNegative())) +
+						attribute("InputRegionId", 0) +
+						attribute("Analyze", 1) +
+						attribute("DisplayId", regionId) +
+				">");
+				
+				out.println("        <Attributes/>");
+				
+				out.println("        <Vertices>");
+				
+				for (final Point2D vertex : region.getVertices()) {
+					out.println("          <Vertex" + attribute("X", vertex.getX()) + attribute("Y", vertex.getY()) + "/>");
+				}
+				
+				out.println("        </Vertices>");
+				
+				out.println("      </Region>");
+			}
+			
+			out.println("    </Regions>");
+			out.println("    <Posts/>");
+			out.println("  </Annotation>");
+			
+			++annotationId;
+		}
+		
+		out.println("</Annotations>");
+	}
+	
+	public static final String attribute(final String name, final Object value) {
+		return " " + name + "=\"" + value + "\"";
+	}
+	
+	public static final boolean parseBoolean(final String attributeValue) {
+		return !("0".equals(attributeValue) || "false".equals(attributeValue) || "no".equals(attributeValue));
+	}
+	
+	public static final String formatBoolean01(final boolean value) {
+		return value ? "1" : "0";
+	}
+	
 	/**
+	 * Note: the <code>selected</code> attribute maps to a XML attribute and may be ignored by GUIs.
+	 * 
 	 * @author codistmonk (creation 2013-02-26)
 	 */
 	public final class Annotation extends GenericTreeNode<Region> {
 		
 		private Color lineColor;
+		
+		private boolean visible;
+		
+		private boolean selected;
 		
 		public Annotation() {
 			Annotations.this.getAnnotations().add(this);
@@ -135,6 +238,22 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 		
 		public final void setLineColor(final Color lineColor) {
 			this.lineColor = lineColor;
+		}
+		
+		public final boolean isVisible() {
+			return this.visible;
+		}
+		
+		public final void setVisible(final boolean visible) {
+			this.visible = visible;
+		}
+		
+		public final boolean isSelected() {
+			return this.selected;
+		}
+		
+		public final void setSelected(final boolean selected) {
+			this.selected = selected;
 		}
 		
 		/**
