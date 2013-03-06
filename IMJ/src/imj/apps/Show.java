@@ -18,11 +18,11 @@ import static net.sourceforge.aprog.af.AFTools.item;
 import static net.sourceforge.aprog.af.AFTools.newAboutItem;
 import static net.sourceforge.aprog.af.AFTools.newPreferencesItem;
 import static net.sourceforge.aprog.af.AFTools.newQuitItem;
+import static net.sourceforge.aprog.af.AFTools.setupSystemLookAndFeel;
 import static net.sourceforge.aprog.i18n.Messages.setMessagesBase;
 import static net.sourceforge.aprog.swing.SwingTools.menuBar;
 import static net.sourceforge.aprog.swing.SwingTools.packAndCenter;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
-import static net.sourceforge.aprog.swing.SwingTools.useSystemLookAndFeel;
 import static net.sourceforge.aprog.swing.SwingTools.I18N.menu;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
@@ -69,7 +69,6 @@ import net.sourceforge.aprog.af.AFConstants;
 import net.sourceforge.aprog.af.AFMainFrame;
 import net.sourceforge.aprog.af.AFTools;
 import net.sourceforge.aprog.af.AbstractAFAction;
-import net.sourceforge.aprog.af.MacOSXTools;
 import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.events.Variable;
 import net.sourceforge.aprog.events.Variable.Listener;
@@ -121,7 +120,7 @@ public final class Show {
 		new AbstractAFAction(result, AFConstants.Variables.ACTIONS_QUIT) {
 			
 			@Override
-			public final void perform() {
+			public final void perform(final Object object) {
 				final AFMainFrame mainFrame = result.get(AFConstants.Variables.MAIN_FRAME);
 				
 				mainFrame.dispose();
@@ -133,6 +132,9 @@ public final class Show {
 			
 		};
 		
+		new ShowActions.MoveListItemUp(result);
+		new ShowActions.MoveListItemDown(result);
+		new ShowActions.DeleteListItem(result);
 		new ShowActions.ExportAnnotations(result);
 		new ShowActions.ToggleHistogram(result);
 		new ShowActions.ToggleAnnotations(result);
@@ -333,8 +335,7 @@ public final class Show {
 			return;
 		}
 		
-		MacOSXTools.setupUI(APPLICATION_NAME, APPLICATION_ICON_PATH);
-		useSystemLookAndFeel();
+		setupSystemLookAndFeel(APPLICATION_NAME, APPLICATION_ICON_PATH);
 		setMessagesBase(getThisPackagePath() + "modules/Show");
 		
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
