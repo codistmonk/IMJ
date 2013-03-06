@@ -22,11 +22,6 @@ public final class FeatureViewFilter extends ViewFilter {
 	}
 	
 	@Override
-	public final void initialize() {
-		this.feature = Feature.valueOf(this.getParameters().get("feature").toUpperCase(Locale.ENGLISH));
-	}
-	
-	@Override
 	public final int getNewValue(final int index, final int oldValue, final Channel channel) {
 		final int featureValue = this.feature.getNewValue(index, oldValue);
 		
@@ -40,6 +35,11 @@ public final class FeatureViewFilter extends ViewFilter {
 		default:
 			return argb(255, featureValue, featureValue, featureValue);
 		}
+	}
+	
+	@Override
+	protected final void doInitialize() {
+		this.feature = Feature.valueOf(this.getParameters().get("feature").toUpperCase(Locale.ENGLISH));
 	}
 	
 	@Override

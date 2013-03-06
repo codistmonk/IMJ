@@ -24,7 +24,7 @@ public final class StatisticsViewFilter extends ViewFilter.FromFilter {
 	}
 	
 	@Override
-	public final void initialize() {
+	protected final void doInitialize() {
 		final StatisticsSelector feature = StatisticsSelector.valueOf(
 				this.getParameters().get("statistic").toUpperCase(Locale.ENGLISH));
 		
