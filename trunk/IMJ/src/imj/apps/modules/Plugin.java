@@ -8,7 +8,6 @@ import static javax.swing.Box.createVerticalGlue;
 import static javax.swing.JOptionPane.showInputDialog;
 import static net.sourceforge.aprog.i18n.Messages.translate;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
-import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 
@@ -38,20 +37,26 @@ import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 
 import net.sourceforge.aprog.context.Context;
-import net.sourceforge.aprog.events.AtomicVariable;
 
 /**
  * @author codistmonk (creation 2013-02-18)
  */
 public abstract class Plugin {
 	
+	private final long id;
+	
 	private final Context context;
 	
 	private final Map<String, String> parameters;
 	
 	protected Plugin(final Context context) {
+		this.id = ++newId;
 		this.context = context;
 		this.parameters = new LinkedHashMap<String, String>();
+	}
+	
+	public final long getId() {
+		return this.id;
 	}
 	
 	public final Context getContext() {
@@ -73,10 +78,7 @@ public abstract class Plugin {
 			@Override
 			public final void actionPerformed(final ActionEvent event) {
 				if (previewButton.isSelected()) {
-					for (final Map.Entry<String, JTextField> entry : textFields.entrySet()) {
-						Plugin.this.getParameters().put(entry.getKey(), entry.getValue().getText());
-					}
-					
+					Plugin.this.retrieveParameters(textFields);
 					Plugin.this.initialize();
 					Plugin.this.apply();
 				} else if (event.getSource() == previewButton) {
@@ -203,6 +205,12 @@ public abstract class Plugin {
 		return this.getClass().getName();
 	}
 	
+	public final void retrieveParameters(final Map<String, JTextField> textFields) {
+		for (final Map.Entry<String, JTextField> entry : textFields.entrySet()) {
+			this.getParameters().put(entry.getKey(), entry.getValue().getText());
+		}
+	}
+	
 	/**
 	 * @param previewAction
 	 * <br>Must not be null
@@ -224,6 +232,8 @@ public abstract class Plugin {
 		
 		return result;
 	}
+	
+	private static long newId = 0L;
 	
 	public static final JTextField newSpinnerTextField(final String initialText, final ActionListener action) {
 		final JTextField result = new JTextField(initialText);

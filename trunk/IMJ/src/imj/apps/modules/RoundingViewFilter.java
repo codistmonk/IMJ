@@ -1,11 +1,8 @@
 package imj.apps.modules;
 
-import static imj.IMJTools.blue;
-import static imj.IMJTools.green;
-import static imj.IMJTools.red;
-import static imj.IMJTools.argb;
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.min;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import net.sourceforge.aprog.context.Context;
 
@@ -25,16 +22,18 @@ public final class RoundingViewFilter extends ViewFilter {
 	}
 	
 	@Override
-	public final void initialize() {
-		final int bitCount = parseInt(this.getParameters().get("bitCount"));
-		
-		this.offset = 1 << (bitCount - 1);
-		this.mask = (~((1 << bitCount) - 1)) & 0x7FFFFFFF;
+	public final int getNewValue(final int index, final int oldValue,  final Channel channel) {
+		return this.transform(channel.getValue(oldValue));
 	}
 	
 	@Override
-	public final int getNewValue(final int index, final int oldValue,  final Channel channel) {
-		return this.transform(channel.getValue(oldValue));
+	protected final void doInitialize() {
+		final int bitCount = parseInt(this.getParameters().get("bitCount"));
+		
+		debugPrint(this.getId(), bitCount);
+		
+		this.offset = 1 << (bitCount - 1);
+		this.mask = (~((1 << bitCount) - 1)) & 0x7FFFFFFF;
 	}
 	
 	public final int transform(final int channelValue) {

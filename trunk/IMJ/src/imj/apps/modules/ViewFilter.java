@@ -146,12 +146,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	
 	public abstract int getNewValue(final int index, final int oldValue, final Channel channel);
 	
-	protected boolean splitInputChannels() {
-		return true;
-	}
-	
-	@Override
-	public final void apply() {
+	public final void initialize() {
 		if (this.splitInputChannels()) {
 			final String[] inputChannelAsStrings = this.getParameters().get(PARAMETER_CHANNELS).split("\\s+");
 			final int n = inputChannelAsStrings.length;
@@ -178,6 +173,15 @@ public abstract class ViewFilter extends Plugin implements Filter {
 			this.inputChannelClass = null;
 		}
 		
+		this.doInitialize();
+	}
+	
+	protected void doInitialize() {
+		// NOP
+	}
+	
+	@Override
+	public final void apply() {
 		final Context context = this.getContext();
 		
 		context.set("viewFilter", null);
@@ -206,6 +210,10 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	
 	public final boolean isBackingUp() {
 		return this.backingUp;
+	}
+	
+	protected boolean splitInputChannels() {
+		return true;
 	}
 	
 	/**

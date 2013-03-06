@@ -16,16 +16,19 @@ import static javax.swing.SwingUtilities.isRightMouseButton;
 import static net.sourceforge.aprog.af.AFTools.item;
 import static net.sourceforge.aprog.i18n.Messages.translate;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.HashMap;
 import java.util.Map;
 
 import javax.swing.DefaultListModel;
@@ -35,6 +38,9 @@ import javax.swing.JPopupMenu;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
+import javax.swing.ListModel;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 
 import net.sourceforge.aprog.af.AbstractAFAction;
 import net.sourceforge.aprog.context.Context;
@@ -46,9 +52,12 @@ public final class PipelineViewFilter extends ViewFilter {
 	
 	private final JList filters;
 	
+	private final JPanel cards;
+	
 	public PipelineViewFilter(final Context context) {
 		super(context);
 		this.filters = new JList(new DefaultListModel());
+		this.cards = new JPanel(new CardLayout());
 		
 		this.getParameters().clear();
 		
@@ -124,17 +133,41 @@ public final class PipelineViewFilter extends ViewFilter {
 			}
 			
 		});
+		
+		this.filters.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+			
+			@Override
+			public final void valueChanged(final ListSelectionEvent event) {
+				PipelineViewFilter.this.filterSelected();
+			}
+			
+		});
 	}
 	
 	@Override
-	public final void initialize() {
-		// TODO
+	public final void doInitialize() {
+		debugPrint();
+		
+		final ListModel model = this.filters.getModel();
+		final int n = model.getSize();
+		
+		for (int i = 0; i < n; ++i) {
+			((ViewFilter) model.getElementAt(i)).initialize();
+		}
 	}
 	
 	@Override
 	public final int getNewValue(final int index, final int oldValue, final Channel channel) {
-		// TODO
-		return oldValue;
+		int result = oldValue;
+		
+		final ListModel model = this.filters.getModel();
+		final int n = model.getSize();
+		
+		for (int i = 0; i < n; ++i) {
+			result = ((ViewFilter) model.getElementAt(i)).getNewValue(index, result);
+		}
+		
+		return result;
 	}
 	
 	@Override
@@ -149,10 +182,9 @@ public final class PipelineViewFilter extends ViewFilter {
 		final JSplitPane split = horizontalSplit(this.filters, tabs);
 		final JPanel result = new JPanel(new BorderLayout());
 		final JList filterSelector = new JList(viewFilters);
-		final JPanel configurationsPanel = new JPanel(new CardLayout());
 		
 		tabs.add("Filters", filterSelector);
-		tabs.add("Parameters", configurationsPanel);
+		tabs.add("Parameters", this.cards);
 		
 		result.add(split, BorderLayout.CENTER);
 		
@@ -169,22 +201,32 @@ public final class PipelineViewFilter extends ViewFilter {
 					final ViewFilter filter = (ViewFilter) filterSelector.getSelectedValue();
 					
 					if (filter != null) {
-						PipelineViewFilter.this.addFilter(filter);
+						PipelineViewFilter.this.addFilter(filter, previewAction);
 					}
 				}
 			}
 			
 		});
 		
-		//TODO setup configurationsPanel
-		
 		return result;
 	}
 	
-	final void addFilter(final ViewFilter prototype) {
+	final void addFilter(final ViewFilter prototype, final ActionListener previewAction) {
 		try {
-			((DefaultListModel) this.filters.getModel()).addElement(
-					prototype.getClass().getConstructor(Context.class).newInstance(this.getContext()));
+			final ViewFilter filter = prototype.getClass().getConstructor(Context.class).newInstance(this.getContext());
+			final Map<String, JTextField> textFields = new HashMap<String, JTextField>();
+			
+			((DefaultListModel) this.filters.getModel()).addElement(filter);
+			
+			this.cards.add(filter.newInputPanel(new ActionListener() {
+				
+				@Override
+				public final void actionPerformed(final ActionEvent event) {
+					filter.retrieveParameters(textFields);
+					previewAction.actionPerformed(event);
+				}
+				
+			}, textFields), "" + filter.getId());
 		} catch (final Exception exception) {
 			exception.printStackTrace();
 		}
@@ -196,6 +238,16 @@ public final class PipelineViewFilter extends ViewFilter {
 	
 	final ViewFilter getSelectedFilter() {
 		return (ViewFilter) this.filters.getSelectedValue();
+	}
+	
+	final void filterSelected() {
+		final ViewFilter selectedFilter = this.getSelectedFilter();
+		
+		if (selectedFilter != null) {
+			final CardLayout layout = (CardLayout) this.cards.getLayout();
+			
+			layout.show(this.cards, "" + selectedFilter.getId());
+		}
 	}
 	
 }

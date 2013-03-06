@@ -39,26 +39,6 @@ public final class LODStatisticsViewFilter extends ViewFilter {
 	}
 	
 	@Override
-	protected final boolean isOutputMonochannel() {
-		return true;
-	}
-	
-	@Override
-	public final void initialize() {
-		final String imageId = this.getContext().get("imageId");
-		this.currentLOD = this.getContext().get("lod");
-		this.currentImage = this.getContext().get("image");
-		this.sourceLOD = parseInt(this.getParameters().get("lod"));
-		
-		if (this.sourceLOD < 0) {
-			this.sourceLOD = max(0, this.currentLOD + this.sourceLOD);
-		}
-		
-		this.sourceImage = ImageWrangler.INSTANCE.load(imageId, this.sourceLOD);
-		this.feature = StatisticsSelector.valueOf(this.getParameters().get("statistic").toUpperCase(Locale.ENGLISH));
-	}
-	
-	@Override
 	public final int getNewValue(final int index, final int oldValue, final Channel channel) {
 		final int rowIndex = this.currentImage.getRowIndex(index);
 		final int columnIndex = this.currentImage.getColumnIndex(index);
@@ -77,6 +57,26 @@ public final class LODStatisticsViewFilter extends ViewFilter {
 		}
 		
 		return (int) this.feature.getValue(this.statistics);
+	}
+	
+	@Override
+	protected final boolean isOutputMonochannel() {
+		return true;
+	}
+	
+	@Override
+	protected final void doInitialize() {
+		final String imageId = this.getContext().get("imageId");
+		this.currentLOD = this.getContext().get("lod");
+		this.currentImage = this.getContext().get("image");
+		this.sourceLOD = parseInt(this.getParameters().get("lod"));
+		
+		if (this.sourceLOD < 0) {
+			this.sourceLOD = max(0, this.currentLOD + this.sourceLOD);
+		}
+		
+		this.sourceImage = ImageWrangler.INSTANCE.load(imageId, this.sourceLOD);
+		this.feature = StatisticsSelector.valueOf(this.getParameters().get("statistic").toUpperCase(Locale.ENGLISH));
 	}
 	
 }
