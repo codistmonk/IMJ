@@ -1,7 +1,6 @@
 package imj.apps.modules;
 
 import static imj.apps.modules.BigImageComponent.drawRegionOutline;
-import static imj.apps.modules.Plugin.fireUpdate;
 import static imj.apps.modules.ShowActions.EdgeNeighborhood.computeNeighborhood;
 import static imj.apps.modules.Sieve.getROI;
 import static java.awt.Color.GREEN;
@@ -13,6 +12,8 @@ import static java.util.Collections.sort;
 import static javax.swing.JOptionPane.OK_CANCEL_OPTION;
 import static javax.swing.JOptionPane.OK_OPTION;
 import static javax.swing.JOptionPane.showConfirmDialog;
+import static javax.swing.SwingUtilities.getAncestorOfClass;
+import static net.sourceforge.aprog.af.AFTools.fireUpdate;
 import static net.sourceforge.aprog.i18n.Messages.translate;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
@@ -24,7 +25,9 @@ import imj.apps.modules.Annotations.Annotation.Region;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Graphics2D;
+import java.awt.event.ActionEvent;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.geom.Point2D;
@@ -39,11 +42,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.DefaultListModel;
 import javax.swing.JColorChooser;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
+import javax.swing.JPopupMenu;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 
@@ -51,7 +56,6 @@ import net.sourceforge.aprog.af.AFConstants;
 import net.sourceforge.aprog.af.AFMainFrame;
 import net.sourceforge.aprog.af.AbstractAFAction;
 import net.sourceforge.aprog.context.Context;
-import net.sourceforge.aprog.i18n.Messages;
 import net.sourceforge.aprog.i18n.Translator;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -64,6 +68,21 @@ public final class ShowActions {
 	private ShowActions() {
 		throw new IllegalInstantiationException();
 	}
+	
+	/**
+	 * {@value}.
+	 */
+	public static final String ACTIONS_MOVE_LIST_ITEM_UP = "actions.moveListItemUp";
+	
+	/**
+	 * {@value}.
+	 */
+	public static final String ACTIONS_MOVE_LIST_ITEM_DOWN = "actions.moveListItemDown";
+	
+	/**
+	 * {@value}.
+	 */
+	public static final String ACTIONS_DELETE_LIST_ITEM = "actions.deleteListItem";
 	
 	/**
 	 * {@value}.
@@ -143,6 +162,83 @@ public final class ShowActions {
 	/**
 	 * @author codistmonk (creation 2013-02-28)
 	 */
+	public static final class MoveListItemUp extends AbstractAFAction {
+		
+		public MoveListItemUp(final Context context) {
+			super(context, ACTIONS_MOVE_LIST_ITEM_UP);
+		}
+		
+		@Override
+		public final void perform(final Object event) {
+			final JPopupMenu popup = (JPopupMenu) getAncestorOfClass(JPopupMenu.class,
+					(Component) ((ActionEvent) event).getSource());
+			final JList list = (JList) popup.getInvoker();
+			final int index = list.getSelectedIndex();
+			
+			if (0 < index) {
+				final DefaultListModel model = (DefaultListModel) list.getModel();
+				final Object item = model.remove(index);
+				
+				model.add(index - 1, item);
+				list.setSelectedValue(item, true);
+			}
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-28)
+	 */
+	public static final class MoveListItemDown extends AbstractAFAction {
+		
+		public MoveListItemDown(final Context context) {
+			super(context, ACTIONS_MOVE_LIST_ITEM_DOWN);
+		}
+		
+		@Override
+		public final void perform(final Object event) {
+			final JPopupMenu popup = (JPopupMenu) getAncestorOfClass(JPopupMenu.class,
+					(Component) ((ActionEvent) event).getSource());
+			final JList list = (JList) popup.getInvoker();
+			final int index = list.getSelectedIndex();
+			
+			if (index < list.getModel().getSize()) {
+				final DefaultListModel model = (DefaultListModel) list.getModel();
+				final Object item = model.remove(index);
+				
+				model.add(index + 1, item);
+				list.setSelectedValue(item, true);
+			}
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-28)
+	 */
+	public static final class DeleteListItem extends AbstractAFAction {
+		
+		public DeleteListItem(final Context context) {
+			super(context, ACTIONS_DELETE_LIST_ITEM);
+		}
+		
+		@Override
+		public final void perform(final Object event) {
+			final JPopupMenu popup = (JPopupMenu) getAncestorOfClass(JPopupMenu.class,
+					(Component) ((ActionEvent) event).getSource());
+			final JList list = (JList) popup.getInvoker();
+			final int index = list.getSelectedIndex();
+			
+			if (0 <= index && askUserToConfirmElementDeletion()) {
+				((DefaultListModel) list.getModel()).remove(index);
+			}
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-28)
+	 */
 	public static final class ExportAnnotations extends AbstractAFAction {
 		
 		public ExportAnnotations(final Context context) {
@@ -150,7 +246,7 @@ public final class ShowActions {
 		}
 		
 		@Override
-		public final void perform() {
+		public final void perform(final Object object) {
 			final String imageId = this.getContext().get("imageId");
 			final JFileChooser fileChooser = new JFileChooser(imageId);
 			
@@ -187,7 +283,7 @@ public final class ShowActions {
 		}
 		
 		@Override
-		public final void perform() {
+		public final void perform(final Object object) {
 			JDialog dialog = this.getContext().get("histogramDialog");
 			
 			if (dialog == null) {
@@ -217,7 +313,7 @@ public final class ShowActions {
 		}
 		
 		@Override
-		public final void perform() {
+		public final void perform(final Object object) {
 			JDialog dialog = this.getContext().get("annotationsDialog");
 			
 			if (dialog == null) {
@@ -260,7 +356,7 @@ public final class ShowActions {
 		}
 		
 		@Override
-		public final void perform() {
+		public final void perform(final Object object) {
 			final ViewFilter[] filters = this.getContext().get("viewFilters");
 			final JList input = new JList(filters);
 			final int option = JOptionPane.showConfirmDialog(null, scrollable(input), "Select a filter", OK_CANCEL_OPTION);
@@ -289,7 +385,7 @@ public final class ShowActions {
 		}
 		
 		@Override
-		public final void perform() {
+		public final void perform(final Object object) {
 			final Sieve[] sieves = this.getContext().get("sieves");
 			final JList input = new JList(sieves);
 			final int option = showConfirmDialog(null, scrollable(input), "Select a sieve", OK_CANCEL_OPTION);
@@ -320,7 +416,7 @@ public final class ShowActions {
 		}
 		
 		@Override
-		public final void perform() {
+		public final void perform(final Object object) {
 			this.plugin.configureAndApply();
 		}
 		
@@ -336,7 +432,7 @@ public final class ShowActions {
 		}
 		
 		@Override
-		public final void perform() {
+		public final void perform(final Object object) {
 			final RegionOfInterest[] rois = this.getContext().get("rois");
 			final int lod = this.getContext().get("lod");
 			final RegionOfInterest roi = lod < rois.length ? rois[lod] : null;
@@ -363,7 +459,7 @@ public final class ShowActions {
 		}
 		
 		@Override
-		public final void perform() {
+		public final void perform(final Object object) {
 			final String lods = JOptionPane.showInputDialog("LOD:");
 			
 			if (lods == null || lods.isEmpty()) {
@@ -391,7 +487,7 @@ public final class ShowActions {
 		}
 		
 		@Override
-		public final void perform() {
+		public final void perform(final Object object) {
 			final TreePath[] selectedAnnotations = this.getContext().get("selectedAnnotations");
 			
 			if (selectedAnnotations == null) {
@@ -521,7 +617,7 @@ public final class ShowActions {
 		}
 		
 		@Override
-		public final void perform() {
+		public final void perform(final Object object) {
 			final TreePath[] selectedAnnotations = this.getContext().get("selectedAnnotations");
 			
 			if (selectedAnnotations == null) {
@@ -565,7 +661,7 @@ public final class ShowActions {
 		}
 		
 		@Override
-		public final void perform() {
+		public final void perform(final Object object) {
 			final TreePath[] selectedAnnotations = this.getContext().get("selectedAnnotations");
 			
 			if (selectedAnnotations == null) {
@@ -597,7 +693,7 @@ public final class ShowActions {
 		}
 		
 		@Override
-		public final void perform() {
+		public final void perform(final Object object) {
 			final TreePath[] selectedAnnotations = this.getContext().get("selectedAnnotations");
 			
 			if (selectedAnnotations == null) {
@@ -616,13 +712,11 @@ public final class ShowActions {
 				}
 				
 				if (!confirmed) {
-					JOptionPane.setDefaultLocale(Translator.getDefaultTranslator().getLocale());
+					confirmed = askUserToConfirmElementDeletion();
 					
-					if (JOptionPane.OK_OPTION != showConfirmDialog(null, translate("Delete selected elements?"))) {
+					if (!confirmed) {
 						return;
 					}
-					
-					confirmed = true;
 				}
 				
 				((DefaultMutableTreeNode) element.getParent()).remove(element);
@@ -631,6 +725,16 @@ public final class ShowActions {
 			fireUpdate(this.getContext(), "annotations");
 		}
 		
+	}
+	
+	public static final boolean askUserToConfirmElementDeletion() {
+		return askUserToConfirm("Delete selected elements?");
+	}
+	
+	public static final boolean askUserToConfirm(final String messageTranslationKey) {
+		JOptionPane.setDefaultLocale(Translator.getDefaultTranslator().getLocale());
+		
+		return JOptionPane.OK_OPTION == showConfirmDialog(null, translate(messageTranslationKey));
 	}
 	
 	/**
@@ -643,7 +747,7 @@ public final class ShowActions {
 		}
 		
 		@Override
-		public final void perform() {
+		public final void perform(final Object object) {
 			final RegionOfInterest roi = getROI(this.getContext());
 			
 			if (roi == null) {

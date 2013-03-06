@@ -1,5 +1,6 @@
 package imj.apps.modules;
 
+import static net.sourceforge.aprog.af.AFTools.fireUpdate;
 import imj.apps.modules.FilteredImage.RankFilter;
 import imj.apps.modules.ViewFilter.Channel;
 
@@ -105,7 +106,7 @@ public final class ROIMorphologyPlugin extends Plugin {
 	@Override
 	public final void cancel() {
 		this.backup.copyTo(this.getROI());
-		Plugin.fireUpdate(this.getContext(), "sieve");
+		fireUpdate(this.getContext(), "sieve");
 	}
 	
 	@Override

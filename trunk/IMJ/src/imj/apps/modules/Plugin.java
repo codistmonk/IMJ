@@ -225,15 +225,6 @@ public abstract class Plugin {
 		return result;
 	}
 	
-	public static final void fireUpdate(final Context context, final String variableName) {
-		final Object value = context.get(variableName);
-		final AtomicVariable<Object> variable = cast(AtomicVariable.class, context.getVariable(variableName));
-		
-		if (variable != null) {
-			variable.new ValueChangedEvent(value, value).fire();
-		}
-	}
-	
 	public static final JTextField newSpinnerTextField(final String initialText, final ActionListener action) {
 		final JTextField result = new JTextField(initialText);
 		

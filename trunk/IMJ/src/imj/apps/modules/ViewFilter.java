@@ -21,6 +21,7 @@ import static imj.apps.modules.ViewFilter.Channel.Synthetic.SATURATION;
 import static java.lang.Double.parseDouble;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static net.sourceforge.aprog.af.AFTools.fireUpdate;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.ignore;

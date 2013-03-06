@@ -1,11 +1,11 @@
 package imj.apps.modules;
 
-import static imj.apps.modules.Plugin.fireUpdate;
 import static imj.apps.modules.ShowActions.ACTIONS_DELETE_ANNOTATION;
 import static imj.apps.modules.ShowActions.ACTIONS_PICK_ANNOTATION_COLOR;
 import static imj.apps.modules.ShowActions.ACTIONS_TOGGLE_ANNOTATION_VISIBILITY;
 import static imj.apps.modules.ShowActions.ACTIONS_USE_ANNOTATION_AS_ROI;
 import static javax.swing.SwingUtilities.isRightMouseButton;
+import static net.sourceforge.aprog.af.AFTools.fireUpdate;
 import static net.sourceforge.aprog.af.AFTools.item;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import imj.apps.modules.Annotations.Annotation;
@@ -24,6 +24,7 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
+import net.sourceforge.aprog.af.AFTools;
 import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
