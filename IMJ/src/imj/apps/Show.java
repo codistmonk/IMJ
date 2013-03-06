@@ -3,13 +3,16 @@ package imj.apps;
 import static imj.IMJTools.blue;
 import static imj.IMJTools.green;
 import static imj.IMJTools.red;
-import static imj.apps.modules.ShowActions.*;
+import static imj.apps.modules.ShowActions.ACTIONS_APPLY_MORPHOLOGICAL_OPERATION_TO_ROI;
 import static imj.apps.modules.ShowActions.ACTIONS_APPLY_SIEVE;
 import static imj.apps.modules.ShowActions.ACTIONS_COPY_ROI_TO_LOD;
+import static imj.apps.modules.ShowActions.ACTIONS_CREATE_ANNOTATION_FROM_ROI;
+import static imj.apps.modules.ShowActions.ACTIONS_EXPORT_ANNOTATIONS;
 import static imj.apps.modules.ShowActions.ACTIONS_RESET_ROI;
 import static imj.apps.modules.ShowActions.ACTIONS_SET_VIEW_FILTER;
 import static imj.apps.modules.ShowActions.ACTIONS_TOGGLE_ANNOTATIONS;
 import static imj.apps.modules.ShowActions.ACTIONS_TOGGLE_HISTOGRAM;
+import static imj.apps.modules.ShowActions.baseName;
 import static java.util.Collections.synchronizedList;
 import static net.sourceforge.aprog.af.AFTools.item;
 import static net.sourceforge.aprog.af.AFTools.newAboutItem;
@@ -28,10 +31,11 @@ import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.BigImageComponent;
-import imj.apps.modules.LinearColorViewFilter;
 import imj.apps.modules.FeatureViewFilter;
 import imj.apps.modules.LODStatisticsViewFilter;
+import imj.apps.modules.LinearColorViewFilter;
 import imj.apps.modules.LinearViewFilter;
+import imj.apps.modules.PipelineViewFilter;
 import imj.apps.modules.RankViewFilter;
 import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.RoundingViewFilter;
@@ -141,6 +145,7 @@ public final class Show {
 		new ShowActions.UseAnnotationAsROI(result);
 		new ShowActions.PickAnnotationColor(result);
 		new ShowActions.ToggleAnnotationVisibility(result);
+		new ShowActions.DeleteAnnotation(result);
 		
 		result.set(AFConstants.Variables.MAIN_MENU_BAR, menuBar(
 				menu("Application",
@@ -174,11 +179,13 @@ public final class Show {
 		result.set("rgb", null, String.class);
 		result.set("hsb", null, String.class);
 		result.set("viewFilters", array(
-				null, new RoundingViewFilter(result),
-				new FeatureViewFilter(result),
+				null,
+				new RoundingViewFilter(result),
 				new LinearColorViewFilter(result),
+				new FeatureViewFilter(result),
 				new StatisticsViewFilter(result),
 				new LODStatisticsViewFilter(result),
+				new PipelineViewFilter(result),
 				new LinearViewFilter(result),
 				new RankViewFilter(result)),
 		ViewFilter[].class);

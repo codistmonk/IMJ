@@ -4,6 +4,7 @@ import static java.awt.event.InputEvent.SHIFT_DOWN_MASK;
 import static java.lang.Double.parseDouble;
 import static java.lang.Math.abs;
 import static javax.swing.Box.createHorizontalGlue;
+import static javax.swing.Box.createVerticalGlue;
 import static javax.swing.JOptionPane.showInputDialog;
 import static net.sourceforge.aprog.i18n.Messages.translate;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
@@ -11,6 +12,8 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 
+import java.awt.Component;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
@@ -85,18 +88,15 @@ public abstract class Plugin {
 		
 		previewButton.addActionListener(previewAction);
 		
-		for (final Map.Entry<String, String> entry : this.getParameters().entrySet()) {
-			final JTextField textField = newSpinnerTextField(entry.getValue(), previewAction);
-			
-			textFields.put(entry.getKey(), textField);
-			inputBox.add(horizontalBox(new JLabel(entry.getKey()), textField));
-		}
+		inputBox.add(this.newInputPanel(previewAction, textFields));
+		inputBox.add(createVerticalGlue());
 		
 		final JButton cancelButton = translate(new JButton("Cancel"));
 		final JButton applyButton = translate(new JButton("Apply"));
 		final JButton okButton = translate(new JButton("OK"));
 		
-		inputBox.add(horizontalBox(cancelButton, createHorizontalGlue(), previewButton, applyButton, okButton));
+		inputBox.add(horizontalBox(cancelButton, createHorizontalGlue(),
+				previewButton, createHorizontalGlue(), applyButton, okButton));
 		
 		final JPanel panel = new JPanel();
 		final JFrame mainFrame = this.getContext().get("mainFrame");
@@ -201,6 +201,28 @@ public abstract class Plugin {
 	@Override
 	public final String toString() {
 		return this.getClass().getName();
+	}
+	
+	/**
+	 * @param previewAction
+	 * <br>Must not be null
+	 * @param textFields
+	 * <br>Must not be null
+	 * <br>Used by <code>previewAction</code> to initialize this plugin's parameters
+	 * @return
+	 * <br>Must not be null
+	 */
+	protected Component newInputPanel(final ActionListener previewAction, final Map<String, JTextField> textFields) {
+		final JPanel result = new JPanel(new GridLayout(0, 1));
+		
+		for (final Map.Entry<String, String> entry : this.getParameters().entrySet()) {
+			final JTextField textField = newSpinnerTextField(entry.getValue(), previewAction);
+			
+			textFields.put(entry.getKey(), textField);
+			result.add(horizontalBox(new JLabel(entry.getKey()), textField));
+		}
+		
+		return result;
 	}
 	
 	public static final void fireUpdate(final Context context, final String variableName) {
