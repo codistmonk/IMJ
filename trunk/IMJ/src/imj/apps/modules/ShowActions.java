@@ -23,11 +23,10 @@ import imj.IntList;
 import imj.apps.modules.Annotations.Annotation;
 import imj.apps.modules.Annotations.Annotation.Region;
 
+import java.awt.AWTEvent;
 import java.awt.BasicStroke;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Graphics2D;
-import java.awt.event.ActionEvent;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.geom.Point2D;
@@ -159,6 +158,22 @@ public final class ShowActions {
 		return " " + name + "=\"" + value + "\"";
 	}
 	
+	public static final JList getList(final Object eventSource) {
+		final JList list = cast(JList.class, eventSource);
+		
+		if (list != null) {
+			return list;
+		}
+		
+		final JPopupMenu popup = cast(JPopupMenu.class, eventSource);
+		
+		if (popup != null) {
+			return (JList) getAncestorOfClass(JList.class, popup.getInvoker());
+		}
+		
+		return null;
+	}
+	
 	/**
 	 * @author codistmonk (creation 2013-02-28)
 	 */
@@ -170,9 +185,7 @@ public final class ShowActions {
 		
 		@Override
 		public final void perform(final Object event) {
-			final JPopupMenu popup = (JPopupMenu) getAncestorOfClass(JPopupMenu.class,
-					(Component) ((ActionEvent) event).getSource());
-			final JList list = (JList) popup.getInvoker();
+			final JList list = getList(((AWTEvent) event).getSource());
 			final int index = list.getSelectedIndex();
 			
 			if (0 < index) {
@@ -197,9 +210,7 @@ public final class ShowActions {
 		
 		@Override
 		public final void perform(final Object event) {
-			final JPopupMenu popup = (JPopupMenu) getAncestorOfClass(JPopupMenu.class,
-					(Component) ((ActionEvent) event).getSource());
-			final JList list = (JList) popup.getInvoker();
+			final JList list = getList(((AWTEvent) event).getSource());
 			final int index = list.getSelectedIndex();
 			
 			if (index < list.getModel().getSize()) {
@@ -224,9 +235,10 @@ public final class ShowActions {
 		
 		@Override
 		public final void perform(final Object event) {
-			final JPopupMenu popup = (JPopupMenu) getAncestorOfClass(JPopupMenu.class,
-					(Component) ((ActionEvent) event).getSource());
-			final JList list = (JList) popup.getInvoker();
+//			final JPopupMenu popup = (JPopupMenu) getAncestorOfClass(JPopupMenu.class,
+//					(Component) ((ActionEvent) event).getSource());
+//			final JList list = (JList) popup.getInvoker();
+			final JList list = getList(((AWTEvent) event).getSource());
 			final int index = list.getSelectedIndex();
 			
 			if (0 <= index && askUserToConfirmElementDeletion()) {

@@ -3,42 +3,41 @@ package imj.apps.modules;
 import static imj.apps.modules.ShowActions.ACTIONS_DELETE_LIST_ITEM;
 import static imj.apps.modules.ShowActions.ACTIONS_MOVE_LIST_ITEM_DOWN;
 import static imj.apps.modules.ShowActions.ACTIONS_MOVE_LIST_ITEM_UP;
+import static java.awt.event.InputEvent.ALT_DOWN_MASK;
+import static java.awt.event.KeyEvent.VK_BACK_SPACE;
+import static java.awt.event.KeyEvent.VK_DELETE;
+import static java.awt.event.KeyEvent.VK_DOWN;
+import static java.awt.event.KeyEvent.VK_KP_DOWN;
+import static java.awt.event.KeyEvent.VK_KP_UP;
+import static java.awt.event.KeyEvent.VK_UP;
 import static javax.swing.ListSelectionModel.SINGLE_SELECTION;
-import static javax.swing.SwingUtilities.getAncestorOfClass;
 import static javax.swing.SwingUtilities.isLeftMouseButton;
 import static javax.swing.SwingUtilities.isRightMouseButton;
 import static net.sourceforge.aprog.af.AFTools.item;
 import static net.sourceforge.aprog.i18n.Messages.translate;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Component;
-import java.awt.event.ActionEvent;
+import java.awt.Dimension;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Map;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JList;
-import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
-import javax.swing.ListModel;
-import javax.swing.ListSelectionModel;
-import javax.swing.SwingUtilities;
 
-import net.sourceforge.aprog.af.AFTools;
 import net.sourceforge.aprog.af.AbstractAFAction;
 import net.sourceforge.aprog.context.Context;
-import net.sourceforge.aprog.i18n.Messages;
-import net.sourceforge.aprog.swing.AbstractCustomizableAction;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-18)
@@ -53,6 +52,7 @@ public final class PipelineViewFilter extends ViewFilter {
 		
 		this.getParameters().clear();
 		
+		this.filters.setPreferredSize(new Dimension(128, 128));
 		this.filters.setSelectionMode(SINGLE_SELECTION);
 		
 		this.filters.addMouseListener(new MouseAdapter() {
@@ -74,6 +74,52 @@ public final class PipelineViewFilter extends ViewFilter {
 				
 				if (isRightMouseButton(event) && selectedFilter != null) {
 					this.popup.show(event.getComponent(), event.getX(), event.getY());
+				}
+			}
+			
+		});
+		
+		this.filters.addKeyListener(new KeyAdapter() {
+			
+			@Override
+			public final void keyPressed(final KeyEvent event) {
+				
+				final JList list = ShowActions.getList(event.getSource());
+				final int index = list.getSelectedIndex();
+				
+				if (0 <= index) {
+					final boolean altDown = (event.getModifiersEx() & ALT_DOWN_MASK) == ALT_DOWN_MASK;
+					final AbstractAFAction action;
+					
+					switch (event.getKeyCode()) {
+					case VK_UP:
+					case VK_KP_UP:
+						if (altDown) {
+							action = context.get(ACTIONS_MOVE_LIST_ITEM_UP);
+						} else {
+							action = null;
+						}
+						break;
+					case VK_DOWN:
+					case VK_KP_DOWN:
+						if (altDown) {
+							action = context.get(ACTIONS_MOVE_LIST_ITEM_DOWN);
+						} else {
+							action = null;
+						}
+						break;
+					case VK_BACK_SPACE:
+					case VK_DELETE:
+						action = context.get(ACTIONS_DELETE_LIST_ITEM);
+						break;
+					default:
+						action = null;
+						break;
+					}
+					
+					if (action != null) {
+						action.perform(event);
+					}
 				}
 			}
 			
@@ -139,9 +185,6 @@ public final class PipelineViewFilter extends ViewFilter {
 		try {
 			((DefaultListModel) this.filters.getModel()).addElement(
 					prototype.getClass().getConstructor(Context.class).newInstance(this.getContext()));
-			
-			this.filters.invalidate();
-			this.filters.repaint();
 		} catch (final Exception exception) {
 			exception.printStackTrace();
 		}
