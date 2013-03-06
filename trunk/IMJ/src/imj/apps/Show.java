@@ -140,6 +140,7 @@ public final class Show {
 		new ShowActions.CreateAnnotationFromROI(result);
 		new ShowActions.UseAnnotationAsROI(result);
 		new ShowActions.PickAnnotationColor(result);
+		new ShowActions.ToggleAnnotationVisibility(result);
 		
 		result.set(AFConstants.Variables.MAIN_MENU_BAR, menuBar(
 				menu("Application",
