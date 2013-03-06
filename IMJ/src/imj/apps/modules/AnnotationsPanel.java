@@ -7,7 +7,7 @@ import static imj.apps.modules.ShowActions.ACTIONS_TOGGLE_ANNOTATION_VISIBILITY;
 import static imj.apps.modules.ShowActions.ACTIONS_USE_ANNOTATION_AS_ROI;
 import static javax.swing.SwingUtilities.isRightMouseButton;
 import static net.sourceforge.aprog.af.AFTools.item;
-
+import static net.sourceforge.aprog.tools.Tools.cast;
 import imj.apps.modules.Annotations.Annotation;
 import imj.apps.modules.Annotations.Annotation.Region;
 
@@ -22,6 +22,7 @@ import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeNode;
+import javax.swing.tree.TreePath;
 
 import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.events.Variable.Listener;
@@ -51,7 +52,22 @@ public final class AnnotationsPanel extends JPanel {
 			
 			@Override
 			public final void valueChanged(final TreeSelectionEvent event) {
-				context.set("selectedAnnotations", tree.getSelectionPaths());
+				final TreePath[] selectionPaths = tree.getSelectionPaths();
+				final Annotations annotations = context.get("annotations");
+				
+				context.set("selectedAnnotations", selectionPaths);
+				
+				for (final Annotation annotation : annotations.getAnnotations()) {
+					annotation.setSelected(false);
+				}
+				
+				for (final TreePath path : selectionPaths) {
+					final Annotation annotation = cast(Annotation.class, path.getLastPathComponent());
+					
+					if (annotation != null) {
+						annotation.setSelected(true);
+					}
+				}
 				
 				fireUpdate(context, "sieve");
 			}

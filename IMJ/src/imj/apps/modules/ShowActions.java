@@ -666,6 +666,7 @@ public final class ShowActions {
 			final Annotation annotation = annotations.new Annotation();
 			
 			annotation.setLineColor(GREEN);
+			annotation.setVisible(true);
 			
 			while (!joints.isEmpty()) {
 				final Region region = annotation.new Region();
