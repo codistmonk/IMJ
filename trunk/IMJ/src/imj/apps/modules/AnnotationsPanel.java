@@ -1,6 +1,7 @@
 package imj.apps.modules;
 
 import static imj.apps.modules.Plugin.fireUpdate;
+import static imj.apps.modules.ShowActions.ACTIONS_DELETE_ANNOTATION;
 import static imj.apps.modules.ShowActions.ACTIONS_PICK_ANNOTATION_COLOR;
 import static imj.apps.modules.ShowActions.ACTIONS_TOGGLE_ANNOTATION_VISIBILITY;
 import static imj.apps.modules.ShowActions.ACTIONS_USE_ANNOTATION_AS_ROI;
@@ -8,6 +9,7 @@ import static javax.swing.SwingUtilities.isRightMouseButton;
 import static net.sourceforge.aprog.af.AFTools.item;
 
 import imj.apps.modules.Annotations.Annotation;
+import imj.apps.modules.Annotations.Annotation.Region;
 
 import java.awt.BorderLayout;
 import java.awt.event.MouseAdapter;
@@ -58,14 +60,22 @@ public final class AnnotationsPanel extends JPanel {
 		
 		tree.addMouseListener(new MouseAdapter() {
 			
-			private final JPopupMenu popup;
+			private final JPopupMenu annotationPopup;
+			
+			private final JPopupMenu regionPopup;
 			
 			{
-				this.popup = new JPopupMenu();
+				this.annotationPopup = new JPopupMenu();
+				this.regionPopup = new JPopupMenu();
 				
-				this.popup.add(item("Use as ROI", context, ACTIONS_USE_ANNOTATION_AS_ROI));
-				this.popup.add(item("Pick color...", context, ACTIONS_PICK_ANNOTATION_COLOR));
-				this.popup.add(item("Toggle visibility", context, ACTIONS_TOGGLE_ANNOTATION_VISIBILITY));
+				this.annotationPopup.add(item("Use as ROI", context, ACTIONS_USE_ANNOTATION_AS_ROI));
+				this.annotationPopup.addSeparator();
+				this.annotationPopup.add(item("Pick color...", context, ACTIONS_PICK_ANNOTATION_COLOR));
+				this.annotationPopup.add(item("Toggle visibility", context, ACTIONS_TOGGLE_ANNOTATION_VISIBILITY));
+				this.annotationPopup.addSeparator();
+				this.annotationPopup.add(item("Delete", context, ACTIONS_DELETE_ANNOTATION));
+				
+				this.regionPopup.add(item("Delete", context, ACTIONS_DELETE_ANNOTATION));
 			}
 			
 			@Override
@@ -73,9 +83,17 @@ public final class AnnotationsPanel extends JPanel {
 				if (isRightMouseButton(event)) {
 					final int row = tree.getRowForLocation(event.getX(), event.getY());
 					
-					if (0 <= row && tree.getPathForRow(row).getLastPathComponent() instanceof Annotation) {
-						tree.setSelectionRow(row);
-						this.popup.show(event.getComponent(), event.getX(), event.getY());
+					if (row < 0) {
+						return;
+					}
+					
+					final Object element = tree.getPathForRow(row).getLastPathComponent();
+					
+					if (element instanceof Annotation) {
+//						tree.setSelectionRow(row);
+						this.annotationPopup.show(event.getComponent(), event.getX(), event.getY());
+					} else if (element instanceof Region) {
+						this.regionPopup.show(event.getComponent(), event.getX(), event.getY());
 					}
 				}
 			}

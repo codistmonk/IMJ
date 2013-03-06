@@ -13,6 +13,7 @@ import static java.util.Collections.sort;
 import static javax.swing.JOptionPane.OK_CANCEL_OPTION;
 import static javax.swing.JOptionPane.OK_OPTION;
 import static javax.swing.JOptionPane.showConfirmDialog;
+import static net.sourceforge.aprog.i18n.Messages.translate;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
 import static net.sourceforge.aprog.tools.Tools.cast;
@@ -43,12 +44,15 @@ import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
+import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 
 import net.sourceforge.aprog.af.AFConstants;
 import net.sourceforge.aprog.af.AFMainFrame;
 import net.sourceforge.aprog.af.AbstractAFAction;
 import net.sourceforge.aprog.context.Context;
+import net.sourceforge.aprog.i18n.Messages;
+import net.sourceforge.aprog.i18n.Translator;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
@@ -115,6 +119,11 @@ public final class ShowActions {
 	 * {@value}.
 	 */
 	public static final String ACTIONS_TOGGLE_ANNOTATION_VISIBILITY = "actions.toggleAnnotationVisibility";
+	
+	/**
+	 * {@value}.
+	 */
+	public static final String ACTIONS_DELETE_ANNOTATION = "actions.deleteAnnotation";
 	
 	/**
 	 * {@value}.
@@ -574,6 +583,52 @@ public final class ShowActions {
 			}
 			
 			fireUpdate(this.getContext(), "sieve");
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-28)
+	 */
+	public static final class DeleteAnnotation extends AbstractAFAction {
+		
+		public DeleteAnnotation(final Context context) {
+			super(context, ACTIONS_DELETE_ANNOTATION);
+		}
+		
+		@Override
+		public final void perform() {
+			final TreePath[] selectedAnnotations = this.getContext().get("selectedAnnotations");
+			
+			if (selectedAnnotations == null) {
+				return;
+			}
+			
+			boolean confirmed = false;
+			
+			for (final TreePath path : selectedAnnotations) {
+				final DefaultMutableTreeNode element = cast(DefaultMutableTreeNode.class, path.getLastPathComponent());
+				final Annotation annotation = cast(Annotation.class, element);
+				final Region region = cast(Region.class, element);
+				
+				if (annotation == null && region == null) {
+					continue;
+				}
+				
+				if (!confirmed) {
+					JOptionPane.setDefaultLocale(Translator.getDefaultTranslator().getLocale());
+					
+					if (JOptionPane.OK_OPTION != showConfirmDialog(null, translate("Delete selected elements?"))) {
+						return;
+					}
+					
+					confirmed = true;
+				}
+				
+				((DefaultMutableTreeNode) element.getParent()).remove(element);
+			}
+			
+			fireUpdate(this.getContext(), "annotations");
 		}
 		
 	}
