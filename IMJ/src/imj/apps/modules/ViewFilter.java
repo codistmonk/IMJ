@@ -86,7 +86,7 @@ public abstract class ViewFilter extends Plugin /*implements Filter*/ {
 		
 		@Override
 		public final int getNewValue(final int index, final int oldValue) {
-			if (!ViewFilter.this.splitInputChannels()) {
+			if (!this.splitInputChannels()) {
 				return this.getNewValue(index, oldValue, Channel.Primitive.INT);
 			}
 			
@@ -102,7 +102,7 @@ public abstract class ViewFilter extends Plugin /*implements Filter*/ {
 					this.getBuffer()[channel.getIndex()] = value;
 				}
 				
-				if (ViewFilter.this.isOutputMonochannel() && this.getInputChannels().size() == 1) {
+				if (this.isOutputMonochannel() && this.getInputChannels().size() == 1) {
 					return argb(255, value, value, value);
 				}
 				
@@ -120,7 +120,7 @@ public abstract class ViewFilter extends Plugin /*implements Filter*/ {
 					this.getBuffer()[channel.getIndex()] = value;
 				}
 				
-				if (ViewFilter.this.isOutputMonochannel() && this.getInputChannels().size() == 1) {
+				if (this.isOutputMonochannel() && this.getInputChannels().size() == 1) {
 					return argb(255, value, value, value);
 				}
 				
@@ -132,6 +132,14 @@ public abstract class ViewFilter extends Plugin /*implements Filter*/ {
 		}
 		
 		public abstract int getNewValue(final int index, final int oldValue, final Channel channel);
+		
+		protected boolean isOutputMonochannel() {
+			return false;
+		}
+		
+		protected boolean splitInputChannels() {
+			return true;
+		}
 		
 	}
 	
@@ -180,21 +188,12 @@ public abstract class ViewFilter extends Plugin /*implements Filter*/ {
 	
 	protected abstract ComplexFilter newComplexFilter();
 	
-	protected boolean isOutputMonochannel() {
-		return false;
-	}
-	
-//	@Override
-//	public final int getNewValue(final int index, final int oldValue) {
-//		return this.getComplexFilter().getNewValue(index, oldValue);
-//	}
-	
 	public final void initialize() {
 		if (this.getComplexFilter() == null) {
 			this.complexFilter = this.newComplexFilter();
 		}
 		
-		if (this.splitInputChannels()) {
+		if (this.getComplexFilter().splitInputChannels()) {
 			final String[] inputChannelAsStrings = this.getParameters().get(PARAMETER_CHANNELS).split("\\s+");
 			final int n = inputChannelAsStrings.length;
 			final Collection<Channel> newInputChannels = new LinkedHashSet<Channel>();
@@ -257,10 +256,6 @@ public abstract class ViewFilter extends Plugin /*implements Filter*/ {
 	
 	public final boolean isBackingUp() {
 		return this.backingUp;
-	}
-	
-	protected boolean splitInputChannels() {
-		return true;
 	}
 	
 	/**
@@ -477,7 +472,25 @@ public abstract class ViewFilter extends Plugin /*implements Filter*/ {
 					return FromFilter.this.getFilter().getNewValue(index, oldValue, channel);
 				}
 				
+				@Override
+				protected final boolean isOutputMonochannel() {
+					return FromFilter.this.isOutputMonochannel();
+				}
+				
+				@Override
+				protected final boolean splitInputChannels() {
+					return FromFilter.this.splitInputChannels();
+				}
+				
 			};
+		}
+		
+		protected boolean isOutputMonochannel() {
+			return false;
+		}
+		
+		protected boolean splitInputChannels() {
+			return true;
 		}
 		
 	}

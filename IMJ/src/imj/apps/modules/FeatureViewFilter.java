@@ -26,11 +26,6 @@ public final class FeatureViewFilter extends ViewFilter {
 	}
 	
 	@Override
-	protected final boolean splitInputChannels() {
-		return false;
-	}
-	
-	@Override
 	protected final ComplexFilter newComplexFilter() {
 		return this.new ComplexFilter() {
 			
@@ -49,6 +44,12 @@ public final class FeatureViewFilter extends ViewFilter {
 					return argb(255, featureValue, featureValue, featureValue);
 				}
 			}
+			
+			@Override
+			protected final boolean splitInputChannels() {
+				return false;
+			}
+			
 		};
 	}
 	
