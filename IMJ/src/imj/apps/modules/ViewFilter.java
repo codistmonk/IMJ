@@ -46,12 +46,12 @@ import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
 /**
  * @author codistmonk (creation 2013-02-18)
  */
-public abstract class ViewFilter extends Plugin implements Filter {
+public abstract class ViewFilter extends Plugin /*implements Filter*/ {
 	
 	/**
 	 * @author codistmonk (creation 2013-03-07)
 	 */
-	public abstract class ComplexFilter {
+	public abstract class ComplexFilter implements Filter {
 		
 		private Collection<Channel> inputChannels;
 		
@@ -84,6 +84,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 			return this.buffer;
 		}
 		
+		@Override
 		public final int getNewValue(final int index, final int oldValue) {
 			if (!ViewFilter.this.splitInputChannels()) {
 				return ViewFilter.this.getNewValue(index, oldValue, Channel.Primitive.INT);
@@ -171,21 +172,25 @@ public abstract class ViewFilter extends Plugin implements Filter {
 		});
 	}
 	
+	public final ComplexFilter getComplexFilter() {
+		return this.complexFilter;
+	}
+	
 	protected abstract ComplexFilter newComplexFilter();
 	
 	protected boolean isOutputMonochannel() {
 		return false;
 	}
 	
-	@Override
-	public final int getNewValue(final int index, final int oldValue) {
-		return this.complexFilter.getNewValue(index, oldValue);
-	}
+//	@Override
+//	public final int getNewValue(final int index, final int oldValue) {
+//		return this.getComplexFilter().getNewValue(index, oldValue);
+//	}
 	
 	public abstract int getNewValue(final int index, final int oldValue, final Channel channel);
 	
 	public final void initialize() {
-		if (this.complexFilter == null) {
+		if (this.getComplexFilter() == null) {
 			this.complexFilter = this.newComplexFilter();
 		}
 		
@@ -208,11 +213,11 @@ public abstract class ViewFilter extends Plugin implements Filter {
 				newInputChannelClass = (Class<? extends Channel>) channel.getClass().getSuperclass();
 			}
 			
-			this.complexFilter.setInputChannels(newInputChannels);
-			this.complexFilter.setInputChannelClass(newInputChannelClass);
+			this.getComplexFilter().setInputChannels(newInputChannels);
+			this.getComplexFilter().setInputChannelClass(newInputChannelClass);
 		} else {
-			this.complexFilter.setInputChannels(null);
-			this.complexFilter.setInputChannelClass(null);
+			this.getComplexFilter().setInputChannels(null);
+			this.getComplexFilter().setInputChannelClass(null);
 		}
 		
 		this.doInitialize();
