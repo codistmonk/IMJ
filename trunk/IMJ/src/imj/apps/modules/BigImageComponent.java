@@ -38,6 +38,8 @@ import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
  */
 public final class BigImageComponent extends JComponent {
 	
+	public static final String VIEW_FILTER = "viewFilter";
+
 	private final Context context;
 	
 	private final String imageId;
@@ -146,7 +148,7 @@ public final class BigImageComponent extends JComponent {
 			
 		};
 		
-		context.getVariable("viewFilter").addListener(fullRepaintNeeded);
+		context.getVariable(VIEW_FILTER).addListener(fullRepaintNeeded);
 		context.getVariable("sieve").addListener(fullRepaintNeeded);
 		
 		this.setFocusable(true);
@@ -208,7 +210,8 @@ public final class BigImageComponent extends JComponent {
 	
 	public final void refreshImage() {
 		this.image = new FilteredImage(ImageWrangler.INSTANCE.load(this.getImageId(), this.getLod()));
-		this.image.setFilter((ViewFilter) this.context.get("viewFilter"));
+		final ViewFilter viewFilter = this.context.get(VIEW_FILTER);
+		this.image.setFilter(viewFilter == null ? null : viewFilter.getComplexFilter());
 		
 		this.context.set("image", this.image);
 		
@@ -257,7 +260,8 @@ public final class BigImageComponent extends JComponent {
 	}
 	
 	public final void repaintAll() {
-		this.image.setFilter((ViewFilter) this.context.get("viewFilter"));
+		final ViewFilter viewFilter = this.context.get(VIEW_FILTER);
+		this.image.setFilter(viewFilter == null ? null : viewFilter.getComplexFilter());
 		this.viewport.setSize(0, 0);
 		this.repaint();
 	}

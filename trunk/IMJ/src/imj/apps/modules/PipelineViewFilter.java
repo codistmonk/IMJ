@@ -161,7 +161,7 @@ public final class PipelineViewFilter extends ViewFilter {
 		final int n = model.getSize();
 		
 		for (int i = 0; i < n; ++i) {
-			result = ((ViewFilter) model.getElementAt(i)).getNewValue(index, result);
+			result = ((ViewFilter) model.getElementAt(i)).getComplexFilter().getNewValue(index, result);
 		}
 		
 		return result;
