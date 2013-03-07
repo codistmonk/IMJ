@@ -154,11 +154,6 @@ public final class PipelineViewFilter extends ViewFilter {
 	}
 	
 	@Override
-	protected final boolean splitInputChannels() {
-		return false;
-	}
-	
-	@Override
 	protected final Component newInputPanel(final ActionListener previewAction, final Map<String, JTextField> textFields) {
 		final ViewFilter[] viewFilters = this.getContext().get("viewFilters");
 		final JTabbedPane tabs = new JTabbedPane();
@@ -210,6 +205,11 @@ public final class PipelineViewFilter extends ViewFilter {
 				}
 				
 				return result;
+			}
+			
+			@Override
+			protected final boolean splitInputChannels() {
+				return false;
 			}
 			
 		};

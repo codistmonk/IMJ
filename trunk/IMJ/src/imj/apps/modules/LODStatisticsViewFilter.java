@@ -39,11 +39,6 @@ public final class LODStatisticsViewFilter extends ViewFilter {
 	}
 	
 	@Override
-	protected final boolean isOutputMonochannel() {
-		return true;
-	}
-	
-	@Override
 	protected final void doInitialize() {
 		final String imageId = this.getContext().get("imageId");
 		this.currentLOD = this.getContext().get("lod");
@@ -81,6 +76,11 @@ public final class LODStatisticsViewFilter extends ViewFilter {
 				}
 				
 				return (int) feature.getValue(statistics);
+			}
+			
+			@Override
+			protected final boolean isOutputMonochannel() {
+				return true;
 			}
 			
 		};
