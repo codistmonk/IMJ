@@ -154,20 +154,6 @@ public final class PipelineViewFilter extends ViewFilter {
 	}
 	
 	@Override
-	public final int getNewValue(final int index, final int oldValue, final Channel channel) {
-		int result = oldValue;
-		
-		final ListModel model = this.filters.getModel();
-		final int n = model.getSize();
-		
-		for (int i = 0; i < n; ++i) {
-			result = ((ViewFilter) model.getElementAt(i)).getComplexFilter().getNewValue(index, result);
-		}
-		
-		return result;
-	}
-	
-	@Override
 	protected final boolean splitInputChannels() {
 		return false;
 	}
@@ -211,7 +197,21 @@ public final class PipelineViewFilter extends ViewFilter {
 	@Override
 	protected final ComplexFilter newComplexFilter() {
 		return this.new ComplexFilter() {
-			// NOP
+			
+			@Override
+			public final int getNewValue(final int index, final int oldValue, final Channel channel) {
+				int result = oldValue;
+				
+				final ListModel model = filters.getModel();
+				final int n = model.getSize();
+				
+				for (int i = 0; i < n; ++i) {
+					result = ((ViewFilter) model.getElementAt(i)).getComplexFilter().getNewValue(index, result);
+				}
+				
+				return result;
+			}
+			
 		};
 	}
 	

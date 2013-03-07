@@ -39,27 +39,6 @@ public final class LODStatisticsViewFilter extends ViewFilter {
 	}
 	
 	@Override
-	public final int getNewValue(final int index, final int oldValue, final Channel channel) {
-		final int rowIndex = this.currentImage.getRowIndex(index);
-		final int columnIndex = this.currentImage.getColumnIndex(index);
-		final int scale = (int) pow(2.0, this.currentLOD - this.sourceLOD);
-		final int rStart = rowIndex * scale;
-		final int cStart = columnIndex * scale;
-		final int rEnd = min(this.sourceImage.getRowCount(), rStart + scale);
-		final int cEnd = min(this.sourceImage.getColumnCount(), cStart + scale);
-		
-		this.statistics.reset();
-		
-		for (int r = rStart; r < rEnd; ++r) {
-			for (int c = cStart; c < cEnd; ++c) {
-				this.statistics.addValue(channel.getValue(this.sourceImage.getValue(r, c)));
-			}
-		}
-		
-		return (int) this.feature.getValue(this.statistics);
-	}
-	
-	@Override
 	protected final boolean isOutputMonochannel() {
 		return true;
 	}
@@ -82,7 +61,28 @@ public final class LODStatisticsViewFilter extends ViewFilter {
 	@Override
 	protected final ComplexFilter newComplexFilter() {
 		return this.new ComplexFilter() {
-			// NOP
+			
+			@Override
+			public final int getNewValue(final int index, final int oldValue, final Channel channel) {
+				final int rowIndex = currentImage.getRowIndex(index);
+				final int columnIndex = currentImage.getColumnIndex(index);
+				final int scale = (int) pow(2.0, currentLOD - sourceLOD);
+				final int rStart = rowIndex * scale;
+				final int cStart = columnIndex * scale;
+				final int rEnd = min(sourceImage.getRowCount(), rStart + scale);
+				final int cEnd = min(sourceImage.getColumnCount(), cStart + scale);
+				
+				statistics.reset();
+				
+				for (int r = rStart; r < rEnd; ++r) {
+					for (int c = cStart; c < cEnd; ++c) {
+						statistics.addValue(channel.getValue(sourceImage.getValue(r, c)));
+					}
+				}
+				
+				return (int) feature.getValue(statistics);
+			}
+			
 		};
 	}
 	

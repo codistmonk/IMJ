@@ -21,22 +21,6 @@ public final class FeatureViewFilter extends ViewFilter {
 	}
 	
 	@Override
-	public final int getNewValue(final int index, final int oldValue, final Channel channel) {
-		final int featureValue = this.feature.getNewValue(index, oldValue);
-		
-		switch (this.feature) {
-		case RED:
-			return argb(255, featureValue, 0, 0);
-		case GREEN:
-			return argb(255, 0, featureValue, 0);
-		case BLUE:
-			return argb(255, 0, 0, featureValue);
-		default:
-			return argb(255, featureValue, featureValue, featureValue);
-		}
-	}
-	
-	@Override
 	protected final void doInitialize() {
 		this.feature = Feature.valueOf(this.getParameters().get("feature").toUpperCase(Locale.ENGLISH));
 	}
@@ -49,7 +33,22 @@ public final class FeatureViewFilter extends ViewFilter {
 	@Override
 	protected final ComplexFilter newComplexFilter() {
 		return this.new ComplexFilter() {
-			// NOP
+			
+			@Override
+			public final int getNewValue(final int index, final int oldValue, final Channel channel) {
+				final int featureValue = feature.getNewValue(index, oldValue);
+				
+				switch (feature) {
+				case RED:
+					return argb(255, featureValue, 0, 0);
+				case GREEN:
+					return argb(255, 0, featureValue, 0);
+				case BLUE:
+					return argb(255, 0, 0, featureValue);
+				default:
+					return argb(255, featureValue, featureValue, featureValue);
+				}
+			}
 		};
 	}
 	
