@@ -47,11 +47,9 @@ import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
  */
 public abstract class ViewFilter extends Plugin {
 	
+	private ViewFilter source;
+	
 	private ComplexFilter complexFilter;
-	
-	private ViewFilter backup;
-	
-	private boolean backingUp;
 	
 	protected ViewFilter(final Context context) {
 		super(context);
@@ -66,18 +64,8 @@ public abstract class ViewFilter extends Plugin {
 					return;
 				}
 				
-				final boolean thisViewFilterIsApplying = context.get("viewFilter") == ViewFilter.this;
-				
-				if (thisViewFilterIsApplying) {
+				if (context.get(VIEW_FILTER) == ViewFilter.this) {
 					ViewFilter.this.cancel();
-				}
-				
-				if (ViewFilter.this.isBackingUp()) {
-					ViewFilter.this.clearBackup();
-					ViewFilter.this.backup();
-				}
-				
-				if (thisViewFilterIsApplying) {
 					ViewFilter.this.initialize();
 					ViewFilter.this.apply();
 				}
@@ -134,32 +122,57 @@ public abstract class ViewFilter extends Plugin {
 	public final void apply() {
 		final Context context = this.getContext();
 		
-		context.set("viewFilter", null);
-		context.set("viewFilter", this);
+		final ViewFilter current = context.get(VIEW_FILTER);
+		ViewFilter f = current;
 		
-		fireUpdate(this.getContext(), "image");
+		while (f != this && f != null) {
+			f = f.source;
+		}
+		
+		if (f == null) {
+			this.source = current;
+			context.set(VIEW_FILTER, this);
+		} else {
+			fireUpdate(this.getContext(), VIEW_FILTER);
+		}
 	}
 	
 	@Override
 	public final void backup() {
-		this.backup = this.getContext().get("viewFilter");
-		this.backingUp = true;
+		// NOP
 	}
 	
 	@Override
 	public final void cancel() {
-		this.getContext().set("viewFilter", this.backup);
-		fireUpdate(this.getContext(), "image");
+		final Context context = this.getContext();
+		final ViewFilter current = context.get(VIEW_FILTER);
+		
+		if (current == this) {
+			context.set(VIEW_FILTER, this.source);
+			
+			fireUpdate(this.getContext(), VIEW_FILTER);
+		} else {
+			ViewFilter f = current;
+			
+			while (f != null && f.source != this) {
+				f = f.source;
+			}
+			
+			if (f != null) {
+				assert f.source == this;
+				
+				f.source = this.source;
+				
+				fireUpdate(this.getContext(), VIEW_FILTER);
+			}
+		}
+		
+		this.source = null;
 	}
 	
 	@Override
 	public final void clearBackup() {
-		this.backup = null;
-		this.backingUp = false;
-	}
-	
-	public final boolean isBackingUp() {
-		return this.backingUp;
+		// NOP
 	}
 	
 	/**
@@ -291,6 +304,11 @@ public abstract class ViewFilter extends Plugin {
 	 * {@value}.
 	 */
 	public static final String PARAMETER_CHANNELS = "channels";
+	
+	/**
+	 * {@value}.
+	 */
+	public static final String VIEW_FILTER = "viewFilter";
 	
 	public static final Channel parseChannel(final String string) {
 		try {
