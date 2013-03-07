@@ -2,8 +2,6 @@ package imj.apps.modules;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.min;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
-
 import net.sourceforge.aprog.context.Context;
 
 /**
@@ -29,8 +27,6 @@ public final class RoundingViewFilter extends ViewFilter {
 	@Override
 	protected final void doInitialize() {
 		final int bitCount = parseInt(this.getParameters().get("bitCount"));
-		
-		debugPrint(this.getId(), bitCount);
 		
 		this.offset = 1 << (bitCount - 1);
 		this.mask = (~((1 << bitCount) - 1)) & 0x7FFFFFFF;

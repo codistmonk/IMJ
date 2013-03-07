@@ -100,7 +100,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	@Override
 	public final int getNewValue(final int index, final int oldValue) {
 		if (!this.splitInputChannels()) {
-			return this.getNewValue(index, oldValue, null);
+			return this.getNewValue(index, oldValue, Channel.Primitive.INT);
 		}
 		
 		if (this.inputChannelClass == Primitive.class) {
