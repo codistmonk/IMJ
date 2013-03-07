@@ -7,13 +7,13 @@ import net.sourceforge.aprog.context.Context;
 /**
  * @author codistmonk (creation 2013-02-18)
  */
-public final class RoundingViewFilter extends ViewFilter {
+public final class BitRoundingViewFilter extends ViewFilter {
 	
 	private int offset;
 	
 	private int mask;
 	
-	public RoundingViewFilter(final Context context) {
+	public BitRoundingViewFilter(final Context context) {
 		super(context);
 		
 		this.getParameters().put("bitCount", "0");
