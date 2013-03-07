@@ -39,109 +39,13 @@ import java.util.LinkedHashSet;
 import java.util.Locale;
 
 import net.sourceforge.aprog.context.Context;
-import net.sourceforge.aprog.events.Variable;
 import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
 
 /**
  * @author codistmonk (creation 2013-02-18)
  */
-public abstract class ViewFilter extends Plugin /*implements Filter*/ {
-	
-	/**
-	 * @author codistmonk (creation 2013-03-07)
-	 */
-	public abstract class ComplexFilter implements Filter {
-		
-		private Collection<Channel> inputChannels;
-		
-		private Class<? extends Channel> inputChannelClass;
-		
-		private final int[] buffer;
-		
-		protected ComplexFilter() {
-			this.buffer = new int[4];
-			this.inputChannelClass = Primitive.class;
-		}
-		
-		public final Collection<Channel> getInputChannels() {
-			return this.inputChannels;
-		}
-		
-		public final void setInputChannels(final Collection<Channel> inputChannels) {
-			this.inputChannels = inputChannels;
-		}
-		
-		public final Class<? extends Channel> getInputChannelClass() {
-			return this.inputChannelClass;
-		}
-		
-		public final void setInputChannelClass(final Class<? extends Channel> inputChannelClass) {
-			this.inputChannelClass = inputChannelClass;
-		}
-		
-		public final int[] getBuffer() {
-			return this.buffer;
-		}
-		
-		@Override
-		public final int getNewValue(final int index, final int oldValue) {
-			if (!this.splitInputChannels()) {
-				return this.getNewValue(index, oldValue, Channel.Primitive.INT);
-			}
-			
-			if (this.getInputChannelClass() == Primitive.class) {
-				for (int i = 0; i < 4; ++i) {
-					this.getBuffer()[i] = channelValue(oldValue, i);
-				}
-				
-				int value = 0;
-				
-				for (final Channel channel : this.getInputChannels()) {
-					value = max(0, min(255, this.getNewValue(index, oldValue, channel)));
-					this.getBuffer()[channel.getIndex()] = value;
-				}
-				
-				if (this.isOutputMonochannel() && this.getInputChannels().size() == 1) {
-					return argb(255, value, value, value);
-				}
-				
-				return argb(this.getBuffer()[ALPHA.getIndex()],
-						this.getBuffer()[RED.getIndex()], this.getBuffer()[GREEN.getIndex()], this.getBuffer()[BLUE.getIndex()]);
-			} else if (this.getInputChannelClass() == Synthetic.class) {
-				this.getBuffer()[0] = hue(oldValue);
-				this.getBuffer()[1] = saturation(oldValue);
-				this.getBuffer()[2] = brightness(oldValue);
-				
-				int value = 0;
-				
-				for (final Channel channel : this.getInputChannels()) {
-					value = max(0, min(255, this.getNewValue(index, oldValue, channel)));
-					this.getBuffer()[channel.getIndex()] = value;
-				}
-				
-				if (this.isOutputMonochannel() && this.getInputChannels().size() == 1) {
-					return argb(255, value, value, value);
-				}
-				
-				return Color.HSBtoRGB(this.getBuffer()[HUE.getIndex()] / 255F,
-						this.getBuffer()[SATURATION.getIndex()] / 255F, this.getBuffer()[BRIGHTNESS.getIndex()] / 255F);
-			}
-			
-			return 0;
-		}
-		
-		public abstract int getNewValue(final int index, final int oldValue, final Channel channel);
-		
-		protected boolean isOutputMonochannel() {
-			return false;
-		}
-		
-		protected boolean splitInputChannels() {
-			return true;
-		}
-		
-	}
+public abstract class ViewFilter extends Plugin {
 	
 	private ComplexFilter complexFilter;
 	
@@ -454,21 +358,11 @@ public abstract class ViewFilter extends Plugin /*implements Filter*/ {
 		
 		@Override
 		protected final ComplexFilter newComplexFilter() {
-			return this.new ComplexFilter() {
+			return new ComplexFilter(this.isOutputMonochannel(), this.splitInputChannels()) {
 				
 				@Override
 				public final int getNewValue(final int index, final int oldValue, final Channel channel) {
 					return FromFilter.this.getFilter().getNewValue(index, oldValue, channel);
-				}
-				
-				@Override
-				protected final boolean isOutputMonochannel() {
-					return FromFilter.this.isOutputMonochannel();
-				}
-				
-				@Override
-				protected final boolean splitInputChannels() {
-					return FromFilter.this.splitInputChannels();
 				}
 				
 			};
@@ -481,6 +375,121 @@ public abstract class ViewFilter extends Plugin /*implements Filter*/ {
 		protected boolean splitInputChannels() {
 			return true;
 		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-03-07)
+	 */
+	public static abstract class ComplexFilter implements Filter {
+		
+		private Collection<Channel> inputChannels;
+		
+		private Class<? extends Channel> inputChannelClass;
+		
+		private final int[] buffer;
+		
+		private final boolean splitInputChannels;
+		
+		private final boolean outputMonochannel;
+		
+		protected ComplexFilter() {
+			this(DEFAULT_SPLIT_INPUT_CHANNELS, DEFAULT_OUTPUT_MONOCHANNEL);
+		}
+		
+		protected ComplexFilter(final boolean splitInputChannels, final boolean outputMonochannel) {
+			this.buffer = new int[4];
+			this.inputChannelClass = Primitive.class;
+			this.splitInputChannels = splitInputChannels;
+			this.outputMonochannel = outputMonochannel;
+		}
+		
+		public final Collection<Channel> getInputChannels() {
+			return this.inputChannels;
+		}
+		
+		public final void setInputChannels(final Collection<Channel> inputChannels) {
+			this.inputChannels = inputChannels;
+		}
+		
+		public final Class<? extends Channel> getInputChannelClass() {
+			return this.inputChannelClass;
+		}
+		
+		public final void setInputChannelClass(final Class<? extends Channel> inputChannelClass) {
+			this.inputChannelClass = inputChannelClass;
+		}
+		
+		public final int[] getBuffer() {
+			return this.buffer;
+		}
+		
+		@Override
+		public final int getNewValue(final int index, final int oldValue) {
+			if (!this.splitInputChannels()) {
+				return this.getNewValue(index, oldValue, Channel.Primitive.INT);
+			}
+			
+			if (this.getInputChannelClass() == Primitive.class) {
+				for (int i = 0; i < 4; ++i) {
+					this.getBuffer()[i] = channelValue(oldValue, i);
+				}
+				
+				int value = 0;
+				
+				for (final Channel channel : this.getInputChannels()) {
+					value = max(0, min(255, this.getNewValue(index, oldValue, channel)));
+					this.getBuffer()[channel.getIndex()] = value;
+				}
+				
+				if (this.isOutputMonochannel() && this.getInputChannels().size() == 1) {
+					return argb(255, value, value, value);
+				}
+				
+				return argb(this.getBuffer()[ALPHA.getIndex()],
+						this.getBuffer()[RED.getIndex()], this.getBuffer()[GREEN.getIndex()], this.getBuffer()[BLUE.getIndex()]);
+			} else if (this.getInputChannelClass() == Synthetic.class) {
+				this.getBuffer()[0] = hue(oldValue);
+				this.getBuffer()[1] = saturation(oldValue);
+				this.getBuffer()[2] = brightness(oldValue);
+				
+				int value = 0;
+				
+				for (final Channel channel : this.getInputChannels()) {
+					value = max(0, min(255, this.getNewValue(index, oldValue, channel)));
+					this.getBuffer()[channel.getIndex()] = value;
+				}
+				
+				if (this.isOutputMonochannel() && this.getInputChannels().size() == 1) {
+					return argb(255, value, value, value);
+				}
+				
+				return Color.HSBtoRGB(this.getBuffer()[HUE.getIndex()] / 255F,
+						this.getBuffer()[SATURATION.getIndex()] / 255F, this.getBuffer()[BRIGHTNESS.getIndex()] / 255F);
+			}
+			
+			return 0;
+		}
+		
+		public abstract int getNewValue(final int index, final int oldValue, final Channel channel);
+		
+		public final boolean isOutputMonochannel() {
+			return this.outputMonochannel;
+		}
+		
+		public final boolean splitInputChannels() {
+			return this.splitInputChannels;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		public static final boolean DEFAULT_SPLIT_INPUT_CHANNELS = true;
+		
+		/**
+		 * {@value}.
+		 */
+		public static final boolean DEFAULT_OUTPUT_MONOCHANNEL = false;
 		
 	}
 	

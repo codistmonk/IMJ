@@ -1,6 +1,7 @@
 package imj.apps.modules;
 
 import static imj.IMJTools.argb;
+import static imj.apps.modules.ViewFilter.ComplexFilter.DEFAULT_OUTPUT_MONOCHANNEL;
 import imj.apps.modules.SimpleSieve.Feature;
 
 import java.util.Locale;
@@ -27,7 +28,7 @@ public final class FeatureViewFilter extends ViewFilter {
 	
 	@Override
 	protected final ComplexFilter newComplexFilter() {
-		return this.new ComplexFilter() {
+		return new ComplexFilter(false, DEFAULT_OUTPUT_MONOCHANNEL) {
 			
 			@Override
 			public final int getNewValue(final int index, final int oldValue, final Channel channel) {
@@ -43,11 +44,6 @@ public final class FeatureViewFilter extends ViewFilter {
 				default:
 					return argb(255, featureValue, featureValue, featureValue);
 				}
-			}
-			
-			@Override
-			protected final boolean splitInputChannels() {
-				return false;
 			}
 			
 		};
