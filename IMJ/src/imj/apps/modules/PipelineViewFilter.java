@@ -3,6 +3,7 @@ package imj.apps.modules;
 import static imj.apps.modules.ShowActions.ACTIONS_DELETE_LIST_ITEM;
 import static imj.apps.modules.ShowActions.ACTIONS_MOVE_LIST_ITEM_DOWN;
 import static imj.apps.modules.ShowActions.ACTIONS_MOVE_LIST_ITEM_UP;
+import static imj.apps.modules.ViewFilter.ComplexFilter.DEFAULT_OUTPUT_MONOCHANNEL;
 import static java.awt.event.InputEvent.ALT_DOWN_MASK;
 import static java.awt.event.KeyEvent.VK_BACK_SPACE;
 import static java.awt.event.KeyEvent.VK_DELETE;
@@ -191,7 +192,7 @@ public final class PipelineViewFilter extends ViewFilter {
 	
 	@Override
 	protected final ComplexFilter newComplexFilter() {
-		return this.new ComplexFilter() {
+		return new ComplexFilter(false, DEFAULT_OUTPUT_MONOCHANNEL) {
 			
 			@Override
 			public final int getNewValue(final int index, final int oldValue, final Channel channel) {
@@ -205,11 +206,6 @@ public final class PipelineViewFilter extends ViewFilter {
 				}
 				
 				return result;
-			}
-			
-			@Override
-			protected final boolean splitInputChannels() {
-				return false;
 			}
 			
 		};

@@ -1,5 +1,6 @@
 package imj.apps.modules;
 
+import static imj.apps.modules.ViewFilter.ComplexFilter.DEFAULT_SPLIT_INPUT_CHANNELS;
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -55,7 +56,7 @@ public final class LODStatisticsViewFilter extends ViewFilter {
 	
 	@Override
 	protected final ComplexFilter newComplexFilter() {
-		return this.new ComplexFilter() {
+		return new ComplexFilter(DEFAULT_SPLIT_INPUT_CHANNELS, true) {
 			
 			@Override
 			public final int getNewValue(final int index, final int oldValue, final Channel channel) {
@@ -76,11 +77,6 @@ public final class LODStatisticsViewFilter extends ViewFilter {
 				}
 				
 				return (int) feature.getValue(statistics);
-			}
-			
-			@Override
-			protected final boolean isOutputMonochannel() {
-				return true;
 			}
 			
 		};

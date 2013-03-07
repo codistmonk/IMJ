@@ -33,7 +33,7 @@ public final class RoundingViewFilter extends ViewFilter {
 	
 	@Override
 	protected final ComplexFilter newComplexFilter() {
-		return this.new ComplexFilter() {
+		return new ComplexFilter() {
 			
 			@Override
 			public final int getNewValue(final int index, final int oldValue,  final Channel channel) {
