@@ -132,7 +132,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 		
 	}
 	
-	private final ComplexFilter complexFilter;
+	private ComplexFilter complexFilter;
 	
 	private ViewFilter backup;
 	
@@ -140,7 +140,6 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	
 	protected ViewFilter(final Context context) {
 		super(context);
-		this.complexFilter = this.new ComplexFilter();
 		
 		this.getParameters().put(PARAMETER_CHANNELS, "red green blue");
 		
@@ -172,6 +171,10 @@ public abstract class ViewFilter extends Plugin implements Filter {
 		});
 	}
 	
+	private final ComplexFilter newComplexFilter() {
+		return this.new ComplexFilter();
+	}
+	
 	protected boolean isOutputMonochannel() {
 		return false;
 	}
@@ -184,6 +187,10 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	public abstract int getNewValue(final int index, final int oldValue, final Channel channel);
 	
 	public final void initialize() {
+		if (this.complexFilter == null) {
+			this.complexFilter = this.newComplexFilter();
+		}
+		
 		if (this.splitInputChannels()) {
 			final String[] inputChannelAsStrings = this.getParameters().get(PARAMETER_CHANNELS).split("\\s+");
 			final int n = inputChannelAsStrings.length;
