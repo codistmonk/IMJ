@@ -48,11 +48,45 @@ import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
  */
 public abstract class ViewFilter extends Plugin implements Filter {
 	
-	private Collection<Channel> inputChannels;
+	/**
+	 * @author codistmonk (creation 2013-03-07)
+	 */
+	public static final class ComplexFilter {
+		
+		private Collection<Channel> inputChannels;
+		
+		private Class<? extends Channel> inputChannelClass;
+		
+		private final int[] buffer;
+		
+		public ComplexFilter() {
+			this.buffer = new int[4];
+			this.inputChannelClass = Primitive.class;
+		}
+		
+		public final Collection<Channel> getInputChannels() {
+			return this.inputChannels;
+		}
+		
+		public final void setInputChannels(final Collection<Channel> inputChannels) {
+			this.inputChannels = inputChannels;
+		}
+		
+		public final Class<? extends Channel> getInputChannelClass() {
+			return this.inputChannelClass;
+		}
+		
+		public final void setInputChannelClass(final Class<? extends Channel> inputChannelClass) {
+			this.inputChannelClass = inputChannelClass;
+		}
+		
+		public final int[] getBuffer() {
+			return this.buffer;
+		}
+		
+	}
 	
-	private Class<? extends Channel> inputChannelClass;
-	
-	private final int[] buffer;
+	private final ComplexFilter complexFilter;
 	
 	private ViewFilter backup;
 	
@@ -60,10 +94,9 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	
 	protected ViewFilter(final Context context) {
 		super(context);
-		this.buffer = new int[4];
+		this.complexFilter = new ComplexFilter();
 		
 		this.getParameters().put(PARAMETER_CHANNELS, "red green blue");
-		this.inputChannelClass = Primitive.class;
 		
 		context.getVariable("image").addListener(new Listener<Object>() {
 			
@@ -103,42 +136,42 @@ public abstract class ViewFilter extends Plugin implements Filter {
 			return this.getNewValue(index, oldValue, Channel.Primitive.INT);
 		}
 		
-		if (this.inputChannelClass == Primitive.class) {
+		if (this.complexFilter.getInputChannelClass() == Primitive.class) {
 			for (int i = 0; i < 4; ++i) {
-				this.buffer[i] = channelValue(oldValue, i);
+				this.complexFilter.getBuffer()[i] = channelValue(oldValue, i);
 			}
 			
 			int value = 0;
 			
-			for (final Channel channel : this.inputChannels) {
+			for (final Channel channel : this.complexFilter.getInputChannels()) {
 				value = max(0, min(255, this.getNewValue(index, oldValue, channel)));
-				this.buffer[channel.getIndex()] = value;
+				this.complexFilter.getBuffer()[channel.getIndex()] = value;
 			}
 			
-			if (this.isOutputMonochannel() && this.inputChannels.size() == 1) {
+			if (this.isOutputMonochannel() && this.complexFilter.getInputChannels().size() == 1) {
 				return argb(255, value, value, value);
 			}
 			
-			return argb(this.buffer[ALPHA.getIndex()],
-					this.buffer[RED.getIndex()], this.buffer[GREEN.getIndex()], this.buffer[BLUE.getIndex()]);
-		} else if (this.inputChannelClass == Synthetic.class) {
-			this.buffer[0] = hue(oldValue);
-			this.buffer[1] = saturation(oldValue);
-			this.buffer[2] = brightness(oldValue);
+			return argb(this.complexFilter.getBuffer()[ALPHA.getIndex()],
+					this.complexFilter.getBuffer()[RED.getIndex()], this.complexFilter.getBuffer()[GREEN.getIndex()], this.complexFilter.getBuffer()[BLUE.getIndex()]);
+		} else if (this.complexFilter.getInputChannelClass() == Synthetic.class) {
+			this.complexFilter.getBuffer()[0] = hue(oldValue);
+			this.complexFilter.getBuffer()[1] = saturation(oldValue);
+			this.complexFilter.getBuffer()[2] = brightness(oldValue);
 			
 			int value = 0;
 			
-			for (final Channel channel : this.inputChannels) {
+			for (final Channel channel : this.complexFilter.getInputChannels()) {
 				value = max(0, min(255, this.getNewValue(index, oldValue, channel)));
-				this.buffer[channel.getIndex()] = value;
+				this.complexFilter.getBuffer()[channel.getIndex()] = value;
 			}
 			
-			if (this.isOutputMonochannel() && this.inputChannels.size() == 1) {
+			if (this.isOutputMonochannel() && this.complexFilter.getInputChannels().size() == 1) {
 				return argb(255, value, value, value);
 			}
 			
-			return Color.HSBtoRGB(this.buffer[HUE.getIndex()] / 255F,
-					this.buffer[SATURATION.getIndex()] / 255F, this.buffer[BRIGHTNESS.getIndex()] / 255F);
+			return Color.HSBtoRGB(this.complexFilter.getBuffer()[HUE.getIndex()] / 255F,
+					this.complexFilter.getBuffer()[SATURATION.getIndex()] / 255F, this.complexFilter.getBuffer()[BRIGHTNESS.getIndex()] / 255F);
 		}
 		
 		return 0;
@@ -166,11 +199,11 @@ public abstract class ViewFilter extends Plugin implements Filter {
 				newInputChannelClass = (Class<? extends Channel>) channel.getClass().getSuperclass();
 			}
 			
-			this.inputChannels = newInputChannels;
-			this.inputChannelClass = newInputChannelClass;
+			this.complexFilter.setInputChannels(newInputChannels);
+			this.complexFilter.setInputChannelClass(newInputChannelClass);
 		} else {
-			this.inputChannels = null;
-			this.inputChannelClass = null;
+			this.complexFilter.setInputChannels(null);
+			this.complexFilter.setInputChannelClass(null);
 		}
 		
 		this.doInitialize();
