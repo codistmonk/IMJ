@@ -35,6 +35,7 @@ import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.BigImageComponent;
 import imj.apps.modules.FeatureViewFilter;
+import imj.apps.modules.IntRoundingViewFilter;
 import imj.apps.modules.LODStatisticsViewFilter;
 import imj.apps.modules.LinearColorViewFilter;
 import imj.apps.modules.LinearViewFilter;
@@ -42,7 +43,7 @@ import imj.apps.modules.PipelineViewFilter;
 import imj.apps.modules.RankViewFilter;
 import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.RegionViewFilter;
-import imj.apps.modules.RoundingViewFilter;
+import imj.apps.modules.BitRoundingViewFilter;
 import imj.apps.modules.ShowActions;
 import imj.apps.modules.Sieve;
 import imj.apps.modules.SimpleSieve;
@@ -186,7 +187,8 @@ public final class Show {
 		result.set("hsb", null, String.class);
 		result.set("viewFilters", array(
 				null,
-				new RoundingViewFilter(result),
+				new BitRoundingViewFilter(result),
+				new IntRoundingViewFilter(result),
 				new LinearColorViewFilter(result),
 				new PipelineViewFilter(result),
 				new RegionViewFilter(result),
@@ -208,7 +210,7 @@ public final class Show {
 			
 			@Override
 			public final void valueChanged(final ValueChangedEvent<Point, ?> event) {
-				final Image image = result.get(SOURCE_IMAGE);
+				final Image image = ViewFilter.getCurrentImage(result);
 				
 				if (image != null) {
 					final Point xy = event.getNewValue();
