@@ -1,6 +1,7 @@
 package imj.apps.modules;
 
 import static imj.IMJTools.argb;
+import static imj.Image.Abstract.index;
 import imj.IMJTools.StatisticsSelector;
 import imj.Image;
 import imj.IntList;
@@ -10,19 +11,22 @@ import net.sourceforge.aprog.tools.MathTools.Statistics;
 /**
  * @author codistmonk (creation 2013-02-18)
  */
-public final class FilteredImage extends Image.Abstract {
+public final class FilteredImage implements Image {
 	
-	private final Image source;
+	private Image source;
 	
 	private ViewFilter filter;
 	
 	public FilteredImage(final Image source) {
-		super(source.getRowCount(), source.getColumnCount(), source.getChannelCount());
 		this.source = source;
 	}
 	
 	public final Image getSource() {
 		return this.source;
+	}
+	
+	public final void setSource(final Image source) {
+		this.source = source;
 	}
 	
 	public final ViewFilter getFilter() {
@@ -57,6 +61,41 @@ public final class FilteredImage extends Image.Abstract {
 	@Override
 	public final float setFloatValue(final int index, float value) {
 		return this.setValue(index, (int) value);
+	}
+	
+	@Override
+	public final int getChannelCount() {
+		return this.getSource().getChannelCount();
+	}
+	
+	@Override
+	public final int getRowCount() {
+		return this.getSource().getRowCount();
+	}
+	
+	@Override
+	public final int getColumnCount() {
+		return this.getSource().getColumnCount();
+	}
+	
+	@Override
+	public final int getValue(final int rowIndex, final int columnIndex) {
+		return this.getValue(index(this.getSource(), rowIndex, columnIndex));
+	}
+	
+	@Override
+	public final int setValue(final int rowIndex, final int columnIndex, final int value) {
+		return this.setValue(index(this.getSource(), rowIndex, columnIndex), value);
+	}
+	
+	@Override
+	public final float getFloatValue(final int rowIndex, final int columnIndex) {
+		return this.getFloatValue(index(this.getSource(), rowIndex, columnIndex));
+	}
+	
+	@Override
+	public final float setFloatValue(final int rowIndex, final int columnIndex, final float value) {
+		return this.setFloatValue(index(this.getSource(), rowIndex, columnIndex), value);
 	}
 	
 	/**
