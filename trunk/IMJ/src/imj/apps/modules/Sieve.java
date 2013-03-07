@@ -2,6 +2,7 @@ package imj.apps.modules;
 
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
+
 import imj.Image;
 
 import java.util.Date;
@@ -40,7 +41,7 @@ public abstract class Sieve extends Plugin {
 		if (roi != null) {
 			final int rowCount = roi.getRowCount();
 			final int columnCount = roi.getColumnCount();
-			final Image image = context.get("image");
+			final Image image = ViewFilter.getCurrentImage(context);
 			
 			if (image != null && image.getRowCount() == rowCount && image.getColumnCount() == columnCount) {
 				final int pixelCount = rowCount * columnCount;

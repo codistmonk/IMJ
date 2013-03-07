@@ -31,6 +31,8 @@ public final class RegionViewFilter extends ViewFilter.FromFilter {
 	
 	@Override
 	protected final void doInitialize() {
+		super.doInitialize();
+		
 		final String[] rgbCoefficientAsStrings = this.getParameters().get("rgbCoefficients").trim().split("\\s++");
 		final double[] rgbCoefficients = new double[3];
 		

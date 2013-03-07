@@ -11,6 +11,7 @@ import static imj.IMJTools.red;
 import static imj.IMJTools.saturation;
 import static imj.MorphologicalOperations.StructuringElement.newDisk;
 import static imj.MorphologicalOperations.StructuringElement.newRing;
+import static imj.apps.modules.BigImageComponent.SOURCE_IMAGE;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.ALPHA;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.BLUE;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.GREEN;
@@ -57,7 +58,7 @@ public abstract class ViewFilter extends Plugin {
 		
 		this.getParameters().put(CHANNELS, "red green blue");
 		
-		context.getVariable("image").addListener(new Listener<Object>() {
+		context.getVariable(SOURCE_IMAGE).addListener(new Listener<Object>() {
 			
 			@Override
 			public final void valueChanged(final ValueChangedEvent<Object, ?> event) {
@@ -79,7 +80,7 @@ public abstract class ViewFilter extends Plugin {
 		return this.image;
 	}
 	
-	public final ComplexFilter getComplexFilter() {
+	final ComplexFilter getComplexFilter() {
 		return (ComplexFilter) this.getImage().getFilter();
 	}
 	
@@ -90,7 +91,17 @@ public abstract class ViewFilter extends Plugin {
 	public final void setSource(final ViewFilter source) {
 		this.source = source;
 		
-		this.getImage().setSource(source == null ? null : source.getImage());
+		this.setSourceImage(source == null ? null : source.getImage());
+	}
+	
+	public final void setSourceImage(final Image image) {
+		this.getImage().setSource(image);
+		
+		this.sourceImageChanged();
+	}
+	
+	protected void sourceImageChanged() {
+		// NOP
 	}
 	
 	public final void initialize() {
@@ -188,6 +199,54 @@ public abstract class ViewFilter extends Plugin {
 	
 	protected void doInitialize() {
 		// NOP
+	}
+	
+	/**
+	 * {@value}.
+	 */
+	public static final String CHANNELS = "channels";
+	
+	/**
+	 * {@value}.
+	 */
+	public static final String VIEW_FILTER = "viewFilter";
+	
+	public static final Channel parseChannel(final String string) {
+		try {
+			return Channel.Primitive.valueOf(string);
+		} catch (final Exception exception) {
+			ignore(exception);
+			
+			return Channel.Synthetic.valueOf(string);
+		}
+	}
+	
+	public static final int[] parseStructuringElement(final String structuringElementParametersAsString) {
+		final String[] structuringElementParameters = structuringElementParametersAsString.trim().split("\\s+");
+		final String shape = structuringElementParameters[0];
+		
+		if ("ring".equals(shape)) {
+			final double innerRadius = parseDouble(structuringElementParameters[1]);
+			final double outerRadius = parseDouble(structuringElementParameters[2]);
+			final Distance distance = Distance.valueOf(structuringElementParameters[3].toUpperCase(Locale.ENGLISH));
+			
+			return newRing(innerRadius, outerRadius, distance);
+		}
+		
+		if ("disk".equals(shape)) {
+			final double radius = parseDouble(structuringElementParameters[1]);
+			final Distance distance = Distance.valueOf(structuringElementParameters[2].toUpperCase(Locale.ENGLISH));
+			
+			return newDisk(radius, distance);
+		}
+		
+		throw new IllegalArgumentException("Invalid structuring element shape: " + shape);
+	}
+	
+	public static final Image getCurrentImage(final Context context) {
+		final ViewFilter viewFilter = context.get(VIEW_FILTER);
+		
+		return viewFilter == null ? (Image) context.get(SOURCE_IMAGE) : viewFilter.getImage();
 	}
 	
 	/**
@@ -316,48 +375,6 @@ public abstract class ViewFilter extends Plugin {
 	}
 	
 	/**
-	 * {@value}.
-	 */
-	public static final String CHANNELS = "channels";
-	
-	/**
-	 * {@value}.
-	 */
-	public static final String VIEW_FILTER = "viewFilter";
-	
-	public static final Channel parseChannel(final String string) {
-		try {
-			return Channel.Primitive.valueOf(string);
-		} catch (final Exception exception) {
-			ignore(exception);
-			
-			return Channel.Synthetic.valueOf(string);
-		}
-	}
-	
-	public static final int[] parseStructuringElement(final String structuringElementParametersAsString) {
-		final String[] structuringElementParameters = structuringElementParametersAsString.trim().split("\\s+");
-		final String shape = structuringElementParameters[0];
-		
-		if ("ring".equals(shape)) {
-			final double innerRadius = parseDouble(structuringElementParameters[1]);
-			final double outerRadius = parseDouble(structuringElementParameters[2]);
-			final Distance distance = Distance.valueOf(structuringElementParameters[3].toUpperCase(Locale.ENGLISH));
-			
-			return newRing(innerRadius, outerRadius, distance);
-		}
-		
-		if ("disk".equals(shape)) {
-			final double radius = parseDouble(structuringElementParameters[1]);
-			final Distance distance = Distance.valueOf(structuringElementParameters[2].toUpperCase(Locale.ENGLISH));
-			
-			return newDisk(radius, distance);
-		}
-		
-		throw new IllegalArgumentException("Invalid structuring element shape: " + shape);
-	}
-	
-	/**
 	 * @author codistmonk (creation 2013-02-19)
 	 */
 	public static abstract class FromFilter extends ViewFilter {
@@ -377,12 +394,23 @@ public abstract class ViewFilter extends Plugin {
 		public final void setFilter(final ChannelFilter filter) {
 			this.filter = filter;
 			
-			if (filter instanceof StructuringElementFilter) {
-				final Image image = this.getContext().get("image");
-				final FilteredImage filteredImage = cast(FilteredImage.class, image);
-				
-				((StructuringElementFilter) filter).setImage(filteredImage != null ? filteredImage.getSource() : image);
+			this.sourceImageChanged();
+		}
+		
+		@Override
+		protected final void sourceImageChanged() {
+			final StructuringElementFilter seFilter = cast(StructuringElementFilter.class, this.getFilter());
+			
+			if (seFilter != null) {
+				seFilter.setImage(this.getImage().getSource());
 			}
+		}
+		
+		@Override
+		protected void doInitialize() {
+			super.doInitialize();
+			
+			this.sourceImageChanged();
 		}
 		
 		public final int[] parseStructuringElement() {

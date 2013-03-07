@@ -5,6 +5,7 @@ import static java.lang.Integer.parseInt;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.pow;
+
 import imj.IMJTools.StatisticsSelector;
 import imj.Image;
 import imj.ImageWrangler;
@@ -43,7 +44,7 @@ public final class LODStatisticsViewFilter extends ViewFilter {
 	protected final void doInitialize() {
 		final String imageId = this.getContext().get("imageId");
 		this.currentLOD = this.getContext().get("lod");
-		this.currentImage = this.getContext().get("image");
+		this.currentImage = ViewFilter.getCurrentImage(this.getContext());
 		this.sourceLOD = parseInt(this.getParameters().get("lod"));
 		
 		if (this.sourceLOD < 0) {

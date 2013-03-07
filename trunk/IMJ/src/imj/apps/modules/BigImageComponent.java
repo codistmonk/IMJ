@@ -39,6 +39,8 @@ import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
  */
 public final class BigImageComponent extends JComponent {
 	
+	public static final String SOURCE_IMAGE = "sourceImage";
+
 	private final Context context;
 	
 	private final String imageId;
@@ -47,7 +49,7 @@ public final class BigImageComponent extends JComponent {
 	
 	private int lod;
 	
-	private FilteredImage image;
+	private Image image;
 	
 	private BufferedImage buffer1;
 	
@@ -208,11 +210,10 @@ public final class BigImageComponent extends JComponent {
 	}
 	
 	public final void refreshImage() {
-		this.image = new FilteredImage(ImageWrangler.INSTANCE.load(this.getImageId(), this.getLod()));
-		final ViewFilter viewFilter = this.context.get(VIEW_FILTER);
-		this.image.setFilter(viewFilter == null ? null : viewFilter.getComplexFilter());
+		final Image sourceImage = ImageWrangler.INSTANCE.load(this.getImageId(), this.getLod());
 		
-		this.context.set("image", this.image);
+		this.updateImage(sourceImage);
+		this.context.set(SOURCE_IMAGE, sourceImage);
 		
 		final Rectangle viewport = this.getVisibleRect();
 		final int columnCount = this.image.getColumnCount();
@@ -259,10 +260,27 @@ public final class BigImageComponent extends JComponent {
 	}
 	
 	public final void repaintAll() {
-		final ViewFilter viewFilter = this.context.get(VIEW_FILTER);
-		this.image.setFilter(viewFilter == null ? null : viewFilter.getComplexFilter());
+		final Image sourceImage = this.context.get(SOURCE_IMAGE);
+		this.updateImage(sourceImage);
+		
 		this.viewport.setSize(0, 0);
 		this.repaint();
+	}
+	
+	private final void updateImage(final Image sourceImage) {
+		ViewFilter viewFilter = this.context.get(VIEW_FILTER);
+		
+		if (viewFilter != null) {
+			this.image = viewFilter.getImage();
+			
+			while (viewFilter.getSource() != null) {
+				viewFilter = viewFilter.getSource();
+			}
+			
+			viewFilter.setSourceImage(sourceImage);
+		} else {
+			this.image = sourceImage;
+		}
 	}
 	
 	public final void refreshBuffer() {

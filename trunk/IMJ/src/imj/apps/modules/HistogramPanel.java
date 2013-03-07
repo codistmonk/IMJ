@@ -1,6 +1,8 @@
 package imj.apps.modules;
 
 import static imj.IMJTools.argb;
+import static imj.apps.modules.BigImageComponent.SOURCE_IMAGE;
+import static imj.apps.modules.ViewFilter.VIEW_FILTER;
 import static java.awt.Color.BLACK;
 import static java.awt.Color.YELLOW;
 import static java.util.Arrays.fill;
@@ -111,7 +113,9 @@ public final class HistogramPanel extends JPanel {
 			
 		};
 		
-		context.getVariable("image").addListener(updater);
+		// XXX avoid duplicate updates
+		context.getVariable(SOURCE_IMAGE).addListener(updater);
+		context.getVariable(VIEW_FILTER).addListener(updater);
 		context.getVariable("sieve").addListener(updater);
 		
 		this.setPreferredSize(new Dimension(256, 256));
@@ -132,7 +136,7 @@ public final class HistogramPanel extends JPanel {
 	}
 	
 	final void update() {
-		final Image image = this.context.get("image");
+		final Image image = ViewFilter.getCurrentImage(this.context);
 		
 		if (image != null) {
 			final String[] channelAsStrings = this.channelsTextField.getText().split("\\s+");
@@ -238,14 +242,6 @@ public final class HistogramPanel extends JPanel {
 			g.setColor(YELLOW);
 			
 			for (int x = viewport.x; x < endX; ++x) {
-//				int h = 0;
-//				
-//				for (int i = this.getDatumIndex(x), j = min(255, this.getDatumIndex(x + 1)); i <= j; ++i) {
-//					h = Math.max(h, this.getValue(i));
-//				}
-//				
-//				h = (h * viewport.height) / this.max;
-				
 				final int h = this.getValue(this.getDatumIndex(x)) * viewport.height / this.max;
 				
 				g.drawLine(x, lastY, x, lastY - h);

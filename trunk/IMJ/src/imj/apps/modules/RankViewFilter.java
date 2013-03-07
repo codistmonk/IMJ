@@ -17,6 +17,8 @@ public final class RankViewFilter extends ViewFilter.FromFilter {
 	
 	@Override
 	protected final void doInitialize() {
+		super.doInitialize();
+		
 		final int rank = parseInt(this.getParameters().get("rank"));
 		
 		this.setFilter(new RankFilter(this.parseStructuringElement(), rank));
