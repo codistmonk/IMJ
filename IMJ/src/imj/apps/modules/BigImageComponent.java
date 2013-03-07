@@ -1,5 +1,6 @@
 package imj.apps.modules;
 
+import static imj.apps.modules.ViewFilter.VIEW_FILTER;
 import static java.lang.Double.isInfinite;
 import static java.lang.Double.isNaN;
 import static java.lang.Math.min;
@@ -38,8 +39,6 @@ import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
  */
 public final class BigImageComponent extends JComponent {
 	
-	public static final String VIEW_FILTER = "viewFilter";
-
 	private final Context context;
 	
 	private final String imageId;

@@ -13,6 +13,7 @@ import static imj.apps.modules.ShowActions.ACTIONS_SET_VIEW_FILTER;
 import static imj.apps.modules.ShowActions.ACTIONS_TOGGLE_ANNOTATIONS;
 import static imj.apps.modules.ShowActions.ACTIONS_TOGGLE_HISTOGRAM;
 import static imj.apps.modules.ShowActions.baseName;
+import static imj.apps.modules.ViewFilter.VIEW_FILTER;
 import static java.util.Collections.synchronizedList;
 import static net.sourceforge.aprog.af.AFTools.item;
 import static net.sourceforge.aprog.af.AFTools.newAboutItem;
@@ -193,7 +194,7 @@ public final class Show {
 				new LinearViewFilter(result),
 				new RankViewFilter(result)),
 		ViewFilter[].class);
-		result.set("viewFilter", null, ViewFilter.class);
+		result.set(VIEW_FILTER, null, ViewFilter.class);
 		result.set("sieves", array(new SimpleSieve(result)), Sieve[].class);
 		result.set("sieve", null, Sieve.class);
 		

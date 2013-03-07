@@ -3,6 +3,7 @@ package imj.apps.modules;
 import static imj.apps.modules.BigImageComponent.drawRegionOutline;
 import static imj.apps.modules.ShowActions.EdgeNeighborhood.computeNeighborhood;
 import static imj.apps.modules.Sieve.getROI;
+import static imj.apps.modules.ViewFilter.VIEW_FILTER;
 import static java.awt.Color.GREEN;
 import static java.lang.Math.abs;
 import static java.lang.Math.floor;
@@ -369,7 +370,7 @@ public final class ShowActions {
 		
 		@Override
 		public final void perform(final Object object) {
-			final ViewFilter[] filters = this.getContext().get("viewFilters");
+			final ViewFilter[] filters = this.getContext().get(VIEW_FILTER);
 			final JList input = new JList(filters);
 			final int option = JOptionPane.showConfirmDialog(null, scrollable(input), "Select a filter", OK_CANCEL_OPTION);
 			
@@ -382,7 +383,7 @@ public final class ShowActions {
 			if (filter != null) {
 				filter.configureAndApply();
 			} else {
-				this.getContext().set("viewFilter", null);
+				this.getContext().set(VIEW_FILTER, null);
 			}
 		}
 	}
