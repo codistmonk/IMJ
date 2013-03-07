@@ -83,7 +83,15 @@ public abstract class ViewFilter extends Plugin {
 		return (ComplexFilter) this.getImage().getFilter();
 	}
 	
-	protected abstract ComplexFilter newComplexFilter();
+	public final ViewFilter getSource() {
+		return this.source;
+	}
+	
+	public final void setSource(final ViewFilter source) {
+		this.source = source;
+		
+		this.getImage().setSource(source == null ? null : source.getImage());
+	}
 	
 	public final void initialize() {
 		if (this.getComplexFilter() == null) {
@@ -119,10 +127,6 @@ public abstract class ViewFilter extends Plugin {
 		this.doInitialize();
 	}
 	
-	protected void doInitialize() {
-		// NOP
-	}
-	
 	@Override
 	public final void apply() {
 		final Context context = this.getContext();
@@ -131,11 +135,11 @@ public abstract class ViewFilter extends Plugin {
 		ViewFilter f = current;
 		
 		while (f != this && f != null) {
-			f = f.source;
+			f = f.getSource();
 		}
 		
 		if (f == null) {
-			this.source = current;
+			this.setSource(current);
 			context.set(VIEW_FILTER, this);
 		} else {
 			fireUpdate(this.getContext(), VIEW_FILTER);
@@ -153,30 +157,36 @@ public abstract class ViewFilter extends Plugin {
 		final ViewFilter current = context.get(VIEW_FILTER);
 		
 		if (current == this) {
-			context.set(VIEW_FILTER, this.source);
+			context.set(VIEW_FILTER, this.getSource());
 			
 			fireUpdate(this.getContext(), VIEW_FILTER);
 		} else {
 			ViewFilter f = current;
 			
-			while (f != null && f.source != this) {
-				f = f.source;
+			while (f != null && f.getSource() != this) {
+				f = f.getSource();
 			}
 			
 			if (f != null) {
-				assert f.source == this;
+				assert f.getSource() == this;
 				
-				f.source = this.source;
+				f.setSource(this.getSource());
 				
 				fireUpdate(this.getContext(), VIEW_FILTER);
 			}
 		}
 		
-		this.source = null;
+		this.setSource(null);
 	}
 	
 	@Override
 	public final void clearBackup() {
+		// NOP
+	}
+	
+	protected abstract ComplexFilter newComplexFilter();
+	
+	protected void doInitialize() {
 		// NOP
 	}
 	
