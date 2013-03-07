@@ -62,11 +62,13 @@ public final class AnnotationsPanel extends JPanel {
 					annotation.setSelected(false);
 				}
 				
-				for (final TreePath path : selectionPaths) {
-					final Annotation annotation = cast(Annotation.class, path.getLastPathComponent());
-					
-					if (annotation != null) {
-						annotation.setSelected(true);
+				if (selectionPaths != null) {
+					for (final TreePath path : selectionPaths) {
+						final Annotation annotation = cast(Annotation.class, path.getLastPathComponent());
+						
+						if (annotation != null) {
+							annotation.setSelected(true);
+						}
 					}
 				}
 				

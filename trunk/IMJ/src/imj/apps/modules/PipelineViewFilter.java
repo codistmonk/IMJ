@@ -16,7 +16,6 @@ import static javax.swing.SwingUtilities.isRightMouseButton;
 import static net.sourceforge.aprog.af.AFTools.item;
 import static net.sourceforge.aprog.i18n.Messages.translate;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
@@ -146,8 +145,6 @@ public final class PipelineViewFilter extends ViewFilter {
 	
 	@Override
 	public final void doInitialize() {
-		debugPrint();
-		
 		final ListModel model = this.filters.getModel();
 		final int n = model.getSize();
 		
