@@ -20,18 +20,6 @@ public final class LinearColorViewFilter extends ViewFilter {
 	}
 	
 	@Override
-	public final int getNewValue(final int index, final int oldValue, final Channel channel) {
-		final int red = red(oldValue);
-		final int green = green(oldValue);
-		final int blue = blue(oldValue);
-		final double kr = this.rgbCoefficients[0];
-		final double kg = this.rgbCoefficients[1];
-		final double kb = this.rgbCoefficients[2];
-		
-		return (int) (kr * red + kg * green + kb * blue);
-	}
-	
-	@Override
 	protected final void doInitialize() {
 		final String[] rgbCoefficients = this.getParameters().get("rgbCoefficients").trim().split("\\s++");
 		
@@ -43,7 +31,19 @@ public final class LinearColorViewFilter extends ViewFilter {
 	@Override
 	protected final ComplexFilter newComplexFilter() {
 		return this.new ComplexFilter() {
-			// NOP
+			
+			@Override
+			public final int getNewValue(final int index, final int oldValue, final Channel channel) {
+				final int red = red(oldValue);
+				final int green = green(oldValue);
+				final int blue = blue(oldValue);
+				final double kr = rgbCoefficients[0];
+				final double kg = rgbCoefficients[1];
+				final double kb = rgbCoefficients[2];
+				
+				return (int) (kr * red + kg * green + kb * blue);
+			}
+			
 		};
 	}
 	

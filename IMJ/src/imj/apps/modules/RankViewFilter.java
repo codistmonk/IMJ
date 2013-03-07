@@ -22,11 +22,4 @@ public final class RankViewFilter extends ViewFilter.FromFilter {
 		this.setFilter(new RankFilter(this.parseStructuringElement(), rank));
 	}
 	
-	@Override
-	protected final ComplexFilter newComplexFilter() {
-		return this.new ComplexFilter() {
-			// NOP
-		};
-	}
-	
 }

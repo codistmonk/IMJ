@@ -46,13 +46,6 @@ public final class RegionViewFilter extends ViewFilter.FromFilter {
 		this.setFilter(new RegionFilter(structuringElement, rgbCoefficients, threshold, rejectionModulation));
 	}
 	
-	@Override
-	protected final ComplexFilter newComplexFilter() {
-		return this.new ComplexFilter() {
-			// NOP
-		};
-	}
-	
 	/**
 	 * @author codistmonk (creation 2013-03-07)
 	 */

@@ -87,7 +87,7 @@ public abstract class ViewFilter extends Plugin /*implements Filter*/ {
 		@Override
 		public final int getNewValue(final int index, final int oldValue) {
 			if (!ViewFilter.this.splitInputChannels()) {
-				return ViewFilter.this.getNewValue(index, oldValue, Channel.Primitive.INT);
+				return this.getNewValue(index, oldValue, Channel.Primitive.INT);
 			}
 			
 			if (this.getInputChannelClass() == Primitive.class) {
@@ -98,7 +98,7 @@ public abstract class ViewFilter extends Plugin /*implements Filter*/ {
 				int value = 0;
 				
 				for (final Channel channel : this.getInputChannels()) {
-					value = max(0, min(255, ViewFilter.this.getNewValue(index, oldValue, channel)));
+					value = max(0, min(255, this.getNewValue(index, oldValue, channel)));
 					this.getBuffer()[channel.getIndex()] = value;
 				}
 				
@@ -116,7 +116,7 @@ public abstract class ViewFilter extends Plugin /*implements Filter*/ {
 				int value = 0;
 				
 				for (final Channel channel : this.getInputChannels()) {
-					value = max(0, min(255, ViewFilter.this.getNewValue(index, oldValue, channel)));
+					value = max(0, min(255, this.getNewValue(index, oldValue, channel)));
 					this.getBuffer()[channel.getIndex()] = value;
 				}
 				
@@ -130,6 +130,8 @@ public abstract class ViewFilter extends Plugin /*implements Filter*/ {
 			
 			return 0;
 		}
+		
+		public abstract int getNewValue(final int index, final int oldValue, final Channel channel);
 		
 	}
 	
@@ -186,8 +188,6 @@ public abstract class ViewFilter extends Plugin /*implements Filter*/ {
 //	public final int getNewValue(final int index, final int oldValue) {
 //		return this.getComplexFilter().getNewValue(index, oldValue);
 //	}
-	
-	public abstract int getNewValue(final int index, final int oldValue, final Channel channel);
 	
 	public final void initialize() {
 		if (this.getComplexFilter() == null) {
@@ -464,13 +464,20 @@ public abstract class ViewFilter extends Plugin /*implements Filter*/ {
 			}
 		}
 		
-		@Override
-		public final int getNewValue(final int index, final int oldValue, final Channel channel) {
-			return this.getFilter().getNewValue(index, oldValue, channel);
-		}
-		
 		public final int[] parseStructuringElement() {
 			return ViewFilter.parseStructuringElement(this.getParameters().get("structuringElement"));
+		}
+		
+		@Override
+		protected final ComplexFilter newComplexFilter() {
+			return this.new ComplexFilter() {
+				
+				@Override
+				public final int getNewValue(final int index, final int oldValue, final Channel channel) {
+					return FromFilter.this.getFilter().getNewValue(index, oldValue, channel);
+				}
+				
+			};
 		}
 		
 	}
