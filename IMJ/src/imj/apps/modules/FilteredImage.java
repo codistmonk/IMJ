@@ -15,7 +15,7 @@ public final class FilteredImage implements Image {
 	
 	private Image source;
 	
-	private ViewFilter filter;
+	private Filter filter;
 	
 	public FilteredImage(final Image source) {
 		this.source = source;
@@ -29,11 +29,11 @@ public final class FilteredImage implements Image {
 		this.source = source;
 	}
 	
-	public final ViewFilter getFilter() {
+	public final Filter getFilter() {
 		return this.filter;
 	}
 	
-	public final void setFilter(final ViewFilter filter) {
+	public final void setFilter(final Filter filter) {
 		this.filter = filter;
 	}
 	
