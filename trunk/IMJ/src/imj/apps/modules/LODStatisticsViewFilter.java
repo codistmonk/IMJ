@@ -24,7 +24,7 @@ public final class LODStatisticsViewFilter extends ViewFilter {
 	
 	private int currentLOD;
 	
-	private Image.Abstract currentImage;
+	private Image currentImage;
 	
 	private StatisticsSelector feature;
 	
@@ -59,8 +59,8 @@ public final class LODStatisticsViewFilter extends ViewFilter {
 			
 			@Override
 			public final int getNewValue(final int index, final int oldValue, final Channel channel) {
-				final int rowIndex = currentImage.getRowIndex(index);
-				final int columnIndex = currentImage.getColumnIndex(index);
+				final int rowIndex = index / currentImage.getColumnCount();
+				final int columnIndex = index % currentImage.getColumnCount();
 				final int scale = (int) pow(2.0, currentLOD - sourceLOD);
 				final int rStart = rowIndex * scale;
 				final int cStart = columnIndex * scale;
