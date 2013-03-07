@@ -49,12 +49,13 @@ public abstract class ViewFilter extends Plugin {
 	
 	private ViewFilter source;
 	
-	private ComplexFilter complexFilter;
+	private final FilteredImage image;
 	
 	protected ViewFilter(final Context context) {
 		super(context);
+		this.image = new FilteredImage(null);
 		
-		this.getParameters().put(PARAMETER_CHANNELS, "red green blue");
+		this.getParameters().put(CHANNELS, "red green blue");
 		
 		context.getVariable("image").addListener(new Listener<Object>() {
 			
@@ -74,19 +75,23 @@ public abstract class ViewFilter extends Plugin {
 		});
 	}
 	
+	public final FilteredImage getImage() {
+		return this.image;
+	}
+	
 	public final ComplexFilter getComplexFilter() {
-		return this.complexFilter;
+		return (ComplexFilter) this.getImage().getFilter();
 	}
 	
 	protected abstract ComplexFilter newComplexFilter();
 	
 	public final void initialize() {
 		if (this.getComplexFilter() == null) {
-			this.complexFilter = this.newComplexFilter();
+			this.getImage().setFilter(this.newComplexFilter());
 		}
 		
 		if (this.getComplexFilter().splitInputChannels()) {
-			final String[] inputChannelAsStrings = this.getParameters().get(PARAMETER_CHANNELS).split("\\s+");
+			final String[] inputChannelAsStrings = this.getParameters().get(CHANNELS).split("\\s+");
 			final int n = inputChannelAsStrings.length;
 			final Collection<Channel> newInputChannels = new LinkedHashSet<Channel>();
 			Class<? extends Channel> newInputChannelClass = Channel.class;
@@ -303,7 +308,7 @@ public abstract class ViewFilter extends Plugin {
 	/**
 	 * {@value}.
 	 */
-	public static final String PARAMETER_CHANNELS = "channels";
+	public static final String CHANNELS = "channels";
 	
 	/**
 	 * {@value}.
