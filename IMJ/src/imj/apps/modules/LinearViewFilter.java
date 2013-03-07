@@ -24,6 +24,8 @@ public final class LinearViewFilter extends ViewFilter.FromFilter {
 	
 	@Override
 	protected final void doInitialize() {
+		super.doInitialize();
+		
 		final String[] kernelParameters = this.getParameters().get("kernel").trim().split("\\s+");
 		final String kernelType = kernelParameters[0].toLowerCase(Locale.ENGLISH);
 		final int[] structuringElement = this.parseStructuringElement();

@@ -20,6 +20,7 @@ import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+
 import imj.IntList;
 import imj.apps.modules.Annotations.Annotation;
 import imj.apps.modules.Annotations.Annotation.Region;
@@ -236,9 +237,6 @@ public final class ShowActions {
 		
 		@Override
 		public final void perform(final Object event) {
-//			final JPopupMenu popup = (JPopupMenu) getAncestorOfClass(JPopupMenu.class,
-//					(Component) ((ActionEvent) event).getSource());
-//			final JList list = (JList) popup.getInvoker();
 			final JList list = getList(((AWTEvent) event).getSource());
 			final int index = list.getSelectedIndex();
 			

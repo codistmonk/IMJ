@@ -3,6 +3,7 @@ package imj.apps;
 import static imj.IMJTools.blue;
 import static imj.IMJTools.green;
 import static imj.IMJTools.red;
+import static imj.apps.modules.BigImageComponent.SOURCE_IMAGE;
 import static imj.apps.modules.ShowActions.ACTIONS_APPLY_MORPHOLOGICAL_OPERATION_TO_ROI;
 import static imj.apps.modules.ShowActions.ACTIONS_APPLY_SIEVE;
 import static imj.apps.modules.ShowActions.ACTIONS_COPY_ROI_TO_LOD;
@@ -28,6 +29,7 @@ import static net.sourceforge.aprog.swing.SwingTools.I18N.menu;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.getThisPackagePath;
+
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
@@ -175,7 +177,7 @@ public final class Show {
 						newCreateAnnotationFromROIItem(result))
 		));
 		
-		result.set("image", null, Image.class);
+		result.set(SOURCE_IMAGE, null, Image.class);
 		result.set("lod", null, Integer.class);
 		result.set("scale", null, Integer.class);
 		result.set("autoAdjustScale", null, Boolean.class);
@@ -206,7 +208,7 @@ public final class Show {
 			
 			@Override
 			public final void valueChanged(final ValueChangedEvent<Point, ?> event) {
-				final Image image = result.get("image");
+				final Image image = result.get(SOURCE_IMAGE);
 				
 				if (image != null) {
 					final Point xy = event.getNewValue();
