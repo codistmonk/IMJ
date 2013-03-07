@@ -41,6 +41,13 @@ public final class LinearViewFilter extends ViewFilter.FromFilter {
 		this.setFilter(new LinearFilter(structuringElement, coefficients));
 	}
 	
+	@Override
+	protected final ComplexFilter newComplexFilter() {
+		return this.new ComplexFilter() {
+			// NOP
+		};
+	}
+	
 	public static final double SQRT_2_PI = sqrt(2.0 * Math.PI);
 	
 	public static final double[] gaussian(final int[] structuringElement, final double sigma) {

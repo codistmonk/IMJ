@@ -40,4 +40,11 @@ public final class LinearColorViewFilter extends ViewFilter {
 		}
 	}
 	
+	@Override
+	protected final ComplexFilter newComplexFilter() {
+		return this.new ComplexFilter() {
+			// NOP
+		};
+	}
+	
 }

@@ -79,4 +79,11 @@ public final class LODStatisticsViewFilter extends ViewFilter {
 		this.feature = StatisticsSelector.valueOf(this.getParameters().get("statistic").toUpperCase(Locale.ENGLISH));
 	}
 	
+	@Override
+	protected final ComplexFilter newComplexFilter() {
+		return this.new ComplexFilter() {
+			// NOP
+		};
+	}
+	
 }
