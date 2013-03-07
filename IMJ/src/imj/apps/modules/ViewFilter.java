@@ -51,7 +51,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	/**
 	 * @author codistmonk (creation 2013-03-07)
 	 */
-	public final class ComplexFilter {
+	public abstract class ComplexFilter {
 		
 		private Collection<Channel> inputChannels;
 		
@@ -59,7 +59,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 		
 		private final int[] buffer;
 		
-		public ComplexFilter() {
+		protected ComplexFilter() {
 			this.buffer = new int[4];
 			this.inputChannelClass = Primitive.class;
 		}
@@ -171,9 +171,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 		});
 	}
 	
-	private final ComplexFilter newComplexFilter() {
-		return this.new ComplexFilter();
-	}
+	protected abstract ComplexFilter newComplexFilter();
 	
 	protected boolean isOutputMonochannel() {
 		return false;

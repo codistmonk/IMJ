@@ -31,4 +31,11 @@ public final class StatisticsViewFilter extends ViewFilter.FromFilter {
 		this.setFilter(new StatisticsFilter(this.parseStructuringElement(), feature));
 	}
 	
+	@Override
+	protected final ComplexFilter newComplexFilter() {
+		return this.new ComplexFilter() {
+			// NOP
+		};
+	}
+	
 }

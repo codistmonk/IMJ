@@ -24,6 +24,10 @@ public final class RoundingViewFilter extends ViewFilter {
 		return this.transform(channel.getValue(oldValue));
 	}
 	
+	public final int transform(final int channelValue) {
+		return min(255, (channelValue + this.offset) & this.mask);
+	}
+	
 	@Override
 	protected final void doInitialize() {
 		final int bitCount = parseInt(this.getParameters().get("bitCount"));
@@ -32,8 +36,11 @@ public final class RoundingViewFilter extends ViewFilter {
 		this.mask = (~((1 << bitCount) - 1)) & 0x7FFFFFFF;
 	}
 	
-	public final int transform(final int channelValue) {
-		return min(255, (channelValue + this.offset) & this.mask);
+	@Override
+	protected final ComplexFilter newComplexFilter() {
+		return this.new ComplexFilter() {
+			// NOP
+		};
 	}
 	
 }

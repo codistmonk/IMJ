@@ -208,6 +208,13 @@ public final class PipelineViewFilter extends ViewFilter {
 		return result;
 	}
 	
+	@Override
+	protected final ComplexFilter newComplexFilter() {
+		return this.new ComplexFilter() {
+			// NOP
+		};
+	}
+	
 	final void addFilter(final ViewFilter prototype, final ActionListener previewAction) {
 		try {
 			final ViewFilter filter = prototype.getClass().getConstructor(Context.class).newInstance(this.getContext());

@@ -1,7 +1,6 @@
 package imj.apps.modules;
 
 import static imj.IMJTools.argb;
-
 import imj.apps.modules.SimpleSieve.Feature;
 
 import java.util.Locale;
@@ -45,6 +44,13 @@ public final class FeatureViewFilter extends ViewFilter {
 	@Override
 	protected final boolean splitInputChannels() {
 		return false;
+	}
+	
+	@Override
+	protected final ComplexFilter newComplexFilter() {
+		return this.new ComplexFilter() {
+			// NOP
+		};
 	}
 	
 }
