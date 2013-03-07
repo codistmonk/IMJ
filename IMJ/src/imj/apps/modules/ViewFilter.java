@@ -51,7 +51,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	/**
 	 * @author codistmonk (creation 2013-03-07)
 	 */
-	public static final class ComplexFilter {
+	public final class ComplexFilter {
 		
 		private Collection<Channel> inputChannels;
 		
@@ -84,6 +84,52 @@ public abstract class ViewFilter extends Plugin implements Filter {
 			return this.buffer;
 		}
 		
+		public final int getNewValue(final int index, final int oldValue) {
+			if (!ViewFilter.this.splitInputChannels()) {
+				return ViewFilter.this.getNewValue(index, oldValue, Channel.Primitive.INT);
+			}
+			
+			if (this.getInputChannelClass() == Primitive.class) {
+				for (int i = 0; i < 4; ++i) {
+					this.getBuffer()[i] = channelValue(oldValue, i);
+				}
+				
+				int value = 0;
+				
+				for (final Channel channel : this.getInputChannels()) {
+					value = max(0, min(255, ViewFilter.this.getNewValue(index, oldValue, channel)));
+					this.getBuffer()[channel.getIndex()] = value;
+				}
+				
+				if (ViewFilter.this.isOutputMonochannel() && this.getInputChannels().size() == 1) {
+					return argb(255, value, value, value);
+				}
+				
+				return argb(this.getBuffer()[ALPHA.getIndex()],
+						this.getBuffer()[RED.getIndex()], this.getBuffer()[GREEN.getIndex()], this.getBuffer()[BLUE.getIndex()]);
+			} else if (this.getInputChannelClass() == Synthetic.class) {
+				this.getBuffer()[0] = hue(oldValue);
+				this.getBuffer()[1] = saturation(oldValue);
+				this.getBuffer()[2] = brightness(oldValue);
+				
+				int value = 0;
+				
+				for (final Channel channel : this.getInputChannels()) {
+					value = max(0, min(255, ViewFilter.this.getNewValue(index, oldValue, channel)));
+					this.getBuffer()[channel.getIndex()] = value;
+				}
+				
+				if (ViewFilter.this.isOutputMonochannel() && this.getInputChannels().size() == 1) {
+					return argb(255, value, value, value);
+				}
+				
+				return Color.HSBtoRGB(this.getBuffer()[HUE.getIndex()] / 255F,
+						this.getBuffer()[SATURATION.getIndex()] / 255F, this.getBuffer()[BRIGHTNESS.getIndex()] / 255F);
+			}
+			
+			return 0;
+		}
+		
 	}
 	
 	private final ComplexFilter complexFilter;
@@ -94,7 +140,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	
 	protected ViewFilter(final Context context) {
 		super(context);
-		this.complexFilter = new ComplexFilter();
+		this.complexFilter = this.new ComplexFilter();
 		
 		this.getParameters().put(PARAMETER_CHANNELS, "red green blue");
 		
@@ -132,49 +178,7 @@ public abstract class ViewFilter extends Plugin implements Filter {
 	
 	@Override
 	public final int getNewValue(final int index, final int oldValue) {
-		if (!this.splitInputChannels()) {
-			return this.getNewValue(index, oldValue, Channel.Primitive.INT);
-		}
-		
-		if (this.complexFilter.getInputChannelClass() == Primitive.class) {
-			for (int i = 0; i < 4; ++i) {
-				this.complexFilter.getBuffer()[i] = channelValue(oldValue, i);
-			}
-			
-			int value = 0;
-			
-			for (final Channel channel : this.complexFilter.getInputChannels()) {
-				value = max(0, min(255, this.getNewValue(index, oldValue, channel)));
-				this.complexFilter.getBuffer()[channel.getIndex()] = value;
-			}
-			
-			if (this.isOutputMonochannel() && this.complexFilter.getInputChannels().size() == 1) {
-				return argb(255, value, value, value);
-			}
-			
-			return argb(this.complexFilter.getBuffer()[ALPHA.getIndex()],
-					this.complexFilter.getBuffer()[RED.getIndex()], this.complexFilter.getBuffer()[GREEN.getIndex()], this.complexFilter.getBuffer()[BLUE.getIndex()]);
-		} else if (this.complexFilter.getInputChannelClass() == Synthetic.class) {
-			this.complexFilter.getBuffer()[0] = hue(oldValue);
-			this.complexFilter.getBuffer()[1] = saturation(oldValue);
-			this.complexFilter.getBuffer()[2] = brightness(oldValue);
-			
-			int value = 0;
-			
-			for (final Channel channel : this.complexFilter.getInputChannels()) {
-				value = max(0, min(255, this.getNewValue(index, oldValue, channel)));
-				this.complexFilter.getBuffer()[channel.getIndex()] = value;
-			}
-			
-			if (this.isOutputMonochannel() && this.complexFilter.getInputChannels().size() == 1) {
-				return argb(255, value, value, value);
-			}
-			
-			return Color.HSBtoRGB(this.complexFilter.getBuffer()[HUE.getIndex()] / 255F,
-					this.complexFilter.getBuffer()[SATURATION.getIndex()] / 255F, this.complexFilter.getBuffer()[BRIGHTNESS.getIndex()] / 255F);
-		}
-		
-		return 0;
+		return this.complexFilter.getNewValue(index, oldValue);
 	}
 	
 	public abstract int getNewValue(final int index, final int oldValue, final Channel channel);
