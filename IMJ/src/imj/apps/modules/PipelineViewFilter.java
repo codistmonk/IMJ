@@ -146,11 +146,27 @@ public final class PipelineViewFilter extends ViewFilter {
 	
 	@Override
 	public final void doInitialize() {
+		this.sourceImageChanged();
+		
 		final ListModel model = this.filters.getModel();
 		final int n = model.getSize();
 		
 		for (int i = 0; i < n; ++i) {
 			((ViewFilter) model.getElementAt(i)).initialize();
+		}
+	}
+	
+	@Override
+	protected final void sourceImageChanged() {
+		final ListModel model = this.filters.getModel();
+		final int n = model.getSize();
+		
+		if (0 < n) {
+			((ViewFilter) model.getElementAt(0)).setSourceImage(this.getImage().getSource());
+			
+			for (int i = 1; i < n; ++i) {
+				((ViewFilter) model.getElementAt(i)).setSourceImage(((ViewFilter) model.getElementAt(i - 1)).getImage());
+			}
 		}
 	}
 	
@@ -196,16 +212,18 @@ public final class PipelineViewFilter extends ViewFilter {
 			
 			@Override
 			public final int getNewValue(final int index, final int oldValue, final Channel channel) {
-				int result = oldValue;
-				
+//				int result = oldValue;
+//				
 				final ListModel model = filters.getModel();
 				final int n = model.getSize();
+//				
+//				for (int i = 0; i < n; ++i) {
+//					result = ((ViewFilter) model.getElementAt(i)).getComplexFilter().getNewValue(index, result);
+//				}
+//				
+//				return result;
 				
-				for (int i = 0; i < n; ++i) {
-					result = ((ViewFilter) model.getElementAt(i)).getComplexFilter().getNewValue(index, result);
-				}
-				
-				return result;
+				return 0 < n ? ((ViewFilter) model.getElementAt(n - 1)).getImage().getValue(index) : oldValue;
 			}
 			
 		};
