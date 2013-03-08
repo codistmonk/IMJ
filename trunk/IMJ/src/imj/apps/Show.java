@@ -9,6 +9,7 @@ import static imj.apps.modules.ShowActions.ACTIONS_APPLY_SIEVE;
 import static imj.apps.modules.ShowActions.ACTIONS_COPY_ROI_TO_LOD;
 import static imj.apps.modules.ShowActions.ACTIONS_CREATE_ANNOTATION_FROM_ROI;
 import static imj.apps.modules.ShowActions.ACTIONS_EXPORT_ANNOTATIONS;
+import static imj.apps.modules.ShowActions.ACTIONS_EXPORT_VIEW;
 import static imj.apps.modules.ShowActions.ACTIONS_RESET_ROI;
 import static imj.apps.modules.ShowActions.ACTIONS_SET_VIEW_FILTER;
 import static imj.apps.modules.ShowActions.ACTIONS_TOGGLE_ANNOTATIONS;
@@ -143,6 +144,7 @@ public final class Show {
 		new ShowActions.MoveListItemDown(result);
 		new ShowActions.DeleteListItem(result);
 		new ShowActions.ExportAnnotations(result);
+		new ShowActions.ExportView(result);
 		new ShowActions.ToggleHistogram(result);
 		new ShowActions.ToggleAnnotations(result);
 		new ShowActions.SetViewFilter(result);
@@ -164,6 +166,7 @@ public final class Show {
 						null,
 						newQuitItem(result)),
 				menu("File",
+						newExportViewItem(result),
 						newExportAnnotationsItem(result)),
 				menu("Tools",
 						newHistogramItem(result),
@@ -247,6 +250,10 @@ public final class Show {
     
     public static final JMenuItem newExportAnnotationsItem(final Context context) {
     	return item("Export annotations...", context, ACTIONS_EXPORT_ANNOTATIONS);
+    }
+    
+    public static final JMenuItem newExportViewItem(final Context context) {
+    	return item("Export view...", context, ACTIONS_EXPORT_VIEW);
     }
     
     public static final JMenuItem newAnnotationsItem(final Context context) {
