@@ -855,6 +855,7 @@ public final class ShowActions {
 			}
 			
 			fireUpdate(this.getContext(), "annotations");
+			fireUpdate(this.getContext(), "sieve");
 		}
 		
 	}
