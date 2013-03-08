@@ -6,6 +6,7 @@ import imj.IMJTools.StatisticsSelector;
 import imj.Image;
 import imj.IntList;
 import imj.apps.modules.ViewFilter.Channel;
+import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
 
 /**
@@ -43,6 +44,10 @@ public final class FilteredImage implements Image {
 			final int value = this.getSource().getValue(index);
 			
 			return 1 < this.getChannelCount() ? value : argb(255, value, value, value);
+		}
+		
+		if (this.getSource() == null) {
+			Tools.debugPrint(this.getFilter());
 		}
 		
 		return this.getFilter().getNewValue(index, this.getSource().getValue(index));

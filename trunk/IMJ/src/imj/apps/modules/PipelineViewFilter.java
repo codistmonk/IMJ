@@ -3,7 +3,6 @@ package imj.apps.modules;
 import static imj.apps.modules.ShowActions.ACTIONS_DELETE_LIST_ITEM;
 import static imj.apps.modules.ShowActions.ACTIONS_MOVE_LIST_ITEM_DOWN;
 import static imj.apps.modules.ShowActions.ACTIONS_MOVE_LIST_ITEM_UP;
-import static imj.apps.modules.ViewFilter.ComplexFilter.DEFAULT_OUTPUT_MONOCHANNEL;
 import static java.awt.event.InputEvent.ALT_DOWN_MASK;
 import static java.awt.event.KeyEvent.VK_BACK_SPACE;
 import static java.awt.event.KeyEvent.VK_DELETE;
@@ -162,10 +161,15 @@ public final class PipelineViewFilter extends ViewFilter {
 		final int n = model.getSize();
 		
 		if (0 < n) {
-			((ViewFilter) model.getElementAt(0)).setSourceImage(this.getImage().getSource());
+			if (this.getSource() != null) {
+				((ViewFilter) model.getElementAt(0)).setSource(this.getSource());
+			} else {
+				((ViewFilter) model.getElementAt(0)).setSourceImage(this.getImage().getSource());
+			}
 			
 			for (int i = 1; i < n; ++i) {
-				((ViewFilter) model.getElementAt(i)).setSourceImage(((ViewFilter) model.getElementAt(i - 1)).getImage());
+//				((ViewFilter) model.getElementAt(i)).setSourceImage(((ViewFilter) model.getElementAt(i - 1)).getImage());
+				((ViewFilter) model.getElementAt(i)).setSource(((ViewFilter) model.getElementAt(i - 1)));
 			}
 		}
 	}
@@ -208,22 +212,15 @@ public final class PipelineViewFilter extends ViewFilter {
 	
 	@Override
 	protected final ComplexFilter newComplexFilter() {
-		return new ComplexFilter(false, DEFAULT_OUTPUT_MONOCHANNEL) {
+		final ListModel listModel = this.filters.getModel();
+		
+		return new ComplexFilter(false, true) {
 			
 			@Override
 			public final int getNewValue(final int index, final int oldValue, final Channel channel) {
-//				int result = oldValue;
-//				
-				final ListModel model = filters.getModel();
-				final int n = model.getSize();
-//				
-//				for (int i = 0; i < n; ++i) {
-//					result = ((ViewFilter) model.getElementAt(i)).getComplexFilter().getNewValue(index, result);
-//				}
-//				
-//				return result;
+				final int n = listModel.getSize();
 				
-				return 0 < n ? ((ViewFilter) model.getElementAt(n - 1)).getImage().getValue(index) : oldValue;
+				return 0 < n ? ((ViewFilter) listModel.getElementAt(n - 1)).getImage().getValue(index) : oldValue;
 			}
 			
 		};
