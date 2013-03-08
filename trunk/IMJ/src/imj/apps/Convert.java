@@ -27,7 +27,7 @@ public class Convert {
 	 * <br>Must not be null
 	 */
 	public static final void main(final String[] commandLineArguments) {
-		if (commandLineArguments.length % 2 != 0 || 6 <= commandLineArguments.length) {
+		if (commandLineArguments.length % 2 != 0 || 6 < commandLineArguments.length) {
 			System.out.println("Arguments: file <imageId> to <(pgm|ppm)> [lod <(N|*)>]");
 			System.out.println("Default for lod is *");
 			
