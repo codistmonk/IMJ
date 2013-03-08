@@ -44,6 +44,7 @@ import imj.apps.modules.RankViewFilter;
 import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.RegionViewFilter;
 import imj.apps.modules.BitRoundingViewFilter;
+import imj.apps.modules.SaturationSieve201303080950;
 import imj.apps.modules.ShowActions;
 import imj.apps.modules.Sieve;
 import imj.apps.modules.SimpleSieve;
@@ -201,7 +202,7 @@ public final class Show {
 				new RankViewFilter(result)),
 		ViewFilter[].class);
 		result.set(VIEW_FILTER, null, ViewFilter.class);
-		result.set("sieves", array(new SimpleSieve(result)), Sieve[].class);
+		result.set("sieves", array(new SimpleSieve(result), new SaturationSieve201303080950(result)), Sieve[].class);
 		result.set("sieve", null, Sieve.class);
 		
 		final Variable<Point> xyVariable = result.getVariable("xy");
