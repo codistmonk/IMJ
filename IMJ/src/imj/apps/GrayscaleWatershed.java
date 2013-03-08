@@ -44,7 +44,7 @@ public class GrayscaleWatershed {
 	 * <br>Must not be null
 	 */
 	public static final void main(final String[] commandLineArguments) {
-		if (commandLineArguments.length % 2 != 0 || 10 <= commandLineArguments.length) {
+		if (commandLineArguments.length % 2 != 0 || 10 < commandLineArguments.length) {
 			System.out.println("Arguments: file <imageId> [lod <N|*>] [connectivity <4|8>] [h <N>] [prioritize <speed|memory>]");
 			System.out.println("Default for lod is *");
 			System.out.println("Default for connectivity is 8");
