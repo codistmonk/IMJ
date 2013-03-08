@@ -48,6 +48,7 @@ import imj.apps.modules.ShowActions;
 import imj.apps.modules.Sieve;
 import imj.apps.modules.SimpleSieve;
 import imj.apps.modules.StatisticsViewFilter;
+import imj.apps.modules.SubtractFromSourceViewFilter;
 import imj.apps.modules.ViewFilter;
 
 import java.awt.BorderLayout;
@@ -191,9 +192,10 @@ public final class Show {
 				new IntRoundingViewFilter(result),
 				new LinearColorViewFilter(result),
 				new PipelineViewFilter(result),
+				new StatisticsViewFilter(result),
 				new RegionViewFilter(result),
 				new FeatureViewFilter(result),
-				new StatisticsViewFilter(result),
+				new SubtractFromSourceViewFilter(result),
 				new LODStatisticsViewFilter(result),
 				new LinearViewFilter(result),
 				new RankViewFilter(result)),
