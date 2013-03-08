@@ -384,12 +384,14 @@ public final class BigImageComponent extends JComponent {
 		
 		g.drawImage(this.buffer1, viewport.x, viewport.y, null);
 		
-		this.drawAnnotations((Graphics2D) g);
+		this.drawAnnotations(this.context, (Graphics2D) g);
 	}
 	
-	private final void drawAnnotations(final Graphics2D g) {
-		final Annotations annotations = this.context.get("annotations");
-		final TreePath[] selectedPaths = this.context.get("selectedAnnotations");
+	public static final void drawAnnotations(final Context context, final Graphics2D g) {
+		final Annotations annotations = context.get("annotations");
+		final TreePath[] selectedPaths = context.get("selectedAnnotations");
+		final int scale = context.get("scale");
+		final int lod = context.get("lod");
 		final Collection<Object> selection = new ArrayList<Object>(selectedPaths == null ? 0 : selectedPaths.length);
 		
 		if (selectedPaths != null) {
@@ -398,7 +400,7 @@ public final class BigImageComponent extends JComponent {
 			}
 		}
 		
-		final double s = this.getScale() * pow(2.0, -this.getLod());
+		final double s = scale * pow(2.0, -lod);
 		final float[] dash = { (float) (5.0 / s), (float) (5.0 / s) };
 		
 		g.scale(s, s);

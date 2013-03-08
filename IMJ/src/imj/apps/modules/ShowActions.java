@@ -5,11 +5,13 @@ import static imj.apps.modules.ShowActions.EdgeNeighborhood.computeNeighborhood;
 import static imj.apps.modules.Sieve.getROI;
 import static imj.apps.modules.ViewFilter.VIEW_FILTER;
 import static java.awt.Color.GREEN;
+import static java.awt.image.BufferedImage.TYPE_3BYTE_BGR;
 import static java.lang.Math.abs;
 import static java.lang.Math.floor;
 import static java.lang.Math.pow;
 import static java.lang.Math.round;
 import static java.util.Collections.sort;
+import static javax.swing.JFileChooser.APPROVE_OPTION;
 import static javax.swing.JOptionPane.OK_CANCEL_OPTION;
 import static javax.swing.JOptionPane.OK_OPTION;
 import static javax.swing.JOptionPane.showConfirmDialog;
@@ -21,6 +23,7 @@ import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
+import imj.Image;
 import imj.IntList;
 import imj.apps.modules.Annotations.Annotation;
 import imj.apps.modules.Annotations.Annotation.Region;
@@ -28,6 +31,7 @@ import imj.apps.modules.Annotations.Annotation.Region;
 import java.awt.AWTEvent;
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -36,6 +40,7 @@ import java.awt.geom.Point2D.Float;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -43,6 +48,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.imageio.ImageIO;
 import javax.swing.DefaultListModel;
 import javax.swing.JColorChooser;
 import javax.swing.JDialog;
@@ -69,6 +75,11 @@ public final class ShowActions {
 	private ShowActions() {
 		throw new IllegalInstantiationException();
 	}
+	
+	/**
+	 * {@value}.
+	 */
+	public static final String ACTIONS_EXPORT_VIEW = "actions.exportView";
 	
 	/**
 	 * {@value}.
@@ -150,6 +161,12 @@ public final class ShowActions {
 	 */
 	public static final String ACTIONS_CREATE_ANNOTATION_FROM_ROI = "actions.createAnnotationFromROI";
 	
+	public static final String extension(final String fileName) {
+		final int lastDotIndex = fileName.lastIndexOf('.');
+		
+		return lastDotIndex < 0 ? "" : fileName.substring(lastDotIndex + 1);
+	}
+	
 	public static final String baseName(final String fileName) {
 		final int lastDotIndex = fileName.lastIndexOf('.');
 		
@@ -174,6 +191,54 @@ public final class ShowActions {
 		}
 		
 		return null;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-28)
+	 */
+	public static final class ExportView extends AbstractAFAction {
+		
+		public ExportView(final Context context) {
+			super(context, ACTIONS_EXPORT_VIEW);
+		}
+		
+		@Override
+		public final void perform(final Object event) {
+			final JFileChooser fileChooser = new JFileChooser();
+			
+			if (APPROVE_OPTION != fileChooser.showSaveDialog(null)) {
+				return;
+			}
+			
+			final Image source = ViewFilter.getCurrentImage(this.getContext());
+			final BufferedImage destination = new BufferedImage(source.getColumnCount(), source.getRowCount(), TYPE_3BYTE_BGR);
+			
+			for (int y = 0; y < source.getRowCount(); ++y) {
+				for (int x = 0; x < source.getColumnCount(); ++x) {
+					destination.setRGB(x, y, source.getValue(y, x));
+				}
+			}
+			
+			final Graphics2D g = destination.createGraphics();
+			
+			BigImageComponent.drawAnnotations(this.getContext(), g);
+			
+			g.dispose();
+			
+			final File file = fileChooser.getSelectedFile();
+			String format = extension(file.getName());
+			
+			if ("".equals(format)) {
+				format = "png";
+			}
+			
+			try {
+				ImageIO.write(destination, extension(file.getName()), file);
+			} catch (final IOException exception) {
+				exception.printStackTrace();
+			}
+		}
+		
 	}
 	
 	/**
