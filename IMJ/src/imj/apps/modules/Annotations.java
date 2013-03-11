@@ -17,6 +17,7 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -24,6 +25,7 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
@@ -79,9 +81,13 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 					
 					private Region region;
 					
+					private final List<String> elements = new LinkedList<String>();
+					
 					@Override
 					public final void startElement(final String uri, final String localName,
 							final String qName, final Attributes attributes) throws SAXException {
+						this.elements.add(0, qName);
+						
 						if ("Annotations".equals(qName)) {
 							result.setMicronsPerPixel(parseDouble(attributes.getValue("MicronsPerPixel")));
 						} else if ("Annotation".equals(qName)) {
@@ -102,7 +108,21 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 							this.region.getVertices().add(new Point2D.Float(
 									(float) (parseDouble(attributes.getValue("X"))),
 									(float) (parseDouble(attributes.getValue("Y")))));
+						} else if ("Attribute".equals(qName)) {
+							if (startsWith(this.elements, "Attribute", "Attributes", "Annotation")) {
+								final String name = attributes.getValue("Name");
+								
+								if (name != null && !name.trim().isEmpty()) {
+									this.annotation.setUserObject(name);
+								}
+							}
 						}
+					}
+					
+					@Override
+					public final void endElement(final String uri, final String localName,
+							final String qName) throws SAXException {
+						this.elements.remove(0);
 					}
 					
 				});
@@ -114,6 +134,24 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 		}
 		
 		return result;
+	}
+	
+	public static final <E> boolean startsWith(final Iterable<E> elements, final E... prefix) {
+		int i = 0;
+		
+		for (final E element : elements) {
+			if (prefix.length <= i) {
+				break;
+			}
+			
+			if (!Tools.equals(element, prefix[i])) {
+				return false;
+			}
+			
+			++i;
+		}
+		
+		return true;
 	}
 	
 	public static final void toXML(final Annotations annotations, final PrintStream out) {
@@ -138,7 +176,7 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 			
 			out.println("    <Attributes>");
 			out.println("      <Attribute" +
-					attribute("Name", "Description") + attribute("Id", 0) + attribute("Value", "") + "/>");
+					attribute("Name", "" + annotation.getUserObject()) + attribute("Id", 0) + attribute("Value", "") + "/>");
 			out.println("    </Attributes>");
 			
 			out.println("    <Regions>");
