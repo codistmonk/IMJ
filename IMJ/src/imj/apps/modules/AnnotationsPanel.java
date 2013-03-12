@@ -94,6 +94,8 @@ public final class AnnotationsPanel extends JPanel {
 				this.annotationPopup.addSeparator();
 				this.annotationPopup.add(item("Delete", context, ACTIONS_DELETE_ANNOTATION));
 				
+				this.regionPopup.add(item("Use as ROI", context, ACTIONS_USE_ANNOTATION_AS_ROI));
+				this.regionPopup.addSeparator();
 				this.regionPopup.add(item("Delete", context, ACTIONS_DELETE_ANNOTATION));
 			}
 			

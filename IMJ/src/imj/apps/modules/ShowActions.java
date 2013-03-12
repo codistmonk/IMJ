@@ -1,6 +1,7 @@
 package imj.apps.modules;
 
 import static imj.apps.modules.BigImageComponent.drawRegionOutline;
+import static imj.apps.modules.BigImageComponent.fillRegion;
 import static imj.apps.modules.ShowActions.EdgeNeighborhood.computeNeighborhood;
 import static imj.apps.modules.Sieve.getROI;
 import static imj.apps.modules.ViewFilter.VIEW_FILTER;
@@ -39,8 +40,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -560,120 +563,139 @@ public final class ShowActions {
 		
 		@Override
 		public final void perform(final Object object) {
+			
+			final RegionOfInterest roi = getROI(this.getContext());
+			
+			if (roi == null) {
+				return;
+			}
+			
 			final TreePath[] selectedAnnotations = this.getContext().get("selectedAnnotations");
 			
 			if (selectedAnnotations == null) {
 				return;
 			}
 			
+			final Collection<Region> selectedRegions = extractRegions(selectedAnnotations);
+			final int rowCount = roi.getRowCount();
+			final int columnCount = roi.getColumnCount();
+			final BufferedImage buffer = new BufferedImage(columnCount, rowCount, BufferedImage.TYPE_BYTE_BINARY);
+			final Graphics2D g = buffer.createGraphics();
+			final int lod = this.getContext().get("lod");
+			final double s = pow(2.0, -lod);
+			
+			g.scale(s, s);
+			g.setStroke(new BasicStroke((float) (3.0 / s)));
+			
+			if (regionsAreClosed(selectedRegions)) {
+				fillClosedRegions(roi, selectedRegions, buffer, g, s);
+			} else {
+				debugPrint("Result may be incorrect because some regions are not closed");
+				
+				fillUnclosedRegions(roi, selectedRegions, buffer, g);
+			}
+			
+			g.dispose();
+			
+			fireUpdate(this.getContext(), "sieve");
+		}
+
+		private static final boolean regionsAreClosed(final Collection<Region> selectedRegions) {
+			boolean regionsAreClosed = true;
+			
+			for (final Region region : selectedRegions) {
+				final List<Float> shape = region.getVertices();
+				
+				if (!shape.isEmpty() && region.getLength() / 3 < shape.get(0).distance(shape.get(shape.size() - 1))) {
+					regionsAreClosed = false;
+					break;
+				}
+			}
+			return regionsAreClosed;
+		}
+		
+		private static final Collection<Region> extractRegions(final TreePath[] selectedAnnotations) {
+			final Collection<Region> selectedRegions = new LinkedHashSet<Region>();
+			
 			for (final TreePath path : selectedAnnotations) {
 				final Annotation annotation = cast(Annotation.class, path.getLastPathComponent());
 				
-				if (annotation == null) {
-					continue;
+				if (annotation != null) {
+					selectedRegions.addAll(annotation.getRegions());
 				}
 				
-				final RegionOfInterest roi = getROI(this.getContext());
+				final Region region = cast(Region.class, path.getLastPathComponent());
 				
-				if (roi == null) {
-					continue;
+				if (region != null) {
+					selectedRegions.add(region);
 				}
-				
-				final int rowCount = roi.getRowCount();
-				final int columnCount = roi.getColumnCount();
-				final BufferedImage buffer = new BufferedImage(columnCount, rowCount, BufferedImage.TYPE_BYTE_BINARY);
-				final Graphics2D g = buffer.createGraphics();
-				final int lod = this.getContext().get("lod");
-				final double s = pow(2.0, -lod);
-				
-				g.scale(s, s);
-				g.setStroke(new BasicStroke((float) (3.0 / s)));
-				
-				boolean regionsAreClosed = true;
-				
-				for (final Region region : annotation.getRegions()) {
-					final List<Float> shape = region.getVertices();
-					
-					if (!shape.isEmpty() && region.getLength() / 3 < shape.get(0).distance(shape.get(shape.size() - 1))) {
-						regionsAreClosed = false;
-						break;
+			}
+			return selectedRegions;
+		}
+		
+		private static final void fillUnclosedRegions(final RegionOfInterest roi,
+				final Collection<Region> selectedRegions, final BufferedImage buffer,
+				final Graphics2D g) {
+			final int rowCount = roi.getRowCount();
+			final int columnCount = roi.getColumnCount();
+			
+			for (final Region region : selectedRegions) {
+				if (region.isNegative()) {
+					drawRegionOutline(region, g);
+				}
+			}
+			
+			for (int y = 0; y < rowCount; ++y) {
+				for (int x = 0; x < columnCount; ++x) {
+					roi.set(y, x, (buffer.getRGB(x, y) & 0x00FFFFFF) != 0);
+				}
+			}
+			
+			fillContours(roi);
+			
+			for (final Region region : selectedRegions) {
+				if (!region.isNegative()) {
+					drawRegionOutline(region, g);
+				}
+			}
+			
+			for (int y = 0; y < rowCount; ++y) {
+				for (int x = 0; x < columnCount; ++x) {
+					if ((buffer.getRGB(x, y) & 0x00FFFFFF) != 0) {
+						roi.set(y, x);
 					}
 				}
+			}
+			
+			fillContours(roi);
+		}
+
+		private static final void fillClosedRegions(final RegionOfInterest roi,
+				final Collection<Region> selectedRegions, final BufferedImage buffer,
+				final Graphics2D g, final double s) {
+			final int rowCount = roi.getRowCount();
+			final int columnCount = roi.getColumnCount();
+			final List<Region> sortedRegions = new ArrayList<Region>(selectedRegions);
+			
+			sort(sortedRegions, DECREASING_AREA);
+			
+			roi.reset();
+			roi.invert();
+			
+			for (final Region region : sortedRegions) {
+				g.setColor(Color.BLACK);
+				g.fillRect(0, 0, (int) (columnCount / s), (int) (rowCount / s));
+				g.setColor(Color.WHITE);
 				
-				if (regionsAreClosed) {
-					final List<Region> sortedRegions = new ArrayList<Region>(annotation.getRegions());
-					
-					sort(sortedRegions, DECREASING_AREA);
-					
-					final int pixelCount = roi.getPixelCount();
-					final RegionOfInterest tmp = new RegionOfInterest.UsingBitSet(rowCount, columnCount, false);
-					
-					roi.reset();
-					roi.invert();
-					
-					for (final Region region : sortedRegions) {
-						g.setColor(Color.BLACK);
-						g.fillRect(0, 0, (int) (columnCount / s), (int) (rowCount / s));
-						g.setColor(Color.WHITE);
-						
-						drawRegionOutline(region, g);
-						
-						tmp.reset();
-						tmp.invert();
-						
-						for (int y = 0; y < rowCount; ++y) {
-							for (int x = 0; x < columnCount; ++x) {
-								if ((buffer.getRGB(x, y) & 0x00FFFFFF) != 0) {
-									tmp.set(y, x);
-								}
-							}
-						}
-						
-						fillContours(tmp);
-						
-						for (int pixel = 0; pixel < pixelCount; ++pixel) {
-							if (tmp.get(pixel)) {
-								roi.set(pixel, !region.isNegative());
-							}
+				fillRegion(region, g);
+				
+				for (int y = 0; y < rowCount; ++y) {
+					for (int x = 0; x < columnCount; ++x) {
+						if ((buffer.getRGB(x, y) & 0x00FFFFFF) != 0) {
+							roi.set(y, x, !region.isNegative());
 						}
 					}
-				} else {
-					debugPrint("Result may be incorrect because some regions are not closed");
-					
-					for (final Region region : annotation.getRegions()) {
-						if (region.isNegative()) {
-							drawRegionOutline(region, g);
-						}
-					}
-					
-					for (int y = 0; y < rowCount; ++y) {
-						for (int x = 0; x < columnCount; ++x) {
-							roi.set(y, x, (buffer.getRGB(x, y) & 0x00FFFFFF) != 0);
-						}
-					}
-					
-					fillContours(roi);
-					
-					for (final Region region : annotation.getRegions()) {
-						if (!region.isNegative()) {
-							drawRegionOutline(region, g);
-						}
-					}
-					
-					for (int y = 0; y < rowCount; ++y) {
-						for (int x = 0; x < columnCount; ++x) {
-							if ((buffer.getRGB(x, y) & 0x00FFFFFF) != 0) {
-								roi.set(y, x);
-							}
-						}
-					}
-					
-					fillContours(roi);
 				}
-				
-				g.dispose();
-				
-				fireUpdate(this.getContext(), "sieve");
 			}
 		}
 		
