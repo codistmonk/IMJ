@@ -120,8 +120,8 @@ public final class ExtractRegions {
 		final int rowCount = roi.getRowCount();
 		final int columnCount = roi.getColumnCount();
 		final Rectangle result = new Rectangle(columnCount - 1, rowCount - 1, 1, 1);
-		int maxX = Integer.MIN_VALUE;
-		int maxY = Integer.MIN_VALUE;
+		int maxX = 0;
+		int maxY = 0;
 		
 		for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex) {
 			for (int columnIndex = 0; columnIndex < columnCount; ++columnIndex) {
@@ -134,8 +134,8 @@ public final class ExtractRegions {
 			}
 		}
 		
-		result.width = 1 + maxX - result.x;
-		result.height = 1 + maxY - result.y;
+		result.width = max(1, 1 + maxX - result.x);
+		result.height = max(1, 1 + maxY - result.y);
 		
 		return result;
 	}
