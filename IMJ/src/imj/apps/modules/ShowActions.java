@@ -563,7 +563,6 @@ public final class ShowActions {
 		
 		@Override
 		public final void perform(final Object object) {
-			
 			final RegionOfInterest roi = getROI(this.getContext());
 			
 			if (roi == null) {
@@ -576,12 +575,18 @@ public final class ShowActions {
 				return;
 			}
 			
-			final Collection<Region> selectedRegions = extractRegions(selectedAnnotations);
+			final int lod = this.getContext().get("lod");
+			
+			set(roi, lod, extractRegions(selectedAnnotations));
+			
+			fireUpdate(this.getContext(), "sieve");
+		}
+		
+		public static final void set(final RegionOfInterest roi, final int lod, final Collection<Region> selectedRegions) {
 			final int rowCount = roi.getRowCount();
 			final int columnCount = roi.getColumnCount();
 			final BufferedImage buffer = new BufferedImage(columnCount, rowCount, BufferedImage.TYPE_BYTE_BINARY);
 			final Graphics2D g = buffer.createGraphics();
-			final int lod = this.getContext().get("lod");
 			final double s = pow(2.0, -lod);
 			
 			g.scale(s, s);
@@ -596,10 +601,8 @@ public final class ShowActions {
 			}
 			
 			g.dispose();
-			
-			fireUpdate(this.getContext(), "sieve");
 		}
-
+		
 		private static final boolean regionsAreClosed(final Collection<Region> selectedRegions) {
 			boolean regionsAreClosed = true;
 			
