@@ -7,9 +7,7 @@ import static imj.apps.modules.ViewFilter.VIEW_FILTER;
 import static java.awt.Color.GREEN;
 import static java.awt.image.BufferedImage.TYPE_3BYTE_BGR;
 import static java.lang.Math.abs;
-import static java.lang.Math.floor;
 import static java.lang.Math.pow;
-import static java.lang.Math.round;
 import static java.util.Collections.sort;
 import static javax.swing.JFileChooser.APPROVE_OPTION;
 import static javax.swing.JOptionPane.OK_CANCEL_OPTION;
@@ -22,7 +20,6 @@ import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-
 import imj.Image;
 import imj.IntList;
 import imj.apps.modules.Annotations.Annotation;
@@ -31,7 +28,6 @@ import imj.apps.modules.Annotations.Annotation.Region;
 import java.awt.AWTEvent;
 import java.awt.BasicStroke;
 import java.awt.Color;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -857,20 +853,10 @@ public final class ShowActions {
 				
 				region.getVertices().add(start);
 				Point2D.Float previousEdge = start;
-				boolean previousEdgeIsHorizontal = isEdgeHorizontal(start.x / scale, start.y / scale);
-				int spin = 0;
 				int segmentLength = 0;
 				final int maximumSegmentLength = 5;
 				
 				while (edge != null && !start.equals(edge)) {
-					final boolean edgeIsHorizontal = isEdgeHorizontal(edge.x / scale, edge.y / scale);
-					
-					if (previousEdgeIsHorizontal && !edgeIsHorizontal) {
-						spin += (previousEdge.x < edge.x) == (edge.y < previousEdge.y) ? -1 : +1;
-					} else if (!previousEdgeIsHorizontal && edgeIsHorizontal) {
-						spin += (previousEdge.x < edge.x) == (previousEdge.y < edge.y) ? -1 : +1;
-					}
-					
 					if (segmentLength < 1) {
 						region.getVertices().add(edge);
 						++segmentLength;
@@ -881,22 +867,14 @@ public final class ShowActions {
 						region.getVertices().set(region.getVertices().size() - 1, edge);
 						++segmentLength;
 					}
-					area += det(previousEdge, edge);
+					area += det(edge, previousEdge);
 					length += scale;
 					previousEdge = edge;
-					previousEdgeIsHorizontal = edgeIsHorizontal;
 					edge = joints.remove(edge);
 				}
 				
 				if (edge != null) {
 					edge = start;
-					final boolean edgeIsHorizontal = isEdgeHorizontal(edge.x / scale, edge.y / scale);
-					
-					if (previousEdgeIsHorizontal && !edgeIsHorizontal) {
-						spin += (previousEdge.x < edge.x) == (edge.y < previousEdge.y) ? -1 : +1;
-					} else if (!previousEdgeIsHorizontal && edgeIsHorizontal) {
-						spin += (previousEdge.x < edge.x) == (previousEdge.y < edge.y) ? -1 : +1;
-					}
 					
 					if (segmentLength < 1 || maximumSegmentLength < segmentLength) {
 						region.getVertices().add(edge);
@@ -904,15 +882,10 @@ public final class ShowActions {
 						region.getVertices().set(region.getVertices().size() - 1, edge);
 					}
 					
-					area += det(previousEdge, edge);
+					area += det(edge, previousEdge);
 				}
 				
-				if ((abs(spin) % 4) != 0) {
-					debugPrint("Possible defect detected");
-					debugPrint("spin:", spin);
-				}
-				
-				region.setNegative(spin < 0);
+				region.setNegative(area < 0);
 				region.setArea(abs(area));
 				region.setAreaInSquareMicrons(region.getArea() * square(annotations.getMicronsPerPixel()));
 				region.setLength(length);
@@ -927,10 +900,6 @@ public final class ShowActions {
 	
 	public static final float det(final Point2D.Float v1, final Point2D.Float v2) {
 		return v1.x * v2.y - v1.y * v2.x;
-	}
-	
-	public static final boolean isEdgeHorizontal(final float edgeX, final float edgeY) {
-		return round(edgeX + 0.1F) == (int) floor(edgeX);
 	}
 	
 	/**
