@@ -1,10 +1,10 @@
 package imj;
 
 import static imj.IMJTools.alpha;
+import static imj.IMJTools.argb;
 import static imj.IMJTools.blue;
 import static imj.IMJTools.green;
 import static imj.IMJTools.red;
-import static imj.IMJTools.argb;
 import static imj.IMJTools.unsigned;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
@@ -15,8 +15,6 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.Locale;
 import java.util.prefs.Preferences;
-
-import javax.swing.ProgressMonitor;
 
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
@@ -98,6 +96,8 @@ public final class ImageWrangler {
 					break;
 				}
 			}
+			
+			printProgress(rowIndex, rowCount + 1);
 		}
 		
 		this.preferences.put(imageKey, result.getFile().toString());
@@ -122,9 +122,11 @@ public final class ImageWrangler {
 		try {
 			reader.setId(imageId);
 			
+			final TicToc timer = new TicToc();
 			final int rowCount = reader.getSizeY();
 			final int columnCount = reader.getSizeX();
 			final int channelCount = reader.getSizeC();
+			debugPrint("Creating data file:", new Date(timer.tic()));
 			debugPrint("Allocating");
 			final LinearStorage result = new LinearStorage(rowCount, columnCount, channelCount, false);
 			debugPrint("Allocated in file:", result.getFile());
@@ -132,7 +134,6 @@ public final class ImageWrangler {
 			final int optimalTileColumnCount = reader.getOptimalTileWidth();
 			final int bufferRowCount;
 			final int bufferColumnCount;
-			final ProgressMonitor progressMonitor = new ProgressMonitor(null, "Loading " + imageId, null, 0, rowCount - 1);
 			
 			debugPrint("rowCount:", rowCount, "columnCount:", columnCount);
 			debugPrint("channelCount:", channelCount);
@@ -154,11 +155,11 @@ public final class ImageWrangler {
 				reader.getCoreMetadata()[0].interleaved = true;
 			}
 			
-			for (int y = 0; y < rowCount && !progressMonitor.isCanceled(); y += bufferRowCount) {
+			for (int y = 0; y < rowCount; y += bufferRowCount) {
 				final int h = y + bufferRowCount <= rowCount ? bufferRowCount : rowCount - y;
 				final int endRowIndex = y + h;
 				
-				for (int x = 0; x < columnCount && !progressMonitor.isCanceled(); x += bufferColumnCount) {
+				for (int x = 0; x < columnCount; x += bufferColumnCount) {
 					final int w = x + bufferColumnCount <= columnCount ? bufferColumnCount : columnCount - x;
 					final int endColumnIndex = x + w;
 					final int channelSize = h * w;
@@ -202,12 +203,12 @@ public final class ImageWrangler {
 					}
 				}
 				
-				progressMonitor.setProgress(y);
+				printProgress(y, rowCount + 1);
 			}
 			
-			progressMonitor.close();
-			
 			this.preferences.put(imageKey, result.getFile().toString());
+			
+			debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 			
 			return result;
 		} catch (final Exception exception) {
@@ -222,5 +223,9 @@ public final class ImageWrangler {
 	}
 	
 	public static final ImageWrangler INSTANCE = new ImageWrangler();
+	
+	public static final void printProgress(final int progress, final int last) {
+		System.out.print(progress * 10000 / last / 100.0 + "%\r");
+	}
 	
 }
