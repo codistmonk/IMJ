@@ -2,12 +2,15 @@ package imj.apps;
 
 import static imj.apps.ExtractRegions.loadLods;
 import static imj.apps.modules.ShowActions.baseName;
+import static java.util.Arrays.binarySearch;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 
 import imj.Image;
 import imj.apps.modules.Annotations;
+import imj.apps.modules.Annotations.Annotation.Region;
 import imj.apps.modules.RegionOfInterest;
+import imj.apps.modules.ShowActions;
 import imj.apps.modules.Sieve;
 import imj.apps.modules.SimpleSieve;
 
@@ -55,9 +58,10 @@ public final class GenerateROCData {
 		}
 		
 		final List<Image> lods = loadLods(imageId);
+		final Iterable<Region> regions = ExtractRegions.collectRegions(annotations);
 		
 		for (int lod = 0; lod < lods.size(); ++lod) {
-			if (Arrays.binarySearch(forceLods, lod) < 0) {
+			if (binarySearch(forceLods, lod) < 0) {
 				continue;
 			}
 			
@@ -66,11 +70,39 @@ public final class GenerateROCData {
 			System.out.println("Processing lod " + lod + "... (" + new Date(timer.tic()) + ")");
 			
 			final Image image = lods.get(lod);
-			final RegionOfInterest roi = RegionOfInterest.newInstance(image.getRowCount(), image.getColumnCount());
+			final int rowCount = image.getRowCount();
+			final int columnCount = image.getColumnCount();
+			final RegionOfInterest reference = RegionOfInterest.newInstance(rowCount, columnCount);
+			final RegionOfInterest computed = RegionOfInterest.newInstance(rowCount, columnCount);
 			
-			sieve.setROI(roi, image);
+			ShowActions.UseAnnotationAsROI.set(reference, lod, regions);
+			sieve.setROI(computed, image);
 			
-			System.out.println("Processing lod " + lod + " done (time:" + timer.getTotalTime() + " memory:" + usedMemory() + ")");
+			int truePositives = 0;
+			int falsePositives = 0;
+			int trueNegatives = 0;
+			int falseNegatives = 0;
+			final int pixelCount = rowCount * columnCount;
+			
+			for (int pixel = 0; pixel < pixelCount; ++pixel) {
+				if (computed.get(pixel)) {
+					if (reference.get(pixel)) {
+						++truePositives;
+					} else {
+						++falsePositives;
+					}
+				} else {
+					if (reference.get(pixel)) {
+						++falseNegatives;
+					} else {
+						++trueNegatives;
+					}
+				}
+			}
+			
+			debugPrint("tp:", truePositives, "fp:", falsePositives, "tn:", trueNegatives, "fn:", falseNegatives);
+			
+			System.out.println("Processing lod " + lod + " done (time:" + timer.toc() + " memory:" + usedMemory() + ")");
 		}
 	}
 	
