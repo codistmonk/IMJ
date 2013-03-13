@@ -47,7 +47,7 @@ public final class ExtractRegions {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String imageId = arguments.get("file", "");
 		final String annotationsId = arguments.get("annotations", baseName(imageId) + ".xml");
-		final Annotations annotations = Annotations.fromXML(arguments.get("annotations", annotationsId));
+		final Annotations annotations = Annotations.fromXML(annotationsId);
 		final int[] forceLods = arguments.get("lods");
 		int regionCount = 0;
 		
