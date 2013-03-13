@@ -41,28 +41,33 @@ public abstract class Sieve extends Plugin {
 		final RegionOfInterest roi = this.getROI();
 		
 		if (roi != null) {
-			final int rowCount = roi.getRowCount();
-			final int columnCount = roi.getColumnCount();
-			final Image image = ViewFilter.getCurrentImage(context);
-			
-			if (image != null && image.getRowCount() == rowCount && image.getColumnCount() == columnCount) {
-				final int pixelCount = rowCount * columnCount;
-				
-				for (int pixel = 0; pixel < pixelCount; ++pixel) {
-					if (roi.get(pixel) && !this.accept(pixel, image.getValue(pixel))) {
-						roi.set(pixel, false);
-					}
-				}
-				
-				this.finish(roi);
-				
-				if (this == context.set("sieve", this)) {
-					fireUpdate(context, "sieve");
-				}
-			}
+			this.setROI(roi, ViewFilter.getCurrentImage(context));
 		}
 		
 		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
+	}
+	
+	public final void setROI(final RegionOfInterest roi, final Image image) {
+		final int rowCount = roi.getRowCount();
+		final int columnCount = roi.getColumnCount();
+		
+		if (image != null && image.getRowCount() == rowCount && image.getColumnCount() == columnCount) {
+			final int pixelCount = rowCount * columnCount;
+			
+			for (int pixel = 0; pixel < pixelCount; ++pixel) {
+				if (roi.get(pixel) && !this.accept(pixel, image.getValue(pixel))) {
+					roi.set(pixel, false);
+				}
+			}
+			
+			this.finish(roi);
+			
+			final Context context = this.getContext();
+			
+			if (this == context.set("sieve", this)) {
+				fireUpdate(context, "sieve");
+			}
+		}
 	}
 	
 	protected void finish(final RegionOfInterest roi) {

@@ -71,6 +71,7 @@ public final class ExtractRegions {
 			}
 			
 			final TicToc timer = new TicToc();
+			
 			System.out.println("Processing lod " + lod + "... (" + new Date(timer.tic()) + ")");
 			
 			final Image image = lods.get(lod);
