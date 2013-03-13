@@ -3,9 +3,7 @@ package imj.apps;
 import static imj.apps.ExtractRegions.loadLods;
 import static imj.apps.modules.ShowActions.baseName;
 import static java.util.Arrays.binarySearch;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
-
 import imj.Image;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.Annotations.Annotation.Region;
@@ -14,7 +12,7 @@ import imj.apps.modules.ShowActions;
 import imj.apps.modules.Sieve;
 import imj.apps.modules.SimpleSieve;
 
-import java.util.Arrays;
+import java.io.File;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +21,6 @@ import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-03-13)
@@ -42,23 +39,31 @@ public final class GenerateROCData {
 	public static final void main(final String[] commandLineArguments) throws Exception {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String imageId = arguments.get("file", "");
-		final String annotationsId = arguments.get("annotations", baseName(imageId) + ".xml");
-		final Annotations annotations = Annotations.fromXML(arguments.get("annotations", annotationsId));
 		final int[] forceLods = arguments.get("lods");
 		final Class<? extends Sieve> sieveClass =
 				(Class<? extends Sieve>) Class.forName(arguments.get("sieve", SimpleSieve.class.getName()));
 		final Sieve sieve = sieveClass.getConstructor(Context.class).newInstance(new Context());
 		
-		debugPrint(sieve);
+		System.out.println("sieve: " + sieve);
 		
 		for (final Map.Entry<String, String> entry : sieve.getParameters().entrySet()) {
 			entry.setValue(arguments.get(entry.getKey(), entry.getValue()));
 			
-			debugPrint(entry);
+			System.out.println("parameter: " + entry);
 		}
 		
+		final String annotationsId = arguments.get("annotations", baseName(imageId) + ".xml");
+		
+		generateROCData(imageId, annotationsId, forceLods, sieve, new ROCRowGenerator.Default());
+	}
+	
+	public static final void generateROCData(final String imageId,
+			final String annotationsId, final int[] forceLods, final Sieve sieve,
+			final ROCRowGenerator generator) {
 		final List<Image> lods = loadLods(imageId);
+		final Annotations annotations = Annotations.fromXML(annotationsId);
 		final Iterable<Region> regions = ExtractRegions.collectRegions(annotations);
+		final String fileName = new File(imageId).getName();
 		
 		for (int lod = 0; lod < lods.size(); ++lod) {
 			if (binarySearch(forceLods, lod) < 0) {
@@ -73,37 +78,86 @@ public final class GenerateROCData {
 			final int rowCount = image.getRowCount();
 			final int columnCount = image.getColumnCount();
 			final RegionOfInterest reference = RegionOfInterest.newInstance(rowCount, columnCount);
-			final RegionOfInterest computed = RegionOfInterest.newInstance(rowCount, columnCount);
-			
 			ShowActions.UseAnnotationAsROI.set(reference, lod, regions);
-			sieve.setROI(computed, image);
 			
-			int truePositives = 0;
-			int falsePositives = 0;
-			int trueNegatives = 0;
-			int falseNegatives = 0;
-			final int pixelCount = rowCount * columnCount;
+			sieve.initialize();
 			
-			for (int pixel = 0; pixel < pixelCount; ++pixel) {
-				if (computed.get(pixel)) {
-					if (reference.get(pixel)) {
-						++truePositives;
-					} else {
-						++falsePositives;
-					}
-				} else {
-					if (reference.get(pixel)) {
-						++falseNegatives;
-					} else {
-						++trueNegatives;
-					}
-				}
-			}
-			
-			debugPrint("tp:", truePositives, "fp:", falsePositives, "tn:", trueNegatives, "fn:", falseNegatives);
+			generator.generateROCRow(fileName, image, lod, reference, sieve);
 			
 			System.out.println("Processing lod " + lod + " done (time:" + timer.toc() + " memory:" + usedMemory() + ")");
 		}
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-03-13)
+	 */
+	public static abstract interface ROCRowGenerator {
+		
+		public abstract void generateROCRow(String fileName, Image image, int lod,
+				RegionOfInterest reference, Sieve sieve);
+		
+		/**
+		 * @author codistmonk (creation 2013-03-13)
+		 */
+		public static final class Default implements ROCRowGenerator {
+			
+			@Override
+			public final void generateROCRow(final String fileName, final Image image, final int lod,
+					final RegionOfInterest reference, final Sieve sieve) {
+				final int rowCount = image.getRowCount();
+				final int columnCount = image.getColumnCount();
+				final RegionOfInterest computed = RegionOfInterest.newInstance(rowCount, columnCount);
+				
+				sieve.setROI(computed, image);
+				
+				int truePositives = 0;
+				int falsePositives = 0;
+				int trueNegatives = 0;
+				int falseNegatives = 0;
+				final int pixelCount = rowCount * columnCount;
+				
+				for (int pixel = 0; pixel < pixelCount; ++pixel) {
+					if (computed.get(pixel)) {
+						if (reference.get(pixel)) {
+							++truePositives;
+						} else {
+							++falsePositives;
+						}
+					} else {
+						if (reference.get(pixel)) {
+							++falseNegatives;
+						} else {
+							++trueNegatives;
+						}
+					}
+				}
+				
+				final StringBuilder row = new StringBuilder();
+				
+				row.append("file_lod_");
+				
+				for (final String parameterName : sieve.getParameters().keySet()) {
+					row.append(parameterName).append('_');
+				}
+				
+				final char separator = '	';
+				row.append("tp_fp_tn_fn: ").append(fileName).append(separator).append(lod).append(separator);
+				
+				for (final String parameterValue : sieve.getParameters().values()) {
+					row.append(parameterValue).append(separator);
+				}
+				
+				row
+				.append(truePositives).append(separator)
+				.append(falsePositives).append(separator)
+				.append(trueNegatives).append(separator)
+				.append(falseNegatives);
+				
+				System.out.println(row);
+			}
+			
+		}
+		
 	}
 	
 }

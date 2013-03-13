@@ -8,7 +8,6 @@ import static imj.IMJTools.hue;
 import static imj.IMJTools.red;
 import static imj.IMJTools.saturation;
 import static java.lang.Integer.parseInt;
-import static java.util.Locale.ENGLISH;
 import imj.Labeling.NeighborhoodShape.Distance;
 import imj.MorphologicalOperations.StructuringElement;
 import imj.RankFilter;
