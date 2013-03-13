@@ -151,6 +151,18 @@ public final class ExtractRegions {
 		return result;
 	}
 	
+	public static final Iterable<Region> collectRegions(final Annotations annotations, final String excludedNamePattern) {
+		final Collection<Region> result = new ArrayList<Region>();
+		
+		for (final Annotation annotation : annotations.getAnnotations()) {
+			if (!("" + annotation.getUserObject()).matches(excludedNamePattern)) {
+				result.addAll(annotation.getRegions());
+			}
+		}
+		
+		return result;
+	}
+	
 	public static final List<Image> loadLods(final String imageId) {
 		final List<Image> result = new ArrayList<Image>();
 		int lod = 0;
