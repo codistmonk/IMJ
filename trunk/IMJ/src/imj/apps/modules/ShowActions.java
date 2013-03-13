@@ -21,6 +21,7 @@ import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.list;
 import imj.Image;
 import imj.IntList;
 import imj.apps.modules.Annotations.Annotation;
@@ -39,7 +40,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -582,7 +582,7 @@ public final class ShowActions {
 			fireUpdate(this.getContext(), "sieve");
 		}
 		
-		public static final void set(final RegionOfInterest roi, final int lod, final Collection<Region> selectedRegions) {
+		public static final void set(final RegionOfInterest roi, final int lod, final Iterable<Region> selectedRegions) {
 			final int rowCount = roi.getRowCount();
 			final int columnCount = roi.getColumnCount();
 			final BufferedImage buffer = new BufferedImage(columnCount, rowCount, BufferedImage.TYPE_BYTE_BINARY);
@@ -603,7 +603,7 @@ public final class ShowActions {
 			g.dispose();
 		}
 		
-		private static final boolean regionsAreClosed(final Collection<Region> selectedRegions) {
+		private static final boolean regionsAreClosed(final Iterable<Region> selectedRegions) {
 			boolean regionsAreClosed = true;
 			
 			for (final Region region : selectedRegions) {
@@ -637,7 +637,7 @@ public final class ShowActions {
 		}
 		
 		private static final void fillUnclosedRegions(final RegionOfInterest roi,
-				final Collection<Region> selectedRegions, final BufferedImage buffer,
+				final Iterable<Region> selectedRegions, final BufferedImage buffer,
 				final Graphics2D g) {
 			final int rowCount = roi.getRowCount();
 			final int columnCount = roi.getColumnCount();
@@ -674,11 +674,11 @@ public final class ShowActions {
 		}
 
 		private static final void fillClosedRegions(final RegionOfInterest roi,
-				final Collection<Region> selectedRegions, final BufferedImage buffer,
+				final Iterable<Region> selectedRegions, final BufferedImage buffer,
 				final Graphics2D g, final double s) {
 			final int rowCount = roi.getRowCount();
 			final int columnCount = roi.getColumnCount();
-			final List<Region> sortedRegions = new ArrayList<Region>(selectedRegions);
+			final List<Region> sortedRegions = list(selectedRegions);
 			
 			sort(sortedRegions, DECREASING_AREA);
 			
