@@ -62,11 +62,11 @@ public final class GenerateROCData {
 			final ROCRowGenerator generator) {
 		final List<Image> lods = loadLods(imageId);
 		final Annotations annotations = Annotations.fromXML(annotationsId);
-		final Iterable<Region> regions = ExtractRegions.collectRegions(annotations);
+		final Iterable<Region> regions = ExtractRegions.collectRegions(annotations, ".*excluded.*");
 		final String fileName = new File(imageId).getName();
 		
 		for (int lod = 0; lod < lods.size(); ++lod) {
-			if (binarySearch(forceLods, lod) < 0) {
+			if (forceLods.length != 0 && binarySearch(forceLods, lod) < 0) {
 				continue;
 			}
 			
