@@ -2,10 +2,9 @@ package imj;
 
 import static imj.IMJTools.image;
 import static imj.RegionalExtremaTest.assertImageEquals;
+import imj.MathOperations.BinaryOperator;
 
 import org.junit.Test;
-
-import imj.MathOperations.BinaryOperator;
 
 /**
  * @author codistmonk (creation 2013-02-10)

@@ -1,7 +1,7 @@
 package imj;
 
-import net.sourceforge.aprog.tools.MathTools.Statistics;
 import imj.IMJTools.StatisticsSelector;
+import net.sourceforge.aprog.tools.MathTools.Statistics;
 
 /**
  * @author codistmonk (creation 2013-02-03)

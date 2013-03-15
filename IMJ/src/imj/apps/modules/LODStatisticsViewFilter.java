@@ -5,7 +5,6 @@ import static java.lang.Integer.parseInt;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.pow;
-
 import imj.IMJTools.StatisticsSelector;
 import imj.Image;
 import imj.ImageWrangler;

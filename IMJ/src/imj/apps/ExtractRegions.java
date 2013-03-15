@@ -32,7 +32,6 @@ import javax.imageio.ImageIO;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-03-12)
@@ -190,12 +189,14 @@ public final class ExtractRegions {
 		
 		gc();
 		
-		final long freeMemory = Runtime.getRuntime().freeMemory();
+//		final long freeMemory = Runtime.getRuntime().freeMemory();
+		final long availableMemory = Runtime.getRuntime().maxMemory() - usedMemory();
 		
-		debugPrint("byteCount:", byteCount, "freeMemory:", freeMemory);
+		debugPrint("byteCount:", byteCount, "availableMemory:", availableMemory);
 		
-		if (byteCount * 2L <= freeMemory) {
-			debugPrint("Copying image in RAM...");
+		if (byteCount * 2L <= availableMemory) {
+			final TicToc timer = new TicToc();
+			debugPrint("Copying image in RAM...", "(" + new Date(timer.tic()) + ")");
 			
 			final Image imageInRAM = new ImageOfInts(rowCount, columnCount, image.getChannelCount());
 			
@@ -203,7 +204,7 @@ public final class ExtractRegions {
 				imageInRAM.setValue(pixel, image.getValue(pixel));
 			}
 			
-			debugPrint("Done");
+			debugPrint("Done", "time:", timer.toc(), "memory:", usedMemory());
 			
 			return imageInRAM;
 		}

@@ -14,9 +14,9 @@ import imj.ImageOfBufferedImage.Feature;
 import imj.ImageWrangler;
 import imj.Labeling;
 import imj.Labeling.MemoryManagementStrategy;
-import imj.apps.modules.ImageComponent;
 import imj.RegionalMinima;
 import imj.Watershed;
+import imj.apps.modules.ImageComponent;
 
 import java.awt.image.BufferedImage;
 import java.io.FileOutputStream;

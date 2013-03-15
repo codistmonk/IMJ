@@ -30,11 +30,12 @@ import static net.sourceforge.aprog.swing.SwingTools.I18N.menu;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.getThisPackagePath;
-
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.BigImageComponent;
+import imj.apps.modules.BitRoundingViewFilter;
+import imj.apps.modules.ContourSieve;
 import imj.apps.modules.FeatureViewFilter;
 import imj.apps.modules.IntRoundingViewFilter;
 import imj.apps.modules.LODStatisticsViewFilter;
@@ -44,7 +45,6 @@ import imj.apps.modules.PipelineViewFilter;
 import imj.apps.modules.RankViewFilter;
 import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.RegionViewFilter;
-import imj.apps.modules.BitRoundingViewFilter;
 import imj.apps.modules.SaturationSieve201303080950;
 import imj.apps.modules.ShowActions;
 import imj.apps.modules.Sieve;
@@ -205,7 +205,10 @@ public final class Show {
 				new RankViewFilter(result)),
 		ViewFilter[].class);
 		result.set(VIEW_FILTER, null, ViewFilter.class);
-		result.set("sieves", array(new SimpleSieve(result), new SaturationSieve201303080950(result)), Sieve[].class);
+		result.set("sieves", array(
+				new SimpleSieve(result),
+				new SaturationSieve201303080950(result),
+				new ContourSieve(result)), Sieve[].class);
 		result.set("sieve", null, Sieve.class);
 		
 		final Variable<Point> xyVariable = result.getVariable("xy");

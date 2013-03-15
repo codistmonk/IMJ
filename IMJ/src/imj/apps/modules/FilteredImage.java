@@ -6,8 +6,8 @@ import imj.IMJTools.StatisticsSelector;
 import imj.Image;
 import imj.IntList;
 import imj.apps.modules.ViewFilter.Channel;
-import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-18)

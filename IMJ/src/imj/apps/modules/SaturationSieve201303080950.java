@@ -12,6 +12,7 @@ import imj.Labeling.NeighborhoodShape.Distance;
 import imj.MorphologicalOperations.StructuringElement;
 import imj.RankFilter;
 import imj.apps.modules.FilteredImage.Filter;
+import imj.apps.modules.SimpleSieve.Feature;
 
 import java.awt.Color;
 
@@ -38,10 +39,6 @@ public final class SaturationSieve201303080950 extends Sieve {
 	
 	@Override
 	public final boolean accept(final int index, final int value) {
-		if (this.feature == null) {
-			return true;
-		}
-		
 		if (this.maximum < this.minimum) {
 			return false;
 		}
@@ -72,80 +69,6 @@ public final class SaturationSieve201303080950 extends Sieve {
 		
 		new RankFilter(roi, tmp, -1, structuringElement3);
 		new RankFilter(tmp, roi, 0, structuringElement3);
-	}
-	
-	/**
-	 * @author codistmonk (creation 2013-02-18)
-	 */
-	public static enum Feature implements Filter {
-		
-		RED {
-			
-			@Override
-			public final int getNewValue(final int index, final int oldValue) {
-				return red(oldValue);
-			}
-			
-		}, GREEN {
-			
-			@Override
-			public final int getNewValue(final int index, final int oldValue) {
-				return red(oldValue);
-			}
-			
-		}, BLUE {
-			
-			@Override
-			public final int getNewValue(final int index, final int oldValue) {
-				return blue(oldValue);
-			}
-			
-		}, ALPHA {
-			
-			@Override
-			public final int getNewValue(final int index, final int oldValue) {
-				return alpha(oldValue);
-			}
-			
-		}, BRIGHTNESS {
-			
-			@Override
-			public final int getNewValue(final int index, final int oldValue) {
-				return brightness(oldValue);
-			}
-			
-		}, SATURATION {
-			
-			@Override
-			public final int getNewValue(final int index, final int oldValue) {
-				return saturation(oldValue);
-			}
-			
-		}, HUE {
-			
-			@Override
-			public final int getNewValue(final int index, final int oldValue) {
-				return hue(oldValue);
-			}
-			
-		};
-		
-		static {
-			final float[] hsb = new float[3];
-			
-			for (int r = 0; r < 256; r += 2) {
-				for (int g = 0; g < 256; g += 2) {
-					for (int b = 0; b < 256; b += 2) {
-						Color.RGBtoHSB(r, g, b, hsb);
-						
-						if (HUE.getNewValue(0, argb(255, r, g, b)) != (int) (hsb[0] * 255F)) {
-							throw new RuntimeException();
-						}
-					}
-				}
-			}
-		}
-		
 	}
 	
 }
