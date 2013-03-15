@@ -21,6 +21,7 @@ import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-03-13)
@@ -84,13 +85,13 @@ public final class GenerateROCData {
 			ShowActions.UseAnnotationAsROI.set(reference, lod, regions);
 			
 			System.out.println("Initializing reference done (time:" + timer.toc() + " memory:" + usedMemory() + ")");
-			System.out.println("Applying sieve... (" + new Date(timer.tic()) + ")");
+			System.out.println("Generating data... (" + new Date(timer.tic()) + ")");
 			
 			sieve.initialize();
 			
 			generator.generateROCRow(fileName, image, lod, reference, sieve);
 			
-			System.out.println("Applying sieve done (time:" + timer.toc() + " memory:" + usedMemory() + ")");
+			System.out.println("Generating data done (time:" + timer.toc() + " memory:" + usedMemory() + ")");
 			System.out.println("Processing lod " + lod + " done (time:" + timer.getTotalTime() + " memory:" + usedMemory() + ")");
 		}
 	}
@@ -111,11 +112,18 @@ public final class GenerateROCData {
 			@Override
 			public final void generateROCRow(final String fileName, final Image image, final int lod,
 					final RegionOfInterest reference, final Sieve sieve) {
+				final TicToc timer = new TicToc();
+				
+				System.out.println("Appling sieve... (" + new Date(timer.tic()) + ")");
+				
 				final int rowCount = image.getRowCount();
 				final int columnCount = image.getColumnCount();
 				final RegionOfInterest computed = RegionOfInterest.newInstance(rowCount, columnCount);
 				
 				sieve.setROI(computed, image);
+				
+				System.out.println("Applying sieve done (time:" + timer.toc() + " memory:" + usedMemory() + ")");
+				System.out.println("Collecting data... (" + new Date(timer.tic()) + ")");
 				
 				int truePositives = 0;
 				int falsePositives = 0;
@@ -160,6 +168,7 @@ public final class GenerateROCData {
 				.append(trueNegatives).append(separator)
 				.append(falseNegatives);
 				
+				System.out.println("Collecting data done (" + new Date(timer.tic()) + ")");
 				System.out.println(row);
 			}
 			

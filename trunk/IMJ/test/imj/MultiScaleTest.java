@@ -8,7 +8,6 @@ import static imj.apps.modules.ImageComponent.awtImage;
 import static java.awt.image.BufferedImage.TYPE_3BYTE_BGR;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
-
 import imj.IMJTools.StatisticsSelector;
 import imj.ImageOfBufferedImage.Feature;
 import imj.apps.modules.ImageComponent;

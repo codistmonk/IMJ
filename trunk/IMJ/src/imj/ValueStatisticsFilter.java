@@ -1,7 +1,6 @@
 package imj;
 
 import static imj.IMJTools.channelValue;
-
 import imj.IMJTools.StatisticsSelector;
 
 /**

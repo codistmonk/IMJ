@@ -11,8 +11,8 @@ import imj.Labeling;
 import imj.Labeling.MemoryManagementStrategy;
 import imj.Labeling.NeighborhoodShape.Distance;
 import imj.MorphologicalOperations.StructuringElement;
-import imj.apps.modules.ImageComponent;
 import imj.ValueStatisticsFilter;
+import imj.apps.modules.ImageComponent;
 
 import java.awt.image.BufferedImage;
 import java.io.FileOutputStream;

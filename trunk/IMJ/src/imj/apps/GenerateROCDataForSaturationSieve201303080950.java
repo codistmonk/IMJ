@@ -2,7 +2,6 @@ package imj.apps;
 
 import static imj.apps.modules.ShowActions.baseName;
 import static java.lang.Math.min;
-
 import imj.Image;
 import imj.apps.GenerateROCData.ROCRowGenerator;
 import imj.apps.modules.RegionOfInterest;

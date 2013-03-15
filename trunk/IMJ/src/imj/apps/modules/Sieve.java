@@ -3,12 +3,10 @@ package imj.apps.modules;
 import static net.sourceforge.aprog.af.AFTools.fireUpdate;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
-
 import imj.Image;
 
 import java.util.Date;
 
-import net.sourceforge.aprog.af.AFTools;
 import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.tools.TicToc;
 

@@ -7,7 +7,6 @@ import static imj.Labeling.NeighborhoodShape.CONNECTIVITY_8;
 import static java.lang.Integer.toHexString;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
-
 import imj.ImageOfBufferedImage.Feature;
 
 import java.io.IOException;
