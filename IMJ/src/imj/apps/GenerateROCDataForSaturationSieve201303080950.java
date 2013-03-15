@@ -1,6 +1,7 @@
 package imj.apps;
 
 import static imj.apps.modules.ShowActions.baseName;
+import static java.lang.Math.min;
 
 import imj.Image;
 import imj.apps.GenerateROCData.ROCRowGenerator;
@@ -38,11 +39,11 @@ public final class GenerateROCDataForSaturationSieve201303080950 {
 			@Override
 			public final void generateROCRow(final String fileName, final Image image, final int lod,
 					final RegionOfInterest reference, final Sieve sieve) {
-				for (int minimum = 0; minimum <= 255; ++minimum) {
-					sieve.getParameters().put("minimum", "" + minimum);
+				for (int minimum = 0; minimum <= 256; minimum = minimum += 8) {
+					sieve.getParameters().put("minimum", "" + min(255, minimum));
 					
-					for (int maximum = minimum; maximum <= 255; ++maximum) {
-						sieve.getParameters().put("maximum", "" + maximum);
+					for (int maximum = minimum; maximum <= 256; maximum += 8) {
+						sieve.getParameters().put("maximum", "" + min(255, maximum));
 						
 						sieve.initialize();
 						

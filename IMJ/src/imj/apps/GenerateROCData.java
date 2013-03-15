@@ -78,13 +78,20 @@ public final class GenerateROCData {
 			final int rowCount = image.getRowCount();
 			final int columnCount = image.getColumnCount();
 			final RegionOfInterest reference = RegionOfInterest.newInstance(rowCount, columnCount);
+			
+			System.out.println("Initializing reference... (" + new Date(timer.tic()) + ")");
+			
 			ShowActions.UseAnnotationAsROI.set(reference, lod, regions);
+			
+			System.out.println("Initializing reference done (time:" + timer.toc() + " memory:" + usedMemory() + ")");
+			System.out.println("Applying sieve... (" + new Date(timer.tic()) + ")");
 			
 			sieve.initialize();
 			
 			generator.generateROCRow(fileName, image, lod, reference, sieve);
 			
-			System.out.println("Processing lod " + lod + " done (time:" + timer.toc() + " memory:" + usedMemory() + ")");
+			System.out.println("Applying sieve done (time:" + timer.toc() + " memory:" + usedMemory() + ")");
+			System.out.println("Processing lod " + lod + " done (time:" + timer.getTotalTime() + " memory:" + usedMemory() + ")");
 		}
 	}
 	

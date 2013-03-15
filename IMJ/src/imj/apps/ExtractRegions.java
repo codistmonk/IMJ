@@ -5,8 +5,11 @@ import static java.awt.image.BufferedImage.TYPE_3BYTE_BGR;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Arrays.asList;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.Image;
+import imj.ImageOfInts;
 import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.Annotations.Annotation;
@@ -29,6 +32,7 @@ import javax.imageio.ImageIO;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-03-12)
@@ -166,15 +170,45 @@ public final class ExtractRegions {
 	public static final List<Image> loadLods(final String imageId) {
 		final List<Image> result = new ArrayList<Image>();
 		int lod = 0;
-		Image image = ImageWrangler.INSTANCE.load(imageId, lod);
+		Image image = maybeCacheImage(ImageWrangler.INSTANCE.load(imageId, lod));
 		result.add(image);
 		
 		while (1 < image.getRowCount() && 1 < image.getColumnCount()) {
-			image = ImageWrangler.INSTANCE.load(imageId, ++lod);
+			image = maybeCacheImage(ImageWrangler.INSTANCE.load(imageId, ++lod));
+			
 			result.add(image);
 		}
 		
 		return result;
+	}
+
+	public static Image maybeCacheImage(final Image image) {
+		final int rowCount = image.getRowCount();
+		final int columnCount = image.getColumnCount();
+		final int pixelCount = rowCount * columnCount;
+		final long byteCount = 4L * pixelCount;
+		
+		gc();
+		
+		final long freeMemory = Runtime.getRuntime().freeMemory();
+		
+		debugPrint("byteCount:", byteCount, "freeMemory:", freeMemory);
+		
+		if (byteCount * 2L <= freeMemory) {
+			debugPrint("Copying image in RAM...");
+			
+			final Image imageInRAM = new ImageOfInts(rowCount, columnCount, image.getChannelCount());
+			
+			for (int pixel = 0; pixel < pixelCount; ++pixel) {
+				imageInRAM.setValue(pixel, image.getValue(pixel));
+			}
+			
+			debugPrint("Done");
+			
+			return imageInRAM;
+		}
+		
+		return image;
 	}
 	
 }
