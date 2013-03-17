@@ -1,7 +1,8 @@
 package imj.apps.modules;
 
 import static net.sourceforge.aprog.af.AFTools.fireUpdate;
-import imj.apps.modules.FilteredImage.RankFilter;
+import imj.apps.modules.FilteredImage.BinaryRankFilter;
+import imj.apps.modules.FilteredImage.StructuringElementFilter;
 import imj.apps.modules.ViewFilter.Channel;
 
 import java.util.Locale;
@@ -13,9 +14,9 @@ import net.sourceforge.aprog.context.Context;
  */
 public final class ROIMorphologyPlugin extends Plugin {
 	
-	private RankFilter filter;
+	private StructuringElementFilter filter;
 	
-	private RankFilter filter2;
+	private StructuringElementFilter filter2;
 	
 	private RegionOfInterest backup;
 	
@@ -57,10 +58,10 @@ public final class ROIMorphologyPlugin extends Plugin {
 		
 		final int[] structuringElement = ViewFilter.parseStructuringElement(this.getParameters().get("structuringElement"));
 		
-		this.filter = new RankFilter(structuringElement, rank);
+		this.filter = newRankFilter(structuringElement, rank);
 		
 		if (rank2 != Integer.MIN_VALUE) {
-			this.filter2 = new RankFilter(structuringElement, rank2);
+			this.filter2 = newRankFilter(structuringElement, rank2);
 			final RegionOfInterest roi = this.getROI();
 			this.tmp = RegionOfInterest.newInstance(roi.getRowCount(), roi.getColumnCount());
 		} else {
@@ -114,6 +115,10 @@ public final class ROIMorphologyPlugin extends Plugin {
 		this.backup = null;
 		this.filter = null;
 		this.filter2 = null;
+	}
+	
+	public static final StructuringElementFilter newRankFilter(final int[] structuringElement, final int rank) {
+		return new BinaryRankFilter(structuringElement, rank);
 	}
 	
 }
