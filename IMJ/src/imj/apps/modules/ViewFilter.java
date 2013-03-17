@@ -221,6 +221,18 @@ public abstract class ViewFilter extends Plugin {
 		}
 	}
 	
+	public static final Channel[] parseChannels(final String string) {
+		final String[] channelAsStrings = string.trim().split("\\s+");
+		final int n = channelAsStrings.length;
+		final Channel[] result = new Channel[n];
+		
+		for (int i = 0; i < n; ++i) {
+			result[i] = parseChannel(channelAsStrings[i].toUpperCase(Locale.ENGLISH));
+		}
+		
+		return result;
+	}
+	
 	public static final int[] parseStructuringElement(final String structuringElementParametersAsString) {
 		final String[] structuringElementParameters = structuringElementParametersAsString.trim().split("\\s+");
 		final String shape = structuringElementParameters[0];

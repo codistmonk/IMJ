@@ -32,16 +32,17 @@ public final class GenerateROCDataForSaturationSieve201303080950 {
 		final int[] forceLods = arguments.get("lods");
 		final Sieve sieve = new SaturationSieve201303080950(new Context());
 		final ROCRowGenerator defaultGenerator = new ROCRowGenerator.Default();
+		final int step = arguments.get("step", 8)[0];
 		
 		GenerateROCData.generateROCData(imageId, annotationsId, forceLods, sieve, new ROCRowGenerator() {
 			
 			@Override
 			public final void generateROCRow(final String fileName, final Image image, final int lod,
 					final RegionOfInterest reference, final Sieve sieve) {
-				for (int minimum = 0; minimum <= 256; minimum = minimum += 8) {
+				for (int minimum = 0; minimum <= 256; minimum = minimum += step) {
 					sieve.getParameters().put("minimum", "" + min(255, minimum));
 					
-					for (int maximum = minimum; maximum <= 256; maximum += 8) {
+					for (int maximum = minimum; maximum <= 256; maximum += step) {
 						sieve.getParameters().put("maximum", "" + min(255, maximum));
 						
 						sieve.initialize();
