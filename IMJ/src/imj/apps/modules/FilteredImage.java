@@ -206,13 +206,52 @@ public final class FilteredImage implements Image {
 	/**
 	 * @author codistmonk (creation 2013-02-19)
 	 */
-	public static final class RankFilter extends StructuringElementFilter {
+	public static final class BinaryRankFilter extends StructuringElementFilter {
+		
+		private final int rank;
+		
+		private int accumulator;
+		
+		private int nonZero;
+		
+		public BinaryRankFilter(final int[] deltas, final int rank) {
+			super(deltas);
+			this.rank = rank;
+			this.nonZero = 255;
+		}
+		
+		@Override
+		protected final void reset(final int index, final int oldValue) {
+			this.accumulator = 0;
+		}
+		
+		@Override
+		protected final void processNeighbor(final int index, final int oldValue, final int neighborIndex, final int neighborValue) {
+			if (0 != neighborValue) {
+				++this.accumulator;
+				this.nonZero = neighborValue;
+			}
+		}
+		
+		@Override
+		protected final int getResult(final int index, final int oldValue) {
+			final int n = this.getSize();
+			
+			return (n - this.accumulator) <= ((this.rank + n) % n) ? this.nonZero : 0;
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-19)
+	 */
+	public static final class IntRankFilter extends StructuringElementFilter {
 		
 		private final int rank;
 		
 		private final IntList values;
 		
-		public RankFilter(final int[] deltas, final int rank) {
+		public IntRankFilter(final int[] deltas, final int rank) {
 			super(deltas);
 			this.rank = rank;
 			this.values = new IntList(this.getMaximumSize());

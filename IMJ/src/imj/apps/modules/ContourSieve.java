@@ -1,11 +1,11 @@
 package imj.apps.modules;
 
+import static imj.MorphologicalOperations.StructuringElement.newRing;
 import static java.util.Locale.ENGLISH;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import imj.Image;
+import imj.Labeling.NeighborhoodShape.Distance;
 import imj.apps.modules.SimpleSieve.Feature;
 import net.sourceforge.aprog.context.Context;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-18)
@@ -22,23 +22,13 @@ public final class ContourSieve extends Sieve {
 		this.getParameters().put("feature", "brightness");
 	}
 	
-	private static final int[][] NEIGHBORHOOD = {
-		{ -1, -1 },
-		{ -1, +0 },
-		{ -1, +1 },
-		{ +0, -1 },
-		{ +0, +1 },
-		{ +1, -1 },
-		{ +1, +0 },
-		{ +1, +1 },
-	};
-	
 	@Override
 	public final boolean accept(final int index, final int value) {
 		if (this.feature == null) {
 			return true;
 		}
 		
+		final int neighborhoodArrayLength = NEIGHBORHOOD.length;
 		final int featureValue = this.feature.getNewValue(index, value);
 		final int rowCount = this.image.getRowCount();
 		final int columnCount = this.image.getColumnCount();
@@ -46,9 +36,9 @@ public final class ContourSieve extends Sieve {
 		final int columnIndex = index % columnCount;
 		boolean result = false;
 		
-		for (final int[] drdc : NEIGHBORHOOD) {
-			final int r = rowIndex + drdc[0];
-			final int c = columnIndex + drdc[1];
+		for (int i = 0; i < neighborhoodArrayLength; i += 2) {
+			final int r = rowIndex + NEIGHBORHOOD[i];
+			final int c = columnIndex + NEIGHBORHOOD[i + 1];
 			
 			if (0 <= r && r < rowCount && 0 <= c && c < columnCount) {
 				final int j = r * columnCount + c;
@@ -67,23 +57,12 @@ public final class ContourSieve extends Sieve {
 		return result;
 	}
 	
-	private final boolean neighborIsStrictlyLarger(final int rowIndex, final int columnIndex, final int value) {
-		final int rowCount = this.image.getRowCount();
-		final int columnCount = this.image.getColumnCount();
-		
-		if (rowIndex < 0 || rowCount <= rowIndex || columnIndex < 0 || columnCount <= columnIndex) {
-			return false;
-		}
-		
-		final int index = rowIndex * columnCount + columnIndex;
-		
-		return value < this.feature.getNewValue(index, this.image.getValue(index));
-	}
-	
 	@Override
 	public final void initialize() {
 		this.feature = Feature.valueOf(this.getParameters().get("feature").toUpperCase(ENGLISH));
 		this.image = ViewFilter.getCurrentImage(this.getContext());
 	}
+	
+	private static final int[] NEIGHBORHOOD = newRing(1.0, 1.0, Distance.CHESSBOARD);
 	
 }

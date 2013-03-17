@@ -1,7 +1,7 @@
 package imj.apps.modules;
 
 import static java.lang.Integer.parseInt;
-import imj.apps.modules.FilteredImage.RankFilter;
+import imj.apps.modules.FilteredImage.IntRankFilter;
 import net.sourceforge.aprog.context.Context;
 
 /**
@@ -21,7 +21,7 @@ public final class RankViewFilter extends ViewFilter.FromFilter {
 		
 		final int rank = parseInt(this.getParameters().get("rank"));
 		
-		this.setFilter(new RankFilter(this.parseStructuringElement(), rank));
+		this.setFilter(new IntRankFilter(this.parseStructuringElement(), rank));
 	}
 	
 }
