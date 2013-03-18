@@ -5,6 +5,8 @@ import static imj.apps.modules.BigImageComponent.SOURCE_IMAGE;
 import static imj.apps.modules.ViewFilter.VIEW_FILTER;
 import static java.awt.Color.BLACK;
 import static java.awt.Color.YELLOW;
+import static java.lang.Math.log;
+import static java.lang.Math.round;
 import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -116,7 +118,6 @@ public final class HistogramPanel extends JPanel {
 		// XXX avoid duplicate updates
 		context.getVariable(SOURCE_IMAGE).addListener(updater);
 		context.getVariable(VIEW_FILTER).addListener(updater);
-		context.getVariable("sieve").addListener(updater);
 		
 		this.setPreferredSize(new Dimension(256, 256));
 		
@@ -313,9 +314,10 @@ public final class HistogramPanel extends JPanel {
 			
 			final int endX = viewport.x + viewport.width;
 			final int endY = viewport.y + viewport.height;
-			final int colorMin = 96;
-			final int colorAmplitude = 255 - colorMin;
+			final int colorMinimum = 32;
+			final int colorAmplitude = 255 - colorMinimum;
 			final int countAmplitude = this.max - this.nonZeroMin;
+			final double logScale = log(1 + countAmplitude);
 			
 			for (int y = viewport.y; y < endY; ++y) {
 				final int datumRowIndex = this.getDatumRowIndex(y);
@@ -323,7 +325,8 @@ public final class HistogramPanel extends JPanel {
 				for (int x = viewport.x; x < endX; ++x) {
 					final int datumColumnIndex = this.getDatumColumnIndex(x);
 					final int count = this.getValue(datumColumnIndex, datumRowIndex);
-					final int color = count == 0 ? 0 : colorMin + (count - this.nonZeroMin) * colorAmplitude / countAmplitude;
+					final int color = count == 0 ? 0 :
+						(int) round(colorMinimum + colorAmplitude * log(1 + count - this.nonZeroMin) / logScale);
 					
 					this.buffer.setRGB(x, y, argb(255, color, color, 0));
 				}
