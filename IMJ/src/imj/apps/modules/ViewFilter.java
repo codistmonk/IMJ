@@ -431,7 +431,7 @@ public abstract class ViewFilter extends Plugin {
 		
 		@Override
 		protected final ComplexFilter newComplexFilter() {
-			return new ComplexFilter(this.isOutputMonochannel(), this.splitInputChannels()) {
+			return new ComplexFilter(this.splitInputChannels(), this.isOutputMonochannel()) {
 				
 				@Override
 				public final int getNewValue(final int index, final int oldValue, final Channel channel) {
