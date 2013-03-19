@@ -10,6 +10,7 @@ import static net.sourceforge.aprog.i18n.Messages.translate;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
 import static net.sourceforge.aprog.tools.Tools.ignore;
+import static net.sourceforge.aprog.tools.Tools.invoke;
 
 import java.awt.Component;
 import java.awt.GridLayout;
@@ -37,6 +38,8 @@ import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 
 import net.sourceforge.aprog.context.Context;
+import net.sourceforge.aprog.events.Variable.Listener;
+import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
 
 /**
  * @author codistmonk (creation 2013-02-18)
@@ -320,6 +323,17 @@ public abstract class Plugin {
 		});
 		
 		return result;
+	}
+	
+	public static final void onChange(final Context context, final String variableName, final Object objectOrClass, final String methodName, final Object... arguments) {
+		context.getVariable(variableName).addListener(new Listener<Object>() {
+			
+			@Override
+			public final void valueChanged(final ValueChangedEvent<Object, ?> event) {
+				invoke(objectOrClass, methodName, arguments);
+			}
+			
+		});
 	}
 	
 }
