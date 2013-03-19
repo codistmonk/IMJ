@@ -37,11 +37,10 @@ public final class BitRoundingViewFilter extends ViewFilter {
 			
 			@Override
 			public final int getNewValue(final int index, final int oldValue,  final Channel channel) {
-				return transform(channel.getValue(oldValue));
+				return BitRoundingViewFilter.this.transform(channel.getValue(oldValue));
 			}
 			
 		};
 	}
 	
 }
-	
