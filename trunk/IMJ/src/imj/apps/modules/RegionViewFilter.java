@@ -21,7 +21,7 @@ public final class RegionViewFilter extends ViewFilter.FromFilter {
 		this.getParameters().put("structuringElement", "disk 1 chessboard");
 		this.getParameters().put("rgbCoefficients", "2 -6 4");
 		this.getParameters().put("threshold", "128");
-		this.getParameters().put("rejectionModulation", "0.5");
+		this.getParameters().put("outside", "0.5");
 	}
 	
 	@Override
@@ -41,11 +41,11 @@ public final class RegionViewFilter extends ViewFilter.FromFilter {
 		}
 		
 		final double threshold = parseDouble(this.getParameters().get("threshold").trim());
-		final double rejectionModulation = parseDouble(this.getParameters().get("rejectionModulation").trim());
+		final double outside = parseDouble(this.getParameters().get("outside").trim());
 		
 		final int[] structuringElement = parseStructuringElement(this.getParameters().get("structuringElement"));
 		
-		this.setFilter(new RegionFilter(structuringElement, rgbCoefficients, threshold, rejectionModulation));
+		this.setFilter(new RegionFilter(structuringElement, rgbCoefficients, threshold, outside));
 	}
 	
 	/**

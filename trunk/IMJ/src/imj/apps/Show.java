@@ -49,6 +49,7 @@ import imj.apps.modules.RegionViewFilter;
 import imj.apps.modules.SaturationSieve201303080950;
 import imj.apps.modules.ShowActions;
 import imj.apps.modules.Sieve;
+import imj.apps.modules.SieveViewFilter;
 import imj.apps.modules.SimpleSieve;
 import imj.apps.modules.StatisticsViewFilter;
 import imj.apps.modules.SubtractFromSourceViewFilter;
@@ -200,6 +201,7 @@ public final class Show {
 				new StatisticsViewFilter(result),
 				new FeatureViewFilter(result),
 				new LogViewFilter(result),
+				new SieveViewFilter(result),
 				new RegionViewFilter(result),
 				new SubtractFromSourceViewFilter(result),
 				new LODStatisticsViewFilter(result),

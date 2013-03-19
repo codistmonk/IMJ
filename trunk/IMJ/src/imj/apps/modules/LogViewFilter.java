@@ -6,7 +6,7 @@ import static java.lang.Math.round;
 import net.sourceforge.aprog.context.Context;
 
 /**
- * @author codistmonk (creation 2013-02-18)
+ * @author codistmonk (creation 2013-03-19)
  */
 public final class LogViewFilter extends ViewFilter {
 	
