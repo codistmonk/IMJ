@@ -2,18 +2,23 @@ package imj.apps.modules;
 
 import static imj.IMJTools.argb;
 import static imj.apps.modules.BigImageComponent.SOURCE_IMAGE;
+import static imj.apps.modules.Plugin.onChange;
 import static imj.apps.modules.ViewFilter.VIEW_FILTER;
 import static java.awt.Color.BLACK;
 import static java.awt.Color.YELLOW;
 import static java.lang.Math.log;
 import static java.lang.Math.round;
 import static java.util.Arrays.fill;
+import static javax.swing.SwingUtilities.isRightMouseButton;
+import static net.sourceforge.aprog.af.AFTools.item;
+import static net.sourceforge.aprog.af.AFTools.menu;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import imj.Image;
 import imj.apps.modules.ViewFilter.Channel;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Rectangle;
@@ -27,11 +32,14 @@ import java.util.Locale;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JTextField;
 
+import net.sourceforge.aprog.af.AbstractAFAction;
 import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
+import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**
  * @author codistmonk (creation 2013-02-25)
@@ -115,7 +123,7 @@ public final class HistogramPanel extends JPanel {
 			
 		};
 		
-		// XXX avoid duplicate updates
+		// TODO avoid duplicate updates
 		context.getVariable(SOURCE_IMAGE).addListener(updater);
 		context.getVariable(VIEW_FILTER).addListener(updater);
 		
@@ -195,16 +203,206 @@ public final class HistogramPanel extends JPanel {
 	}
 	
 	/**
+	 * @author codistmonk (creation 2013-03-19)
+	 */
+	public static final class HistogramActions {
+		
+		private HistogramActions() {
+			throw new IllegalInstantiationException();
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		public static final String ACTIONS_SET_VALUE_SCALE_LINEAR = "actions.setValueScaleLinear";
+		
+		/**
+		 * {@value}.
+		 */
+		public static final String ACTIONS_SET_VALUE_SCALE_LOGARITHMIC = "actions.setValueScaleLogarithmic";
+		
+		/**
+		 * @author codistmonk (creation 2013-02-25)
+		 */
+		public static final class SetValueScaleLinear extends AbstractAFAction {
+			
+			public SetValueScaleLinear(final Context context) {
+				super(context, ACTIONS_SET_VALUE_SCALE_LINEAR);
+			}
+			
+			@Override
+			public final void perform(final Object object) {
+				this.getContext().set("valueScale", new ValueScale.Linear());
+			}
+			
+		}
+		
+		/**
+		 * @author codistmonk (creation 2013-02-25)
+		 */
+		public static final class SetValueScaleLogarithmic extends AbstractAFAction {
+			
+			public SetValueScaleLogarithmic(final Context context) {
+				super(context, ACTIONS_SET_VALUE_SCALE_LOGARITHMIC);
+			}
+			
+			@Override
+			public final void perform(final Object object) {
+				this.getContext().set("valueScale", new ValueScale.Logarithmic());
+			}
+			
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-03-19)
+	 */
+	public static abstract class ValueScale {
+		
+		private int valueMinimum;
+		
+		private int valueMaximum;
+		
+		private int valueAmplitude;
+		
+		private int displayMinimum;
+		
+		private int displayMaximum;
+		
+		private int displayAmplitude;
+		
+		public final void setBounds(final int valueMinimum, final int valueMaximum, final int displayMinimum, final int displayMaximum) {
+			this.valueMinimum = valueMinimum;
+			this.valueMaximum = valueMaximum;
+			this.valueAmplitude = valueMaximum - valueMinimum;
+			this.displayMinimum = displayMinimum;
+			this.displayMaximum = displayMaximum;
+			this.displayAmplitude = displayMaximum - displayMinimum;
+			
+			this.boundsSet();
+		}
+		
+		public final int getValueMinimum() {
+			return this.valueMinimum;
+		}
+		
+		public final int getValueMaximum() {
+			return this.valueMaximum;
+		}
+		
+		public final int getValueAmplitude() {
+			return this.valueAmplitude;
+		}
+		
+		public final int getDisplayMinimum() {
+			return this.displayMinimum;
+		}
+		
+		public final int getDisplayMaximum() {
+			return this.displayMaximum;
+		}
+		
+		public final int getDisplayAmplitude() {
+			return this.displayAmplitude;
+		}
+		
+		public abstract int getDisplayValue(int value);
+		
+		protected void boundsSet() {
+			// NOP
+		}
+		
+		/**
+		 * @author codistmonk (creation 2013-03-19)
+		 */
+		public static final class Linear extends ValueScale {
+			
+			@Override
+			public final int getDisplayValue(final int value) {
+				return this.getDisplayMinimum() + this.getDisplayAmplitude() * (value - this.getValueMinimum()) / this.getValueAmplitude();
+			}
+			
+		}
+		
+		/**
+		 * @author codistmonk (creation 2013-03-19)
+		 */
+		public static final class Logarithmic extends ValueScale {
+			
+			private double logScale;
+			
+			@Override
+			public final int getDisplayValue(final int value) {
+				return (int) round(this.getDisplayMinimum() +
+						this.getDisplayAmplitude() * log(1 + value - this.getValueMinimum()) / this.logScale);
+			}
+			
+			@Override
+			protected final void boundsSet() {
+				this.logScale = log(1 + this.getValueAmplitude());
+				
+				if (this.logScale <= 0.0) {
+					this.logScale = 1.0;
+				}
+			}
+			
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-02-25)
+	 */
+	public static final class HistogramPopupHandler extends MouseAdapter {
+		
+		private final JPopupMenu popup;
+		
+		public HistogramPopupHandler(final Context context, final Component component) {
+			this.popup = new JPopupMenu();
+			
+			new HistogramActions.SetValueScaleLinear(context);
+			new HistogramActions.SetValueScaleLogarithmic(context);
+			
+			this.popup.add(
+					menu("Value scale",
+							item("Linear", context, HistogramActions.ACTIONS_SET_VALUE_SCALE_LINEAR),
+							item("Logarithmic", context, HistogramActions.ACTIONS_SET_VALUE_SCALE_LOGARITHMIC)));
+			
+			onChange(context, "valueScale", component, "repaint");
+		}
+		
+		@Override
+		public final void mouseClicked(final MouseEvent event) {
+			if (isRightMouseButton(event)) {
+				this.popup.show(event.getComponent(), event.getX(), event.getY());
+			}
+		}
+		
+		public final void addTo(final Component component) {
+			component.addMouseListener(this);
+		}
+		
+	}
+	
+	/**
 	 * @author codistmonk (creation 2013-02-25)
 	 */
 	public static final class Histogram1Component extends JComponent {
+		
+		private final Context context;
 		
 		private final int[] data;
 		
 		private int max;
 		
 		public Histogram1Component() {
+			this.context = new Context();
 			this.data = new int[256];
+			
+			this.context.set("valueScale", new ValueScale.Linear(), ValueScale.class);
+			
+			new HistogramPopupHandler(this.context, this).addTo(this);
 		}
 		
 		public final void update(final Image image, final Channel channel) {
@@ -242,11 +440,19 @@ public final class HistogramPanel extends JPanel {
 			
 			g.setColor(YELLOW);
 			
+			final ValueScale valueScale = this.getContext().get("valueScale");
+			
+			valueScale.setBounds(0, this.max, 0, viewport.height);
+			
 			for (int x = viewport.x; x < endX; ++x) {
-				final int h = this.getValue(this.getDatumIndex(x)) * viewport.height / this.max;
+				final int h = valueScale.getDisplayValue(this.getValue(this.getDatumIndex(x)));
 				
 				g.drawLine(x, lastY, x, lastY - h);
 			}
+		}
+		
+		final Context getContext() {
+			return this.context;
 		}
 		
 	}
@@ -256,17 +462,24 @@ public final class HistogramPanel extends JPanel {
 	 */
 	public static final class Histogram2Component extends JComponent {
 		
+		private final Context context;
+		
 		private final int[][] data;
 		
-		private int max;
+		private int maximum;
 		
-		private int nonZeroMin;
+		private int nonZeroMinimum;
 		
 		private BufferedImage buffer;
 		
 		public Histogram2Component() {
+			this.context = new Context();
 			this.data = new int[256][256];
 			this.setDoubleBuffered(false);
+			
+			this.context.set("valueScale", new ValueScale.Logarithmic(), ValueScale.class);
+			
+			new HistogramPopupHandler(this.context, this).addTo(this);
 		}
 		
 		public final int getValue(final int datumColumnIndex, final int datumRowIndex) {
@@ -294,12 +507,12 @@ public final class HistogramPanel extends JPanel {
 				++this.data[channel0.getValue(rgba)][channel1.getValue(rgba)];
 			}
 			
-			this.nonZeroMin = Integer.MAX_VALUE;
-			this.max = Integer.MIN_VALUE;
+			this.nonZeroMinimum = Integer.MAX_VALUE;
+			this.maximum = Integer.MIN_VALUE;
 			
 			for (final int[] subData : this.data) {
-				this.max = Math.max(this.max, max(subData));
-				this.nonZeroMin = Math.min(this.nonZeroMin, nonZeroMin(subData));
+				this.maximum = Math.max(this.maximum, max(subData));
+				this.nonZeroMinimum = Math.min(this.nonZeroMinimum, nonZeroMin(subData));
 			}
 			
 			this.repaint();
@@ -312,21 +525,20 @@ public final class HistogramPanel extends JPanel {
 				this.buffer = new BufferedImage(viewport.width, viewport.height, BufferedImage.TYPE_3BYTE_BGR);
 			}
 			
+			final ValueScale valueScale = this.context.get("valueScale");
 			final int endX = viewport.x + viewport.width;
 			final int endY = viewport.y + viewport.height;
-			final int colorMinimum = 32;
-			final int colorAmplitude = 255 - colorMinimum;
-			final int countAmplitude = this.max - this.nonZeroMin;
-			final double logScale = log(1 + countAmplitude);
+			final int displayMinimum = 16;
+			
+			valueScale.setBounds(this.nonZeroMinimum, this.maximum, displayMinimum, 255);
 			
 			for (int y = viewport.y; y < endY; ++y) {
 				final int datumRowIndex = this.getDatumRowIndex(y);
 				
 				for (int x = viewport.x; x < endX; ++x) {
 					final int datumColumnIndex = this.getDatumColumnIndex(x);
-					final int count = this.getValue(datumColumnIndex, datumRowIndex);
-					final int color = count == 0 ? 0 :
-						(int) round(colorMinimum + colorAmplitude * log(1 + count - this.nonZeroMin) / logScale);
+					final int value = this.getValue(datumColumnIndex, datumRowIndex);
+					final int color = value == 0 ? 0 : valueScale.getDisplayValue(value);
 					
 					this.buffer.setRGB(x, y, argb(255, color, color, 0));
 				}
