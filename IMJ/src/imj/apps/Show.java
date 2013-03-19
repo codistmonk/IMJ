@@ -41,6 +41,7 @@ import imj.apps.modules.IntRoundingViewFilter;
 import imj.apps.modules.LODStatisticsViewFilter;
 import imj.apps.modules.LinearColorViewFilter;
 import imj.apps.modules.LinearViewFilter;
+import imj.apps.modules.LogViewFilter;
 import imj.apps.modules.PipelineViewFilter;
 import imj.apps.modules.RankViewFilter;
 import imj.apps.modules.RegionOfInterest;
@@ -197,8 +198,9 @@ public final class Show {
 				new LinearColorViewFilter(result),
 				new PipelineViewFilter(result),
 				new StatisticsViewFilter(result),
-				new RegionViewFilter(result),
 				new FeatureViewFilter(result),
+				new LogViewFilter(result),
+				new RegionViewFilter(result),
 				new SubtractFromSourceViewFilter(result),
 				new LODStatisticsViewFilter(result),
 				new LinearViewFilter(result),
