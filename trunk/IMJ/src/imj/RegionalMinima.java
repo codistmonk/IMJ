@@ -5,6 +5,10 @@ package imj;
  */
 public final class RegionalMinima extends RegionalExtrema {
 	
+	public RegionalMinima(final Image image, final Image result, final int[] connectivity) {
+		super(image, result, connectivity);
+	}
+	
 	public RegionalMinima(final Image image, final int[] connectivity) {
 		super(image, connectivity);
 	}

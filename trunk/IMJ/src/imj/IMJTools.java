@@ -94,26 +94,26 @@ public final class IMJTools {
 		return (alpha << 24) | (red << 16) | (green << 8) | blue;
 	}
 	
-	public static final int alpha(final int rgba) {
-		return channelValue(rgba, 3);
+	public static final int alpha(final int argb) {
+		return channelValue(argb, 3);
 	}
 	
-	public static final int red(final int rgba) {
-		return channelValue(rgba, 2);
+	public static final int red(final int argb) {
+		return channelValue(argb, 2);
 	}
 	
-	public static final int green(final int rgba) {
-		return channelValue(rgba, 1);
+	public static final int green(final int argb) {
+		return channelValue(argb, 1);
 	}
 	
-	public static final int blue(final int rgba) {
-		return channelValue(rgba, 0);
+	public static final int blue(final int argb) {
+		return channelValue(argb, 0);
 	}
 	
-	public static final int hue(final int rgba) {
-		final int red = red(rgba);
-		final int green = green(rgba);
-		final int blue = blue(rgba);
+	public static final int hue(final int argb) {
+		final int red = red(argb);
+		final int green = green(argb);
+		final int blue = blue(argb);
 		int brightness = red < green ? green : red;
 		int darkness = red < green ? red : green;
 		
@@ -148,10 +148,10 @@ public final class IMJTools {
 	    return (int) ((hue < 0F ? hue + 1F : hue) * 255F);
 	}
 	
-	public static final int saturation(final int rgba) {
-		final int red = red(rgba);
-		final int green = green(rgba);
-		final int blue = blue(rgba);
+	public static final int saturation(final int argb) {
+		final int red = red(argb);
+		final int green = green(argb);
+		final int blue = blue(argb);
 		int brightness = red < green ? green : red;
 		int darkness = red < green ? red : green;
 		
@@ -164,10 +164,10 @@ public final class IMJTools {
 		return brightness == 0 ? 0 : (brightness - darkness) * 255 / brightness;
 	}
 	
-	public static final int brightness(final int rgba) {
-		final int red = red(rgba);
-		final int green = green(rgba);
-		final int blue = blue(rgba);
+	public static final int brightness(final int argb) {
+		final int red = red(argb);
+		final int green = green(argb);
+		final int blue = blue(argb);
 		int result = red < green ? green : red;
 		
 		if (result < blue) {
@@ -177,8 +177,8 @@ public final class IMJTools {
 		return result;
 	}
 	
-	public static final int channelValue(final int rgba, final int channelIndex) {
-		return (rgba >> (channelIndex << 3)) & 0x000000FF;
+	public static final int channelValue(final int argb, final int channelIndex) {
+		return (argb >> (channelIndex << 3)) & 0x000000FF;
 	}
 	
 	public static final int square(final int x) {

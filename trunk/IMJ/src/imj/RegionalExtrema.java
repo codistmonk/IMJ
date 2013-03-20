@@ -14,7 +14,11 @@ public abstract class RegionalExtrema extends Labeling {
 	private int labelCount;
 	
 	public RegionalExtrema(final Image image, final int[] connectivity) {
-		super(image);
+		this(image, null, connectivity);
+	}
+	
+	public RegionalExtrema(final Image image, final Image result, final int[] connectivity) {
+		super(image, result);
 		this.component = new IntList();
 		this.componentBorder = new IntList();
 		this.componentOutside = new IntList();

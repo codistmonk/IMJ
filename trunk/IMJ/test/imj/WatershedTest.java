@@ -4,6 +4,8 @@ import static imj.IMJTools.image;
 import static imj.Labeling.NeighborhoodShape.CONNECTIVITY_4;
 import static imj.MorphologicalOperations.edges8;
 import static imj.RegionalExtremaTest.assertImageEquals;
+import static imj.RegionalMaxima.regionalMaxima26;
+import static imj.Watershed.watershedTopDown26;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.IMJTools.StatisticsSelector;
@@ -98,7 +100,7 @@ public final class WatershedTest {
 	}
 	
 //	@Test
-	public final void test7() {
+	public final void test6() {
 		final TicToc timer = new TicToc();
 //		final String imageId = "test/imj/12003.jpg";
 		final String imageId = "../Libraries/images/16088-4.png";
@@ -113,6 +115,52 @@ public final class WatershedTest {
 //		
 //		ImageComponent.showAdjusted(imageId, image, edges);
 		ImageComponent.showAdjusted(imageId, new WatershedStack(image, 2, StatisticsSelector.MEAN).getAllImages());
+	}
+	
+	@Test
+	public final void test3D1() {
+		final Image[] image = {
+				image(new int[][] {
+					{ 0, 1, 2, 1, },
+					{ 0, 2, 4, 2, },
+					{ 4, 3, 2, 1, },
+					{ 5, 4, 0, 0, },
+			}), image(new int[][] {
+					{ 0, 3, 4, 3, },
+					{ 0, 4, 5, 4, },
+					{ 2, 3, 4, 3, },
+					{ 4, 2, 0, 0, },
+			}), image(new int[][] {
+					{ 0, 1, 2, 1, },
+					{ 0, 2, 4, 2, },
+					{ 0, 1, 2, 1, },
+					{ 0, 0, 0, 0, },
+			})
+		};
+		final Image[] expected = {
+				image(new int[][] {
+					{ 2, 2, 2, 2, },
+					{ 1, 2, 2, 2, },
+					{ 1, 1, 2, 2, },
+					{ 1, 1, 1, 2, },
+			}), image(new int[][] {
+					{ 2, 2, 2, 2, },
+					{ 1, 2, 2, 2, },
+					{ 1, 1, 2, 2, },
+					{ 1, 1, 1, 2, },
+			}), image(new int[][] {
+					{ 2, 2, 2, 2, },
+					{ 1, 2, 2, 2, },
+					{ 1, 2, 2, 2, },
+					{ 1, 1, 1, 2, },
+			})
+		};
+		
+		final Image[] labels = watershedTopDown26(image, regionalMaxima26(image, null));
+		
+		assertImageEquals(expected[0], labels[0]);
+		assertImageEquals(expected[1], labels[1]);
+		assertImageEquals(expected[2], labels[2]);
 	}
 	
 	/**

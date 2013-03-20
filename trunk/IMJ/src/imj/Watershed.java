@@ -1,5 +1,7 @@
 package imj;
 
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-01-27)
@@ -86,5 +88,114 @@ public final class Watershed extends Labeling {
 	 * {@value}.
 	 */
 	private static final boolean DONT_GROW_UNLESS_PIXEL_IS_CLOSEST_TO_NEIGHBOR = false;
+	
+	public static final Image[] watershedTopDown26(final Image[] image, final Image[] result) {
+		final int[][] neighborhood = {
+				{ -1, -1, -1 },
+				{ -1, -1, +0 },
+				{ -1, -1, +1 },
+				{ -1, +0, -1 },
+				{ -1, +0, +0 },
+				{ -1, +0, +1 },
+				{ -1, +1, -1 },
+				{ -1, +1, +0 },
+				{ -1, +1, +1 },
+				
+				{ +0, -1, -1 },
+				{ +0, -1, +0 },
+				{ +0, -1, +1 },
+				{ +0, +0, -1 },
+				{ +0, +0, +1 },
+				{ +0, +1, -1 },
+				{ +0, +1, +0 },
+				{ +0, +1, +1 },
+				
+				{ +1, -1, -1 },
+				{ +1, -1, +0 },
+				{ +1, -1, +1 },
+				{ +1, +0, -1 },
+				{ +1, +0, +0 },
+				{ +1, +0, +1 },
+				{ +1, +1, -1 },
+				{ +1, +1, +0 },
+				{ +1, +1, +1 },
+		};
+		
+		final int layerCount = image.length;
+		final int rowCount = image[0].getRowCount();
+		final int columnCount = image[0].getColumnCount();
+		final int layerPixelCount = rowCount * columnCount;
+		final IntList todo = new IntList();
+		int processedPixels = 0;
+		
+		for (int layerIndex = 0; layerIndex < layerCount; ++layerIndex) {
+			for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex) {
+				for (int columnIndex = 0; columnIndex < columnCount; ++columnIndex) {
+					final int label = result[layerIndex].getValue(rowIndex, columnIndex);
+					
+					if (0 < label) {
+						todo.add(layerIndex * layerPixelCount + rowIndex * columnCount + columnIndex);
+						++processedPixels;
+					}
+				}
+			}
+		}
+		
+		while (!todo.isEmpty()) {
+			final int pixel = todo.remove(0);
+			final int layerIndex = pixel / layerPixelCount;
+			final int rowIndex = (pixel % layerPixelCount) / columnCount;
+			final int columnIndex = (pixel % layerPixelCount) % columnCount;
+			final int pixelValue = image[layerIndex].getValue(rowIndex, columnIndex);
+			final int pixelLabel = result[layerIndex].getValue(rowIndex, columnIndex);
+			
+			for (final int[] dzrc : neighborhood) {
+				final int z = layerIndex + dzrc[0];
+				final int r = rowIndex + dzrc[1];
+				final int c = columnIndex + dzrc[2];
+				
+				if (0 <= z && z < layerCount && 0 <= r && r < rowCount && 0 <= c && c < columnCount) {
+					final int neighbor = z * layerPixelCount + r * columnCount + c;
+					final int neighborValue = image[z].getValue(r, c);
+					final int neighborLabel = result[z].getValue(r, c);
+					
+					if (neighborValue <= pixelValue && neighborLabel <= 0) {
+//					if (neighborLabel <= 0) {
+						result[z].setValue(r, c, pixelLabel);
+						todo.add(neighbor);
+						++processedPixels;
+					}
+				}
+			}
+		}
+		
+		debugPrint(processedPixels, layerCount * layerPixelCount);
+		
+		for (int layerIndex = 0; layerIndex < layerCount; ++layerIndex) {
+			for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex) {
+				for (int columnIndex = 0; columnIndex < columnCount; ++columnIndex) {
+					final int label = result[layerIndex].getValue(rowIndex, columnIndex);
+					
+					if (label == 0) {
+						debugPrint(layerIndex, rowIndex, columnIndex, result[layerIndex].getValue(rowIndex, columnIndex), image[layerIndex].getValue(rowIndex, columnIndex));
+						
+						for (final int[] dzrc : neighborhood) {
+							final int z = layerIndex + dzrc[0];
+							final int r = rowIndex + dzrc[1];
+							final int c = columnIndex + dzrc[2];
+							
+							if (0 <= z && z < layerCount && 0 <= r && r < rowCount && 0 <= c && c < columnCount) {
+								debugPrint(z, r, c, result[z].getValue(r, c), image[z].getValue(r, c));
+							}
+						}
+						
+						throw new IllegalStateException();
+					}
+				}
+			}
+		}
+		
+		return result;
+	}
 	
 }
