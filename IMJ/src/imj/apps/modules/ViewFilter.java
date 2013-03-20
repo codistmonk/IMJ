@@ -42,6 +42,7 @@ import java.util.Locale;
 import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-18)
@@ -95,9 +96,11 @@ public abstract class ViewFilter extends Plugin {
 	}
 	
 	public final void setSourceImage(final Image image) {
-		this.getImage().setSource(image);
-		
-		this.sourceImageChanged();
+		if (this.getImage().getSource() != image) {
+			this.getImage().setSource(image);
+			
+			this.sourceImageChanged();
+		}
 	}
 	
 	protected void sourceImageChanged() {

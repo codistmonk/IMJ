@@ -35,6 +35,7 @@ import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.BigImageComponent;
 import imj.apps.modules.BitRoundingViewFilter;
+import imj.apps.modules.ColorClusterViewFilter;
 import imj.apps.modules.ContourSieve;
 import imj.apps.modules.FeatureViewFilter;
 import imj.apps.modules.IntRoundingViewFilter;
@@ -202,6 +203,7 @@ public final class Show {
 				new FeatureViewFilter(result),
 				new LogViewFilter(result),
 				new SieveViewFilter(result),
+				new ColorClusterViewFilter(result),
 				new RegionViewFilter(result),
 				new SubtractFromSourceViewFilter(result),
 				new LODStatisticsViewFilter(result),

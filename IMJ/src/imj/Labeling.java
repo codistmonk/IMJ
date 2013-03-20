@@ -33,11 +33,11 @@ public abstract class Labeling {
 		this.pixelCount = this.rowCount * this.columnCount;
 		this.lastRowIndex = this.rowCount - 1;
 		this.lastColumnIndex = this.columnCount - 1;
-		this.result = result;
+		this.result = result != null ? result : getMemoryManagementStrategy().newImage(image.getRowCount(), image.getColumnCount(), image.getChannelCount());
 	}
 	
 	protected Labeling(final Image image) {
-		this(image, getMemoryManagementStrategy().newImage(image.getRowCount(), image.getColumnCount(), image.getChannelCount()));
+		this(image, null);
 	}
 	
 	protected Labeling(final Image image, final int resultChannelCount) {
