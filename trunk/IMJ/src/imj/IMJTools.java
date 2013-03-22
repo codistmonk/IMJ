@@ -177,6 +177,19 @@ public final class IMJTools {
 		return result;
 	}
 	
+	public static final int darkness(final int argb) {
+		final int red = red(argb);
+		final int green = green(argb);
+		final int blue = blue(argb);
+		int result = red > green ? green : red;
+		
+		if (result > blue) {
+			result = blue;
+		}
+		
+		return result;
+	}
+	
 	public static final int channelValue(final int argb, final int channelIndex) {
 		return (argb >> (channelIndex << 3)) & 0x000000FF;
 	}

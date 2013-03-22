@@ -2,6 +2,10 @@ package imj.apps.modules;
 
 import static imj.IMJTools.argb;
 import static imj.Image.Abstract.index;
+
+import java.awt.Dimension;
+import java.awt.Point;
+
 import imj.IMJTools.StatisticsSelector;
 import imj.Image;
 import imj.IntList;
@@ -17,6 +21,10 @@ public final class FilteredImage implements Image {
 	private Image source;
 	
 	private Filter filter;
+	
+	private Image cache;
+	
+	private Point cacheLocation;
 	
 	public FilteredImage(final Image source) {
 		this.source = source;
@@ -102,6 +110,8 @@ public final class FilteredImage implements Image {
 	public final float setFloatValue(final int rowIndex, final int columnIndex, final float value) {
 		return this.setFloatValue(index(this.getSource(), rowIndex, columnIndex), value);
 	}
+	
+	static final Dimension cacheSize = new Dimension(256, 256);
 	
 	/**
 	 * @author codistmonk (creation 2013-02-18)

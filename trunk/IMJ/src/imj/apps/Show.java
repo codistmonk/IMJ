@@ -37,8 +37,11 @@ import imj.apps.modules.BigImageComponent;
 import imj.apps.modules.BitRoundingViewFilter;
 import imj.apps.modules.ColorClusterViewFilter;
 import imj.apps.modules.ContourSieve;
+import imj.apps.modules.ContourViewFilter;
 import imj.apps.modules.FeatureViewFilter;
+import imj.apps.modules.HistogramClusterViewFilter;
 import imj.apps.modules.IntRoundingViewFilter;
+import imj.apps.modules.IterativeBitRoundingViewFilter;
 import imj.apps.modules.LODStatisticsViewFilter;
 import imj.apps.modules.LinearColorViewFilter;
 import imj.apps.modules.LinearViewFilter;
@@ -196,6 +199,7 @@ public final class Show {
 		result.set("viewFilters", array(
 				null,
 				new BitRoundingViewFilter(result),
+				new IterativeBitRoundingViewFilter(result),
 				new IntRoundingViewFilter(result),
 				new LinearColorViewFilter(result),
 				new PipelineViewFilter(result),
@@ -203,6 +207,8 @@ public final class Show {
 				new FeatureViewFilter(result),
 				new LogViewFilter(result),
 				new SieveViewFilter(result),
+				new ContourViewFilter(result),
+				new HistogramClusterViewFilter(result),
 				new ColorClusterViewFilter(result),
 				new RegionViewFilter(result),
 				new SubtractFromSourceViewFilter(result),
