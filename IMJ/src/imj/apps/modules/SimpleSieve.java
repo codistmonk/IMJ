@@ -4,6 +4,7 @@ import static imj.IMJTools.alpha;
 import static imj.IMJTools.argb;
 import static imj.IMJTools.blue;
 import static imj.IMJTools.brightness;
+import static imj.IMJTools.darkness;
 import static imj.IMJTools.hue;
 import static imj.IMJTools.red;
 import static imj.IMJTools.saturation;
@@ -108,6 +109,20 @@ public final class SimpleSieve extends Sieve {
 			@Override
 			public final int getNewValue(final int index, final int oldValue) {
 				return hue(oldValue);
+			}
+			
+		}, DARKNESS {
+			
+			@Override
+			public final int getNewValue(final int index, final int oldValue) {
+				return darkness(oldValue);
+			}
+			
+		}, INT {
+			
+			@Override
+			public final int getNewValue(final int index, final int oldValue) {
+				return oldValue;
 			}
 			
 		};
