@@ -35,7 +35,6 @@ import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.BigImageComponent;
 import imj.apps.modules.BitRoundingViewFilter;
-import imj.apps.modules.ColorClusterViewFilter;
 import imj.apps.modules.ContourSieve;
 import imj.apps.modules.ContourViewFilter;
 import imj.apps.modules.FeatureViewFilter;
@@ -198,8 +197,9 @@ public final class Show {
 		result.set("hsb", null, String.class);
 		result.set("viewFilters", array(
 				null,
-				new BitRoundingViewFilter(result),
+				new HistogramClusterViewFilter(result),
 				new IterativeBitRoundingViewFilter(result),
+				new BitRoundingViewFilter(result),
 				new IntRoundingViewFilter(result),
 				new LinearColorViewFilter(result),
 				new PipelineViewFilter(result),
@@ -208,8 +208,6 @@ public final class Show {
 				new LogViewFilter(result),
 				new SieveViewFilter(result),
 				new ContourViewFilter(result),
-				new HistogramClusterViewFilter(result),
-				new ColorClusterViewFilter(result),
 				new RegionViewFilter(result),
 				new SubtractFromSourceViewFilter(result),
 				new LODStatisticsViewFilter(result),
