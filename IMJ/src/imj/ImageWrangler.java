@@ -70,6 +70,8 @@ public final class ImageWrangler {
 		
 		for (int rowIndex = 0, sourceRowIndex = 0; rowIndex < rowCount; ++rowIndex, sourceRowIndex += 2) {
 			for (int columnIndex = 0, sourceColumnIndex = 0; columnIndex < columnCount; ++columnIndex, sourceColumnIndex += 2) {
+				assert sourceRowIndex < source.getRowCount() && sourceColumnIndex < source.getColumnCount();
+				
 				final int value00 = source.getValue(sourceRowIndex + 0, sourceColumnIndex + 0);
 				final int value01 = source.getValue(sourceRowIndex + 0, sourceColumnIndex + 1);
 				final int value10 = source.getValue(sourceRowIndex + 1, sourceColumnIndex + 0);

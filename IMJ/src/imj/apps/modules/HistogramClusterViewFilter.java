@@ -1,34 +1,19 @@
 package imj.apps.modules;
 
-import static imj.IMJTools.blue;
-import static imj.IMJTools.green;
-import static imj.IMJTools.red;
 import static imj.Labeling.NeighborhoodShape.CONNECTIVITY_4;
-import static imj.MathOperations.compute;
-import static imj.MorphologicalOperations.hMaxima;
-import static imj.MorphologicalOperations.hMaxima4;
-import static imj.RegionalMaxima.regionalMaxima26;
-import static imj.Watershed.watershedTopDown26;
 import static java.util.Arrays.sort;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.Image;
 import imj.ImageOfInts;
-import imj.Labeling.NeighborhoodShape;
-import imj.MathOperations.BinaryOperator;
-import imj.MathOperations;
 import imj.MorphologicalOperations;
-import imj.RegionalMaxima;
 import imj.RegionalMinima;
 import imj.Watershed;
-import imj.apps.modules.ViewFilter.Channel;
 
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.Locale;
-import java.util.Set;
 
 import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
@@ -133,6 +118,7 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 			this.clusters = new RegionalMinima(hMinima, CONNECTIVITY_4).getResult();
 			this.clusters = new Watershed(hMinima, this.clusters, CONNECTIVITY_4).getResult();
 			
+//			debugPrintHistogram(this.histogram);
 //			debugPrintHistogram(this.clusters);
 			
 			debugPrint("Applying watershed done", "(time:", timer.toc(), "memory:", usedMemory() + ")");
@@ -142,7 +128,7 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 			
 			for (int i = 0; i < 256; ++i) {
 				final int cluster = this.clusters.getValue(i);
-				this.clusterSizes[cluster] += this.histogram.getValue(i);
+				this.clusterSizes[cluster] += 255 - this.histogram.getValue(i);
 				
 				if (clusterCount < cluster) {
 					clusterCount = cluster;
@@ -160,6 +146,9 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 				
 			});
 			
+//			debugPrint(Arrays.toString(this.indices));
+//			debugPrint(Arrays.toString(this.clusterSizes));
+			
 			Arrays.fill(this.selectedClusters, false);
 			
 			for (final int cluster : new CommandLineArgumentsParser("clusters", this.getParameters().get("clusters")).get("clusters")) {
@@ -167,6 +156,7 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 			}
 			
 //			debugPrint(Arrays.toString(this.selectedClusters));
+//			debugPrint(source);
 		}
 	}
 	
@@ -176,6 +166,23 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 			
 			@Override
 			public final int getNewValue(final int index, final int oldValue, final Channel channel) {
+//				final Image source = getImage().getSource();
+//				
+//				if (index == 0) {
+//					final int pixelCount = source.getRowCount() * source.getColumnCount();
+//					int count = 0;
+//					
+//					for (int pixel = 0; pixel < pixelCount; ++pixel) {
+//						if (accept(source.getValue(pixel))) {
+//							++count;
+//						}
+//					}
+//					
+//					debugPrint(source, count);
+//				}
+//				
+//				assert oldValue == source.getValue(index);
+				
 				return HistogramClusterViewFilter.this.accept(oldValue) ? oldValue : 0;
 			}
 			
@@ -184,79 +191,6 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 	
 	final boolean accept(final int value) {
 		return this.selectedClusters[this.clusters.getValue(this.channel.getValue(value))];
-	}
-	
-	/**
-	 * @author codistmonk (creation 2013-03-19)
-	 */
-	public static final class DataCube {
-		
-		private final int n;
-		
-		private final int nn;
-		
-		private final Image[] data;
-		
-		public DataCube(final int n) {
-			this.n = n;
-			this.nn = n * n;
-			this.data = new Image[n];
-			
-			for (int i = 0; i < n; ++i) {
-				this.data[i] = new ImageOfInts(n, n, 1);
-			}
-		}
-		
-		public final void fill(final int value) {
-			for (final Image layer : this.data) {
-				for (int i = 0; i < this.nn; ++i) {
-					layer.setValue(i, value);
-				}
-			}
-		}
-		
-		public final int getN() {
-			return this.n;
-		}
-		
-//		public final int get(final int index) {
-//			return this.data[index];
-//		}
-//		
-//		public final void set(final int index, final int value) {
-//			this.data[index] = value;
-//		}
-		
-		public final Image[] getData() {
-			return this.data;
-		}
-		
-		public final int get(final int x, final int y, final int z) {
-//			return this.get(this.getIndex(x, y, z));
-			return this.data[z].getValue(y, x);
-		}
-		
-		public final void set(final int x, final int y, final int z, final int value) {
-//			this.set(this.getIndex(x, y, z), value);
-			this.data[z].setValue(y, x, value);
-		}
-		
-		public final int getIndex(final int x, final int y, final int z) {
-			return this.getN() * (this.getN() * z + y) + x;
-		}
-		
-		public final int getX(final int index) {
-			return index % this.getN();
-		}
-		
-		public final int getY(final int index) {
-			return (index / this.getN()) % this.nn;
-		}
-		
-		public final int getZ(final int index) {
-			return index / this.nn;
-		}
-		
 	}
 	
 }
