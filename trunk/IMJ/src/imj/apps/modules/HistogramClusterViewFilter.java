@@ -2,6 +2,8 @@ package imj.apps.modules;
 
 import static imj.Labeling.NeighborhoodShape.CONNECTIVITY_4;
 import static java.util.Arrays.sort;
+import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
+import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.Image;
@@ -39,11 +41,12 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 	public HistogramClusterViewFilter(final Context context) {
 		super(context);
 		this.histogram = new ImageOfInts(1, 256, 1);
-		this.clusterSizes = new int[256];
-		this.indices = new Integer[256];
-		this.selectedClusters = new boolean[256];
+		final int maximumClusterCount = 256 * 256;
+		this.clusterSizes = new int[maximumClusterCount];
+		this.indices = new Integer[maximumClusterCount];
+		this.selectedClusters = new boolean[maximumClusterCount];
 		
-		for (int i = 0; i < 256; ++i) {
+		for (int i = 0; i < maximumClusterCount; ++i) {
 			this.indices[i] = i;
 		}
 		
@@ -94,7 +97,8 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 	}
 	
 	final boolean accept(final int value) {
-		return this.selectedClusters[this.clusters.getValue(this.channels[0].getValue(value))];
+//		return this.selectedClusters[this.clusters.getValue(this.channels[0].getValue(value))];
+		return this.selectedClusters[this.clusters.getValue(this.getColorIndex(value))];
 	}
 	
 	private final void updateChannels() {
@@ -104,6 +108,23 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 		
 		for (int i = 0; i < channelCount; ++i) {
 			this.channels[i] = ViewFilter.parseChannel(channelAsStrings[i].toUpperCase(Locale.ENGLISH));
+		}
+		
+		switch (channelCount) {
+		case 1:
+			if (this.histogram.getRowCount() != 1) {
+				this.histogram = new ImageOfInts(1, 256, 1);
+			}
+			
+			break;
+		case 2:
+			if (this.histogram.getRowCount() != 256) {
+				this.histogram = new ImageOfInts(256, 256, 1);
+			}
+			
+			break;
+		default:
+			throw new IllegalArgumentException("Invalid channel count: " + channelCount);
 		}
 	}
 	
@@ -121,17 +142,22 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 			int maximum = 0;
 			
 			for (int pixel = 0; pixel < pixelCount; ++pixel) {
-				final int pixelChannelValue = this.channels[0].getValue(source.getValue(pixel));
-				final int count = this.histogram.getValue(pixelChannelValue) + 1;
+				final int colorIndex = this.getColorIndex(source.getValue(pixel));
 				
-				this.histogram.setValue(pixelChannelValue, count);
+				final int count = this.histogram.getValue(colorIndex) + 1;
+				
+				this.histogram.setValue(colorIndex, count);
 				
 				if (maximum < count) {
 					maximum = count;
 				}
 			}
 			
-			for (int i = 0; i < 256; ++i) {
+			final int histogramSize = this.histogram.getRowCount() * this.histogram.getColumnCount();
+			
+			debugPrint(histogramSize);
+			
+			for (int i = 0; i < histogramSize; ++i) {
 				this.histogram.setValue(i, 255 - 255 * (1 + this.histogram.getValue(i)) / (1 + maximum));
 			}
 			
@@ -142,7 +168,7 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 			final Image hMinima = MorphologicalOperations.hMinima4(this.histogram, 2);
 			this.clusters = new RegionalMinima(hMinima, CONNECTIVITY_4).getResult();
 			
-			for (int pixel = 0; pixel < 256; ++pixel) {
+			for (int pixel = 0; pixel < histogramSize; ++pixel) {
 				final int value = hMinima.getValue(pixel);
 				
 				if (255 < value) {
@@ -157,7 +183,7 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 			Arrays.fill(this.clusterSizes, 0);
 			int clusterCount = 0;
 			
-			for (int i = 0; i < 256; ++i) {
+			for (int i = 0; i < histogramSize; ++i) {
 				final int cluster = this.clusters.getValue(i);
 				this.clusterSizes[cluster] += 255 - this.histogram.getValue(i);
 				
@@ -176,7 +202,21 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 				}
 				
 			});
+			
+//			debugPrintHistogram(this.clusters);
+//			debugPrint(Arrays.toString(Arrays.copyOf(this.clusterSizes, 10)));
+//			debugPrint(Arrays.toString(Arrays.copyOf(this.indices, 10)));
 		}
+	}
+	
+	private final int getColorIndex(final int pixelRawValue) {
+		int result = 0;
+		
+		for (final Channel channel : this.channels) {
+			result = result * 256 + channel.getValue(pixelRawValue);
+		}
+		
+		return result;
 	}
 	
 	private final void updateSelectedClusters() {
@@ -188,7 +228,7 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 	}
 	
 	public static final void debugPrintHistogram(final Image histogram) {
-		debugPrint();
+		System.out.println(debug(DEBUG_STACK_OFFSET + 1));
 		
 		for (int i = 0; i < 256; ++i) {
 			System.out.print(histogram.getValue(i));
