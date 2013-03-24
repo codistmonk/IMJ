@@ -1,6 +1,7 @@
 package imj.apps.modules;
 
 import static imj.Labeling.NeighborhoodShape.CONNECTIVITY_4;
+import static java.lang.Integer.parseInt;
 import static java.util.Arrays.sort;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.debug;
@@ -28,6 +29,8 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 	
 	private Channel[] channels;
 	
+	private int hMin;
+	
 	private Image histogram;
 	
 	private Image clusters;
@@ -53,6 +56,7 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 		this.getParameters().clear();
 		
 		this.getParameters().put("channels", "brightness");
+		this.getParameters().put("hMin", "2");
 		this.getParameters().put("clusters", "1");
 	}
 	
@@ -74,10 +78,13 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 	@Override
 	protected final void doInitialize() {
 		final Channel[] oldChannels = this.channels;
+		final int oldHMin = this.hMin;
 		
 		this.updateChannels();
 		
-		if (!Arrays.equals(oldChannels, this.channels)) {
+		this.hMin = parseInt(this.getParameters().get("hMin").trim());
+		
+		if (!Arrays.equals(oldChannels, this.channels) || oldHMin != this.hMin) {
 			this.updateClusters();
 		}
 		
@@ -97,7 +104,6 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 	}
 	
 	final boolean accept(final int value) {
-//		return this.selectedClusters[this.clusters.getValue(this.channels[0].getValue(value))];
 		return this.selectedClusters[this.clusters.getValue(this.getColorIndex(value))];
 	}
 	
@@ -165,7 +171,7 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 			
 			debugPrint("Applying watershed...", "(" + new Date(timer.tic()) + ")");
 			
-			final Image hMinima = MorphologicalOperations.hMinima4(this.histogram, 2);
+			final Image hMinima = MorphologicalOperations.hMinima4(this.histogram, this.hMin);
 			this.clusters = new RegionalMinima(hMinima, CONNECTIVITY_4).getResult();
 			
 			for (int pixel = 0; pixel < histogramSize; ++pixel) {
