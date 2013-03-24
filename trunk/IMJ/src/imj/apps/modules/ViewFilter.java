@@ -5,6 +5,7 @@ import static imj.IMJTools.argb;
 import static imj.IMJTools.blue;
 import static imj.IMJTools.brightness;
 import static imj.IMJTools.channelValue;
+import static imj.IMJTools.darkness;
 import static imj.IMJTools.green;
 import static imj.IMJTools.hue;
 import static imj.IMJTools.red;
@@ -26,6 +27,7 @@ import static net.sourceforge.aprog.af.AFTools.fireUpdate;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.ignore;
+import imj.IMJTools;
 import imj.Image;
 import imj.Labeling.NeighborhoodShape.Distance;
 import imj.apps.modules.FilteredImage.ChannelFilter;
@@ -380,6 +382,18 @@ public abstract class ViewFilter extends Plugin {
 				@Override
 				public final int getValue(final int rgba) {
 					return brightness(rgba);
+				}
+				
+			}, DARKNESS {
+				
+				@Override
+				public final int getIndex() {
+					return 2;
+				}
+				
+				@Override
+				public final int getValue(final int rgba) {
+					return darkness(rgba);
 				}
 				
 			};
