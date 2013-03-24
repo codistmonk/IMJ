@@ -1,6 +1,7 @@
 package imj.apps.modules;
 
 import static imj.Labeling.NeighborhoodShape.CONNECTIVITY_4;
+import static imj.apps.modules.HistogramPanel.ValueScale.parseValueScale;
 import static java.lang.Integer.parseInt;
 import static java.util.Arrays.sort;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
@@ -12,6 +13,7 @@ import imj.ImageOfInts;
 import imj.MorphologicalOperations;
 import imj.RegionalMinima;
 import imj.Watershed;
+import imj.apps.modules.HistogramPanel.ValueScale;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -30,6 +32,8 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 	private Channel[] channels;
 	
 	private int hMin;
+	
+	private ValueScale valueScale;
 	
 	private Image histogram;
 	
@@ -56,6 +60,7 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 		this.getParameters().clear();
 		
 		this.getParameters().put("channels", "brightness");
+		this.getParameters().put("valueScale", "linear");
 		this.getParameters().put("hMin", "2");
 		this.getParameters().put("clusters", "1");
 	}
@@ -79,12 +84,14 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 	protected final void doInitialize() {
 		final Channel[] oldChannels = this.channels;
 		final int oldHMin = this.hMin;
+		final ValueScale oldValueScale = this.valueScale;
 		
 		this.updateChannels();
 		
 		this.hMin = parseInt(this.getParameters().get("hMin").trim());
+		this.valueScale = parseValueScale(this.getParameters().get("valueScale"));
 		
-		if (!Arrays.equals(oldChannels, this.channels) || oldHMin != this.hMin) {
+		if (!Arrays.equals(oldChannels, this.channels) || oldHMin != this.hMin || oldValueScale != this.valueScale) {
 			this.updateClusters();
 		}
 		
@@ -159,12 +166,13 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 				}
 			}
 			
+			this.valueScale.setBounds(0, maximum, 0, 255);
+			
 			final int histogramSize = this.histogram.getRowCount() * this.histogram.getColumnCount();
 			
-			debugPrint(histogramSize);
-			
 			for (int i = 0; i < histogramSize; ++i) {
-				this.histogram.setValue(i, 255 - 255 * (1 + this.histogram.getValue(i)) / (1 + maximum));
+//				this.histogram.setValue(i, 255 - 255 * (1 + this.histogram.getValue(i)) / (1 + maximum));
+				this.histogram.setValue(i, 255 - this.valueScale.getDisplayValue(this.histogram.getValue(i)));
 			}
 			
 			debugPrint("Collecting data done", "(time:", timer.toc(), "memory:", usedMemory() + ")");
