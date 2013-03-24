@@ -53,6 +53,7 @@ import javax.swing.JColorChooser;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JList;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -177,15 +178,31 @@ public final class ShowActions {
 	}
 	
 	public static final JList getList(final Object eventSource) {
-		final JList list = cast(JList.class, eventSource);
-		
-		if (list != null) {
-			return list;
+		{
+			final JList list = cast(JList.class, eventSource);
+			
+			if (list != null) {
+				return list;
+			}
 		}
 		
-		final JPopupMenu popup = cast(JPopupMenu.class, eventSource);
+		JPopupMenu popup = cast(JPopupMenu.class, eventSource);
+		
+		if (popup == null) {
+			final JMenuItem menu = cast(JMenuItem.class, eventSource);
+			
+			if (menu != null) {
+				popup = (JPopupMenu) getAncestorOfClass(JPopupMenu.class, menu);
+			}
+		}
 		
 		if (popup != null) {
+			final JList list = cast(JList.class, popup.getInvoker());
+			
+			if (list != null) {
+				return list;
+			}
+			
 			return (JList) getAncestorOfClass(JList.class, popup.getInvoker());
 		}
 		
