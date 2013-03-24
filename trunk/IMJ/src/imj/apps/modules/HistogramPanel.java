@@ -313,6 +313,20 @@ public final class HistogramPanel extends JPanel {
 			// NOP
 		}
 		
+		public static final ValueScale parseValueScale(final String valueScale) {
+			final String s = valueScale.trim().toLowerCase(Locale.ENGLISH);
+			
+			if ("linear".equals(s)) {
+				return new Linear();
+			}
+			
+			if ("logarithmic".equals(s)) {
+				return new Logarithmic();
+			}
+			
+			throw new IllegalArgumentException("Invalid value scale: " + valueScale);
+		}
+		
 		/**
 		 * @author codistmonk (creation 2013-03-19)
 		 */
