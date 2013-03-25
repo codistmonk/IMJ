@@ -2,16 +2,16 @@ package imj.apps.modules;
 
 import static imj.IMJTools.argb;
 import static imj.Image.Abstract.index;
+import imj.IMJTools.StatisticsSelector;
+import imj.Image;
+import imj.ImageOfInts;
+import imj.IntList;
+import imj.apps.modules.ViewFilter.Channel;
 
 import java.awt.Dimension;
 import java.awt.Point;
 
-import imj.IMJTools.StatisticsSelector;
-import imj.Image;
-import imj.IntList;
-import imj.apps.modules.ViewFilter.Channel;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-18)
@@ -24,10 +24,16 @@ public final class FilteredImage implements Image {
 	
 	private Image cache;
 	
+	private RegionOfInterest cacheValidity;
+	
 	private Point cacheLocation;
+	
+	private long timestamp;
 	
 	public FilteredImage(final Image source) {
 		this.source = source;
+		
+		this.setCacheDimensions(512, 512);
 	}
 	
 	public final Image getSource() {
@@ -35,7 +41,23 @@ public final class FilteredImage implements Image {
 	}
 	
 	public final void setSource(final Image source) {
-		this.source = source;
+		final Image oldSource = this.getSource();
+		
+		if (oldSource != source) {
+			this.source = source;
+			
+			this.invalidateCache();
+		} else if (source instanceof FilteredImage && this.timestamp < ((FilteredImage) source).timestamp) {
+			this.invalidateCache();
+		}
+	}
+	
+	public final void invalidateCache() {
+		if (this.cacheValidity != null) {
+			this.cacheValidity.reset(false);
+		}
+		
+		this.timestamp = System.nanoTime();
 	}
 	
 	public final Filter getFilter() {
@@ -54,11 +76,71 @@ public final class FilteredImage implements Image {
 			return 1 < this.getChannelCount() ? value : argb(255, value, value, value);
 		}
 		
-		if (this.getSource() == null) {
-			Tools.debugPrint(this.getFilter());
+		if (this.cache != null) {
+			final int columnCount = this.getColumnCount();
+			final int rowIndex = index / columnCount;
+			final int columnIndex = index % columnCount;
+			final int cacheRowIndex = this.cacheLocation.y;
+			final int rowIndexInCache = rowIndex - cacheRowIndex;
+			final int cacheColumnIndex = this.cacheLocation.x;
+			final int columnIndexInCache = columnIndex - cacheColumnIndex;
+			final int cacheRowCount = this.cache.getRowCount();
+			final int cacheColumnCount = this.cache.getColumnCount();
+			
+			if (0 <= rowIndexInCache && rowIndexInCache < cacheRowCount &&
+					0 <= columnIndexInCache && columnIndexInCache < cacheColumnCount) {
+				final int indexInCache = rowIndexInCache * cacheColumnCount + columnIndexInCache;
+				
+				if (!this.cacheValidity.get(indexInCache)) {
+					this.cache.setValue(indexInCache, this.getFilter().getNewValue(index, this.getSource().getValue(index)));
+					this.cacheValidity.set(indexInCache);
+				}
+				
+				return this.cache.getValue(indexInCache);
+			}
+			
+			final int newCacheRowIndex;
+			final int newCacheColumnIndex;
+			
+			if (rowIndex < cacheRowIndex) {
+				newCacheRowIndex = rowIndex;
+			} else if (cacheRowCount <= rowIndexInCache) {
+				newCacheRowIndex = rowIndex - cacheRowCount + 1;
+			} else {
+				newCacheRowIndex = cacheRowIndex;
+			}
+			
+			if (columnIndex < cacheColumnIndex) {
+				newCacheColumnIndex = columnIndex;
+			} else if (cacheColumnCount <= columnIndexInCache) {
+				newCacheColumnIndex = columnIndex - cacheColumnCount + 1;
+			} else {
+				newCacheColumnIndex = cacheColumnIndex;
+			}
+			
+			this.cacheLocation.setLocation(newCacheColumnIndex, newCacheRowIndex);
+			this.cacheValidity.reset(false);
 		}
 		
 		return this.getFilter().getNewValue(index, this.getSource().getValue(index));
+	}
+	
+	public final void setCacheDimensions(final int rowCount, final int columnCount) {
+		if (rowCount <= 0 || columnCount <= 0) {
+			this.cache = null;
+			this.cacheValidity = null;
+			this.cacheLocation = null;
+			
+			return;
+		}
+		
+		if (this.cache != null && this.cache.getRowCount() == rowCount && this.cache.getColumnCount() == columnCount) {
+			return;
+		}
+		
+		this.cache = new ImageOfInts(rowCount, columnCount, 1);
+		this.cacheValidity = new RegionOfInterest.UsingBitSet(rowCount, columnCount, false);
+		this.cacheLocation = new Point();
 	}
 	
 	@Override

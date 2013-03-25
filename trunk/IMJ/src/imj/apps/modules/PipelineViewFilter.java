@@ -156,6 +156,18 @@ public final class PipelineViewFilter extends ViewFilter {
 	}
 	
 	@Override
+	protected final void invalidateCache() {
+		super.invalidateCache();
+		
+		final ListModel model = this.filters.getModel();
+		final int n = model.getSize();
+		
+		for (int i = 0; i < n; ++i) {
+			((ViewFilter) model.getElementAt(i)).invalidateCache();
+		}
+	}
+	
+	@Override
 	protected final void sourceImageChanged() {
 		final ListModel model = this.filters.getModel();
 		final int n = model.getSize();
@@ -168,7 +180,6 @@ public final class PipelineViewFilter extends ViewFilter {
 			}
 			
 			for (int i = 1; i < n; ++i) {
-//				((ViewFilter) model.getElementAt(i)).setSourceImage(((ViewFilter) model.getElementAt(i - 1)).getImage());
 				((ViewFilter) model.getElementAt(i)).setSource(((ViewFilter) model.getElementAt(i - 1)));
 			}
 		}

@@ -27,7 +27,6 @@ import static net.sourceforge.aprog.af.AFTools.fireUpdate;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.ignore;
-import imj.IMJTools;
 import imj.Image;
 import imj.Labeling.NeighborhoodShape.Distance;
 import imj.apps.modules.FilteredImage.ChannelFilter;
@@ -155,10 +154,16 @@ public abstract class ViewFilter extends Plugin {
 		
 		if (f == null) {
 			this.setSource(current);
+			this.invalidateCache();
 			context.set(VIEW_FILTER, this);
 		} else {
+			this.invalidateCache();
 			fireUpdate(this.getContext(), VIEW_FILTER);
 		}
+	}
+	
+	protected void invalidateCache() {
+		this.getImage().invalidateCache();
 	}
 	
 	@Override
