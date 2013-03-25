@@ -5,6 +5,7 @@ import static imj.apps.modules.HistogramPanel.ValueScale.parseValueScale;
 import static java.lang.Integer.parseInt;
 import static java.util.Arrays.sort;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
+import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
@@ -149,31 +150,7 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 			
 			debugPrint("Collecting data...", "(" + new Date(timer.tic()) + ")");
 			
-			fill(this.histogram, 0);
-			
-			final int pixelCount = source.getRowCount() * source.getColumnCount();
-			int maximum = 0;
-			
-			for (int pixel = 0; pixel < pixelCount; ++pixel) {
-				final int colorIndex = this.getColorIndex(source.getValue(pixel));
-				
-				final int count = this.histogram.getValue(colorIndex) + 1;
-				
-				this.histogram.setValue(colorIndex, count);
-				
-				if (maximum < count) {
-					maximum = count;
-				}
-			}
-			
-			this.valueScale.setBounds(0, maximum, 0, 255);
-			
-			final int histogramSize = this.histogram.getRowCount() * this.histogram.getColumnCount();
-			
-			for (int i = 0; i < histogramSize; ++i) {
-//				this.histogram.setValue(i, 255 - 255 * (1 + this.histogram.getValue(i)) / (1 + maximum));
-				this.histogram.setValue(i, 255 - this.valueScale.getDisplayValue(this.histogram.getValue(i)));
-			}
+			this.updateHistogram(source);
 			
 			debugPrint("Collecting data done", "(time:", timer.toc(), "memory:", usedMemory() + ")");
 			
@@ -181,6 +158,7 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 			
 			final Image hMinima = MorphologicalOperations.hMinima4(this.histogram, this.hMin);
 			this.clusters = new RegionalMinima(hMinima, CONNECTIVITY_4).getResult();
+			final int histogramSize = this.histogram.getRowCount() * this.histogram.getColumnCount();
 			
 			for (int pixel = 0; pixel < histogramSize; ++pixel) {
 				final int value = hMinima.getValue(pixel);
@@ -220,6 +198,60 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 //			debugPrintHistogram(this.clusters);
 //			debugPrint(Arrays.toString(Arrays.copyOf(this.clusterSizes, 10)));
 //			debugPrint(Arrays.toString(Arrays.copyOf(this.indices, 10)));
+		}
+	}
+
+	private final void updateHistogram(final Image source) {
+		fill(this.histogram, 0);
+		
+		final int sourceRowCount = source.getRowCount();
+		final int sourceColumnCount = source.getColumnCount();
+		final int pixelCount = sourceRowCount * sourceColumnCount;
+		int maximum = 0;
+		
+		final FilteredImage f = cast(FilteredImage.class, source);
+		
+		if (f != null) {
+			final int tileRowCount = 512;
+			final int tileColumnCount = 512;
+			final int lastTileRowIndex = sourceRowCount / tileRowCount;
+			final int lastTileColumnIndex = sourceColumnCount / tileColumnCount;
+			
+			for (int tileRowIndex = 0; tileRowIndex <= lastTileRowIndex; ++tileRowIndex) {
+				for (int tileColumnIndex = 0; tileColumnIndex <= lastTileColumnIndex; ++tileColumnIndex) {
+					for (int rowIndexInTile = 0, rowIndex = tileRowIndex * tileRowCount; rowIndexInTile < tileRowCount && rowIndex < sourceRowCount; ++rowIndexInTile, ++rowIndex) {
+						for (int columnIndexInTile = 0, columnIndex = tileColumnIndex * tileColumnCount; columnIndexInTile < tileColumnCount && columnIndex < sourceColumnCount; ++columnIndexInTile, ++columnIndex) {
+							final int colorIndex = this.getColorIndex(source.getValue(rowIndex, columnIndex));
+							final int count = this.histogram.getValue(colorIndex) + 1;
+							
+							this.histogram.setValue(colorIndex, count);
+							
+							if (maximum < count) {
+								maximum = count;
+							}
+						}
+					}
+				}
+			}
+		} else {
+			for (int pixel = 0; pixel < pixelCount; ++pixel) {
+				final int colorIndex = this.getColorIndex(source.getValue(pixel));
+				final int count = this.histogram.getValue(colorIndex) + 1;
+				
+				this.histogram.setValue(colorIndex, count);
+				
+				if (maximum < count) {
+					maximum = count;
+				}
+			}
+		}
+		
+		this.valueScale.setBounds(0, maximum, 0, 255);
+		
+		final int histogramSize = this.histogram.getRowCount() * this.histogram.getColumnCount();
+		
+		for (int i = 0; i < histogramSize; ++i) {
+			this.histogram.setValue(i, 255 - this.valueScale.getDisplayValue(this.histogram.getValue(i)));
 		}
 	}
 	
