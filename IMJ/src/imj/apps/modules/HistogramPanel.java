@@ -13,6 +13,7 @@ import static javax.swing.SwingUtilities.isRightMouseButton;
 import static net.sourceforge.aprog.af.AFTools.item;
 import static net.sourceforge.aprog.af.AFTools.menu;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
+import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import imj.Image;
 import imj.apps.modules.ViewFilter.Channel;
@@ -420,12 +421,33 @@ public final class HistogramPanel extends JPanel {
 		}
 		
 		public final void update(final Image image, final Channel channel) {
-			final int pixelCount = image.getRowCount() * image.getColumnCount();
+			final int imageRowCount = image.getRowCount();
+			final int imageColumnCount = image.getColumnCount();
+			final int pixelCount = imageRowCount * imageColumnCount;
 			
 			fill(this.data, 0);
 			
-			for (int pixel = 0; pixel < pixelCount; ++pixel) {
-				++this.data[channel.getValue(image.getValue(pixel))];
+			final FilteredImage f = cast(FilteredImage.class, image);
+			
+			if (f != null) {
+				final int tileRowCount = 512;
+				final int tileColumnCount = 512;
+				final int lastTileRowIndex = imageRowCount / tileRowCount;
+				final int lastTileColumnIndex = imageColumnCount / tileColumnCount;
+				
+				for (int tileRowIndex = 0; tileRowIndex <= lastTileRowIndex; ++tileRowIndex) {
+					for (int tileColumnIndex = 0; tileColumnIndex <= lastTileColumnIndex; ++tileColumnIndex) {
+						for (int rowIndexInTile = 0, rowIndex = tileRowIndex * tileRowCount; rowIndexInTile < tileRowCount && rowIndex < imageRowCount; ++rowIndexInTile, ++rowIndex) {
+							for (int columnIndexInTile = 0, columnIndex = tileColumnIndex * tileColumnCount; columnIndexInTile < tileColumnCount && columnIndex < imageColumnCount; ++columnIndexInTile, ++columnIndex) {
+								++this.data[channel.getValue(image.getValue(rowIndex, columnIndex))];
+							}
+						}
+					}
+				}
+			} else {
+				for (int pixel = 0; pixel < pixelCount; ++pixel) {
+					++this.data[channel.getValue(image.getValue(pixel))];
+				}
 			}
 			
 			this.max = max(this.data);
