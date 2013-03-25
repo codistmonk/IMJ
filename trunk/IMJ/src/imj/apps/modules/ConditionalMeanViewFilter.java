@@ -17,6 +17,7 @@ public final class ConditionalMeanViewFilter extends ViewFilter.FromFilter {
 	public ConditionalMeanViewFilter(final Context context) {
 		super(context);
 		
+		this.getParameters().remove("channels");
 		this.getParameters().put("maximumAmplitude", "2");
 	}
 	
