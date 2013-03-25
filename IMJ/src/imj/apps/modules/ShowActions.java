@@ -530,7 +530,7 @@ public final class ShowActions {
 			final RegionOfInterest roi = lod < rois.length ? rois[lod] : null;
 			
 			if (roi != null) {
-				roi.reset();
+				roi.reset(true);
 				
 				final BigImageComponent imageView = this.getContext().get("imageView");
 				
@@ -699,8 +699,7 @@ public final class ShowActions {
 			
 			sort(sortedRegions, DECREASING_AREA);
 			
-			roi.reset();
-			roi.invert();
+			roi.reset(false);
 			
 			for (final Region region : sortedRegions) {
 				g.setColor(Color.BLACK);

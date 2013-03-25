@@ -87,7 +87,8 @@ public final class ConditionalMeanViewFilter extends ViewFilter.FromFilter {
 		
 		@Override
 		protected final int getResult(final int index, final int oldValue) {
-			return argb(255, this.sums[0] / this.count, this.sums[1] / this.count, this.sums[2] / this.count);
+			return 0 < this.count ?
+					argb(255, this.sums[0] / this.count, this.sums[1] / this.count, this.sums[2] / this.count) : oldValue;
 		}
 		
 	}
