@@ -2,6 +2,7 @@ package imj.apps.modules;
 
 import static java.awt.event.InputEvent.SHIFT_DOWN_MASK;
 import static java.lang.Double.parseDouble;
+import static java.lang.Integer.parseInt;
 import static java.lang.Math.abs;
 import static javax.swing.Box.createHorizontalGlue;
 import static javax.swing.Box.createVerticalGlue;
@@ -40,6 +41,7 @@ import javax.swing.JToggleButton;
 import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.events.Variable.Listener;
 import net.sourceforge.aprog.events.Variable.ValueChangedEvent;
+import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 
 /**
  * @author codistmonk (creation 2013-02-18)
@@ -234,6 +236,18 @@ public abstract class Plugin {
 		}
 		
 		return result;
+	}
+	
+	protected final int[] getIntsParameter(final String key) {
+		return new CommandLineArgumentsParser(key, this.getParameters().get(key).trim()).get(key);
+	}
+	
+	protected final int getIntParameter(final String key) {
+		return parseInt(this.getParameters().get(key).trim());
+	}
+	
+	protected final double getDoubleParameter(final String key) {
+		return Double.parseDouble(this.getParameters().get(key).trim());
 	}
 	
 	private static long newId = 0L;

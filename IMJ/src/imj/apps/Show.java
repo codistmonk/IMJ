@@ -35,6 +35,7 @@ import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.BigImageComponent;
 import imj.apps.modules.BitRoundingViewFilter;
+import imj.apps.modules.ConditionalMeanViewFilter;
 import imj.apps.modules.ContourSieve;
 import imj.apps.modules.ContourViewFilter;
 import imj.apps.modules.FeatureViewFilter;
@@ -199,10 +200,11 @@ public final class Show {
 				null,
 				new HistogramClusterViewFilter(result),
 				new IterativeBitRoundingViewFilter(result),
+				new PipelineViewFilter(result),
+				new ConditionalMeanViewFilter(result),
 				new BitRoundingViewFilter(result),
 				new IntRoundingViewFilter(result),
 				new LinearColorViewFilter(result),
-				new PipelineViewFilter(result),
 				new StatisticsViewFilter(result),
 				new FeatureViewFilter(result),
 				new LogViewFilter(result),
