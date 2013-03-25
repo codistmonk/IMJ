@@ -4,21 +4,10 @@ import static imj.IMJTools.argb;
 import static imj.IMJTools.blue;
 import static imj.IMJTools.green;
 import static imj.IMJTools.red;
-import static java.lang.Integer.parseInt;
-import static java.lang.Math.max;
+import static java.lang.Math.abs;
 import static java.util.Arrays.fill;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import imj.IMJTools;
-import imj.IMJTools.StatisticsSelector;
-import imj.apps.modules.FilteredImage.StatisticsFilter;
 import imj.apps.modules.FilteredImage.StructuringElementFilter;
-
-import java.util.Arrays;
-import java.util.Locale;
-
 import net.sourceforge.aprog.context.Context;
-import net.sourceforge.aprog.tools.Tools;
-import net.sourceforge.aprog.tools.MathTools.Statistics;
 
 /**
  * @author codistmonk (creation 2013-03-25)
@@ -55,70 +44,66 @@ public final class ConditionalMeanViewFilter extends ViewFilter.FromFilter {
 		
 		private final int maximumAmplitude;
 		
-		private final int[] rgb;
+		private final int[] pixelRGB;
 		
-		private final int[] minima;
-		
-		private final int[] maxima;
+		private final int[] neighborRGB;
 		
 		private final int[] sums;
 		
-		private int amplitude;
+		private int count;
 		
 		public ConditionalMeanFilter(final int[] deltas, final int maximumAmplitude) {
 			super(deltas);
 			this.maximumAmplitude = maximumAmplitude;
-			this.rgb = new int[3];
-			this.minima = new int[3];
-			this.maxima = new int[3];
+			this.pixelRGB = new int[3];
+			this.neighborRGB = new int[3];
 			this.sums = new int[3];
 		}
 		
 		@Override
 		protected final void reset(final int index, final int oldValue) {
-			fill(this.minima, Integer.MAX_VALUE);
-			fill(this.maxima, Integer.MIN_VALUE);
 			fill(this.sums, 0);
-			this.amplitude = 0;
+			this.pixelRGB[0] = red(oldValue);
+			this.pixelRGB[1] = green(oldValue);
+			this.pixelRGB[2] = blue(oldValue);
+			this.count = 0;
 		}
 		
 		@Override
 		protected final void processNeighbor(final int index, final int oldValue, final int neighborIndex, final int neighborValue) {
-			this.rgb[0] = red(neighborValue);
-			this.rgb[1] = green(neighborValue);
-			this.rgb[2] = blue(neighborValue);
+			this.neighborRGB[0] = red(neighborValue);
+			this.neighborRGB[1] = green(neighborValue);
+			this.neighborRGB[2] = blue(neighborValue);
 			
-			for (int i = 0; i < 3; ++i) {
-				final int c = this.rgb[i];
-				
-				if (c < this.minima[i]) {
-					this.minima[i] = c;
+			if (chebyshevDistance(this.pixelRGB, this.neighborRGB) <= this.maximumAmplitude) {
+				for (int i = 0; i < 3; ++i) {
+					this.sums[i] += this.neighborRGB[i];
 				}
 				
-				if (this.maxima[i] < c) {
-					this.maxima[i] = c;
-				}
-				
-				this.sums[i] += c;
+				++this.count;
 			}
 		}
 		
 		@Override
 		protected final int getResult(final int index, final int oldValue) {
-			int amplitude = 0;
-			
-			for (int i = 0; i < 3; ++i) {
-				final int a = this.maxima[i] - this.minima[i];
-				
-				if (amplitude < a) {
-					amplitude = a;
-				}
-			}
-			
-			return amplitude <= this.maximumAmplitude ? argb(255,
-					this.sums[0] / this.getSize(), this.sums[1] / this.getSize(), this.sums[2] / this.getSize()) : oldValue;
+			return argb(255, this.sums[0] / this.count, this.sums[1] / this.count, this.sums[2] / this.count);
 		}
 		
+	}
+	
+	public static final int chebyshevDistance(final int[] u, final int[] v) {
+		final int n = u.length;
+		int result = 0;
+		
+		for (int i = 0; i < n; ++i) {
+			final int d = abs(u[i] - v[i]);
+			
+			if (result < d) {
+				result = d;
+			}
+		}
+		
+		return result;
 	}
 	
 }
