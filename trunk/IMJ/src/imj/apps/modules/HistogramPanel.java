@@ -436,6 +436,8 @@ public final class HistogramPanel extends JPanel {
 				final int lastTileColumnIndex = imageColumnCount / tileColumnCount;
 				
 				for (int tileRowIndex = 0; tileRowIndex <= lastTileRowIndex; ++tileRowIndex) {
+					System.out.print(tileRowIndex + "/" + lastTileRowIndex + "\r");
+					
 					for (int tileColumnIndex = 0; tileColumnIndex <= lastTileColumnIndex; ++tileColumnIndex) {
 						for (int rowIndexInTile = 0, rowIndex = tileRowIndex * tileRowCount; rowIndexInTile < tileRowCount && rowIndex < imageRowCount; ++rowIndexInTile, ++rowIndex) {
 							for (int columnIndexInTile = 0, columnIndex = tileColumnIndex * tileColumnCount; columnIndexInTile < tileColumnCount && columnIndex < imageColumnCount; ++columnIndexInTile, ++columnIndex) {
@@ -446,6 +448,10 @@ public final class HistogramPanel extends JPanel {
 				}
 			} else {
 				for (int pixel = 0; pixel < pixelCount; ++pixel) {
+					if (pixel % imageColumnCount == 0) {
+						System.out.print(pixel + "/" + pixelCount + "\r");
+					}
+					
 					++this.data[channel.getValue(image.getValue(pixel))];
 				}
 			}

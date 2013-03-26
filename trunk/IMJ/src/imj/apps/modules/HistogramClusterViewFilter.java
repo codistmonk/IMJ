@@ -92,7 +92,8 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 		this.hMin = parseInt(this.getParameters().get("hMin").trim());
 		this.valueScale = parseValueScale(this.getParameters().get("valueScale"));
 		
-		if (!Arrays.equals(oldChannels, this.channels) || oldHMin != this.hMin || oldValueScale != this.valueScale) {
+		if (!Arrays.equals(oldChannels, this.channels) || oldHMin != this.hMin ||
+				oldValueScale == null || !oldValueScale.getClass().equals(this.valueScale.getClass())) {
 			this.updateClusters();
 		}
 		
@@ -218,6 +219,8 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 			final int lastTileColumnIndex = sourceColumnCount / tileColumnCount;
 			
 			for (int tileRowIndex = 0; tileRowIndex <= lastTileRowIndex; ++tileRowIndex) {
+				System.out.print(tileRowIndex + "/" + lastTileRowIndex + "\r");
+				
 				for (int tileColumnIndex = 0; tileColumnIndex <= lastTileColumnIndex; ++tileColumnIndex) {
 					for (int rowIndexInTile = 0, rowIndex = tileRowIndex * tileRowCount; rowIndexInTile < tileRowCount && rowIndex < sourceRowCount; ++rowIndexInTile, ++rowIndex) {
 						for (int columnIndexInTile = 0, columnIndex = tileColumnIndex * tileColumnCount; columnIndexInTile < tileColumnCount && columnIndex < sourceColumnCount; ++columnIndexInTile, ++columnIndex) {
@@ -235,6 +238,10 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 			}
 		} else {
 			for (int pixel = 0; pixel < pixelCount; ++pixel) {
+				if (pixel % sourceColumnCount == 0) {
+					System.out.print(pixel + "/" + pixelCount + "\r");
+				}
+				
 				final int colorIndex = this.getColorIndex(source.getValue(pixel));
 				final int count = this.histogram.getValue(colorIndex) + 1;
 				
