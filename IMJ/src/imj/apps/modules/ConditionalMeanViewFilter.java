@@ -2,10 +2,19 @@ package imj.apps.modules;
 
 import static imj.IMJTools.argb;
 import static imj.IMJTools.blue;
+import static imj.IMJTools.brightness;
 import static imj.IMJTools.green;
+import static imj.IMJTools.hue;
 import static imj.IMJTools.red;
+import static imj.IMJTools.saturation;
+import static java.awt.Color.HSBtoRGB;
 import static java.lang.Math.abs;
+import static java.lang.Math.max;
 import static java.util.Arrays.fill;
+
+import java.awt.Color;
+
+import imj.IMJTools;
 import imj.apps.modules.FilteredImage.StructuringElementFilter;
 import net.sourceforge.aprog.context.Context;
 
@@ -77,9 +86,9 @@ public final class ConditionalMeanViewFilter extends ViewFilter.FromFilter {
 			this.neighborRGB[2] = blue(neighborValue);
 			
 			if (chebyshevDistance(this.pixelRGB, this.neighborRGB) <= this.maximumAmplitude) {
-				for (int i = 0; i < 3; ++i) {
-					this.sums[i] += this.neighborRGB[i];
-				}
+				this.sums[0] += hue(neighborValue);
+				this.sums[1] = max(this.sums[1], saturation(neighborValue));
+				this.sums[2] += brightness(neighborValue);
 				
 				++this.count;
 			}
@@ -87,8 +96,10 @@ public final class ConditionalMeanViewFilter extends ViewFilter.FromFilter {
 		
 		@Override
 		protected final int getResult(final int index, final int oldValue) {
+			this.count *= 255;
+			
 			return 0 < this.count ?
-					argb(255, this.sums[0] / this.count, this.sums[1] / this.count, this.sums[2] / this.count) : oldValue;
+					HSBtoRGB((float) this.sums[0] / this.count, this.sums[1] / 255F, (float) this.sums[2] / this.count) : oldValue;
 		}
 		
 	}
