@@ -1,20 +1,13 @@
 package imj.apps.modules;
 
-import static imj.IMJTools.argb;
-import static imj.IMJTools.blue;
 import static imj.IMJTools.brightness;
-import static imj.IMJTools.green;
 import static imj.IMJTools.hue;
-import static imj.IMJTools.red;
 import static imj.IMJTools.saturation;
 import static java.awt.Color.HSBtoRGB;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static java.util.Arrays.fill;
-
-import java.awt.Color;
-
-import imj.IMJTools;
 import imj.apps.modules.FilteredImage.StructuringElementFilter;
 import net.sourceforge.aprog.context.Context;
 
@@ -27,7 +20,7 @@ public final class ConditionalMeanViewFilter extends ViewFilter.FromFilter {
 		super(context);
 		
 		this.getParameters().remove("channels");
-		this.getParameters().put("maximumAmplitude", "2");
+		this.getParameters().put("maximumAmplitude", "8");
 	}
 	
 	@Override
@@ -54,9 +47,7 @@ public final class ConditionalMeanViewFilter extends ViewFilter.FromFilter {
 		
 		private final int maximumAmplitude;
 		
-		private final int[] pixelRGB;
-		
-		private final int[] neighborRGB;
+		private int pixelHue;
 		
 		private final int[] sums;
 		
@@ -65,30 +56,26 @@ public final class ConditionalMeanViewFilter extends ViewFilter.FromFilter {
 		public ConditionalMeanFilter(final int[] deltas, final int maximumAmplitude) {
 			super(deltas);
 			this.maximumAmplitude = maximumAmplitude;
-			this.pixelRGB = new int[3];
-			this.neighborRGB = new int[3];
 			this.sums = new int[3];
 		}
 		
 		@Override
 		protected final void reset(final int index, final int oldValue) {
 			fill(this.sums, 0);
-			this.pixelRGB[0] = red(oldValue);
-			this.pixelRGB[1] = green(oldValue);
-			this.pixelRGB[2] = blue(oldValue);
+			this.pixelHue = hue(oldValue);
 			this.count = 0;
 		}
 		
 		@Override
 		protected final void processNeighbor(final int index, final int oldValue, final int neighborIndex, final int neighborValue) {
-			this.neighborRGB[0] = red(neighborValue);
-			this.neighborRGB[1] = green(neighborValue);
-			this.neighborRGB[2] = blue(neighborValue);
+			final int neighborHue = hue(neighborValue);
+			final int neighborSaturation = saturation(neighborValue);
+			final int neighborBrightness = brightness(neighborValue);
 			
-			if (chebyshevDistance(this.pixelRGB, this.neighborRGB) <= this.maximumAmplitude) {
-				this.sums[0] += hue(neighborValue);
-				this.sums[1] = max(this.sums[1], saturation(neighborValue));
-				this.sums[2] += brightness(neighborValue);
+			if (cyclicDistance(this.pixelHue, neighborHue, 256) <= this.maximumAmplitude) {
+				this.sums[0] = this.count == 0 ? neighborHue : cyclicSumForMean(this.sums[0] / this.count, this.count, neighborHue, 1, 256);
+				this.sums[1] = max(this.sums[1], neighborSaturation);
+				this.sums[2] += neighborBrightness;
 				
 				++this.count;
 			}
@@ -96,12 +83,27 @@ public final class ConditionalMeanViewFilter extends ViewFilter.FromFilter {
 		
 		@Override
 		protected final int getResult(final int index, final int oldValue) {
-			this.count *= 255;
-			
 			return 0 < this.count ?
-					HSBtoRGB((float) this.sums[0] / this.count, this.sums[1] / 255F, (float) this.sums[2] / this.count) : oldValue;
+					HSBtoRGB((float) ((this.sums[0] / this.count) % 256) / 255F, this.sums[1] / 255F, (float) this.sums[2] / (255 * this.count)) : oldValue;
 		}
 		
+	}
+	
+	public static final int cyclicSumForMean(final int currentMean, final int currentCount, final int newValue, final int newCount, final int n) {
+		if (newValue < currentMean) {
+			return cyclicSumForMean(newValue, newCount, currentMean, currentCount, n);
+		}
+		
+		return newValue - currentMean <= n + currentMean - newValue ? currentMean * currentCount + newValue * newCount :
+			(n + currentMean) * currentCount + newValue * newCount;
+	}
+	
+	public static final int cyclicDistance(final int a, final int b, final int n) {
+		if (b < a) {
+			return cyclicDistance(b, a, n);
+		}
+		
+		return min(b - a, n + a - b);
 	}
 	
 	public static final int chebyshevDistance(final int[] u, final int[] v) {
