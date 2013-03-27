@@ -62,8 +62,8 @@ public final class HistogramPanel extends JPanel {
 		this.context = context;
 		this.channelsTextField = new JTextField("brightness");
 		this.statusLabel = new JLabel();
-		this.histogram1Component = new Histogram1Component();
-		this.histogram2Component = new Histogram2Component();
+		this.histogram1Component = new Histogram1Component(context);
+		this.histogram2Component = new Histogram2Component(context);
 		
 		this.histogram1Component.addMouseMotionListener(new MouseAdapter() {
 			
@@ -411,10 +411,11 @@ public final class HistogramPanel extends JPanel {
 		
 		private int max;
 		
-		public Histogram1Component() {
+		public Histogram1Component(final Context parentContext) {
 			this.context = new Context();
 			this.data = new int[256];
 			
+			this.context.set("parent", parentContext);
 			this.context.set("valueScale", new ValueScale.Linear(), ValueScale.class);
 			
 			new HistogramPopupHandler(this.context, this).addTo(this);
@@ -426,6 +427,13 @@ public final class HistogramPanel extends JPanel {
 			final int pixelCount = imageRowCount * imageColumnCount;
 			
 			fill(this.data, 0);
+			
+			final Context parentContext = this.context.get("parent");
+			RegionOfInterest roi = Sieve.getROI(parentContext);
+			
+			if (roi != null && (roi.getRowCount() != imageRowCount || roi.getColumnCount() != imageColumnCount)) {
+				roi = null;
+			}
 			
 			final FilteredImage f = cast(FilteredImage.class, image);
 			
@@ -441,7 +449,9 @@ public final class HistogramPanel extends JPanel {
 					for (int tileColumnIndex = 0; tileColumnIndex <= lastTileColumnIndex; ++tileColumnIndex) {
 						for (int rowIndexInTile = 0, rowIndex = tileRowIndex * tileRowCount; rowIndexInTile < tileRowCount && rowIndex < imageRowCount; ++rowIndexInTile, ++rowIndex) {
 							for (int columnIndexInTile = 0, columnIndex = tileColumnIndex * tileColumnCount; columnIndexInTile < tileColumnCount && columnIndex < imageColumnCount; ++columnIndexInTile, ++columnIndex) {
-								++this.data[channel.getValue(image.getValue(rowIndex, columnIndex))];
+								if (roi != null && roi.get(rowIndex, columnIndex)) {
+									++this.data[channel.getValue(image.getValue(rowIndex, columnIndex))];
+								}
 							}
 						}
 					}
@@ -452,7 +462,9 @@ public final class HistogramPanel extends JPanel {
 						System.out.print(pixel + "/" + pixelCount + "\r");
 					}
 					
-					++this.data[channel.getValue(image.getValue(pixel))];
+					if (roi != null && roi.get(pixel)) {
+						++this.data[channel.getValue(image.getValue(pixel))];
+					}
 				}
 			}
 			
@@ -482,7 +494,7 @@ public final class HistogramPanel extends JPanel {
 			
 			g.setColor(YELLOW);
 			
-			final ValueScale valueScale = this.getContext().get("valueScale");
+			final ValueScale valueScale = this.context.get("valueScale");
 			
 			valueScale.setBounds(0, this.max, 0, viewport.height);
 			
@@ -491,10 +503,6 @@ public final class HistogramPanel extends JPanel {
 				
 				g.drawLine(x, lastY, x, lastY - h);
 			}
-		}
-		
-		final Context getContext() {
-			return this.context;
 		}
 		
 	}
@@ -514,11 +522,12 @@ public final class HistogramPanel extends JPanel {
 		
 		private BufferedImage buffer;
 		
-		public Histogram2Component() {
+		public Histogram2Component(final Context parentContext) {
 			this.context = new Context();
 			this.data = new int[256][256];
 			this.setDoubleBuffered(false);
 			
+			this.context.set("parent", parentContext);
 			this.context.set("valueScale", new ValueScale.Logarithmic(), ValueScale.class);
 			
 			new HistogramPopupHandler(this.context, this).addTo(this);
@@ -537,16 +546,65 @@ public final class HistogramPanel extends JPanel {
 		}
 		
 		public final void update(final Image image, final Channel channel0, final Channel channel1) {
-			final int pixelCount = image.getRowCount() * image.getColumnCount();
+			final int imageRowCount = image.getRowCount();
+			final int imageColumnCount = image.getColumnCount();
+			final int pixelCount = imageRowCount * imageColumnCount;
 			
 			for (final int[] subData : this.data) {
 				fill(subData, 0);
 			}
 			
-			for (int pixel = 0; pixel < pixelCount; ++pixel) {
-				final int rgba = image.getValue(pixel);
+			final Context parentContext = this.context.get("parent");
+			RegionOfInterest roi = Sieve.getROI(parentContext);
+			
+			if (roi != null && (roi.getRowCount() != imageRowCount || roi.getColumnCount() != imageColumnCount)) {
+				roi = null;
+			}
+			
+//			for (int pixel = 0; pixel < pixelCount; ++pixel) {
+//				final int rgba = image.getValue(pixel);
+//				
+//				if (roi != null && roi.get(pixel)) {
+//					++this.data[channel0.getValue(rgba)][channel1.getValue(rgba)];
+//				}
+//			}
+			final FilteredImage f = cast(FilteredImage.class, image);
+			
+			if (f != null) {
+				final int tileRowCount = 512;
+				final int tileColumnCount = 512;
+				final int lastTileRowIndex = imageRowCount / tileRowCount;
+				final int lastTileColumnIndex = imageColumnCount / tileColumnCount;
 				
-				++this.data[channel0.getValue(rgba)][channel1.getValue(rgba)];
+				for (int tileRowIndex = 0; tileRowIndex <= lastTileRowIndex; ++tileRowIndex) {
+					System.out.print(tileRowIndex + "/" + lastTileRowIndex + "\r");
+					
+					for (int tileColumnIndex = 0; tileColumnIndex <= lastTileColumnIndex; ++tileColumnIndex) {
+						for (int rowIndexInTile = 0, rowIndex = tileRowIndex * tileRowCount; rowIndexInTile < tileRowCount && rowIndex < imageRowCount; ++rowIndexInTile, ++rowIndex) {
+							for (int columnIndexInTile = 0, columnIndex = tileColumnIndex * tileColumnCount; columnIndexInTile < tileColumnCount && columnIndex < imageColumnCount; ++columnIndexInTile, ++columnIndex) {
+								if (roi != null && roi.get(rowIndex, columnIndex)) {
+									final int argb = image.getValue(rowIndex, columnIndex);
+									
+									++this.data[channel0.getValue(argb)][channel1.getValue(argb)];
+								}
+							}
+						}
+					}
+				}
+			} else {
+				for (int pixel = 0; pixel < pixelCount; ++pixel) {
+					if (pixel % imageColumnCount == 0) {
+						System.out.print(pixel + "/" + pixelCount + "\r");
+					}
+					
+					if (roi != null && roi.get(pixel)) {
+						if (roi != null && roi.get(pixel)) {
+							final int argb = image.getValue(pixel);
+							
+							++this.data[channel0.getValue(argb)][channel1.getValue(argb)];
+						}
+					}
+				}
 			}
 			
 			this.nonZeroMinimum = Integer.MAX_VALUE;

@@ -209,6 +209,11 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 		final int sourceColumnCount = source.getColumnCount();
 		final int pixelCount = sourceRowCount * sourceColumnCount;
 		int maximum = 0;
+		RegionOfInterest roi = Sieve.getROI(this.getContext());
+		
+		if (roi != null && (roi.getRowCount() != sourceRowCount || roi.getColumnCount() != sourceColumnCount)) {
+			roi = null;
+		}
 		
 		final FilteredImage f = cast(FilteredImage.class, source);
 		
@@ -224,13 +229,15 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 				for (int tileColumnIndex = 0; tileColumnIndex <= lastTileColumnIndex; ++tileColumnIndex) {
 					for (int rowIndexInTile = 0, rowIndex = tileRowIndex * tileRowCount; rowIndexInTile < tileRowCount && rowIndex < sourceRowCount; ++rowIndexInTile, ++rowIndex) {
 						for (int columnIndexInTile = 0, columnIndex = tileColumnIndex * tileColumnCount; columnIndexInTile < tileColumnCount && columnIndex < sourceColumnCount; ++columnIndexInTile, ++columnIndex) {
-							final int colorIndex = this.getColorIndex(source.getValue(rowIndex, columnIndex));
-							final int count = this.histogram.getValue(colorIndex) + 1;
-							
-							this.histogram.setValue(colorIndex, count);
-							
-							if (maximum < count) {
-								maximum = count;
+							if (roi != null && roi.get(rowIndex, columnIndex)) {
+								final int colorIndex = this.getColorIndex(source.getValue(rowIndex, columnIndex));
+								final int count = this.histogram.getValue(colorIndex) + 1;
+								
+								this.histogram.setValue(colorIndex, count);
+								
+								if (maximum < count) {
+									maximum = count;
+								}
 							}
 						}
 					}
@@ -242,13 +249,15 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 					System.out.print(pixel + "/" + pixelCount + "\r");
 				}
 				
-				final int colorIndex = this.getColorIndex(source.getValue(pixel));
-				final int count = this.histogram.getValue(colorIndex) + 1;
-				
-				this.histogram.setValue(colorIndex, count);
-				
-				if (maximum < count) {
-					maximum = count;
+				if (roi != null && roi.get(pixel)) {
+					final int colorIndex = this.getColorIndex(source.getValue(pixel));
+					final int count = this.histogram.getValue(colorIndex) + 1;
+					
+					this.histogram.setValue(colorIndex, count);
+					
+					if (maximum < count) {
+						maximum = count;
+					}
 				}
 			}
 		}
