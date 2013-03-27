@@ -36,7 +36,6 @@ import imj.apps.modules.Annotations;
 import imj.apps.modules.BigImageComponent;
 import imj.apps.modules.BitRoundingViewFilter;
 import imj.apps.modules.ConditionalMeanViewFilter;
-import imj.apps.modules.ContourSieve;
 import imj.apps.modules.ContourViewFilter;
 import imj.apps.modules.FeatureViewFilter;
 import imj.apps.modules.HistogramClusterViewFilter;
@@ -219,8 +218,7 @@ public final class Show {
 		result.set(VIEW_FILTER, null, ViewFilter.class);
 		result.set("sieves", array(
 				new SimpleSieve(result),
-				new SaturationSieve201303080950(result),
-				new ContourSieve(result)), Sieve[].class);
+				new SaturationSieve201303080950(result)), Sieve[].class);
 		result.set("sieve", null, Sieve.class);
 		
 		final Variable<Point> xyVariable = result.getVariable("xy");
