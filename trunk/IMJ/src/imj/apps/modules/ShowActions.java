@@ -40,6 +40,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -873,14 +874,15 @@ public final class ShowActions {
 			final float scale = (float) pow(2.0, lod);
 			final Map<Point2D.Float, Point2D.Float> joints = new LinkedHashMap<Point2D.Float, Point2D.Float>();
 			
-			for (int rowIndex = 0; rowIndex < rowCount - 1; ++rowIndex) {
-				for (int columnIndex = 0; columnIndex < columnCount - 1; ++columnIndex) {
+			for (int rowIndex = -1; rowIndex < rowCount; ++rowIndex) {
+				for (int columnIndex = -1; columnIndex < columnCount; ++columnIndex) {
 					connectEdges(roi, rowIndex, columnIndex, scale, joints);
 				}
 			}
 			
 			final Annotations annotations = this.getContext().get("annotations");
 			final Annotation annotation = annotations.new Annotation();
+			final List<Point2D.Float> vertices = new ArrayList<Point2D.Float>();
 			
 			annotation.setLineColor(GREEN);
 			annotation.setVisible(true);
@@ -891,23 +893,14 @@ public final class ShowActions {
 				float area = 0F;
 				float length = 0F;
 				Point2D.Float edge = joints.remove(start);
-				
-				region.getVertices().add(start);
 				Point2D.Float previousEdge = start;
-				int segmentLength = 0;
-				final int maximumSegmentLength = 5;
+				
+				vertices.clear();
+				vertices.add(start);
 				
 				while (edge != null && !start.equals(edge)) {
-					if (segmentLength < 1) {
-						region.getVertices().add(edge);
-						++segmentLength;
-					} else if (maximumSegmentLength < segmentLength) {
-						region.getVertices().add(edge);
-						segmentLength = 1;
-					} else {
-						region.getVertices().set(region.getVertices().size() - 1, edge);
-						++segmentLength;
-					}
+					vertices.add(edge);
+					
 					area += det(edge, previousEdge);
 					length += scale;
 					previousEdge = edge;
@@ -917,13 +910,29 @@ public final class ShowActions {
 				if (edge != null) {
 					edge = start;
 					
-					if (segmentLength < 1 || maximumSegmentLength < segmentLength) {
-						region.getVertices().add(edge);
-					} else {
-						region.getVertices().set(region.getVertices().size() - 1, edge);
-					}
+					vertices.add(edge);
 					
 					area += det(edge, previousEdge);
+				}
+				
+				final int preferredSegmentLength = 5;
+				
+				if (3 * preferredSegmentLength <= vertices.size()) {
+					int i = 0;
+					
+					for (final Point2D.Float vertex : vertices) {
+						if (i == 0) {
+							region.getVertices().add(vertex);
+						}
+						
+						if (++i == preferredSegmentLength) {
+							i = 0;
+						}
+					}
+					
+					region.getVertices().add(start);
+				} else {
+					region.getVertices().addAll(vertices);
 				}
 				
 				region.setNegative(area < 0);
@@ -1174,8 +1183,17 @@ public final class ShowActions {
 		public abstract void updateJoints(int x, int y, float scale, Map<Point2D.Float, Point2D.Float> joints);
 		
 		public static final int computeNeighborhood(final RegionOfInterest image, final int rowIndex, final int columnIndex) {
-			return (image.get(rowIndex, columnIndex) ? 8 : 0) | (image.get(rowIndex, columnIndex + 1) ? 4 : 0) |
-					(image.get(rowIndex + 1, columnIndex) ? 2 : 0) | (image.get(rowIndex + 1, columnIndex + 1) ? 1 : 0);
+			final int nextRowIndex = rowIndex + 1;
+			final int nextColumnIndex = columnIndex + 1;
+			final boolean rowIndexIsValid = 0 <= rowIndex;
+			final boolean nextRowIndexIsValid = nextRowIndex < image.getRowCount();
+			final boolean columnIndexIsValid = 0 <= columnIndex;
+			final boolean nextColumnIndexIsValid = nextColumnIndex < image.getColumnCount();
+			
+			return (rowIndexIsValid && columnIndexIsValid && image.get(rowIndex, columnIndex) ? 8 : 0) |
+					(rowIndexIsValid && nextColumnIndexIsValid && image.get(rowIndex, nextColumnIndex) ? 4 : 0) |
+					(nextRowIndexIsValid && columnIndexIsValid && image.get(nextRowIndex, columnIndex) ? 2 : 0) |
+					(nextRowIndexIsValid && nextColumnIndexIsValid && image.get(nextRowIndex, nextColumnIndex) ? 1 : 0);
 		}
 		
 		public static final void addJoint(final int x, final int y,
