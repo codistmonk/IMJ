@@ -281,6 +281,9 @@ public final class HistogramPanel extends JPanel {
 			this.displayMaximum = displayMaximum;
 			this.displayAmplitude = displayMaximum - displayMinimum;
 			
+//			debugPrint(this.getValueMinimum(), this.getValueMaximum(), this.getValueAmplitude());
+//			debugPrint(this.getDisplayMinimum(), this.getDisplayMaximum(), this.getDisplayAmplitude());
+			
 			this.boundsSet();
 		}
 		
@@ -335,7 +338,7 @@ public final class HistogramPanel extends JPanel {
 			
 			@Override
 			public final int getDisplayValue(final int value) {
-				return this.getDisplayMinimum() + this.getDisplayAmplitude() * (value - this.getValueMinimum()) / this.getValueAmplitude();
+				return (int) (this.getDisplayMinimum() + (long) this.getDisplayAmplitude() * (value - this.getValueMinimum()) / this.getValueAmplitude());
 			}
 			
 		}
@@ -462,7 +465,7 @@ public final class HistogramPanel extends JPanel {
 						System.out.print(pixel + "/" + pixelCount + "\r");
 					}
 					
-					if (roi != null && roi.get(pixel)) {
+					if (roi == null || roi.get(pixel)) {
 						++this.data[channel.getValue(image.getValue(pixel))];
 					}
 				}

@@ -267,6 +267,7 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 		final int histogramSize = this.histogram.getRowCount() * this.histogram.getColumnCount();
 		
 		for (int i = 0; i < histogramSize; ++i) {
+//			debugPrint(i, this.histogram.getValue(i), this.valueScale.getDisplayValue(this.histogram.getValue(i)));
 			this.histogram.setValue(i, 255 - this.valueScale.getDisplayValue(this.histogram.getValue(i)));
 		}
 	}
