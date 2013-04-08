@@ -1,13 +1,13 @@
 package imj.apps.modules;
 
 import static java.lang.Thread.currentThread;
+import static java.net.URLDecoder.decode;
 import static java.util.Locale.ENGLISH;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.iterable;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -94,11 +94,11 @@ public enum ClassPathProtocol {
 			
 			for (final URL resource : iterable(resources)) {
 				debugPrint("Scanning", resource);
-				parseProtocol(resource.getProtocol()).getClasses(packageNameAsPath, resource.getFile(), result);
+				parseProtocol(resource.getProtocol()).getClasses(packageNameAsPath, decode(resource.getFile(), "UTF-8"), result);
 			}
 			
 			return result;
-		} catch (final IOException exception) {
+		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
 	}
