@@ -9,6 +9,7 @@ import static java.awt.Color.GREEN;
 import static java.awt.image.BufferedImage.TYPE_3BYTE_BGR;
 import static java.lang.Math.abs;
 import static java.lang.Math.pow;
+import static java.lang.reflect.Modifier.isAbstract;
 import static java.util.Collections.sort;
 import static javax.swing.JFileChooser.APPROVE_OPTION;
 import static javax.swing.JOptionPane.OK_CANCEL_OPTION;
@@ -40,6 +41,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -161,6 +164,18 @@ public final class ShowActions {
 	 * {@value}.
 	 */
 	public static final String ACTIONS_CREATE_ANNOTATION_FROM_ROI = "actions.createAnnotationFromROI";
+	
+	public static final void loadInto(final Context context) {
+		for (final Class<?> cls : ShowActions.class.getClasses()) {
+			if (!isAbstract(cls.getModifiers()) && AbstractAFAction.class.isAssignableFrom(cls)) {
+				try {
+					cls.getConstructor(Context.class).newInstance(context);
+				} catch (final Exception exception) {
+					exception.printStackTrace();
+				}
+			}
+		}
+	}
 	
 	public static final String extension(final String fileName) {
 		final int lastDotIndex = fileName.lastIndexOf('.');

@@ -4,6 +4,7 @@ import static imj.IMJTools.blue;
 import static imj.IMJTools.green;
 import static imj.IMJTools.red;
 import static imj.apps.modules.BigImageComponent.SOURCE_IMAGE;
+import static imj.apps.modules.ClassPathProtocol.getClassesInPackage;
 import static imj.apps.modules.ShowActions.ACTIONS_APPLY_MORPHOLOGICAL_OPERATION_TO_ROI;
 import static imj.apps.modules.ShowActions.ACTIONS_APPLY_SIEVE;
 import static imj.apps.modules.ShowActions.ACTIONS_COPY_ROI_TO_LOD;
@@ -16,6 +17,7 @@ import static imj.apps.modules.ShowActions.ACTIONS_TOGGLE_ANNOTATIONS;
 import static imj.apps.modules.ShowActions.ACTIONS_TOGGLE_HISTOGRAM;
 import static imj.apps.modules.ShowActions.baseName;
 import static imj.apps.modules.ViewFilter.VIEW_FILTER;
+import static java.lang.reflect.Modifier.isAbstract;
 import static java.util.Collections.synchronizedList;
 import static net.sourceforge.aprog.af.AFTools.item;
 import static net.sourceforge.aprog.af.AFTools.newAboutItem;
@@ -29,33 +31,16 @@ import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.I18N.menu;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getThisPackagePath;
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.BigImageComponent;
-import imj.apps.modules.BitRoundingViewFilter;
-import imj.apps.modules.RegionGrowingViewFilter;
-import imj.apps.modules.ContourViewFilter;
-import imj.apps.modules.FeatureViewFilter;
-import imj.apps.modules.HistogramClusterViewFilter;
-import imj.apps.modules.IntRoundingViewFilter;
-import imj.apps.modules.IterativeBitRoundingViewFilter;
-import imj.apps.modules.LODStatisticsViewFilter;
-import imj.apps.modules.LinearColorViewFilter;
-import imj.apps.modules.LinearViewFilter;
-import imj.apps.modules.LogViewFilter;
-import imj.apps.modules.PipelineViewFilter;
-import imj.apps.modules.RankViewFilter;
+import imj.apps.modules.Plugin;
 import imj.apps.modules.RegionOfInterest;
-import imj.apps.modules.RegionViewFilter;
-import imj.apps.modules.SaturationSieve201303080950;
 import imj.apps.modules.ShowActions;
 import imj.apps.modules.Sieve;
-import imj.apps.modules.SieveViewFilter;
-import imj.apps.modules.SimpleSieve;
-import imj.apps.modules.StatisticsViewFilter;
-import imj.apps.modules.SubtractFromSourceViewFilter;
 import imj.apps.modules.ViewFilter;
 
 import java.awt.BorderLayout;
@@ -65,6 +50,8 @@ import java.awt.Dimension;
 import java.awt.GridBagLayout;
 import java.awt.Point;
 import java.io.File;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -145,23 +132,7 @@ public final class Show {
 			
 		};
 		
-		new ShowActions.MoveListItemUp(result);
-		new ShowActions.MoveListItemDown(result);
-		new ShowActions.DeleteListItem(result);
-		new ShowActions.ExportAnnotations(result);
-		new ShowActions.ExportView(result);
-		new ShowActions.ToggleHistogram(result);
-		new ShowActions.ToggleAnnotations(result);
-		new ShowActions.SetViewFilter(result);
-		new ShowActions.ApplySieve(result);
-		new ShowActions.ApplyMorphologicalOperationToROI(result);
-		new ShowActions.ResetROI(result);
-		new ShowActions.CopyROIToLOD(result);
-		new ShowActions.CreateAnnotationFromROI(result);
-		new ShowActions.UseAnnotationAsROI(result);
-		new ShowActions.PickAnnotationColor(result);
-		new ShowActions.ToggleAnnotationVisibility(result);
-		new ShowActions.DeleteAnnotation(result);
+		ShowActions.loadInto(result);
 		
 		result.set(AFConstants.Variables.MAIN_MENU_BAR, menuBar(
 				menu("Application",
@@ -195,30 +166,10 @@ public final class Show {
 		result.set("xy", null, Point.class);
 		result.set("rgb", null, String.class);
 		result.set("hsb", null, String.class);
-		result.set("viewFilters", array(
-				null,
-				new HistogramClusterViewFilter(result),
-				new IterativeBitRoundingViewFilter(result),
-				new PipelineViewFilter(result),
-				new RegionGrowingViewFilter(result),
-				new BitRoundingViewFilter(result),
-				new IntRoundingViewFilter(result),
-				new LinearColorViewFilter(result),
-				new StatisticsViewFilter(result),
-				new FeatureViewFilter(result),
-				new LogViewFilter(result),
-				new SieveViewFilter(result),
-				new ContourViewFilter(result),
-				new RegionViewFilter(result),
-				new SubtractFromSourceViewFilter(result),
-				new LODStatisticsViewFilter(result),
-				new LinearViewFilter(result),
-				new RankViewFilter(result)),
-		ViewFilter[].class);
+		
+		result.set("viewFilters", loadPlugins(result, ViewFilter.class), ViewFilter[].class);
 		result.set(VIEW_FILTER, null, ViewFilter.class);
-		result.set("sieves", array(
-				new SimpleSieve(result),
-				new SaturationSieve201303080950(result)), Sieve[].class);
+		result.set("sieves", loadPlugins(result, Sieve.class), Sieve[].class);
 		result.set("sieve", null, Sieve.class);
 		
 		final Variable<Point> xyVariable = result.getVariable("xy");
@@ -255,6 +206,25 @@ public final class Show {
 		result.set("rois", new RegionOfInterest[0]);
 		
 		return result;
+	}
+	
+	public static <T> T[] loadPlugins(final Context context, final Class<T> elementType) {
+		final List<T> protoresult = new ArrayList<T>();
+		
+		protoresult.add(null);
+		
+		for (final Class<?> cls : getClassesInPackage(Plugin.class.getPackage().getName())) {
+			if (!isAbstract(cls.getModifiers()) && elementType.isAssignableFrom(cls)) {
+				try {
+					protoresult.add((T) cls.getConstructor(Context.class).newInstance(context));
+				} catch (final Exception exception) {
+					debugPrint(cls);
+					exception.printStackTrace();
+				}
+			}
+		}
+		
+		return protoresult.toArray((T[]) Array.newInstance(elementType, protoresult.size()));
 	}
 	
     public static final JMenuItem newHistogramItem(final Context context) {
