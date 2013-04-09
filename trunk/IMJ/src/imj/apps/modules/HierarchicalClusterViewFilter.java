@@ -3,16 +3,22 @@ package imj.apps.modules;
 import static imj.clustering.HierarchicalClusterer.relabel;
 import static java.lang.Double.parseDouble;
 import static java.lang.Integer.parseInt;
+import static java.lang.Math.min;
 import static java.util.Arrays.fill;
 import static java.util.Locale.ENGLISH;
+import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.Image;
 import imj.clustering.Distance;
 import imj.clustering.HierarchicalClusterer;
+import imj.clustering.HierarchicalClusterer.InterNode;
+import imj.clustering.HierarchicalClusterer.Node;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.PriorityQueue;
 
 import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.tools.TicToc;
@@ -74,14 +80,14 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 			
 			@Override
 			public final int getNewValue(final int index, final int oldValue, final Channel channel) {
-				return HierarchicalClusterViewFilter.this.accept(oldValue) ? oldValue : 0;
+				return HierarchicalClusterViewFilter.this.getClusterColor(index);
 			}
 			
 		};
 	}
 	
-	final boolean accept(final int value) {
-		return true;
+	final int getClusterColor(final int pixel) {
+		return 0 < this.clusterCount ? 0xFF000000 | (0x00FFFFFF * (1 + this.getClusterIndex(pixel)) / this.clusterCount) : 0;
 	}
 	
 	private final boolean updateParameters() {
@@ -214,8 +220,8 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 		
 		for (int tileRowIndex = 0; tileRowIndex < verticalTileCount; ++tileRowIndex) {
 			for (int tileColumnIndex = 0; tileColumnIndex < horizontalTileCount; ++tileColumnIndex) {
-				for (int rowIndex = tileRowIndex, endRowIndex = tileRowIndex + tileRowCount; rowIndex < endRowIndex; ++rowIndex) {
-					for (int columnIndex = tileColumnIndex, endColumnIndex = tileColumnIndex + tileColumnCount; columnIndex < endColumnIndex; ++columnIndex) {
+				for (int rowIndex = tileRowIndex * tileRowCount, endRowIndex = rowIndex + tileRowCount; rowIndex < endRowIndex; ++rowIndex) {
+					for (int columnIndex = tileColumnIndex * tileColumnCount, endColumnIndex = columnIndex + tileColumnCount; columnIndex < endColumnIndex; ++columnIndex) {
 						processor.process(rowIndex * imageColumnCount + columnIndex);
 					}
 				}
@@ -230,6 +236,19 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 		
 		public abstract void process(int pixel);
 		
+	}
+	
+	private final int getClusterIndex(final int pixel) {
+		final int imageRowCount = this.getImage().getRowCount();
+		final int imageColumnCount = this.getImage().getColumnCount();
+		final int pixelRowIndex = pixel / imageColumnCount;
+		final int pixelColumnIndex = pixel % imageColumnCount;
+		final int tileRowCount = imageRowCount / this.verticalTileCount;
+		final int tileColumnCount = imageColumnCount / this.horizontalTileCount;
+		final int tileRowIndex = min(this.verticalTileCount - 1, pixelRowIndex / tileRowCount);
+		final int tileColumnIndex = min(this.horizontalTileCount - 1, pixelColumnIndex / tileColumnCount);
+		
+		return this.clusters[tileRowIndex * this.horizontalTileCount + tileColumnIndex];
 	}
 	
 	private final int getColorIndex(final int pixelRawValue) {
@@ -252,14 +271,43 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 		debugPrint("Extracting data...", "(" + new Date(timer.tic()) + ")");
 		
 		if ("COUNT".equals(this.clustering)) {
-			debugPrint("TODO");
+			final PriorityQueue<Node> nodes = new PriorityQueue<Node>(11, new Comparator<Node>() {
+				
+				@Override
+				public final int compare(final Node n1, final Node n2) {
+					return Double.compare(n2.getDiameter(), n1.getDiameter());
+				}
+				
+			});
+			
+			nodes.add(this.clusterer.getLastNode());
+			
+			while (nodes.size() < this.clusterCount) {
+				final InterNode interNode = cast(InterNode.class, nodes.peek());
+				
+				if (interNode == null) {
+					break;
+				}
+				
+				nodes.poll();
+				nodes.add(interNode.getChild0());
+				nodes.add(interNode.getChild1());
+			}
+			
+			this.clusters = new int[this.clusterer.getSampleCount()];
+			
+			for (final Node node : nodes) {
+				HierarchicalClusterer.label(node, this.clusters);
+			}
 		} else if ("DIAMETER".equals(this.clustering)) {
 			this.clusters = this.clusterer.getClusters(this.diameter);
-			
-			debugPrint("clusterCount:", relabel(this.clusters));
 		}
 		
+		this.clusterCount = relabel(this.clusters);
+		
 		debugPrint("Extracting data done", "(time:", timer.toc(), "memory:", usedMemory() + ")");
+		
+		debugPrint("clusterCount:", this.clusterCount);
 	}
 	
 }
