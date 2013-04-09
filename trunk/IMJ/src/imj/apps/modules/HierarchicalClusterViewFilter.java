@@ -37,6 +37,8 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 	
 	private String sampling;
 	
+	private int channelBinningBitCount;
+	
 	private String clustering;
 	
 	private int clusterCount;
@@ -53,7 +55,7 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 		this.getParameters().clear();
 		
 		this.getParameters().put("channels", "brightness");
-		this.getParameters().put("tiling", "16 16");
+		this.getParameters().put("tiling", "16");
 		this.getParameters().put("sampling", "tile");
 		this.getParameters().put("clustering", "count 2");
 	}
@@ -104,10 +106,23 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 		final int oldHorizontalTileCount = this.horizontalTileCount;
 		final String[] tiling = this.getParameters().get("tiling").split("\\s+");
 		this.verticalTileCount = parseInt(tiling[0]);
-		this.horizontalTileCount = parseInt(tiling[1]);
+		
+		if (this.getImage().getSource() != null) {
+			final int imageRowCount = this.getImage().getRowCount();
+			final int imageColumnCount = this.getImage().getColumnCount();
+			this.horizontalTileCount = imageColumnCount / (imageRowCount / this.verticalTileCount);
+		} else {
+			this.horizontalTileCount = this.verticalTileCount;
+		}
 		
 		final String oldSampling = this.sampling;
-		this.sampling = this.getParameters().get("sampling").trim().toUpperCase(ENGLISH);
+		final int oldChannelBinningBitCount = this.channelBinningBitCount;
+		final String[] sampling = this.getParameters().get("sampling").split("\\s+");
+		this.sampling = sampling[0].toUpperCase(ENGLISH);
+		
+		if ("HISTOGRAM".equals(this.sampling)) {
+			this.channelBinningBitCount = parseInt(sampling[1]);
+		}
 		
 		final String[] clustering = this.getParameters().get("clustering").split("\\s+");
 		this.clustering = clustering[0].trim().toUpperCase(ENGLISH);
@@ -120,7 +135,7 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 		
 		return !Arrays.equals(oldChannels, this.channels) ||
 				oldVerticalTileCount != this.verticalTileCount || oldHorizontalTileCount != this.horizontalTileCount ||
-				!Tools.equals(oldSampling, this.sampling);
+				!Tools.equals(oldSampling, this.sampling) || oldChannelBinningBitCount != this.channelBinningBitCount;
 	}
 	
 	private final void updateClusters() {
@@ -152,7 +167,7 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 						++processed[0];
 						this.i = HierarchicalClusterViewFilter.this.collectChannelValues(source.getValue(pixel), this.i, sample);
 						
-						if (this.i == tileSize) {
+						if (this.i == tileSize * channelCount) {
 							HierarchicalClusterViewFilter.this.clusterer.addSample(sample.clone());
 							this.i = 0;
 							fill(sample, 0.0);
@@ -161,13 +176,14 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 					
 				};
 			} else if ("HISTOGRAM".equals(this.sampling)) {
-				final double[] sample = new double[1 << (8 * (channelCount - 1))];
+				final double[] sample = new double[1 << (this.channelBinningBitCount * channelCount)];
 				collector = new PixelProcessor() {
 					
 					private int i;
 					
 					@Override
 					public final void process(final int pixel) {
+						++processed[0];
 						HierarchicalClusterViewFilter.this.updateHistogram(source.getValue(pixel), sample);
 						
 						if (++this.i == tileSize) {
@@ -253,9 +269,11 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 	
 	private final int getColorIndex(final int pixelRawValue) {
 		int result = 0;
+		final int n = 1 << this.channelBinningBitCount;
+		final int shift = 8 - this.channelBinningBitCount;
 		
 		for (final Channel channel : this.channels) {
-			result = result * 256 + channel.getValue(pixelRawValue);
+			result = result * n + (channel.getValue(pixelRawValue) >> shift);
 		}
 		
 		return result;
