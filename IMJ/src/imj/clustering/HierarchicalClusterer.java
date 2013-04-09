@@ -51,6 +51,10 @@ public final class HierarchicalClusterer {
 		return this.distance;
 	}
 	
+	public final Node getLastNode() {
+		return this.getNodes().get(this.getNodes().size() - 1);
+	}
+	
 	public final List<Node> getNodes() {
 		return this.nodes;
 	}
@@ -206,7 +210,7 @@ public final class HierarchicalClusterer {
 	public final int[] getClusters(final double maximumDistance) {
 		final int[] result = new int[this.getSampleCount()];
 		
-		BREADTH_FIRST.forEachNode(this.getNodes().get(this.getNodes().size() - 1), new NodeProcessor() {
+		BREADTH_FIRST.forEachNode(this.getLastNode(), new NodeProcessor() {
 			
 			@Override
 			public final boolean process(final Node node) {
