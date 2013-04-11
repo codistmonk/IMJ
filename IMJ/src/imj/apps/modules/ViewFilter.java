@@ -344,6 +344,30 @@ public abstract class ViewFilter extends Plugin {
 					return rgba;
 				}
 				
+			}, ROW {
+				
+				@Override
+				public final int getChannelIndex() {
+					return 0;
+				}
+				
+				@Override
+				public final int getValue(final int rgba) {
+					return rgba;
+				}
+				
+			}, COLUMN {
+				
+				@Override
+				public final int getChannelIndex() {
+					return 1;
+				}
+				
+				@Override
+				public final int getValue(final int rgba) {
+					return rgba;
+				}
+				
 			};
 			
 		}

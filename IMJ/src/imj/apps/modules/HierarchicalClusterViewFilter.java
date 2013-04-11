@@ -179,7 +179,7 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 					@Override
 					public final void process(final int pixel) {
 						++processed[0];
-						this.i = HierarchicalClusterViewFilter.this.collectChannelValues(HierarchicalClusterViewFilter.this.source.getValue(pixel), this.i, sample);
+						this.i = HierarchicalClusterViewFilter.this.collectChannelValues(pixel, this.i, sample);
 						
 						if (this.i == tileSize * channelCount) {
 							HierarchicalClusterViewFilter.this.clusterer.addSample(sample.clone());
@@ -198,7 +198,7 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 					@Override
 					public final void process(final int pixel) {
 						++processed[0];
-						HierarchicalClusterViewFilter.this.updateHistogram(HierarchicalClusterViewFilter.this.source.getValue(pixel), sample);
+						HierarchicalClusterViewFilter.this.updateHistogram(pixel, sample);
 						
 						if (++this.i == tileSize) {
 							HierarchicalClusterViewFilter.this.clusterer.addSample(sample.clone());
@@ -228,18 +228,25 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 		}
 	}
 	
-	final int collectChannelValues(final int pixelValue, final int i, final double[] sample) {
+	final int collectChannelValues(final int pixel, final int i, final double[] sample) {
+		final Image image = this.source;
 		int j = i;
 		
 		for (final Channel channel : this.channels) {
-			sample[j++] = channel.getValue(pixelValue);
+			if (Channel.Primitive.ROW == channel) {
+				sample[j++] = pixel / image.getColumnCount();
+			} else if (Channel.Primitive.COLUMN == channel) {
+				sample[j++] = pixel % image.getColumnCount();
+			} else {
+				sample[j++] = channel.getValue(image.getValue(pixel));
+			}
 		}
 		
 		return j;
 	}
 	
-	final void updateHistogram(final int pixelValue, final double[] histogram) {
-		++histogram[this.getColorIndex(pixelValue)];
+	final void updateHistogram(final int pixel, final double[] histogram) {
+		++histogram[this.getColorIndex(pixel, this.source.getValue(pixel))];
 	}
 	
 	public static final void forEachPixelInEachTile(final Image image, final int verticalTileCount, final int horizontalTileCount, final PixelProcessor processor) {
@@ -299,13 +306,23 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 		return this.clusters[tileRowIndex * this.horizontalTileCount + tileColumnIndex];
 	}
 	
-	private final int getColorIndex(final int pixelRawValue) {
+	private final int getColorIndex(final int pixelIndex, final int pixelRawValue) {
 		int result = 0;
 		final int n = 1 << this.channelBinningBitCount;
 		final int shift = 8 - this.channelBinningBitCount;
 		
 		for (final Channel channel : this.channels) {
-			result = result * n + (channel.getValue(pixelRawValue) >> shift);
+			final int channelValue;
+			
+			if (Channel.Primitive.ROW == channel) {
+				channelValue = (1 + pixelIndex / this.source.getColumnCount()) * 255 / this.source.getRowCount();
+			} else if (Channel.Primitive.COLUMN == channel) {
+				channelValue = (1 + pixelIndex % this.source.getColumnCount()) * 255 / this.source.getColumnCount();
+			} else {
+				channelValue = channel.getValue(pixelRawValue);
+			}
+			
+			result = result * n + (channelValue >> shift);
 		}
 		
 		return result;
