@@ -23,6 +23,23 @@ public final class IMJTools {
 		throw new IllegalInstantiationException();
 	}
 	
+	public static final void forEachPixelInEachTile(final Image image, final int verticalTileCount, final int horizontalTileCount, final PixelProcessor processor) {
+		final int imageRowCount = image.getRowCount();
+		final int imageColumnCount = image.getColumnCount();
+		final int tileRowCount = imageRowCount / verticalTileCount;
+		final int tileColumnCount = imageColumnCount / horizontalTileCount;
+		
+		for (int tileRowIndex = 0; tileRowIndex < verticalTileCount; ++tileRowIndex) {
+			for (int tileColumnIndex = 0; tileColumnIndex < horizontalTileCount; ++tileColumnIndex) {
+				for (int rowIndex = tileRowIndex * tileRowCount, endRowIndex = rowIndex + tileRowCount; rowIndex < endRowIndex; ++rowIndex) {
+					for (int columnIndex = tileColumnIndex * tileColumnCount, endColumnIndex = columnIndex + tileColumnCount; columnIndex < endColumnIndex; ++columnIndex) {
+						processor.process(rowIndex * imageColumnCount + columnIndex);
+					}
+				}
+			}
+		}
+	}
+	
 	public static final void writePPM(final Image image, final OutputStream output) {
 		try {
 			final int columnCount = image.getColumnCount();
@@ -418,6 +435,15 @@ public final class IMJTools {
 		};
 		
 		public abstract double getValue(Statistics statistics);
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-04-08)
+	 */
+	public static abstract interface PixelProcessor {
+		
+		public abstract void process(int pixel);
 		
 	}
 	

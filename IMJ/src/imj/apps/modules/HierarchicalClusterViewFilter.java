@@ -1,5 +1,6 @@
 package imj.apps.modules;
 
+import static imj.IMJTools.forEachPixelInEachTile;
 import static imj.clustering.HierarchicalClusterer.relabel;
 import static java.lang.Double.parseDouble;
 import static java.lang.Integer.parseInt;
@@ -9,6 +10,7 @@ import static java.util.Locale.ENGLISH;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
+import imj.IMJTools.PixelProcessor;
 import imj.Image;
 import imj.clustering.Distance;
 import imj.clustering.HierarchicalClusterer;
@@ -247,32 +249,6 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 	
 	final void updateHistogram(final int pixel, final double[] histogram) {
 		++histogram[this.getColorIndex(pixel, this.source.getValue(pixel))];
-	}
-	
-	public static final void forEachPixelInEachTile(final Image image, final int verticalTileCount, final int horizontalTileCount, final PixelProcessor processor) {
-		final int imageRowCount = image.getRowCount();
-		final int imageColumnCount = image.getColumnCount();
-		final int tileRowCount = imageRowCount / verticalTileCount;
-		final int tileColumnCount = imageColumnCount / horizontalTileCount;
-		
-		for (int tileRowIndex = 0; tileRowIndex < verticalTileCount; ++tileRowIndex) {
-			for (int tileColumnIndex = 0; tileColumnIndex < horizontalTileCount; ++tileColumnIndex) {
-				for (int rowIndex = tileRowIndex * tileRowCount, endRowIndex = rowIndex + tileRowCount; rowIndex < endRowIndex; ++rowIndex) {
-					for (int columnIndex = tileColumnIndex * tileColumnCount, endColumnIndex = columnIndex + tileColumnCount; columnIndex < endColumnIndex; ++columnIndex) {
-						processor.process(rowIndex * imageColumnCount + columnIndex);
-					}
-				}
-			}
-		}
-	}
-	
-	/**
-	 * @author codistmonk (creation 2013-04-08)
-	 */
-	public static abstract interface PixelProcessor {
-		
-		public abstract void process(int pixel);
-		
 	}
 	
 	private final int getClusterIndex(final int pixel) {
