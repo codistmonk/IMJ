@@ -1,5 +1,8 @@
 package imj.apps;
 
+import static imj.IMJTools.BLUE_MASK;
+import static imj.IMJTools.GREEN_MASK;
+import static imj.IMJTools.RED_MASK;
 import static imj.ImageOfBufferedImage.rgb;
 import static java.lang.Integer.parseInt;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
@@ -66,15 +69,28 @@ public final class GenerateHistogramDatabase {
 				
 				if (lod <= 5) {
 					final String imageId = regionMetadata[0];
-					final int[] histogram = new int[1 << (3 * channelBitCount)];
+					final int colorCount = 1 << (3 * channelBitCount);
+					final float[] histogram = new float[colorCount];
 					final BufferedImage image = ImageIO.read(region);
 					final int width = image.getWidth();
 					final int height = image.getHeight();
 					final WritableRaster raster = image.getRaster();
+					int pixelCount = 0;
 					
 					for (int y = 0; y < height; ++y) {
 						for (int x = 0; x < width; ++x) {
-							++histogram[shiftRightRGB(rgb(raster.getDataElements(x, y, null)) & 0x00FFFFFF, shift)];
+							final int rgb = rgb(raster.getDataElements(x, y, null));
+							
+							if (rgb != 0) {
+								++histogram[shiftRightRGB(rgb & 0x00FFFFFF, shift)];
+								++pixelCount;
+							}
+						}
+					}
+					
+					if (pixelCount != 0) {
+						for (int i = 0; i < colorCount; ++i) {
+							histogram[i] /= pixelCount;
 						}
 					}
 					
@@ -108,11 +124,11 @@ public final class GenerateHistogramDatabase {
 	}
 	
 	public static final int shiftRightRGB(final int rgb, final int shift) {
-		final int r = (rgb >> (3 * shift));
-		final int g = (rgb >> (2 * shift));
-		final int b = (rgb >> (1 * shift));
+		final int r = (((rgb & RED_MASK) >> shift) & RED_MASK) >> (2 * shift);
+		final int g = (((rgb & GREEN_MASK) >> shift) & GREEN_MASK) >> (1 * shift);
+		final int b = (((rgb & BLUE_MASK) >> shift) & BLUE_MASK) >> (0 * shift);
 		
-		return (r & 0x00FF0000) | (g & 0x0000FF00) & (b & 0x000000FF);
+		return r | g | b;
 	}
 	
 }
