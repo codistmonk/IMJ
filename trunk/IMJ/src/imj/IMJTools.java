@@ -23,6 +23,26 @@ public final class IMJTools {
 		throw new IllegalInstantiationException();
 	}
 	
+	/**
+	 * {@value}.
+	 */
+	public static final int ALPHA_MASK = 0xFF000000;
+	
+	/**
+	 * {@value}.
+	 */
+	public static final int RED_MASK = 0x00FF0000;
+	
+	/**
+	 * {@value}.
+	 */
+	public static final int GREEN_MASK = 0x0000FF00;
+	
+	/**
+	 * {@value}.
+	 */
+	public static final int BLUE_MASK = 0x000000FF;
+	
 	public static final void forEachPixelInEachTile(final Image image, final int verticalTileCount, final int horizontalTileCount, final PixelProcessor processor) {
 		final int imageRowCount = image.getRowCount();
 		final int imageColumnCount = image.getColumnCount();

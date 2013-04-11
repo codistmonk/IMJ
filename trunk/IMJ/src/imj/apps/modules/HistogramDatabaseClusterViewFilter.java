@@ -4,7 +4,6 @@ import static imj.IMJTools.forEachPixelInEachTile;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.BLUE;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.GREEN;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.RED;
-import static imj.clustering.HierarchicalClusterer.relabel;
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.min;
 import static java.util.Arrays.copyOf;
@@ -71,12 +70,14 @@ public final class HistogramDatabaseClusterViewFilter extends ViewFilter {
 	@Override
 	protected final void sourceImageChanged() {
 		this.updateParameters();
+		debugPrint();
 		this.updateClusters();
 	}
 	
 	@Override
 	protected final void doInitialize() {
 		if (this.updateParameters()) {
+			debugPrint();
 			this.updateClusters();
 		}
 	}
@@ -111,6 +112,8 @@ public final class HistogramDatabaseClusterViewFilter extends ViewFilter {
 		this.databaseFile = this.getParameters().get("database");
 		
 		if (!Tools.equals(oldDatabaseFile, this.databaseFile)) {
+			debugPrint(oldDatabaseFile, this.databaseFile);
+			
 			try {
 				final ObjectInputStream ois = new ObjectInputStream(new FileInputStream(this.databaseFile));
 				
@@ -118,6 +121,7 @@ public final class HistogramDatabaseClusterViewFilter extends ViewFilter {
 					this.clusterer = new HistogramDatabaseClusterer((Map<Object, Object>) ois.readObject());
 					final String[] classes = this.clusterer.getClasses();
 					final int n = classes.length;
+					this.clusterCount = n;
 					
 					this.classes.clear();
 					this.classes.put(null, 0);
@@ -168,7 +172,8 @@ public final class HistogramDatabaseClusterViewFilter extends ViewFilter {
 			final long[] processed = { 0L };
 			
 			{
-				final int[] sample = new int[1 << (this.channelBinningBitCount * channelCount)];
+				final int colorCount = 1 << (this.channelBinningBitCount * channelCount);
+				final float[] sample = new float[colorCount];
 				collector = new PixelProcessor() {
 					
 					private int i;
@@ -181,6 +186,10 @@ public final class HistogramDatabaseClusterViewFilter extends ViewFilter {
 						HistogramDatabaseClusterViewFilter.this.updateHistogram(pixel, sample);
 						
 						if (++this.i == tileSize) {
+							for (int j = 0; j < colorCount; ++j) {
+								sample[j] /= tileSize;
+							}
+							
 							HistogramDatabaseClusterViewFilter.this.classify(sample, this.sampleIndex++);
 							this.i = 0;
 							fill(sample, 0);
@@ -194,22 +203,21 @@ public final class HistogramDatabaseClusterViewFilter extends ViewFilter {
 			
 			debugPrint(processed[0], "/", this.source.getRowCount() * this.source.getColumnCount());
 			
+			debugPrint(Arrays.toString(this.clusterer.getClasses()));
 			debugPrint(Arrays.toString(this.clusters));
-			
-			this.clusterCount = relabel(this.clusters);
 			
 			debugPrint("Collecting data done", "(time:", timer.toc(), "memory:", usedMemory() + ")");
 		}
 	}
 	
-	final void classify(final int[] sample, final int sampleIndex) {
+	final void classify(final float[] sample, final int sampleIndex) {
 		final int sampleLOD = this.getContext().get("lod");
 		final String sampleClass = this.clusterer.getCluster(sample, sampleLOD);
 		
 		this.clusters[sampleIndex] = this.classes.get(sampleClass);
 	}
 	
-	final void updateHistogram(final int pixel, final int[] histogram) {
+	final void updateHistogram(final int pixel, final float[] histogram) {
 		++histogram[this.getColorIndex(pixel, this.source.getValue(pixel))];
 	}
 	
@@ -267,7 +275,7 @@ public final class HistogramDatabaseClusterViewFilter extends ViewFilter {
 				final Object[] rowI = table.get(i);
 				final String classI = (String) rowI[0];
 				final int lodI = (Integer) rowI[2];
-				final int[] referenceI = (int[]) rowI[3];
+				final float[] referenceI = (float[]) rowI[3];
 				double[] classRadius = this.classRadii.get(classI);
 				
 				if (classRadius == null) {
@@ -282,7 +290,7 @@ public final class HistogramDatabaseClusterViewFilter extends ViewFilter {
 					final int lodJ = (Integer) rowJ[2];
 					
 					if (classI.equals(classJ) && lodI == lodJ) {
-						final int[] referenceJ = (int[]) rowJ[3];
+						final float[] referenceJ = (float[]) rowJ[3];
 						final double distance = this.getDistance(referenceI, referenceJ) / 2.0;
 						
 						if (classRadius[lodI] < distance) {
@@ -307,10 +315,10 @@ public final class HistogramDatabaseClusterViewFilter extends ViewFilter {
 			return this.classRadii.keySet().toArray(new String[this.classRadii.size()]);
 		}
 		
-		public final String getCluster(final int[] sample, final int sampleLOD) {
+		public final String getCluster(final float[] sample, final int sampleLOD) {
 			double closestDistance = Double.POSITIVE_INFINITY;
 			String closestClass = null;
-			final List<Object[]> table = (List<Object[]>) database.get("table");
+			final List<Object[]> table = (List<Object[]>) this.database.get("table");
 			
 			for (final Object[] row : table) {
 				final int referenceLOD = (Integer) row[2];
@@ -318,7 +326,7 @@ public final class HistogramDatabaseClusterViewFilter extends ViewFilter {
 				if (sampleLOD == referenceLOD) {
 					final String referenceClass = (String) row[0];
 					final double classRadius = this.classRadii.get(referenceClass)[sampleLOD];
-					final int[] reference = (int[]) row[3];
+					final float[] reference = (float[]) row[3];
 					
 					assert sample.length == reference.length;
 					
@@ -334,7 +342,7 @@ public final class HistogramDatabaseClusterViewFilter extends ViewFilter {
 			return closestClass;
 		}
 		
-		private final double getDistance(final int[] sample1, final int[] sample2) {
+		private final double getDistance(final float[] sample1, final float[] sample2) {
 			return Distance.Predefined.EUCLIDEAN.getDistance(sample1, sample2);
 		}
 		
