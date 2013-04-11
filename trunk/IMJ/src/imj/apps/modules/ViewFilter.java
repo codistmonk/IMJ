@@ -275,9 +275,9 @@ public abstract class ViewFilter extends Plugin {
 	 */
 	public static interface Channel {
 		
-		public abstract int getIndex();
+		public abstract int getChannelIndex();
 		
-		public abstract int getValue(final int rgba);
+		public abstract int getValue(int rgba);
 		
 		/**
 		 * @author codistmonk (creation 2013-02-20)
@@ -287,7 +287,7 @@ public abstract class ViewFilter extends Plugin {
 			RED {
 				
 				@Override
-				public final int getIndex() {
+				public final int getChannelIndex() {
 					return 0;
 				}
 				
@@ -299,7 +299,7 @@ public abstract class ViewFilter extends Plugin {
 			}, GREEN {
 				
 				@Override
-				public final int getIndex() {
+				public final int getChannelIndex() {
 					return 1;
 				}
 				
@@ -311,7 +311,7 @@ public abstract class ViewFilter extends Plugin {
 			}, BLUE {
 				
 				@Override
-				public final int getIndex() {
+				public final int getChannelIndex() {
 					return 2;
 				}
 				
@@ -323,7 +323,7 @@ public abstract class ViewFilter extends Plugin {
 			}, ALPHA {
 				
 				@Override
-				public final int getIndex() {
+				public final int getChannelIndex() {
 					return 3;
 				}
 				
@@ -335,7 +335,7 @@ public abstract class ViewFilter extends Plugin {
 			}, INT {
 				
 				@Override
-				public final int getIndex() {
+				public final int getChannelIndex() {
 					return 0;
 				}
 				
@@ -356,7 +356,7 @@ public abstract class ViewFilter extends Plugin {
 			HUE {
 				
 				@Override
-				public final int getIndex() {
+				public final int getChannelIndex() {
 					return 0;
 				}
 				
@@ -368,7 +368,7 @@ public abstract class ViewFilter extends Plugin {
 			}, SATURATION {
 				
 				@Override
-				public final int getIndex() {
+				public final int getChannelIndex() {
 					return 1;
 				}
 				
@@ -380,7 +380,7 @@ public abstract class ViewFilter extends Plugin {
 			}, BRIGHTNESS {
 				
 				@Override
-				public final int getIndex() {
+				public final int getChannelIndex() {
 					return 2;
 				}
 				
@@ -392,7 +392,7 @@ public abstract class ViewFilter extends Plugin {
 			}, DARKNESS {
 				
 				@Override
-				public final int getIndex() {
+				public final int getChannelIndex() {
 					return 2;
 				}
 				
@@ -533,15 +533,15 @@ public abstract class ViewFilter extends Plugin {
 				
 				for (final Channel channel : this.getInputChannels()) {
 					value = max(0, min(255, this.getNewValue(index, oldValue, channel)));
-					this.getBuffer()[channel.getIndex()] = value;
+					this.getBuffer()[channel.getChannelIndex()] = value;
 				}
 				
 				if (this.isOutputMonochannel() && this.getInputChannels().size() == 1) {
 					return argb(255, value, value, value);
 				}
 				
-				return argb(this.getBuffer()[ALPHA.getIndex()],
-						this.getBuffer()[RED.getIndex()], this.getBuffer()[GREEN.getIndex()], this.getBuffer()[BLUE.getIndex()]);
+				return argb(this.getBuffer()[ALPHA.getChannelIndex()],
+						this.getBuffer()[RED.getChannelIndex()], this.getBuffer()[GREEN.getChannelIndex()], this.getBuffer()[BLUE.getChannelIndex()]);
 			} else if (this.getInputChannelClass() == Synthetic.class) {
 				this.getBuffer()[0] = hue(oldValue);
 				this.getBuffer()[1] = saturation(oldValue);
@@ -551,15 +551,15 @@ public abstract class ViewFilter extends Plugin {
 				
 				for (final Channel channel : this.getInputChannels()) {
 					value = max(0, min(255, this.getNewValue(index, oldValue, channel)));
-					this.getBuffer()[channel.getIndex()] = value;
+					this.getBuffer()[channel.getChannelIndex()] = value;
 				}
 				
 				if (this.isOutputMonochannel() && this.getInputChannels().size() == 1) {
 					return argb(255, value, value, value);
 				}
 				
-				return Color.HSBtoRGB(this.getBuffer()[HUE.getIndex()] / 255F,
-						this.getBuffer()[SATURATION.getIndex()] / 255F, this.getBuffer()[BRIGHTNESS.getIndex()] / 255F);
+				return Color.HSBtoRGB(this.getBuffer()[HUE.getChannelIndex()] / 255F,
+						this.getBuffer()[SATURATION.getChannelIndex()] / 255F, this.getBuffer()[BRIGHTNESS.getChannelIndex()] / 255F);
 			}
 			
 			return 0;
