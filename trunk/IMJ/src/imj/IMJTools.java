@@ -50,6 +50,8 @@ public final class IMJTools {
 		final int tileColumnCount = imageColumnCount / horizontalTileCount;
 		
 		for (int tileRowIndex = 0; tileRowIndex < verticalTileCount; ++tileRowIndex) {
+			System.out.print(tileRowIndex + "/" + verticalTileCount + "\r");
+			
 			for (int tileColumnIndex = 0; tileColumnIndex < horizontalTileCount; ++tileColumnIndex) {
 				for (int rowIndex = tileRowIndex * tileRowCount, endRowIndex = rowIndex + tileRowCount; rowIndex < endRowIndex; ++rowIndex) {
 					for (int columnIndex = tileColumnIndex * tileColumnCount, endColumnIndex = columnIndex + tileColumnCount; columnIndex < endColumnIndex; ++columnIndex) {
