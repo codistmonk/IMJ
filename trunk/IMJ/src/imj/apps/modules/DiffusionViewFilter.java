@@ -17,9 +17,9 @@ import net.sourceforge.aprog.context.Context;
 /**
  * @author codistmonk (creation 2013-03-25)
  */
-public final class RegionGrowingViewFilter extends ViewFilter.FromFilter {
+public final class DiffusionViewFilter extends ViewFilter.FromFilter {
 	
-	public RegionGrowingViewFilter(final Context context) {
+	public DiffusionViewFilter(final Context context) {
 		super(context);
 		
 		this.getParameters().remove("channels");
