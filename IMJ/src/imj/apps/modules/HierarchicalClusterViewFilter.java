@@ -392,6 +392,11 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 		}
 		
 		@Override
+		public final int getPixelCount() {
+			return this.getSource().getPixelCount();
+		}
+		
+		@Override
 		public final int getChannelCount() {
 			return this.getSource().getChannelCount();
 		}
@@ -432,26 +437,6 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 			final int columnIndex = index % columnCount;
 			
 			return this.setValue(rowIndex, columnIndex, value);
-		}
-		
-		@Override
-		public final float getFloatValue(final int rowIndex, final int columnIndex) {
-			return Float.intBitsToFloat(this.getValue(rowIndex, columnIndex));
-		}
-		
-		@Override
-		public final float setFloatValue(final int rowIndex, final int columnIndex, final float value) {
-			return this.setValue(rowIndex, columnIndex, Float.floatToIntBits(value));
-		}
-		
-		@Override
-		public final float getFloatValue(final int index) {
-			return Float.intBitsToFloat(this.getValue(index));
-		}
-		
-		@Override
-		public final float setFloatValue(int index, float value) {
-			return this.setValue(index, Float.floatToIntBits(value));
 		}
 		
 	}

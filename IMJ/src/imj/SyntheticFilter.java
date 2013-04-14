@@ -27,7 +27,7 @@ public abstract class SyntheticFilter extends Labeling {
 		
 		if (this.getImage() instanceof ImageOfFloats) {
 			for (int pixel = 0; pixel < pixelCount; ++pixel) {
-					this.getResult().setFloatValue(pixel, this.synthesizer.computeFloat(pixel));
+				((ImageOfFloats) this.getResult()).setFloatValue(pixel, this.synthesizer.computeFloat(pixel));
 			}
 		} else {
 			for (int pixel = 0; pixel < pixelCount; ++pixel) {
@@ -74,7 +74,11 @@ public abstract class SyntheticFilter extends Labeling {
 			
 			while (this.neighborhood.hasNext()) {
 				final int neighbor = this.neighborhood.getNext();
-				this.addFloatValue(neighbor, SyntheticFilter.this.getImage().getFloatValue(neighbor));
+				if (SyntheticFilter.this.getImage() instanceof ImageOfFloats) {
+					this.addFloatValue(neighbor, ((ImageOfFloats) SyntheticFilter.this.getImage()).getFloatValue(neighbor));
+				} else {
+					this.addFloatValue(neighbor, SyntheticFilter.this.getImage().getValue(neighbor));
+				}
 			}
 			
 			return this.computeFloatResult();

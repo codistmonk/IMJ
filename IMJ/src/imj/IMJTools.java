@@ -313,16 +313,6 @@ public final class IMJTools {
 				throw new UnsupportedOperationException();
 			}
 			
-			@Override
-			public final float getFloatValue(final int index) {
-				return this.getValue(index);
-			}
-			
-			@Override
-			public final float setFloatValue(final int index, final float value) {
-				throw new UnsupportedOperationException();
-			}
-			
 		};
 	}
 	
