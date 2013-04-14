@@ -144,19 +144,24 @@ public final class FilteredImage implements Image {
 	}
 	
 	@Override
-	public final int setValue(final int index, final int value) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public final float getFloatValue(final int index) {
-		return this.getValue(index);
+	public final int getPixelCount() {
+		return this.getSource().getPixelCount();
 	}
 	
 	@Override
-	public final float setFloatValue(final int index, float value) {
-		return this.setValue(index, (int) value);
+	public final int setValue(final int index, final int value) {
+		throw new UnsupportedOperationException();
 	}
+//	
+//	@Override
+//	public final float getFloatValue(final int index) {
+//		return this.getValue(index);
+//	}
+//	
+//	@Override
+//	public final float setFloatValue(final int index, float value) {
+//		return this.setValue(index, (int) value);
+//	}
 	
 	@Override
 	public final int getChannelCount() {
@@ -181,16 +186,6 @@ public final class FilteredImage implements Image {
 	@Override
 	public final int setValue(final int rowIndex, final int columnIndex, final int value) {
 		return this.setValue(index(this.getSource(), rowIndex, columnIndex), value);
-	}
-	
-	@Override
-	public final float getFloatValue(final int rowIndex, final int columnIndex) {
-		return this.getFloatValue(index(this.getSource(), rowIndex, columnIndex));
-	}
-	
-	@Override
-	public final float setFloatValue(final int rowIndex, final int columnIndex, final float value) {
-		return this.setFloatValue(index(this.getSource(), rowIndex, columnIndex), value);
 	}
 	
 	static final Dimension cacheSize = new Dimension(256, 256);

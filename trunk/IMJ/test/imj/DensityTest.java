@@ -1,6 +1,8 @@
 package imj;
 
 import static imj.apps.modules.ImageComponent.showAdjusted;
+import static java.lang.Float.floatToRawIntBits;
+import static java.lang.Float.intBitsToFloat;
 import static java.lang.Math.abs;
 import static javax.imageio.ImageIO.read;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -46,7 +48,8 @@ public final class DensityTest {
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
 			final int row = pixel / columnCount;
 			final int column = pixel % columnCount;
-			protoDensity.setFloatValue(pixel, 255.0F / (1 + squareDistance(0, 0, row, column)));
+//			protoDensity.setFloatValue(pixel, 255.0F / (1 + squareDistance(0, 0, row, column)));
+			protoDensity.setValue(pixel, floatToRawIntBits(255.0F / (1 + squareDistance(0, 0, row, column))));
 		}
 		debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 		
@@ -60,10 +63,11 @@ public final class DensityTest {
 				final int inRow = in / columnCount;
 				final int inColumn = in % columnCount;
 				
-				value += protoDensity.getFloatValue(abs(outRow - inRow), abs(outColumn - inColumn)) * image.getFloatValue(in);
+//				value += protoDensity.getFloatValue(abs(outRow - inRow), abs(outColumn - inColumn)) * image.getFloatValue(in);
+				value += intBitsToFloat(protoDensity.getValue(abs(outRow - inRow), abs(outColumn - inColumn))) * intBitsToFloat(image.getValue(in));
 			}
 			
-			density.setFloatValue(out, density.getFloatValue(out) + value / 255.0F);
+			density.setValue(out, floatToRawIntBits(intBitsToFloat(density.getValue(out)) + value / 255.0F));
 			
 			if (outColumn == 0) {
 				progressMonitor.setProgress(outRow);
@@ -84,7 +88,7 @@ public final class DensityTest {
 		final int pixelCount = image.getRowCount() * image.getColumnCount();
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
-			final float value = image.getFloatValue(pixel);
+			final float value = intBitsToFloat(image.getValue(pixel));
 			oldMinimum = Math.min(oldMinimum, value);
 			oldMaximum = Math.max(oldMaximum, value);
 		}
@@ -93,7 +97,7 @@ public final class DensityTest {
 		final float newAmplitude = newMaximum - newMinimum;
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
-			result.setFloatValue(pixel, newMinimum + (image.getValue(pixel) - oldMinimum) * newAmplitude / oldAmplitude);
+			result.setValue(pixel, floatToRawIntBits(newMinimum + (image.getValue(pixel) - oldMinimum) * newAmplitude / oldAmplitude));
 		}
 		
 		return result;

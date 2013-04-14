@@ -22,12 +22,10 @@ public final class ImageOfFloats extends Image.Abstract {
 		return (int) this.setFloatValue(index, (int) value);
 	}
 	
-	@Override
 	public final float getFloatValue(final int index) {
 		return this.data[index];
 	}
 	
-	@Override
 	public final float setFloatValue(final int index, final float value) {
 		final float oldValue = this.data[index];
 		

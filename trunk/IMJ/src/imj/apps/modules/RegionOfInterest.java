@@ -76,16 +76,6 @@ public abstract class RegionOfInterest extends Abstract {
 			
 			return result;
 		}
-
-		@Override
-		public final float getFloatValue(final int index) {
-			return this.getValue(index);
-		}
-
-		@Override
-		public final float setFloatValue(final int index, final float value) {
-			return this.setValue(index, (int) value);
-		}
 		
 		@Override
 		public final void invert() {
@@ -205,16 +195,6 @@ public abstract class RegionOfInterest extends Abstract {
 			this.set(index, value != 0);
 			
 			return result;
-		}
-		
-		@Override
-		public final float getFloatValue(final int index) {
-			return this.getValue(index);
-		}
-		
-		@Override
-		public final float setFloatValue(final int index, final float value) {
-			return this.setValue(index, (int) value);
 		}
 		
 		@Override

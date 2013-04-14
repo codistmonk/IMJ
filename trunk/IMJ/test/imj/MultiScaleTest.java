@@ -6,6 +6,7 @@ import static imj.MorphologicalOperations.edges8;
 import static imj.MorphologicalOperations.hMinima8;
 import static imj.apps.modules.ImageComponent.awtImage;
 import static java.awt.image.BufferedImage.TYPE_3BYTE_BGR;
+import static java.lang.Float.floatToRawIntBits;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.IMJTools.StatisticsSelector;
@@ -118,7 +119,7 @@ public final class MultiScaleTest {
 				for (int y = r.y; y < endY; ++y) {
 					for (int x = r.x; x < endX; ++x) {
 //						result.setValue(y, x, (int) statistics.getMean());
-						result.setFloatValue(y, x, (float) statistics.getVariance());
+						result.setValue(y, x, floatToRawIntBits((float) statistics.getVariance()));
 					}
 				}
 			}

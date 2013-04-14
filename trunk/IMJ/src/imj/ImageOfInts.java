@@ -26,16 +26,6 @@ public final class ImageOfInts extends Image.Abstract {
 		return oldValue;
 	}
 	
-	@Override
-	public final float getFloatValue(final int index) {
-		return this.getValue(index);
-	}
-	
-	@Override
-	public final float setFloatValue(final int index, final float value) {
-		return this.setValue(index, (int) value);
-	}
-	
 }
 
 	

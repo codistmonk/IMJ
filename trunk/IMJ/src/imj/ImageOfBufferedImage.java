@@ -67,16 +67,6 @@ public final class ImageOfBufferedImage extends Image.Abstract {
 	}
 	
 	@Override
-	public final float getFloatValue(final int index) {
-		return this.getValue(index);
-	}
-	
-	@Override
-	public final float setFloatValue(final int index, final float value) {
-		return this.setValue(index, (int) value);
-	}
-	
-	@Override
 	public final String toString() {
 		return "Image(rowCount(" + this.getRowCount() + "), " + "columnCount(" + this.getColumnCount() + "))";
 	}
