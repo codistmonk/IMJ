@@ -5,6 +5,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static javax.imageio.ImageIO.read;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj.ImageOfBufferedImage.Feature;
 
 import java.io.File;
@@ -281,7 +282,7 @@ public final class IMJTools {
 	}
 	
 	public static final Image adjust(final Image image, final int newMinimum, final int newMaximum) {
-		final int n = image.getRowCount() * image.getColumnCount();
+		final int n = image.getPixelCount();
 		int oldMinimum = Integer.MAX_VALUE;
 		int oldMaximum = Integer.MIN_VALUE;
 		

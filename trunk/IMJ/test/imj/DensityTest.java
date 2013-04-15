@@ -85,7 +85,7 @@ public final class DensityTest {
 	public static final Image normalize(final Image image, final Image result, final float newMinimum, final float newMaximum) {
 		float oldMinimum = Float.POSITIVE_INFINITY;
 		float oldMaximum = Float.NEGATIVE_INFINITY;
-		final int pixelCount = image.getRowCount() * image.getColumnCount();
+		final int pixelCount = image.getPixelCount();
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
 			final float value = intBitsToFloat(image.getValue(pixel));
@@ -144,7 +144,7 @@ public final class DensityTest {
 		final int maximum = IMJTools.getMaximum(image);
 		final int amplitude = maximum - minimum + 1;
 		final int[] result = new int[amplitude];
-		final int pixelCount = image.getRowCount() * image.getColumnCount();
+		final int pixelCount = image.getPixelCount();
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
 			++result[image.getValue(pixel) - minimum];

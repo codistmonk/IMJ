@@ -67,7 +67,7 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 	}
 	
 	public static final void fill(final Image image, final int value) {
-		final int pixelCount = image.getRowCount() * image.getColumnCount();
+		final int pixelCount = image.getPixelCount();
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
 			image.setValue(pixel, value);
@@ -159,7 +159,7 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 			
 			final Image hMinima = MorphologicalOperations.hMinima4(this.histogram, this.hMin);
 			this.clusters = new RegionalMinima(hMinima, CONNECTIVITY_4).getResult();
-			final int histogramSize = this.histogram.getRowCount() * this.histogram.getColumnCount();
+			final int histogramSize = this.histogram.getPixelCount();
 			
 			for (int pixel = 0; pixel < histogramSize; ++pixel) {
 				final int value = hMinima.getValue(pixel);
@@ -264,7 +264,7 @@ public final class HistogramClusterViewFilter extends ViewFilter {
 		
 		this.valueScale.setBounds(0, maximum, 0, 255);
 		
-		final int histogramSize = this.histogram.getRowCount() * this.histogram.getColumnCount();
+		final int histogramSize = this.histogram.getPixelCount();
 		
 		for (int i = 0; i < histogramSize; ++i) {
 //			debugPrint(i, this.histogram.getValue(i), this.valueScale.getDisplayValue(this.histogram.getValue(i)));

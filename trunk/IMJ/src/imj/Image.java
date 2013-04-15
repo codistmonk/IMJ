@@ -1,8 +1,5 @@
 package imj;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 /**
  * @author codistmonk (creation 2013-01-23)
  */
@@ -33,8 +30,6 @@ public abstract interface Image {
 	 */
 	public static abstract class Abstract implements Image {
 		
-		private final Map<String, Object> metadata;
-		
 		private final int rowCount;
 		
 		private final int columnCount;
@@ -44,7 +39,6 @@ public abstract interface Image {
 		private final int pixelCount;
 		
 		protected Abstract(final int rowCount, final int columnCount, final int channelCount) {
-			this.metadata = new LinkedHashMap<String, Object>();
 			this.rowCount = rowCount;
 			this.columnCount = columnCount;
 			this.channelCount = channelCount;
