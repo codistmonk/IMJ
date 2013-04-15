@@ -230,7 +230,7 @@ public final class HistogramDatabaseClusterViewFilter extends ViewFilter {
 			
 			forEachPixelInEachTile(this.source, this.verticalTileCount, this.horizontalTileCount, collector);
 			
-			debugPrint(processed[0], "/", this.source.getRowCount() * this.source.getColumnCount());
+			debugPrint(processed[0], "/", this.source.getPixelCount());
 			
 			debugPrint(this.clusterer.getClasses());
 			

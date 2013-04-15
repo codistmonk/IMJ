@@ -20,7 +20,7 @@ public final class MathOperations {
 	}
 	
 	public static final Image compute(final Image left, final BinaryOperator operator, final Image right, final Image result) {
-		final int pixelCount = result.getRowCount() * result.getColumnCount();
+		final int pixelCount = result.getPixelCount();
 		final int channelCount = left.getChannelCount();
 		
 		if (1 < channelCount) {
@@ -53,7 +53,7 @@ public final class MathOperations {
 	}
 	
 	public static final Image compute(final UnaryOperator operator, final Image image, final Image result) {
-		final int pixelCount = result.getRowCount() * result.getColumnCount();
+		final int pixelCount = result.getPixelCount();
 		final int channelCount = image.getChannelCount();
 		
 		if (1 < channelCount) {

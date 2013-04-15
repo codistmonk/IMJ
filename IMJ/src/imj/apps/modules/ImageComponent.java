@@ -198,7 +198,7 @@ public final class ImageComponent extends JComponent {
 				}
 			}
 		} else {
-			final int n = image.getRowCount() * image.getColumnCount();
+			final int n = image.getPixelCount();
 			int oldMinimum = Integer.MAX_VALUE;
 			int oldMaximum = Integer.MIN_VALUE;
 			final int newMinimum = 0;

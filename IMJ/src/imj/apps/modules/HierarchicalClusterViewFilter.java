@@ -215,7 +215,7 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 			
 			forEachPixelInEachTile(this.source, this.verticalTileCount, this.horizontalTileCount, collector);
 			
-			debugPrint(processed[0], "/", this.source.getRowCount() * this.source.getColumnCount());
+			debugPrint(processed[0], "/", this.source.getPixelCount());
 			
 			debugPrint("Collecting data done", "(time:", timer.toc(), "memory:", usedMemory() + ")");
 			
