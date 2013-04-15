@@ -69,6 +69,16 @@ public final class FilteredImage implements Image {
 	}
 	
 	@Override
+	public final int getDimensionCount() {
+		return this.getSource().getDimensionCount();
+	}
+	
+	@Override
+	public final int getDimension(final int dimensionIndex) {
+		return this.getSource().getDimension(dimensionIndex);
+	}
+	
+	@Override
 	public final int getValue(final int index) {
 		if (this.getFilter() == null) {
 			final int value = this.getSource().getValue(index);
