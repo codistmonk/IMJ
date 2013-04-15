@@ -41,7 +41,7 @@ public final class DiffusionViewFilter extends ViewFilter.FromFilter {
 	protected final void doInitialize() {
 		super.doInitialize();
 		
-		this.setFilter(new ConditionalMeanFilter(this.parseStructuringElement(),
+		this.setFilter(new DiffusionFilter(this.parseStructuringElement(),
 				this.getIntParameter("maximumDistance"),
 				valueOf(this.getParameters().get("selector").trim().toUpperCase(Locale.ENGLISH))));
 	}
@@ -49,7 +49,7 @@ public final class DiffusionViewFilter extends ViewFilter.FromFilter {
 	/**
 	 * @author codistmonk (creation 2013-02-19)
 	 */
-	public static final class ConditionalMeanFilter extends StructuringElementFilter {
+	public static final class DiffusionFilter extends StructuringElementFilter {
 		
 		private final int maximumDistance;
 		
@@ -69,7 +69,7 @@ public final class DiffusionViewFilter extends ViewFilter.FromFilter {
 		
 //		private int count;
 		
-		public ConditionalMeanFilter(final int[] deltas, final int maximumDistance, final Feature selector) {
+		public DiffusionFilter(final int[] deltas, final int maximumDistance, final Feature selector) {
 			super(deltas);
 			this.maximumDistance = maximumDistance;
 			this.selector = selector;
