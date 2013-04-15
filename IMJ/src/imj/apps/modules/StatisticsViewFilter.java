@@ -1,7 +1,7 @@
 package imj.apps.modules;
 
-import imj.IMJTools.StatisticsSelector;
 import imj.apps.modules.FilteredImage.StatisticsFilter;
+import imj.apps.modules.FilteredImage.StatisticsFilter.ChannelStatistics;
 
 import java.util.Locale;
 
@@ -27,7 +27,7 @@ public final class StatisticsViewFilter extends ViewFilter.FromFilter {
 	protected final void doInitialize() {
 		super.doInitialize();
 		
-		final StatisticsSelector feature = StatisticsSelector.valueOf(
+		final ChannelStatistics.Selector feature = ChannelStatistics.Selector.valueOf(
 				this.getParameters().get("statistic").toUpperCase(Locale.ENGLISH));
 		
 		this.setFilter(new StatisticsFilter(this.parseStructuringElement(), feature));

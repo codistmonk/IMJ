@@ -2,16 +2,22 @@ package imj.apps.modules;
 
 import static imj.IMJTools.argb;
 import static imj.Image.Abstract.index;
+import static java.util.Arrays.fill;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import imj.IMJTools.StatisticsSelector;
 import imj.Image;
 import imj.ImageOfInts;
 import imj.IntList;
+import imj.apps.modules.FilteredImage.StatisticsFilter.ChannelStatistics;
 import imj.apps.modules.ViewFilter.Channel;
 
 import java.awt.Dimension;
 import java.awt.Point;
+import java.util.Arrays;
 
+import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-18)
@@ -227,14 +233,133 @@ public final class FilteredImage implements Image {
 		
 		private Image image;
 		
+		private Channel channel;
+		
 		private int size;
 		
+		private final int[] oldRowIndex;
+		
+		private final int[] oldColumnIndex;
+		
+		private final int[] north;
+		
+		private final int[] northEast;
+		
+		private final int[] east;
+		
+		private final int[] southEast;
+		
+		private final int[] south;
+		
+		private final int[] southWest;
+		
+		private final int[] west;
+		
+		private final int[] northWest;
+		
 		protected StructuringElementFilter(final int[] deltas) {
-			if ((deltas.length & 1) != 0) {
-				throw new IllegalArgumentException("deltas must have an odd number of elements");
-			}
-			
 			this.deltas = deltas;
+			this.oldRowIndex = new int[3];
+			this.oldColumnIndex = new int[3];
+			final int n = deltas.length;
+			
+			fill(this.oldRowIndex, Integer.MIN_VALUE);
+			fill(this.oldColumnIndex, Integer.MIN_VALUE);
+			
+			if (this.isOptimizedTraversalSupported()) {
+				final IntList north = new IntList();
+				final IntList northEast = new IntList();
+				final IntList east = new IntList();
+				final IntList southEast = new IntList();
+				final IntList south = new IntList();
+				final IntList southWest = new IntList();
+				final IntList west = new IntList();
+				final IntList northWest = new IntList();
+				
+				for (int i = 0; i < n; i += 2) {
+					int deltaType = Direction.ALL;
+					final int drI = deltas[i + 0];
+					final int dcI = deltas[i + 1];
+					
+					for (int j = 0; j < n; j += 2) {
+						final int drJ = deltas[j + 0];
+						final int dcJ = deltas[j + 1];
+						
+						if (dcI == dcJ && drI - 1 == drJ) {
+							deltaType &= ~Direction.NORTH;
+						} else if (dcI + 1 == dcJ && drI - 1 == drJ) {
+							deltaType &= ~Direction.NORTH_EAST;
+						} else if (dcI + 1 == dcJ && drI == drJ) {
+							deltaType &= ~Direction.EAST;
+						} else if (dcI + 1 == dcJ && drI + 1 == drJ) {
+							deltaType &= ~Direction.SOUTH_EAST;
+						} else if (dcI == dcJ && drI + 1 == drJ) {
+							deltaType &= ~Direction.SOUTH;
+						} else if (dcI - 1 == dcJ && drI + 1 == drJ) {
+							deltaType &= ~Direction.SOUTH_WEST;
+						} else if (dcI - 1 == dcJ && drI == drJ) {
+							deltaType &= ~Direction.WEST;
+						} else if (dcI - 1 == dcJ && drI - 1 == drJ) {
+							deltaType &= ~Direction.NORTH_WEST;
+						}
+					}
+					
+					if ((deltaType & Direction.NORTH) != 0) {
+						north.add(i);
+					}
+					
+					if ((deltaType & Direction.NORTH_EAST) != 0) {
+						northEast.add(i);
+					}
+					
+					if ((deltaType & Direction.EAST) != 0) {
+						east.add(i);
+					}
+					
+					if ((deltaType & Direction.SOUTH_EAST) != 0) {
+						southEast.add(i);
+					}
+					
+					if ((deltaType & Direction.SOUTH) != 0) {
+						south.add(i);
+					}
+					
+					if ((deltaType & Direction.SOUTH_WEST) != 0) {
+						southWest.add(i);
+					}
+					
+					if ((deltaType & Direction.WEST) != 0) {
+						west.add(i);
+					}
+					
+					if ((deltaType & Direction.NORTH_WEST) != 0) {
+						northWest.add(i);
+					}
+				}
+				
+				this.north = north.toArray();
+				this.northEast = northEast.toArray();
+				this.east = east.toArray();
+				this.southEast = southEast.toArray();
+				this.south = south.toArray();
+				this.southWest = southWest.toArray();
+				this.west = west.toArray();
+				this.northWest = northWest.toArray();
+				
+				assert this.north.length == this.south.length;
+				assert this.northEast.length == this.southWest.length;
+				assert this.east.length == this.west.length;
+				assert this.southEast.length == this.northWest.length;
+			} else {
+				this.north = null;
+				this.northEast = null;
+				this.east = null;
+				this.southEast = null;
+				this.south = null;
+				this.southWest = null;
+				this.west = null;
+				this.northWest = null;
+			}
 		}
 		
 		public final Image getImage() {
@@ -255,37 +380,76 @@ public final class FilteredImage implements Image {
 		
 		@Override
 		public final int getNewValue(final int index, final int oldValue, final Channel channel) {
-			final int oldChannelValue = channel.getValue(oldValue);
-			
-			this.reset(index, oldChannelValue);
-			
+			this.channel = channel;
 			final int rowCount = this.getImage().getRowCount();
 			final int columnCount = this.getImage().getColumnCount();
 			final int rowIndex = index / columnCount;
 			final int columnIndex = index % columnCount;
-			final int n = this.deltas.length;
-			this.size = 0;
+			final int oldChannelValue = channel.getValue(oldValue);
+			boolean optimizedProcessingPerformed = false;
 			
-			for (int i = 0; i < n; i += 2) {
-				final int y = rowIndex + this.deltas[i + 0];
+			if (this.isOptimizedTraversalSupported()) {
+				optimizedProcessingPerformed = true;
+				final int dr = rowIndex - this.oldRowIndex[channel.getChannelIndex()];
+				final int dc = columnIndex - this.oldColumnIndex[channel.getChannelIndex()];
 				
-				if (0 <= y && y < rowCount) {
-					final int x = columnIndex + this.deltas[i + 1];
-					
-					if (0 <= x && x < columnCount) {
-						++this.size;
-						final int neighborIndex = y * columnCount + x;
-						final int neighborChannelValue = channel.getValue(this.getImage().getValue(neighborIndex));
-						this.processNeighbor(index, oldChannelValue, neighborIndex, neighborChannelValue);
-					} else {
-						this.neighborIgnored();
-					}
+				if (dc == 0 && dr == -1) {
+					this.unprocessAndProcess(index, channel, rowCount, columnCount, rowIndex, columnIndex, oldChannelValue,
+							dr, dc, this.south, this.north);
+				} else if (dc == 1 && dr == -1) {
+					this.unprocessAndProcess(index, channel, rowCount, columnCount, rowIndex, columnIndex, oldChannelValue,
+							dr, dc, this.southWest, this.northEast);
+				} else if (dc == 1 && dr == 0) {
+					this.unprocessAndProcess(index, channel, rowCount, columnCount, rowIndex, columnIndex, oldChannelValue,
+							dr, dc, this.west, this.east);
+				} else if (dc == 1 && dr == 1) {
+					this.unprocessAndProcess(index, channel, rowCount, columnCount, rowIndex, columnIndex, oldChannelValue,
+							dr, dc, this.northWest, this.southEast);
+				} else if (dc == 0 && dr == 1) {
+					this.unprocessAndProcess(index, channel, rowCount, columnCount, rowIndex, columnIndex, oldChannelValue,
+							dr, dc, this.north, this.south);
+				} else if (dc == -1 && dr == 1) {
+					this.unprocessAndProcess(index, channel, rowCount, columnCount, rowIndex, columnIndex, oldChannelValue,
+							dr, dc, this.northEast, this.southWest);
+				} else if (dc == -1 && dr == 0) {
+					this.unprocessAndProcess(index, channel, rowCount, columnCount, rowIndex, columnIndex, oldChannelValue,
+							dr, dc, this.east, this.west);
+				} else if (dc == -1 && dr == -1) {
+					this.unprocessAndProcess(index, channel, rowCount, columnCount, rowIndex, columnIndex, oldChannelValue,
+							dr, dc, this.southEast, this.northWest);
 				} else {
-					this.neighborIgnored();
+					optimizedProcessingPerformed = false;
 				}
 			}
 			
+			if (!optimizedProcessingPerformed) {
+				this.reset(index, oldChannelValue);
+				
+				final int n = this.deltas.length;
+				this.size = 0;
+				
+				for (int i = 0; i < n; i += 2) {
+					this.processNeighbor(i, index, channel, rowCount, columnCount,
+							rowIndex, columnIndex, oldChannelValue);
+				}
+			}
+			
+			this.oldRowIndex[channel.getChannelIndex()] = rowIndex;
+			this.oldColumnIndex[channel.getChannelIndex()] = columnIndex;
+			
 			return this.getResult(index, oldChannelValue);
+		}
+		
+		protected final Channel getChannel() {
+			return this.channel;
+		}
+		
+		/**
+		 * Called in constructor.
+		 * @return
+		 */
+		protected boolean isOptimizedTraversalSupported() {
+			return false;
 		}
 		
 		protected abstract void reset(int index, int oldChannelValue);
@@ -294,9 +458,126 @@ public final class FilteredImage implements Image {
 			// NOP
 		}
 		
+		protected void unprocessNeighbor(int index, int oldChannelValue, int neighborIndex, int neighborChannelValue) {
+			// NOP
+		}
+		
 		protected abstract void processNeighbor(int index, int oldChannelValue, int neighborIndex, int neighborChannelValue);
 		
 		protected abstract int getResult(int index, int oldChannelValue);
+		
+		private final void unprocessAndProcess(final int index,
+				final Channel channel, final int rowCount,
+				final int columnCount, final int rowIndex,
+				final int columnIndex, final int oldChannelValue,
+				final int dr, final int dc,
+				final int[] toUnprocess, final int[] toProcess) {
+			assert toUnprocess.length == toProcess.length;
+			
+			for (final int i : toUnprocess) {
+				this.unprocessNeighbor(i, index, channel, rowCount, columnCount, rowIndex, columnIndex, dr, dc, oldChannelValue);
+			}
+			
+			for (final int i : toProcess) {
+				this.processNeighbor(i, index, channel, rowCount, columnCount, rowIndex, columnIndex, oldChannelValue);
+			}
+		}
+		
+		private final void processNeighbor(final int i, final int index,
+				final Channel channel, final int rowCount,
+				final int columnCount, final int rowIndex,
+				final int columnIndex, final int oldChannelValue) {
+			final int y = rowIndex + this.deltas[i + 0];
+			
+			if (0 <= y && y < rowCount) {
+				final int x = columnIndex + this.deltas[i + 1];
+				
+				if (0 <= x && x < columnCount) {
+					++this.size;
+					final int neighborIndex = y * columnCount + x;
+					final int neighborChannelValue = channel.getValue(this.getImage().getValue(neighborIndex));
+					this.processNeighbor(index, oldChannelValue, neighborIndex, neighborChannelValue);
+				} else {
+					this.neighborIgnored();
+				}
+			} else {
+				this.neighborIgnored();
+			}
+		}
+		
+		private final void unprocessNeighbor(final int i, final int index, final Channel channel,
+				final int rowCount, final int columnCount,
+				final int rowIndex, final int columnIndex,
+				final int dr, final int dc, final int oldChannelValue) {
+			final int y = rowIndex + this.deltas[i + 0] - dr;
+			
+			if (0 <= y && y < rowCount) {
+				final int x = columnIndex + this.deltas[i + 1] - dc;
+				
+				if (0 <= x && x < columnCount) {
+					--this.size;
+					final int neighborIndex = y * columnCount + x;
+					final int neighborChannelValue = channel.getValue(this.getImage().getValue(neighborIndex));
+					this.unprocessNeighbor(index, oldChannelValue, neighborIndex, neighborChannelValue);
+				}
+			}
+		}
+		
+		/**
+		 * @author codistmonk (creation 2013-04-15)
+		 */
+		public static final class Direction {
+			
+			private Direction() {
+				throw new IllegalInstantiationException();
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			public static final int NORTH = 1 << 0;
+			
+			/**
+			 * {@value}.
+			 */
+			public static final int NORTH_EAST = 1 << 1;
+			
+			/**
+			 * {@value}.
+			 */
+			public static final int EAST = 1 << 2;
+			
+			/**
+			 * {@value}.
+			 */
+			public static final int SOUTH_EAST = 1 << 3;
+			
+			/**
+			 * {@value}.
+			 */
+			public static final int SOUTH = 1 << 4;
+			
+			/**
+			 * {@value}.
+			 */
+			public static final int SOUTH_WEST = 1 << 5;
+			
+			/**
+			 * {@value}.
+			 */
+			public static final int WEST = 1 << 6;
+			
+			/**
+			 * {@value}.
+			 */
+			public static final int NORTH_WEST = 1 << 7;
+			
+			/**
+			 * {@value}.
+			 */
+			public static final int ALL = NORTH | NORTH_EAST | EAST | SOUTH_EAST | SOUTH | SOUTH_WEST | WEST | NORTH_WEST;
+			
+		}
 		
 	}
 	
@@ -380,29 +661,206 @@ public final class FilteredImage implements Image {
 	 */
 	public static final class StatisticsFilter extends StructuringElementFilter {
 		
-		private final StatisticsSelector feature;
+		private final ChannelStatistics.Selector feature;
 		
-		private final Statistics statistics;
+		private final ChannelStatistics[] statistics;
 		
-		public StatisticsFilter(final int[] deltas, final StatisticsSelector feature) {
+		public StatisticsFilter(final int[] deltas, final ChannelStatistics.Selector feature) {
 			super(deltas);
 			this.feature = feature;
-			this.statistics = new Statistics();
+			this.statistics = new ChannelStatistics[3];
+			
+			for (int i = 0; i < 3; ++i) {
+				this.statistics[i] = new ChannelStatistics();
+			}
+		}
+		
+		@Override
+		protected final boolean isOptimizedTraversalSupported() {
+			return true;
 		}
 		
 		@Override
 		protected final void reset(final int index, final int oldValue) {
-			this.statistics.reset();
+			this.statistics[this.getChannel().getChannelIndex()].reset();
 		}
 		
 		@Override
-		protected final void processNeighbor(final int index, final int oldValue, final int neighborIndex, final int neighborValue) {
-			this.statistics.addValue(neighborValue);
+		protected final void unprocessNeighbor(int index, int oldChannelValue,
+				int neighborIndex, int neighborChannelValue) {
+			this.statistics[this.getChannel().getChannelIndex()].removeValue(neighborChannelValue);
+		}
+		
+		@Override
+		protected final void processNeighbor(final int index, final int oldValue,
+				final int neighborIndex, final int neighborValue) {
+			this.statistics[this.getChannel().getChannelIndex()].addValue(neighborValue);
 		}
 		
 		@Override
 		protected final int getResult(final int index, final int oldValue) {
-			return (int) this.feature.getValue(this.statistics);
+			return (int) this.feature.getValue(this.statistics[this.getChannel().getChannelIndex()]);
+		}
+		
+		/**
+		 * @author codistmonk (creation 2013-04-15)
+		 */
+		public static final class ChannelStatistics {
+			
+			private final int[] histogram;
+			
+			private long sum;
+			
+			private long sumOfSquares;
+			
+			private int count;
+			
+			public ChannelStatistics() {
+				this.histogram = new int[256];
+			}
+			
+			public final void reset() {
+				fill(this.histogram, 0);
+				this.sum = 0L;
+				this.sumOfSquares = 0L;
+				this.count = 0;
+			}
+			
+			public final void removeValue(final int value) {
+				--this.histogram[value];
+				this.sum -= value;
+				this.sumOfSquares -= square(value);
+				--this.count;
+			}
+			
+			public final void addValue(final int value) {
+				++this.histogram[value];
+				this.sum += value;
+				this.sumOfSquares += square(value);
+				++this.count;
+			}
+			
+			public final long getSum() {
+				return this.sum;
+			}
+			
+			public final long getSumOfSquares() {
+				return this.sumOfSquares;
+			}
+			
+			public final int getCount() {
+				return this.count;
+			}
+			
+			public final int getMean() {
+				return (int) (this.getCount() == 0 ? 0 : this.getSum() / this.getCount());
+			}
+			
+			public final int getVariance() {
+				final int mean = this.getMean();
+				
+				return (int) (this.getSumOfSquares() - 2 * mean * this.getSum() + this.getCount() * square(mean));
+			}
+			
+			public final int getAmplitude() {
+				return this.getCount() == 0 ? 0 : this.getMaximum() - this.getMinimum();
+			}
+			
+			public final int getMinimum() {
+				final int n = this.histogram.length;
+				
+				for (int i = 0; i < n; ++i) {
+					if (0 < this.histogram[i]) {
+						return i;
+					}
+				}
+				
+				return Integer.MAX_VALUE;
+			}
+			
+			public final int getMaximum() {
+				final int n = this.histogram.length;
+				
+				for (int i = n - 1; 0 <= i; --i) {
+					if (0 < this.histogram[i]) {
+						return i;
+					}
+				}
+				
+				return Integer.MIN_VALUE;
+			}
+			
+			public static final long square(final int value) {
+				return value * value;
+			}
+			
+			/**
+			 * @author codistmonk (creation 2013-04-15)
+			 */
+			public static enum Selector {
+				
+				MEAN {
+					
+					@Override
+					public final int getValue(final ChannelStatistics statistics) {
+						return statistics.getMean();
+					}
+					
+				}, MINIMUM {
+					
+					@Override
+					public final int getValue(final ChannelStatistics statistics) {
+						return statistics.getMinimum();
+					}
+					
+				}, MAXIMUM {
+					
+					@Override
+					public final int getValue(final ChannelStatistics statistics) {
+						return statistics.getMaximum();
+					}
+					
+				}, AMPLITUDE {
+					
+					@Override
+					public final int getValue(final ChannelStatistics statistics) {
+						return statistics.getAmplitude();
+					}
+					
+				}, VARIANCE {
+					
+					@Override
+					public final int getValue(final ChannelStatistics statistics) {
+						return statistics.getVariance();
+					}
+					
+				}, SUM {
+					
+					@Override
+					public final int getValue(final ChannelStatistics statistics) {
+						return (int) statistics.getSum();
+					}
+					
+				}, SUM_OF_SQUARES {
+					
+					@Override
+					public final int getValue(final ChannelStatistics statistics) {
+						return (int) statistics.getSumOfSquares();
+					}
+					
+				}, COUNT {
+					
+					@Override
+					public final int getValue(final ChannelStatistics statistics) {
+						return statistics.getCount();
+					}
+					
+				};
+				
+				public abstract int getValue(ChannelStatistics statistics);
+				
+			}
+			
 		}
 		
 	}
