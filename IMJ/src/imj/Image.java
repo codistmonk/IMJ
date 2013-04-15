@@ -12,6 +12,10 @@ public abstract interface Image {
 	
 	public abstract int getChannelCount();
 	
+	public abstract int getDimensionCount();
+	
+	public abstract int getDimension(int dimensionIndex);
+	
 	public abstract int getRowCount();
 	
 	public abstract int getColumnCount();
@@ -50,6 +54,28 @@ public abstract interface Image {
 		@Override
 		public final int getPixelCount() {
 			return this.pixelCount;
+		}
+		
+		@Override
+		public final int getDimensionCount() {
+			return 2;
+		}
+		
+		@Override
+		public final int getDimension(final int dimensionIndex) {
+			if (0 == dimensionIndex) {
+				return this.getRowCount();
+			}
+			
+			if (1 == dimensionIndex) {
+				return this.getColumnCount();
+			}
+			
+			if (2 <= dimensionIndex) {
+				return 1;
+			}
+			
+			throw new IndexOutOfBoundsException();
 		}
 		
 		@Override
