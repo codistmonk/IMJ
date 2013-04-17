@@ -4,9 +4,12 @@ import static imj.ImageOfBufferedImage.Feature.MAX_RGB;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static javax.imageio.ImageIO.read;
+import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import imj.ImageOfBufferedImage.Feature;
+import imj.apps.modules.FilteredImage;
+import imj.apps.modules.RegionOfInterest;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,6 +46,45 @@ public final class IMJTools {
 	 * {@value}.
 	 */
 	public static final int BLUE_MASK = 0x000000FF;
+	
+	public static final void forEachPixel(final Image image, final RegionOfInterest roi, final PixelProcessor processor) {
+		final int imageRowCount = image.getRowCount();
+		final int imageColumnCount = image.getColumnCount();
+		final FilteredImage f = cast(FilteredImage.class, image);
+		
+		if (f != null) {
+			final int tileRowCount = FilteredImage.DEFAULT_CACHE_ROW_COUNT;
+			final int tileColumnCount = FilteredImage.DEFAULT_CACHE_COLUMN_COUNT;
+			final int lastTileRowIndex = imageRowCount / tileRowCount;
+			final int lastTileColumnIndex = imageColumnCount / tileColumnCount;
+			
+			for (int tileRowIndex = 0; tileRowIndex <= lastTileRowIndex; ++tileRowIndex) {
+				System.out.print(tileRowIndex + "/" + lastTileRowIndex + "\r");
+				
+				for (int tileColumnIndex = 0; tileColumnIndex <= lastTileColumnIndex; ++tileColumnIndex) {
+					for (int rowIndexInTile = 0, rowIndex = tileRowIndex * tileRowCount; rowIndexInTile < tileRowCount && rowIndex < imageRowCount; ++rowIndexInTile, ++rowIndex) {
+						for (int columnIndexInTile = 0, columnIndex = tileColumnIndex * tileColumnCount; columnIndexInTile < tileColumnCount && columnIndex < imageColumnCount; ++columnIndexInTile, ++columnIndex) {
+							if (roi == null || roi.get(rowIndex, columnIndex)) {
+								processor.process(rowIndex * imageColumnCount + columnIndex);
+							}
+						}
+					}
+				}
+			}
+		} else {
+			final int pixelCount = image.getPixelCount();
+			
+			for (int pixel = 0; pixel < pixelCount; ++pixel) {
+				if (pixel % imageColumnCount == 0) {
+					System.out.print(pixel + "/" + pixelCount + "\r");
+				}
+				
+				if (roi == null || roi.get(pixel)) {
+					processor.process(pixel);
+				}
+			}
+		}
+	}
 	
 	public static final void forEachPixelInEachTile(final Image image, final int verticalTileCount, final int horizontalTileCount, final PixelProcessor processor) {
 		final int imageRowCount = image.getRowCount();
