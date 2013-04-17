@@ -39,7 +39,7 @@ public final class FilteredImage implements Image {
 	public FilteredImage(final Image source) {
 		this.source = source;
 		
-		this.setCacheDimensions(512, 512);
+		this.setCacheDimensions(DEFAULT_CACHE_ROW_COUNT, DEFAULT_CACHE_COLUMN_COUNT);
 	}
 	
 	public final Image getSource() {
@@ -168,16 +168,6 @@ public final class FilteredImage implements Image {
 	public final int setValue(final int index, final int value) {
 		throw new UnsupportedOperationException();
 	}
-//	
-//	@Override
-//	public final float getFloatValue(final int index) {
-//		return this.getValue(index);
-//	}
-//	
-//	@Override
-//	public final float setFloatValue(final int index, float value) {
-//		return this.setValue(index, (int) value);
-//	}
 	
 	@Override
 	public final int getChannelCount() {
@@ -204,7 +194,15 @@ public final class FilteredImage implements Image {
 		return this.setValue(index(this.getSource(), rowIndex, columnIndex), value);
 	}
 	
-	static final Dimension cacheSize = new Dimension(256, 256);
+	/**
+	 * {@value}.
+	 */
+	public static final int DEFAULT_CACHE_ROW_COUNT = 512;
+	
+	/**
+	 * {@value}.
+	 */
+	public static final int DEFAULT_CACHE_COLUMN_COUNT = DEFAULT_CACHE_ROW_COUNT;
 	
 	/**
 	 * @author codistmonk (creation 2013-02-18)
