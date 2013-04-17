@@ -1,13 +1,14 @@
 package imj.apps.modules;
 
 import static imj.IMJTools.forEachPixel;
-import static imj.apps.modules.ViewFilter.Channel.Primitive.BLUE;
-import static imj.apps.modules.ViewFilter.Channel.Primitive.GREEN;
-import static imj.apps.modules.ViewFilter.Channel.Primitive.RED;
 import static java.lang.Integer.parseInt;
+import static java.lang.Math.max;
 import static java.util.Arrays.fill;
 import imj.IMJTools.PixelProcessor;
 import imj.Image;
+
+import java.util.Arrays;
+
 import net.sourceforge.aprog.context.Context;
 
 /**
@@ -17,14 +18,16 @@ public final class AdaptiveRoundingViewFilter extends ViewFilter {
 	
 	private int bitCount;
 	
-	private final int[][] histograms;
+	private Channel[] channels;
 	
-	private final int[][] accumulators;
+	private int[][] histograms;
+	
+	private int[][] accumulators;
 	
 	public AdaptiveRoundingViewFilter(final Context context) {
 		super(context);
-		this.histograms = new int[CHANNELS.length][256];
-		this.accumulators = new int[CHANNELS.length][256];
+//		this.histograms = new int[CHANNELS.length][256];
+//		this.accumulators = new int[CHANNELS.length][256];
 		
 		this.getParameters().put("bitCount", "0");
 	}
@@ -35,9 +38,46 @@ public final class AdaptiveRoundingViewFilter extends ViewFilter {
 		
 		if (source != null) {
 			this.clearHistograms();
-			updateHistograms(source, Sieve.getROI(this.getContext()), CHANNELS, this.histograms);
+			updateHistograms(source, Sieve.getROI(this.getContext()), this.channels, this.histograms);
 			this.updateAccumulators();
 		}
+	}
+	
+	public final int transform(final Channel channel, final int channelValue) {
+		return this.accumulators[channel.getChannelIndex()][channelValue];
+	}
+	
+	@Override
+	protected final void doInitialize() {
+		final Channel[] oldChannels = this.channels;
+		this.channels = parseChannels(this.getParameters().get("channels"));
+		this.bitCount = parseInt(this.getParameters().get("bitCount"));
+		
+		if (!Arrays.equals(this.channels, oldChannels)) {
+			int n = 0;
+			
+			for (final Channel channel : this.channels) {
+				n = max(n, channel.getChannelIndex() + 1);
+			}
+			
+			this.histograms = new int[n][256];
+			this.accumulators = new int[n][256];
+			this.sourceImageChanged();
+		} else {
+			this.updateAccumulators();
+		}
+	}
+	
+	@Override
+	protected final ComplexFilter newComplexFilter() {
+		return new ComplexFilter() {
+			
+			@Override
+			public final int getNewValue(final int index, final int oldValue,  final Channel channel) {
+				return AdaptiveRoundingViewFilter.this.transform(channel, channel.getValue(oldValue));
+			}
+			
+		};
 	}
 	
 	private final void clearHistograms() {
@@ -77,29 +117,7 @@ public final class AdaptiveRoundingViewFilter extends ViewFilter {
 		}
 	}
 	
-	public final int transform(final Channel channel, final int channelValue) {
-		return this.accumulators[channel.getChannelIndex()][channelValue];
-	}
-	
-	@Override
-	protected final void doInitialize() {
-		this.bitCount = parseInt(this.getParameters().get("bitCount"));
-		this.updateAccumulators();
-	}
-	
-	@Override
-	protected final ComplexFilter newComplexFilter() {
-		return new ComplexFilter() {
-			
-			@Override
-			public final int getNewValue(final int index, final int oldValue,  final Channel channel) {
-				return AdaptiveRoundingViewFilter.this.transform(channel, channel.getValue(oldValue));
-			}
-			
-		};
-	}
-	
-	private static final Channel[] CHANNELS = { RED, GREEN, BLUE };
+//	private static final Channel[] CHANNELS = { RED, GREEN, BLUE };
 	
 	public static final void updateHistograms(final Image image, final RegionOfInterest roi, final Channel[] channels,
 			final int[][] histograms) {
