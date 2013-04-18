@@ -1,7 +1,12 @@
 package imj.apps;
 
+import static imj.apps.GenerateROCData.generateROCData;
+import static imj.apps.GenerateROCData.readClassIds;
 import static imj.apps.modules.ShowActions.baseName;
 import static java.lang.Math.min;
+
+import java.util.List;
+
 import imj.Image;
 import imj.apps.GenerateROCData.ROCRowGenerator;
 import imj.apps.modules.RegionOfInterest;
@@ -33,12 +38,13 @@ public final class GenerateROCDataForSaturationSieve201303080950 {
 		final Sieve sieve = new SaturationSieve201303080950(new Context());
 		final ROCRowGenerator defaultGenerator = new ROCRowGenerator.Default();
 		final int step = arguments.get("step", 8)[0];
+		final String classIdFilePath = arguments.get("classIds", "classIds.txt");
 		
-		GenerateROCData.generateROCData(imageId, annotationsId, forceLods, sieve, new ROCRowGenerator() {
+		generateROCData(imageId, annotationsId, forceLods, sieve, readClassIds(classIdFilePath), new ROCRowGenerator() {
 			
 			@Override
 			public final void generateROCRow(final String fileName, final Image image, final int lod,
-					final RegionOfInterest reference, final Sieve sieve) {
+					final List<RegionOfInterest> references, final Sieve sieve) {
 				for (int minimum = 0; minimum <= 256; minimum = minimum += step) {
 					sieve.getParameters().put("minimum", "" + min(255, minimum));
 					
@@ -47,7 +53,7 @@ public final class GenerateROCDataForSaturationSieve201303080950 {
 						
 						sieve.initialize();
 						
-						defaultGenerator.generateROCRow(fileName, image, lod, reference, sieve);
+						defaultGenerator.generateROCRow(fileName, image, lod, references, sieve);
 					}
 				}
 			}
