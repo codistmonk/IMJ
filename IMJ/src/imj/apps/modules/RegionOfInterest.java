@@ -63,6 +63,10 @@ public abstract class RegionOfInterest extends Abstract {
 			}
 		}
 		
+		public final int getCardinality() {
+			return this.data.cardinality();
+		}
+		
 		@Override
 		public final int getValue(final int index) {
 			return this.get(index) ? Integer.MAX_VALUE : 0;
