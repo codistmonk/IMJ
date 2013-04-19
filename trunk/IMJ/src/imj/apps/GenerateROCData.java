@@ -5,6 +5,7 @@ import static imj.apps.modules.ShowActions.baseName;
 import static java.util.Arrays.binarySearch;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
+
 import imj.Image;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.Annotations.Annotation;
@@ -83,7 +84,6 @@ public final class GenerateROCData {
 			final List<String> classIds, final ROCRowGenerator generator) {
 		final List<Image> lods = loadLods(imageId);
 		final Annotations annotations = Annotations.fromXML(annotationsId);
-//		final Iterable<Region> regions = collectRegions(annotations, ".*excluded.*");
 		final String fileName = new File(imageId).getName();
 		
 		for (int lod = 0; lod < lods.size(); ++lod) {
@@ -98,11 +98,9 @@ public final class GenerateROCData {
 			final Image image = lods.get(lod);
 			final int rowCount = image.getRowCount();
 			final int columnCount = image.getColumnCount();
-//			final RegionOfInterest reference = RegionOfInterest.newInstance(rowCount, columnCount);
 			
 			System.out.println("Initializing references... (" + new Date(timer.tic()) + ")");
 			
-//			UseAnnotationAsROI.set(reference, lod, regions);
 			final List<RegionOfInterest> references = generateReferences(annotations, classIds, lod, rowCount, columnCount);
 			
 			System.out.println("Initializing reference done (time:" + timer.toc() + " memory:" + usedMemory() + ")");
