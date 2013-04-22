@@ -22,6 +22,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
+import net.sourceforge.aprog.tools.Tools;
+
 import org.junit.Test;
 
 /**
@@ -41,7 +43,7 @@ public class TileDatabaseTest {
 		final int horizontalTileCount = imageColumnCount / tileColumnCount;
 		final int tilePixelCount = tileRowCount * tileColumnCount;
 		final Channel[] channels = { RED, GREEN, BLUE };
-		final SparseHistogram histogram = new SparseHistogram();
+		final RegularDictionary histogram = new RegularDictionary();
 		
 		debugPrint(verticalTileCount, horizontalTileCount);
 		
@@ -284,42 +286,46 @@ public class TileDatabaseTest {
 	/**
 	 * @author codistmonk (creation 2013-04-19)
 	 */
-	public static final class SparseHistogram implements Serializable {
+	public static final class RegularDictionary implements Serializable {
 		
 		private final Map<Integer, Object> root;
 		
+		private final Class<? extends Value> valueFactory;
+		
 		private int sampleCount;
 		
-		public SparseHistogram() {
-			this.root = newMap();
+		public RegularDictionary() {
+			this(Value.Default.class);
 		}
 		
-		public final void count(final int... sample) {
+		public RegularDictionary(final Class<? extends Value> valueFactory) {
+			this.root = newTree();
+			this.valueFactory = valueFactory;
+		}
+		
+		public final void count(final int[] sample) {
 			final int n = sample.length;
 			final int lastIndex = n - 1;
 			Map<Integer, Object> node = this.root;
 			
 			for (int i = 0; i < lastIndex; ++i) {
-				Map<Integer, Object> next = (Map<Integer, Object>) node.get(sample[i]);
-				
-				if (next == null) {
-					next = newMap();
-					node.put(sample[i], next);
+				node = getOrCreateSubTree(node, sample[i]);
+			}
+			
+			final Integer lastValue = sample[lastIndex];
+			final Value leaf = (Value) node.get(lastValue);
+			
+			if (leaf == null) {
+				try {
+					node.put(lastValue, this.valueFactory.newInstance());
+				} catch (final Exception exception) {
+					throw unchecked(exception);
 				}
 				
-				node = next;
-			}
-			
-			final int lastValue = sample[lastIndex];
-			final Integer oldCount = (Integer) node.get(lastValue);
-			
-			if (oldCount == null) {
-				node.put(lastValue, 1);
 				++this.sampleCount;
 			} else {
-				node.put(lastValue, oldCount + 1);
+				leaf.incrementCount();
 			}
-			
 		}
 		
 		public final int getSampleCount() {
@@ -331,8 +337,54 @@ public class TileDatabaseTest {
 		 */
 		private static final long serialVersionUID = 8212359447131338635L;
 		
-		private static final Map<Integer, Object> newMap() {
-			return new TreeMap<Integer, Object>();
+		private static final <K> Map<K, Object> newTree() {
+			return new TreeMap<K, Object>();
+		}
+		
+		public static final <K> Map<K, Object> getOrCreateSubTree(final Map<K, Object> node, final K key) {
+			Map<K, Object> result = (Map<K, Object>) node.get(key);
+			
+			if (result == null) {
+				result = newTree();
+				node.put(key, result);
+			}
+			
+			return result;
+		}
+		
+		/**
+		 * @author codistmonk (creation 2013-04-22)
+		 */
+		public static abstract interface Value extends Serializable {
+			
+			public abstract int getCount();
+			
+			public abstract void incrementCount();
+			
+			/**
+			 * @author codistmonk (creation 2013-04-22)
+			 */
+			public static final class Default implements Value {
+				
+				private int count = 1;
+				
+				@Override
+				public final int getCount() {
+					return this.count;
+				}
+				
+				@Override
+				public final void incrementCount() {
+					++this.count;
+				}
+				
+				/**
+				 * {@value}.
+				 */
+				private static final long serialVersionUID = 8585019119527978654L;
+				
+			}
+			
 		}
 		
 	}
