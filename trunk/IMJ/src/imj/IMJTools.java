@@ -14,6 +14,7 @@ import imj.apps.modules.RegionOfInterest;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
@@ -86,6 +87,25 @@ public final class IMJTools {
 		}
 	}
 	
+	public static final void forEachPixelInEachTile(final Image image,
+			final int tileRowCount, final int tileColumnCount, final int verticalTileStride, final int horizontalTileStride,
+			final PixelProcessor processor) {
+		final int imageRowCount = image.getRowCount();
+		final int imageColumnCount = image.getColumnCount();
+		
+		for (int tileRowIndex = 0; tileRowIndex + tileRowCount <= imageRowCount; tileRowIndex += verticalTileStride) {
+			System.out.print(tileRowIndex + "/" + imageRowCount + "\r");
+			
+			for (int tileColumnIndex = 0; tileColumnIndex + tileColumnCount <= imageColumnCount; tileColumnIndex += horizontalTileStride) {
+				for (int rowIndex = tileRowIndex; rowIndex < tileRowIndex + tileRowCount; ++rowIndex) {
+					for (int columnIndex = tileColumnIndex; columnIndex < tileColumnIndex + tileColumnCount; ++columnIndex) {
+						processor.process(rowIndex * imageColumnCount + columnIndex);
+					}
+				}
+			}
+		}
+	}
+	
 	public static final void forEachPixelInEachTile(final Image image, final int verticalTileCount, final int horizontalTileCount, final PixelProcessor processor) {
 		final int imageRowCount = image.getRowCount();
 		final int imageColumnCount = image.getColumnCount();
@@ -103,6 +123,48 @@ public final class IMJTools {
 				}
 			}
 		}
+	}
+	
+	public static final String deepToString(final Object object) {
+		if (object == null) {
+			return "null";
+		}
+		
+		if (object.getClass().isArray()) {
+			if (!object.getClass().getComponentType().isPrimitive()) {
+				return Arrays.deepToString((Object[]) object);
+			}
+			
+			if (boolean[].class.equals(object.getClass())) {
+				return Arrays.toString((boolean[]) object);
+			}
+			
+			if (byte[].class.equals(object.getClass())) {
+				return Arrays.toString((byte[]) object);
+			}
+			
+			if (char[].class.equals(object.getClass())) {
+				return Arrays.toString((char[]) object);
+			}
+			
+			if (int[].class.equals(object.getClass())) {
+				return Arrays.toString((int[]) object);
+			}
+			
+			if (long[].class.equals(object.getClass())) {
+				return Arrays.toString((long[]) object);
+			}
+			
+			if (float[].class.equals(object.getClass())) {
+				return Arrays.toString((float[]) object);
+			}
+			
+			if (double[].class.equals(object.getClass())) {
+				return Arrays.toString((double[]) object);
+			}
+		}
+		
+		return object.toString();
 	}
 	
 	public static final void writePPM(final Image image, final OutputStream output) {
