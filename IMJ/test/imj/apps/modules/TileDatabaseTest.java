@@ -1,15 +1,24 @@
 package imj.apps.modules;
 
+import static imj.IMJTools.deepToString;
 import static imj.IMJTools.forEachPixelInEachTile;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.BLUE;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.GREEN;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.RED;
+import static java.util.Arrays.copyOf;
 import static java.util.Arrays.sort;
+import static java.util.Collections.binarySearch;
+import static junit.framework.Assert.assertNotNull;
+import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+import static org.junit.Assert.assertEquals;
+
 import imj.IMJTools.PixelProcessor;
+import imj.IMJTools;
 import imj.Image;
 import imj.ImageWrangler;
+import imj.apps.modules.TileDatabaseTest.PrefixTree.Value;
 import imj.apps.modules.TileDatabaseTest.Sampler.SampleProcessor;
 import imj.apps.modules.ViewFilter.Channel;
 
@@ -17,12 +26,20 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TreeMap;
 
-import net.sourceforge.aprog.tools.Tools;
+import net.sourceforge.aprog.tools.TicToc;
 
 import org.junit.Test;
 
@@ -33,36 +50,62 @@ public class TileDatabaseTest {
 	
 	@Test
 	public final void test1() {
-//		final Image image = ImageWrangler.INSTANCE.load("test/imj/12003.jpg");
-		final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/16088-4.png");
+		final Image image = ImageWrangler.INSTANCE.load("test/imj/12003.jpg");
+//		final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/16088-4.png");
 		final int imageRowCount = image.getRowCount();
 		final int imageColumnCount = image.getColumnCount();
-		final int tileRowCount = 4;
+		debugPrint("imageRowCount:", imageRowCount, "imageColumnCount:", imageColumnCount);
+		final int tileRowCount = 3;
 		final int tileColumnCount = tileRowCount;
 		final int verticalTileCount = imageRowCount / tileRowCount;
 		final int horizontalTileCount = imageColumnCount / tileColumnCount;
 		final int tilePixelCount = tileRowCount * tileColumnCount;
 		final Channel[] channels = { RED, GREEN, BLUE };
-		final RegularDictionary histogram = new RegularDictionary();
+		final PrefixTree dictionary = new PrefixTree();
 		
 		debugPrint(verticalTileCount, horizontalTileCount);
 		
 		final SampleProcessor processor = new SampleProcessor() {
 			
 			@Override
-			public final void process(final int[] sample) {
-				histogram.count(sample);
+			public final void process(final byte[] sample) {
+				dictionary.add(sample);
 			}
 			
 		};
 		
+		final int verticalTileStride = 1;
+		final int horizontalTileStride = verticalTileStride;
+		
+		final TicToc timer = new TicToc();
+		timer.tic();
 //		forEachPixelInEachTile(image, verticalTileCount, horizontalTileCount,
 //				new LinearSampler(image, channels, tilePixelCount, processor));
-		forEachPixelInEachTile(image, verticalTileCount, horizontalTileCount,
+//		forEachPixelInEachTile(image, verticalTileCount, horizontalTileCount,
+//				new CompactHistogramSampler(image, channels, tilePixelCount, processor));
+		forEachPixelInEachTile(image, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
 				new CompactHistogramSampler(image, channels, tilePixelCount, processor));
+		debugPrint("time:", timer.toc());
 		
-		debugPrint(histogram.getSampleCount());
-		debugPrint(countBytes(histogram));
+		debugPrint(dictionary.getValueCount());
+//		debugPrint(countBytes(dictionary));
+		
+		final int[] dictionaryEntryCount = { 0 };
+		final int[] dictionarySampleCount = { 0 };
+		
+		for (final Map.Entry<byte[], ? extends Value> entry : dictionary) {
+			assertNotNull(entry.getValue());
+			++dictionaryEntryCount[0];
+			dictionarySampleCount[0] += entry.getValue().getCount();
+		}
+		
+		assertEquals(dictionary.getValueCount(), dictionaryEntryCount[0]);
+		// k * verticalTileStride + tileRowCount <= imageRowCount
+		// k * verticalTileStride <= imageRowCount - tileRowCount
+		// k <= (imageRowCount - tileRowCount) / verticalTileStride
+		// k = (imageRowCount - tileRowCount) / verticalTileStride
+		assertEquals(((imageRowCount + verticalTileStride - tileRowCount) / verticalTileStride) *
+				((imageColumnCount + horizontalTileStride - tileColumnCount) / horizontalTileStride), dictionarySampleCount[0]);
 	}
 	
 	public static final long countBytes(final Serializable object) {
@@ -97,14 +140,14 @@ public class TileDatabaseTest {
 		
 		private final Channel[] channels;
 		
-		private final int[] sample;
+		private final byte[] sample;
 		
 		private final SampleProcessor processor;
 		
 		protected Sampler(final Image image, final Channel[] channels, final int sampleSize, final SampleProcessor processor) {
 			this.image = image;
 			this.channels = channels;
-			this.sample = new int[sampleSize];
+			this.sample = new byte[sampleSize];
 			this.processor = processor;
 		}
 		
@@ -116,7 +159,7 @@ public class TileDatabaseTest {
 			return this.channels;
 		}
 		
-		public final int[] getSample() {
+		public final byte[] getSample() {
 			return this.sample;
 		}
 		
@@ -129,7 +172,7 @@ public class TileDatabaseTest {
 		 */
 		public static abstract interface SampleProcessor {
 			
-			public abstract void process(int[] sample);
+			public abstract void process(byte[] sample);
 			
 		}
 		
@@ -155,7 +198,7 @@ public class TileDatabaseTest {
 			final int pixelValue = this.getImage().getValue(pixel);
 			
 			for (final Channel channel : this.getChannels()) {
-				this.getSample()[this.i++] = channel.getValue(pixelValue);
+				this.getSample()[this.i++] = (byte) channel.getValue(pixelValue);
 			}
 			
 			if (this.tilePixelCount <= this.i) {
@@ -194,7 +237,7 @@ public class TileDatabaseTest {
 			this.counts = new int[tilePixelCount];
 		}
 		
-		private final void count(final int value) {
+		private final void count(final Integer value) {
 			int[] count = this.histogram.get(value);
 			
 			if (count == null) {
@@ -211,51 +254,62 @@ public class TileDatabaseTest {
 			
 			if (this.tilePixelCount <= ++this.i) {
 				this.i = 0;
-//				final int m = max(this.histogram);
 				
-				for (int j = 0; j < this.indices.length; ++j) {
-					this.indices[j] = j;
-					this.values[j] = 0;
-					this.counts[j] = 0;
-				}
-				
-				{
-					int j = 0;
-					
-					for (final Map.Entry<Integer, int[]> entry : this.histogram.entrySet()) {
-						this.values[j] = entry.getKey();
-						this.counts[j] = entry.getValue()[0];
-						++j;
-					}
-					
-					this.histogram.clear();
-				}
-				
-				final int[] h = this.counts;
-				
-				sort(this.indices, new Comparator<Integer>() {
-					
-					@Override
-					public final int compare(final Integer i1, final Integer i2) {
-						return h[i2] - h[i1];
-					}
-					
-				});
-				
-				for (int j = 0, k = 0; j < this.getSample().length; ++k) {
-					final int index = this.indices[k];
-					int value = this.values[index];
-					final int count = this.counts[index];
-					
-					for (int channelIndex = this.getChannels().length - 1; 0 <= channelIndex; --channelIndex) {
-						this.getSample()[j++] = value & 0x000000FF;
-						value >>= 8;
-					}
-					
-					this.getSample()[j++] = count;
-				}
+				this.postprocessHistogram();
+				this.sortIndices();
+				this.updateSample();
 				
 				this.getProcessor().process(this.getSample());
+			}
+		}
+		
+		private final void updateSample() {
+			final int m = max(this.counts);
+			
+			for (int j = 0, k = 0; j < this.getSample().length; ++k) {
+				final int index = this.indices[k];
+				int value = this.values[index];
+				final int count = this.counts[index];
+				
+				for (int channelIndex = this.getChannels().length - 1; 0 <= channelIndex; --channelIndex) {
+					this.getSample()[j++] = (byte) (value & 0x000000FF);
+					value >>= 8;
+				}
+				
+				this.getSample()[j++] = (byte) (count * 255L / m);
+			}
+		}
+		
+		private final void sortIndices() {
+			final int[] h = this.counts;
+			
+			sort(this.indices, new Comparator<Integer>() {
+				
+				@Override
+				public final int compare(final Integer i1, final Integer i2) {
+					return h[i2] - h[i1];
+				}
+				
+			});
+		}
+		
+		private final void postprocessHistogram() {
+			for (int j = 0; j < this.indices.length; ++j) {
+				this.indices[j] = j;
+				this.values[j] = 0;
+				this.counts[j] = 0;
+			}
+			
+			{
+				int j = 0;
+				
+				for (final Map.Entry<Integer, int[]> entry : this.histogram.entrySet()) {
+					this.values[j] = entry.getKey();
+					this.counts[j] = entry.getValue()[0];
+					++j;
+				}
+				
+				this.histogram.clear();
 			}
 		}
 		
@@ -286,33 +340,117 @@ public class TileDatabaseTest {
 	/**
 	 * @author codistmonk (creation 2013-04-19)
 	 */
-	public static final class RegularDictionary implements Serializable {
+	public static final class PrefixTree implements Serializable, Iterable<Map.Entry<byte[], ? extends PrefixTree.Value>> {
 		
-		private final Map<Integer, Object> root;
+		private final Map<Byte, Object> root;
 		
 		private final Class<? extends Value> valueFactory;
 		
 		private int sampleCount;
 		
-		public RegularDictionary() {
+		public PrefixTree() {
 			this(Value.Default.class);
 		}
 		
-		public RegularDictionary(final Class<? extends Value> valueFactory) {
+		public PrefixTree(final Class<? extends Value> valueFactory) {
 			this.root = newTree();
 			this.valueFactory = valueFactory;
 		}
 		
-		public final void count(final int[] sample) {
-			final int n = sample.length;
-			final int lastIndex = n - 1;
-			Map<Integer, Object> node = this.root;
+		@Override
+		public final Iterator<Entry<byte[], ? extends Value>> iterator() {
+			final int d = getDepth(this.root);
+			final MutableEntry<byte[], Value> entry = new MutableEntry<byte[], Value>(new byte[d]);
+			final List<Iterator<Entry<Byte, Object>>> todo = new ArrayList<Iterator<Entry<Byte, Object>>>();
 			
-			for (int i = 0; i < lastIndex; ++i) {
-				node = getOrCreateSubTree(node, sample[i]);
+			todo.add(this.root.entrySet().iterator());
+			
+			return new Iterator<Map.Entry<byte[], ? extends Value>>() {
+				
+				@Override
+				public final boolean hasNext() {
+					return !todo.isEmpty();
+				}
+				
+				@Override
+				public final Entry<byte[], ? extends Value> next() {
+					Entry<Byte, Object> nodeEntry = todo.get(0).next();
+					entry.getKey()[todo.size() - 1] = nodeEntry.getKey();
+					
+					while (todo.size() < d) {
+						Map<Byte, Object> subTree = (Map<Byte, Object>) nodeEntry.getValue();
+						todo.add(0, subTree.entrySet().iterator());
+						nodeEntry = todo.get(0).next();
+						entry.getKey()[todo.size() - 1] = nodeEntry.getKey();
+					}
+					
+					entry.setValue((Value) nodeEntry.getValue());
+					
+					while (!todo.isEmpty() && !todo.get(0).hasNext()) {
+						todo.remove(0);
+					}
+					
+					return entry;
+				}
+				
+				@Override
+				public final void remove() {
+					throw new UnsupportedOperationException();
+				}
+				
+			};
+		}
+		
+		/**
+		 * @author codistmonk (creation 2013-04-22)
+		 *
+		 * @param <K>
+		 * @param <V>
+		 */
+		private static final class MutableEntry<K, V> implements Map.Entry<K, V> {
+			
+			private final K key;
+			
+			private V value;
+			
+			public MutableEntry(final K key) {
+				this.key = key;
 			}
 			
-			final Integer lastValue = sample[lastIndex];
+			@Override
+			public final K getKey() {
+				return this.key;
+			}
+			
+			@Override
+			public final V getValue() {
+				return this.value;
+			}
+			
+			@Override
+			public final V setValue(final V value) {
+				final V result = this.value;
+				this.value = value;
+				
+				return result;
+			}
+			
+			public final String toString() {
+				return deepToString(this.getKey()) + "=" + this.getValue();
+			}
+			
+		}
+		
+		public final void add(final byte[] key) {
+			final int n = key.length;
+			final int lastIndex = n - 1;
+			Map<Byte, Object> node = this.root;
+			
+			for (int i = 0; i < lastIndex; ++i) {
+				node = getOrCreateSubTree(node, key[i]);
+			}
+			
+			final Byte lastValue = key[lastIndex];
 			final Value leaf = (Value) node.get(lastValue);
 			
 			if (leaf == null) {
@@ -328,7 +466,7 @@ public class TileDatabaseTest {
 			}
 		}
 		
-		public final int getSampleCount() {
+		public final int getValueCount() {
 			return this.sampleCount;
 		}
 		
@@ -339,6 +477,12 @@ public class TileDatabaseTest {
 		
 		private static final <K> Map<K, Object> newTree() {
 			return new TreeMap<K, Object>();
+		}
+		
+		public static final <K> int getDepth(final Object root) {
+			final Map<K, Object> node = cast(Map.class, root);
+			
+			return node == null ? 0 : 1 + getDepth(node.values().iterator().next());
 		}
 		
 		public static final <K> Map<K, Object> getOrCreateSubTree(final Map<K, Object> node, final K key) {
