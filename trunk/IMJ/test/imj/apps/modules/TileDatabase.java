@@ -116,7 +116,7 @@ public final class TileDatabase implements Serializable, Iterable<Map.Entry<byte
 		
 	}
 	
-	public final Value add(final byte[] key) {
+	public final <V extends Value> V add(final byte[] key) {
 		final int n = key.length;
 		final int lastIndex = n - 1;
 		Map<Byte, Object> node = this.root;
@@ -141,7 +141,7 @@ public final class TileDatabase implements Serializable, Iterable<Map.Entry<byte
 			result.incrementCount();
 		}
 		
-		return result;
+		return (V) result;
 	}
 	
 	public final int getEntryCount() {
