@@ -5,17 +5,13 @@ import static imj.IMJTools.forEachPixelInEachTile;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.BLUE;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.GREEN;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.RED;
-import static java.util.Arrays.copyOf;
 import static java.util.Arrays.sort;
-import static java.util.Collections.binarySearch;
 import static junit.framework.Assert.assertNotNull;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static org.junit.Assert.assertEquals;
-
 import imj.IMJTools.PixelProcessor;
-import imj.IMJTools;
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.TileDatabaseTest.PrefixTree.Value;
@@ -27,16 +23,12 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.TreeMap;
 
 import net.sourceforge.aprog.tools.TicToc;
@@ -88,7 +80,7 @@ public class TileDatabaseTest {
 		debugPrint("time:", timer.toc());
 		
 		debugPrint(dictionary.getValueCount());
-//		debugPrint(countBytes(dictionary));
+		debugPrint(countBytes(dictionary));
 		
 		final int[] dictionaryEntryCount = { 0 };
 		final int[] dictionarySampleCount = { 0 };
@@ -336,7 +328,7 @@ public class TileDatabaseTest {
 		}
 		
 	}
-
+	
 	/**
 	 * @author codistmonk (creation 2013-04-19)
 	 */
@@ -375,13 +367,13 @@ public class TileDatabaseTest {
 				@Override
 				public final Entry<byte[], ? extends Value> next() {
 					Entry<Byte, Object> nodeEntry = todo.get(0).next();
-					entry.getKey()[todo.size() - 1] = nodeEntry.getKey();
+					entry.getKey()[todo.size() - 1] = nodeEntry.getKey().byteValue();
 					
 					while (todo.size() < d) {
 						Map<Byte, Object> subTree = (Map<Byte, Object>) nodeEntry.getValue();
 						todo.add(0, subTree.entrySet().iterator());
 						nodeEntry = todo.get(0).next();
-						entry.getKey()[todo.size() - 1] = nodeEntry.getKey();
+						entry.getKey()[todo.size() - 1] = nodeEntry.getKey().byteValue();
 					}
 					
 					entry.setValue((Value) nodeEntry.getValue());
