@@ -22,7 +22,6 @@ public class CompactIntMapTest {
 		assertEquals(null, map.get(3));
 		assertEquals(null, map.get(4));
 		assertEquals(0, map.getElementCount());
-		assertEquals(0, map.getChunkCount());
 		assertEquals("[]", toStrings(map.entries()).toString());
 		
 		map.put(0, "B");
@@ -35,10 +34,6 @@ public class CompactIntMapTest {
 		assertEquals(1, map.getElementCount());
 		assertEquals("[0=B]", toStrings(map.entries()).toString());
 		
-		if (CompactIntMap.MINIMUM_CHUNK_SIZE == 1) {
-			assertEquals(1, map.getChunkCount());
-		}
-		
 		map.put(0, "A");
 		
 		assertEquals("A", map.get(0));
@@ -48,10 +43,6 @@ public class CompactIntMapTest {
 		assertEquals(null, map.get(4));
 		assertEquals(1, map.getElementCount());
 		assertEquals("[0=A]", toStrings(map.entries()).toString());
-		
-		if (CompactIntMap.MINIMUM_CHUNK_SIZE == 1) {
-			assertEquals(1, map.getChunkCount());
-		}
 		
 		map.put(3, "D");
 		
@@ -63,10 +54,6 @@ public class CompactIntMapTest {
 		assertEquals(2, map.getElementCount());
 		assertEquals("[0=A, 3=D]", toStrings(map.entries()).toString());
 		
-		if (CompactIntMap.MINIMUM_CHUNK_SIZE == 1) {
-			assertEquals(2, map.getChunkCount());
-		}
-		
 		map.put(4, "E");
 		
 		assertEquals("A", map.get(0));
@@ -76,10 +63,6 @@ public class CompactIntMapTest {
 		assertEquals("E", map.get(4));
 		assertEquals(3, map.getElementCount());
 		assertEquals("[0=A, 3=D, 4=E]", toStrings(map.entries()).toString());
-		
-		if (CompactIntMap.MINIMUM_CHUNK_SIZE == 1) {
-			assertEquals(2, map.getChunkCount());
-		}
 		
 		map.put(2, "C");
 		
@@ -91,10 +74,6 @@ public class CompactIntMapTest {
 		assertEquals(4, map.getElementCount());
 		assertEquals("[0=A, 2=C, 3=D, 4=E]", toStrings(map.entries()).toString());
 		
-		if (CompactIntMap.MINIMUM_CHUNK_SIZE == 1) {
-			assertEquals(2, map.getChunkCount());
-		}
-		
 		map.put(1, "B");
 		
 		assertEquals("A", map.get(0));
@@ -104,10 +83,6 @@ public class CompactIntMapTest {
 		assertEquals("E", map.get(4));
 		assertEquals(5, map.getElementCount());
 		assertEquals("[0=A, 1=B, 2=C, 3=D, 4=E]", toStrings(map.entries()).toString());
-		
-		if (CompactIntMap.MINIMUM_CHUNK_SIZE == 1) {
-			assertEquals(1, map.getChunkCount());
-		}
 	}
 	
 	public static final <E> List<String> toStrings(final Iterable<E> elements) {
