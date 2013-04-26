@@ -44,7 +44,7 @@ public class TileDatabaseTest1 {
 		final int horizontalTileCount = imageColumnCount / tileColumnCount;
 		final int tilePixelCount = tileRowCount * tileColumnCount;
 		final Channel[] channels = { RED, GREEN, BLUE };
-		final TileDatabase database = new TileDatabase();
+		final TileDatabase<?> database = new TileDatabase<Value>();
 		final int verticalTileStride = tileRowCount;
 		final int horizontalTileStride = verticalTileStride;
 		
