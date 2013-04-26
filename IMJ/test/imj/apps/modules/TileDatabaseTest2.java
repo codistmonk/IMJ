@@ -7,6 +7,7 @@ import static imj.apps.modules.ViewFilter.Channel.Primitive.GREEN;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.RED;
 import static junit.framework.Assert.assertNotNull;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.gc;
 import static org.junit.Assert.assertEquals;
 import imj.Image;
 import imj.ImageWrangler;
@@ -33,82 +34,46 @@ public class TileDatabaseTest2 {
 	
 	@Test
 	public final void test1() {
-		final String imageId = "../Libraries/images/45657.svs";
+		final String imageId = "../Libraries/images/45660.svs";
 		final int lod = 4;
+		final TileDatabase database = new TileDatabase(TileData.class);
 		final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
-		final String annotationsId = baseName(imageId) + ".xml";
-		final Annotations annotations = Annotations.fromXML(annotationsId);
-		final int imageRowCount = image.getRowCount();
-		final int imageColumnCount = image.getColumnCount();
-		final Map<String, RegionOfInterest> classes = new HashMap<String, RegionOfInterest>();
-		final TicToc timer = new TicToc();
-		
-		debugPrint("imageRowCount:", imageRowCount, "imageColumnCount:", imageColumnCount);
-		
-		debugPrint("Loading regions...", new Date(timer.tic()));
-		
-		for (final Annotation annotation : annotations.getAnnotations()) {
-			debugPrint("Loading", annotation.getUserObject());
-			final RegionOfInterest mask = RegionOfInterest.newInstance(imageRowCount, imageColumnCount);
-			ShowActions.UseAnnotationAsROI.set(mask, lod, annotation.getRegions());
-			classes.put(annotation.getUserObject().toString(), mask);
-		}
-		
-		debugPrint("Loading regions done", "time:", timer.toc());
-		
+		gc();
 		final int tileRowCount = 3;
 		final int tileColumnCount = tileRowCount;
+		final int verticalTileStride = 2;
+		final int horizontalTileStride = verticalTileStride;
+		final int imageRowCount = image.getRowCount();
+		final int imageColumnCount = image.getColumnCount();
 		final int verticalTileCount = imageRowCount / tileRowCount;
 		final int horizontalTileCount = imageColumnCount / tileColumnCount;
-		final int tilePixelCount = tileRowCount * tileColumnCount;
-		final Channel[] channels = { RED, GREEN, BLUE };
-		final TileDatabase database = new TileDatabase(TileData.class);
-		final int verticalTileStride = tileRowCount;
-		final int horizontalTileStride = verticalTileStride;
+		final Map<String, RegionOfInterest> classes = new HashMap<String, RegionOfInterest>();
 		
-		debugPrint(verticalTileCount, horizontalTileCount);
+		debugPrint("imageRowCount:", imageRowCount, "imageColumnCount:", imageColumnCount);
+		debugPrint("verticalTileCount:", verticalTileCount, "horizontalTileCount:", horizontalTileCount);
 		
-		final SampleProcessor processor = new SampleProcessor() {
-			
-			private int tileRowIndex;
-			
-			private int tileColumnIndex;
-			
-			@Override
-			public final void process(final byte[] key) {
-				final TileData sample = database.add(key);
-				
-				for (int rowIndex = this.tileRowIndex; rowIndex < this.tileRowIndex + tileRowCount; ++rowIndex) {
-					for (int columnIndex = this.tileColumnIndex; columnIndex < this.tileColumnIndex + tileColumnCount; ++columnIndex) {
-						for (final Map.Entry<String, RegionOfInterest> entry : classes.entrySet()) {
-							if (entry.getValue().get(rowIndex, columnIndex)) {
-								sample.getClasses().add(entry.getKey());
-							}
-						}
-					}
-				}
-				
-				this.tileColumnIndex += horizontalTileStride;
-				
-				if (imageColumnCount <= this.tileColumnIndex + tileColumnCount) {
-					this.tileColumnIndex = 0;
-					this.tileRowIndex += verticalTileStride;
-				}
-			}
-			
-		};
+		updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride, classes, database);
 		
-		timer.tic();
-		forEachPixelInEachTile(image, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
-				new CompactHistogramSampler(image, channels, tilePixelCount, processor));
-		debugPrint("time:", timer.toc());
+		final int databaseSampleCount = checkDatabase(classes, database);
 		
-		debugPrint(database.getEntryCount());
+		// k * verticalTileStride + tileRowCount <= imageRowCount
+		// k * verticalTileStride <= imageRowCount - tileRowCount
+		// k <= (imageRowCount - tileRowCount) / verticalTileStride
+		// k = (imageRowCount - tileRowCount) / verticalTileStride
+		assertEquals(((imageRowCount + verticalTileStride - tileRowCount) / verticalTileStride) *
+				((imageColumnCount + horizontalTileStride - tileColumnCount) / horizontalTileStride), databaseSampleCount);
 		
-		timer.tic();
+		debugPrint();
+	}
+	
+	public static final int checkDatabase(final Map<String, RegionOfInterest> classes,
+			final TileDatabase database) {
+		final TicToc timer = new TicToc();
 		
-		int dictionaryEntryCount = 0;
-		int dictionarySampleCount = 0;
+		debugPrint("Checking database...", new Date(timer.tic()));
+		
+		int databaseEntryCount = 0;
+		int databaseSampleCount = 0;
 		final Map<String, AtomicInteger> classCounts = new HashMap<String, AtomicInteger>();
 		final Map<Collection<String>, AtomicInteger> groups = new HashMap<Collection<String>, AtomicInteger>();
 		
@@ -117,12 +82,12 @@ public class TileDatabaseTest2 {
 		}
 		
 		for (final Map.Entry<byte[], ? extends Value> entry : database) {
-			if (dictionaryEntryCount % 100000 == 0) {
-				System.out.print(dictionaryEntryCount + "/" + database.getEntryCount() + "\r");
+			if (databaseEntryCount % 100000 == 0) {
+				System.out.print(databaseEntryCount + "/" + database.getEntryCount() + "\r");
 			}
 			assertNotNull(entry.getValue());
-			++dictionaryEntryCount;
-			dictionarySampleCount += entry.getValue().getCount();
+			++databaseEntryCount;
+			databaseSampleCount += entry.getValue().getCount();
 			
 			final TileData tileData = (TileData) entry.getValue();
 			
@@ -133,20 +98,62 @@ public class TileDatabaseTest2 {
 			}
 		}
 		
+		debugPrint("Checking database done", "time:", timer.toc());
+		
+		debugPrint("classCounts", classCounts);
+		debugPrint("groupCount:", groups.size());
+		debugPrint("sampleCount:", databaseSampleCount);
+		
+		for (final Map.Entry<Collection<String>, AtomicInteger> entry : groups.entrySet()) {
+			debugPrint(entry);
+		}
+		
+		assertEquals(database.getEntryCount(), databaseEntryCount);
+		
+		return databaseSampleCount;
+	}
+
+	public static final void updateDatabase(final String imageId, final int lod,
+			final int tileRowCount, final int tileColumnCount,
+			final int verticalTileStride, final int horizontalTileStride,
+			final Map<String, RegionOfInterest> classes, final TileDatabase database) {
+		final TicToc timer = new TicToc();
+		final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
+		final int imageRowCount = image.getRowCount();
+		final int imageColumnCount = image.getColumnCount();
+		final Channel[] channels = { RED, GREEN, BLUE };
+		final Annotations annotations = Annotations.fromXML(baseName(imageId) + ".xml");
+		
+		loadRegions(lod, imageRowCount, imageColumnCount, annotations, classes);
+		
+		final SampleProcessor processor = new Collector(imageColumnCount, tileRowCount, tileColumnCount,
+				verticalTileStride, horizontalTileStride, classes, database);
+		
+		timer.tic();
+		forEachPixelInEachTile(image, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
+				new CompactHistogramSampler(image, channels, tileRowCount * tileColumnCount, processor));
+		gc();
 		debugPrint("time:", timer.toc());
 		
-		debugPrint(classCounts);
-		debugPrint(groups.size(), groups);
+		debugPrint("entryCount:", database.getEntryCount());
+	}
+	
+	public static final void loadRegions(final int lod, final int imageRowCount,
+			final int imageColumnCount, final Annotations annotations,
+			final Map<String, RegionOfInterest> classes) {
+		final TicToc timer = new TicToc();
 		
-		assertEquals(database.getEntryCount(), dictionaryEntryCount);
-		// k * verticalTileStride + tileRowCount <= imageRowCount
-		// k * verticalTileStride <= imageRowCount - tileRowCount
-		// k <= (imageRowCount - tileRowCount) / verticalTileStride
-		// k = (imageRowCount - tileRowCount) / verticalTileStride
-		assertEquals(((imageRowCount + verticalTileStride - tileRowCount) / verticalTileStride) *
-				((imageColumnCount + horizontalTileStride - tileColumnCount) / horizontalTileStride), dictionarySampleCount);
+		debugPrint("Loading regions...", new Date(timer.tic()));
 		
-		debugPrint();
+		for (final Annotation annotation : annotations.getAnnotations()) {
+			debugPrint("Loading", annotation.getUserObject());
+			final RegionOfInterest mask = RegionOfInterest.newInstance(imageRowCount, imageColumnCount);
+			ShowActions.UseAnnotationAsROI.set(mask, lod, annotation.getRegions());
+			classes.put(annotation.getUserObject().toString(), mask);
+			gc();
+		}
+		
+		debugPrint("Loading regions done", "time:", timer.toc());
 	}
 	
 	public static final <K> void count(final Map<K, AtomicInteger> map, final K key) {
@@ -159,6 +166,64 @@ public class TileDatabaseTest2 {
 		}
 	}
 	
+	/**
+	 * @author codistmonk (creation 2013-04-26)
+	 */
+	public static final class Collector implements SampleProcessor {
+		
+		private final int tileColumnCount;
+		
+		private final Map<String, RegionOfInterest> classes;
+		
+		private final TileDatabase database;
+		
+		private final int horizontalTileStride;
+		
+		private final int tileRowCount;
+		
+		private final int verticalTileStride;
+		
+		private final int imageColumnCount;
+		
+		private int tileRowIndex;
+		
+		private int tileColumnIndex;
+		
+		public Collector(final int imageColumnCount, final int tileRowCount, final int tileColumnCount,
+				final int verticalTileStride, final int horizontalTileStride,
+				final Map<String, RegionOfInterest> classes, final TileDatabase database) {
+			this.tileRowCount = tileRowCount;
+			this.tileColumnCount = tileColumnCount;
+			this.classes = classes;
+			this.database = database;
+			this.horizontalTileStride = horizontalTileStride;
+			this.verticalTileStride = verticalTileStride;
+			this.imageColumnCount = imageColumnCount;
+		}
+		
+		@Override
+		public final void process(final byte[] key) {
+			final TileData sample = this.database.add(key);
+			
+			for (int rowIndex = this.tileRowIndex; rowIndex < this.tileRowIndex + this.tileRowCount; ++rowIndex) {
+				for (int columnIndex = this.tileColumnIndex; columnIndex < this.tileColumnIndex + this.tileColumnCount; ++columnIndex) {
+					for (final Map.Entry<String, RegionOfInterest> entry : this.classes.entrySet()) {
+						if (entry.getValue().get(rowIndex, columnIndex)) {
+							sample.getClasses().add(entry.getKey());
+						}
+					}
+				}
+			}
+			
+			this.tileColumnIndex += this.horizontalTileStride;
+			
+			if (this.imageColumnCount <= this.tileColumnIndex + this.tileColumnCount) {
+				this.tileColumnIndex = 0;
+				this.tileRowIndex += this.verticalTileStride;
+			}
+		}
+	}
+
 	/**
 	 * @author codistmonk (creation 2013-04-25)
 	 */
