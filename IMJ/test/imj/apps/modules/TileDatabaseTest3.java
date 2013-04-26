@@ -48,7 +48,8 @@ public class TileDatabaseTest3 {
 			debugPrint("imageRowCount:", imageRowCount, "imageColumnCount:", imageColumnCount);
 			debugPrint("verticalTileCount:", verticalTileCount, "horizontalTileCount:", horizontalTileCount);
 			
-			updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride, classes, database);
+			updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
+					LinearSampler.class, classes, database);
 			gc();
 			checkDatabase(classes, database);
 			gc();
