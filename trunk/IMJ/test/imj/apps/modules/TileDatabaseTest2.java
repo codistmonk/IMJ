@@ -8,6 +8,7 @@ import static imj.apps.modules.ViewFilter.Channel.Primitive.RED;
 import static junit.framework.Assert.assertNotNull;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static org.junit.Assert.assertEquals;
 import imj.Image;
 import imj.ImageWrangler;
@@ -16,6 +17,7 @@ import imj.apps.modules.Sampler.SampleProcessor;
 import imj.apps.modules.TileDatabase.Value;
 import imj.apps.modules.ViewFilter.Channel;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -24,6 +26,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -34,14 +37,14 @@ public class TileDatabaseTest2 {
 	
 	@Test
 	public final void test1() {
-		final String imageId = "../Libraries/images/45657.svs";
-		final int lod = 4;
-		final TileDatabase database = new TileDatabase(TileData.class);
+		final String imageId = "../Libraries/images/45656.svs";
+		final int lod = 2;
+		final TileDatabase<TileData> database = new TileDatabase<TileData>(TileData.class);
 		final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
 		gc();
 		final int tileRowCount = 3;
 		final int tileColumnCount = tileRowCount;
-		final int verticalTileStride = 1;
+		final int verticalTileStride = tileRowCount;
 		final int horizontalTileStride = verticalTileStride;
 		final int imageRowCount = image.getRowCount();
 		final int imageColumnCount = image.getColumnCount();
@@ -52,7 +55,8 @@ public class TileDatabaseTest2 {
 		debugPrint("imageRowCount:", imageRowCount, "imageColumnCount:", imageColumnCount);
 		debugPrint("verticalTileCount:", verticalTileCount, "horizontalTileCount:", horizontalTileCount);
 		
-		updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride, classes, database);
+		updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
+				LinearSampler.class, classes, database);
 		
 		final int databaseSampleCount = checkDatabase(classes, database);
 		
@@ -117,7 +121,8 @@ public class TileDatabaseTest2 {
 	public static final void updateDatabase(final String imageId, final int lod,
 			final int tileRowCount, final int tileColumnCount,
 			final int verticalTileStride, final int horizontalTileStride,
-			final Map<String, RegionOfInterest> classes, final TileDatabase database) {
+			final Class<? extends Sampler> samplerFactory,
+			final Map<String, RegionOfInterest> classes, final TileDatabase<TileData> database) {
 		final TicToc timer = new TicToc();
 		final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
 		final int imageRowCount = image.getRowCount();
@@ -129,10 +134,17 @@ public class TileDatabaseTest2 {
 		
 		final SampleProcessor processor = new Collector(imageColumnCount, tileRowCount, tileColumnCount,
 				verticalTileStride, horizontalTileStride, classes, database);
+		final Sampler sampler;
+		
+		try {
+			sampler = samplerFactory.getConstructor(Image.class, Channel[].class, int.class, SampleProcessor.class)
+					.newInstance(image, channels, tileRowCount * tileColumnCount, processor);
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
 		
 		timer.tic();
-		forEachPixelInEachTile(image, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
-				new CompactHistogramSampler(image, channels, tileRowCount * tileColumnCount, processor));
+		forEachPixelInEachTile(image, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride, sampler);
 		gc();
 		debugPrint("time:", timer.toc());
 	}
