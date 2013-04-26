@@ -5,9 +5,12 @@ import static java.util.Arrays.sort;
 import imj.Image;
 import imj.apps.modules.ViewFilter.Channel;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-04-22)
@@ -86,7 +89,9 @@ public final class CompactHistogramSampler extends Sampler {
 			
 			@Override
 			public final int compare(final Integer i1, final Integer i2) {
-				return h[i2] - h[i1];
+				int result = h[i2] - h[i1];
+				
+				return result != 0 ? result : i2 - i1;
 			}
 			
 		});

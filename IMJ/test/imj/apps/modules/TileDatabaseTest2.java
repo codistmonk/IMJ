@@ -34,14 +34,14 @@ public class TileDatabaseTest2 {
 	
 	@Test
 	public final void test1() {
-		final String imageId = "../Libraries/images/45660.svs";
+		final String imageId = "../Libraries/images/45657.svs";
 		final int lod = 4;
 		final TileDatabase database = new TileDatabase(TileData.class);
 		final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
 		gc();
 		final int tileRowCount = 3;
 		final int tileColumnCount = tileRowCount;
-		final int verticalTileStride = 2;
+		final int verticalTileStride = 1;
 		final int horizontalTileStride = verticalTileStride;
 		final int imageRowCount = image.getRowCount();
 		final int imageColumnCount = image.getColumnCount();
@@ -67,7 +67,7 @@ public class TileDatabaseTest2 {
 	}
 	
 	public static final int checkDatabase(final Map<String, RegionOfInterest> classes,
-			final TileDatabase database) {
+			final TileDatabase<?> database) {
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Checking database...", new Date(timer.tic()));
@@ -102,6 +102,7 @@ public class TileDatabaseTest2 {
 		
 		debugPrint("classCounts", classCounts);
 		debugPrint("groupCount:", groups.size());
+		debugPrint("entryCount:", database.getEntryCount());
 		debugPrint("sampleCount:", databaseSampleCount);
 		
 		for (final Map.Entry<Collection<String>, AtomicInteger> entry : groups.entrySet()) {
@@ -134,8 +135,6 @@ public class TileDatabaseTest2 {
 				new CompactHistogramSampler(image, channels, tileRowCount * tileColumnCount, processor));
 		gc();
 		debugPrint("time:", timer.toc());
-		
-		debugPrint("entryCount:", database.getEntryCount());
 	}
 	
 	public static final void loadRegions(final int lod, final int imageRowCount,
@@ -175,7 +174,7 @@ public class TileDatabaseTest2 {
 		
 		private final Map<String, RegionOfInterest> classes;
 		
-		private final TileDatabase database;
+		private final TileDatabase<TileData> database;
 		
 		private final int horizontalTileStride;
 		
@@ -191,7 +190,7 @@ public class TileDatabaseTest2 {
 		
 		public Collector(final int imageColumnCount, final int tileRowCount, final int tileColumnCount,
 				final int verticalTileStride, final int horizontalTileStride,
-				final Map<String, RegionOfInterest> classes, final TileDatabase database) {
+				final Map<String, RegionOfInterest> classes, final TileDatabase<TileData> database) {
 			this.tileRowCount = tileRowCount;
 			this.tileColumnCount = tileColumnCount;
 			this.classes = classes;
