@@ -1,9 +1,13 @@
 package imj.apps.modules;
 
+import static java.util.Collections.shuffle;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 import net.sourceforge.aprog.tools.TicToc;
@@ -28,12 +32,7 @@ public final class RadixSortTest {
 	
 	public static final void testSortInts(final int n) {
 		final TicToc timer = new TicToc();
-		final Random random = new Random();
-		final int[] values = new int[n];
-		
-		for (int i = 0; i < n; ++i) {
-			values[i] = random.nextInt();
-		}
+		final int[] values = newRandomInts(n);
 		
 		final int[] expecteds = values.clone();
 		timer.tic();
@@ -46,6 +45,34 @@ public final class RadixSortTest {
 		debugPrint("time:", timer.toc());
 		
 		assertArrayEquals(expecteds, actuals);
+	}
+	
+	public static final int[] newRandomInts(final int n) {
+		final Random random = new Random();
+		final int[] result = new int[n];
+		
+		for (int i = 0; i < n; ++i) {
+			result[i] = random.nextInt();
+		}
+		
+		return result;
+	}
+	
+	public static final int[] newRandomizedRange(final int n) {
+		final int[] result = new int[n];
+		final List<Integer> values = new ArrayList<Integer>(n);
+		
+		for (int i = 0; i < n; ++i) {
+			values.add(i);
+		}
+		
+		shuffle(values);
+		
+		for (int i = 0; i < n; ++i) {
+			result[i] = values.get(i);
+		}
+		
+		return result;
 	}
 	
 }

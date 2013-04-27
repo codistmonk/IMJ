@@ -62,7 +62,7 @@ public class TileDatabaseTest1 {
 		final TicToc timer = new TicToc();
 		timer.tic();
 		forEachPixelInEachTile(image, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
-				new CompactHistogramSampler(image, channels, tilePixelCount, processor));
+				new SparseHistogramSampler(image, channels, tilePixelCount, processor));
 		debugPrint("time:", timer.toc());
 		
 		debugPrint(database.getEntryCount());
