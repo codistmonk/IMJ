@@ -1,0 +1,51 @@
+package imj.apps.modules;
+
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static org.junit.Assert.*;
+
+import java.util.Arrays;
+import java.util.Random;
+
+import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
+
+import org.junit.Test;
+
+/**
+ * @author codistmonk (creation 2013-04-27)
+ */
+public final class RadixSortTest {
+	
+	@Test
+	public final void test1() {
+		testSortInts(100);
+	}
+	
+	@Test
+	public final void test2() {
+		testSortInts(1000000);
+	}
+	
+	public static final void testSortInts(final int n) {
+		final TicToc timer = new TicToc();
+		final Random random = new Random();
+		final int[] values = new int[n];
+		
+		for (int i = 0; i < n; ++i) {
+			values[i] = random.nextInt();
+		}
+		
+		final int[] expecteds = values.clone();
+		timer.tic();
+		Arrays.sort(expecteds);
+		debugPrint("time:", timer.toc());
+		
+		final int[] actuals = values.clone();
+		timer.tic();
+		RadixSort.sort(actuals);
+		debugPrint("time:", timer.toc());
+		
+		assertArrayEquals(expecteds, actuals);
+	}
+	
+}
