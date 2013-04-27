@@ -85,6 +85,13 @@ public final class IntList {
 		return copyOfRange(this.values, this.first, this.end);
 	}
 	
+	public final void forEach(final Processor processor) {
+		for (int i = this.first; i < this.end; ++i) {
+			processor.process(this.values[i]);
+		}
+	}
+	
+	@Override
 	public final String toString() {
 		final StringBuilder resultBuilder = new StringBuilder();
 		
@@ -103,6 +110,15 @@ public final class IntList {
 		resultBuilder.append(']');
 		
 		return resultBuilder.toString();
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-04-27)
+	 */
+	public static abstract interface Processor {
+		
+		public abstract void process(int value);
+		
 	}
 	
 }
