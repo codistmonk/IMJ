@@ -15,7 +15,7 @@ import net.sourceforge.aprog.tools.Tools;
 /**
  * @author codistmonk (creation 2013-04-22)
  */
-public final class CompactHistogramSampler extends Sampler {
+public final class SparseHistogramSampler extends Sampler {
 	
 	private final int tilePixelCount;
 	
@@ -29,7 +29,7 @@ public final class CompactHistogramSampler extends Sampler {
 	
 	private int i;
 	
-	public CompactHistogramSampler(final Image image, final Channel[] channels,
+	public SparseHistogramSampler(final Image image, final Channel[] channels,
 			final int tilePixelCount, final SampleProcessor processor) {
 		super(image, channels, tilePixelCount * (channels.length + 1), processor);
 		this.tilePixelCount = tilePixelCount;
