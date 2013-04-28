@@ -6,7 +6,6 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import imj.Image;
 import imj.ImageWrangler;
-import imj.apps.modules.TileDatabaseTest2.TileData;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,7 +25,7 @@ public class TileDatabaseTest3 {
 				"../Libraries/images/45659.svs",
 				"../Libraries/images/45660.svs" };
 		final int lod = 4;
-		final TileDatabase<TileData> database = new TileDatabase<TileData>(TileData.class);
+		final TileDatabase<Sample> database = new TileDatabase<Sample>(Sample.class);
 		
 		for (final String imageId : imageIds) {
 			debugPrint("imageId:", imageId);
