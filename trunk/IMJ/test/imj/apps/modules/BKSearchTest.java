@@ -65,54 +65,61 @@ public final class BKSearchTest {
 	
 	@Test
 	public final void test2() {
+		for (int n = 10; n <= 20000; n *= 2) {
+			testGenericBKSearch(2, n);
+		}
+	}
+	
+	@Test
+	public final void test3() {
+		for (int n = 10; n <= 20000; n *= 2) {
+			testGenericBKSearch(10, n);
+		}
+	}
+	
+	public static final void testGenericBKSearch(final int dimension, int n) {
 		final TicToc timer = new TicToc();
 		final EuclideanDistance distance = EuclideanDistance.INSTANCE;
+		final byte[][] values = newRandomSamples(dimension, n);
+		final byte[][] moreValues = newRandomSamples(dimension, n);
+		final byte[][] sortedValues = clone(values);
+		final byte[][] bkValues = clone(values);
 		
-		for (int n = 10; n <= 20000; n *= 2) {
-			final byte[][] values = newRandomSamples(2, n);
-			final byte[][] moreValues = newRandomSamples(2, n);
-//			final byte[][] values = {{65, 71}, {-59, -84}, {-31, 69}, {47, 52}, {-3, 119}, {104, -91}};
-//			final byte[][] moreValues = {{107, -34}, {27, -35}, {-101, -74}, {-120, -36}, {-97, -42}, {-88, -85}};
+		sort(sortedValues, ByteArrayComparator.INSTANCE);
+		
+		final long[] bkDistances = bkSort(bkValues, distance, ByteArrayComparator.INSTANCE);
+		
+		debugPrint("n:", n);
+		
+		timer.tic();
+		for (final byte[] value : values) {
+			assertArrayEquals(value, findClosest(value, sortedValues, distance));
+		}
+		debugPrint("time:", timer.toc());
+		
+		timer.tic();
+		for (final byte[] value : values) {
+			assertArrayEquals(value, bkFind(value, bkValues, bkDistances, distance));
+		}
+		debugPrint("time:", timer.toc());
+		
+		for (final byte[] value : moreValues) {
+			final byte[] linearClosest = findClosest(value, sortedValues, distance);
+			final byte[] bkClosest = bkFind(value, bkValues, bkDistances, distance);
+			final long expected = distance.getDistance(value, linearClosest);
+			final long actual = distance.getDistance(value, bkClosest);
 			
-			final byte[][] sortedValues = clone(values);
-			final byte[][] bkValues = clone(values);
-			
-			sort(sortedValues, ByteArrayComparator.INSTANCE);
-			
-			final long[] bkDistances = bkSort(bkValues, distance, ByteArrayComparator.INSTANCE);
-			
-			debugPrint("n:", n);
-			
-			timer.tic();
-			for (final byte[] value : values) {
-				assertArrayEquals(value, findClosest(value, sortedValues, distance));
+			if (expected != actual) {
+				debugPrint(Arrays.deepToString(values));
+				debugPrint(Arrays.deepToString(moreValues));
+				debugPrint(Arrays.deepToString(bkValues));
+				debugPrint(Arrays.toString(bkDistances));
+				debugPrint(Arrays.toString(value), distance.getDistance(value, bkValues[0]));
+				debugPrint(Arrays.toString(linearClosest), expected);
+				debugPrint(Arrays.toString(bkClosest), actual);
 			}
-			debugPrint("time:", timer.toc());
 			
-			timer.tic();
-			for (final byte[] value : values) {
-				assertArrayEquals(value, bkFind(value, bkValues, bkDistances, distance));
-			}
-			debugPrint("time:", timer.toc());
-			
-			for (final byte[] value : moreValues) {
-				final byte[] linearClosest = findClosest(value, sortedValues, distance);
-				final byte[] bkClosest = bkFind(value, bkValues, bkDistances, distance);
-				final long expected = distance.getDistance(value, linearClosest);
-				final long actual = distance.getDistance(value, bkClosest);
-				
-				if (expected != actual) {
-					debugPrint(Arrays.deepToString(values));
-					debugPrint(Arrays.deepToString(moreValues));
-					debugPrint(Arrays.deepToString(bkValues));
-					debugPrint(Arrays.toString(bkDistances));
-					debugPrint(Arrays.toString(value), distance.getDistance(value, bkValues[0]));
-					debugPrint(Arrays.toString(linearClosest), expected);
-					debugPrint(Arrays.toString(bkClosest), actual);
-				}
-				
-				assertEquals(expected, actual);
-			}
+			assertEquals(expected, actual);
 		}
 	}
 	
