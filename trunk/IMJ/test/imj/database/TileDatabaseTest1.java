@@ -1,4 +1,4 @@
-package imj.apps.modules;
+package imj.database;
 
 import static imj.IMJTools.forEachPixelInEachTile;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.BLUE;
@@ -11,9 +11,11 @@ import static org.junit.Assert.assertEquals;
 
 import imj.Image;
 import imj.ImageWrangler;
-import imj.apps.modules.Sampler.SampleProcessor;
-import imj.apps.modules.TileDatabase.Value;
+import imj.apps.modules.ViewFilter;
 import imj.apps.modules.ViewFilter.Channel;
+import imj.database.TileDatabase;
+import imj.database.Sampler.SampleProcessor;
+import imj.database.TileDatabase.Value;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;

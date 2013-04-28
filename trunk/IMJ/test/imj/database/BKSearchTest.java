@@ -1,17 +1,19 @@
-package imj.apps.modules;
+package imj.database;
 
-import static imj.apps.modules.BKSearch.bkFind;
-import static imj.apps.modules.BKSearch.bkSort;
-import static imj.apps.modules.BKSearch.distance;
-import static imj.apps.modules.BKSearch.findClosest;
+import static imj.database.BKSearch.bkFind;
+import static imj.database.BKSearch.bkSort;
+import static imj.database.BKSearch.distance;
+import static imj.database.BKSearch.findClosest;
 import static java.lang.Math.ceil;
 import static java.lang.Math.sqrt;
 import static java.util.Arrays.sort;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import imj.apps.modules.BKSearch.BKDatabase;
-import imj.apps.modules.BKSearch.Metric;
+import imj.apps.modules.RadixSortTest;
+import imj.database.ByteArrayComparator;
+import imj.database.BKSearch.BKDatabase;
+import imj.database.BKSearch.Metric;
 
 import java.util.Arrays;
 import java.util.Random;

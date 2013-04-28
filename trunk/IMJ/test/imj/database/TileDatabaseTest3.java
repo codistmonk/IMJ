@@ -1,11 +1,16 @@
-package imj.apps.modules;
+package imj.database;
 
-import static imj.apps.modules.TileDatabaseTest2.checkDatabase;
-import static imj.apps.modules.TileDatabaseTest2.updateDatabase;
+import static imj.database.Sample.updateDatabase;
+import static imj.database.TileDatabaseTest2.checkDatabase;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
+
 import imj.Image;
 import imj.ImageWrangler;
+import imj.apps.modules.RegionOfInterest;
+import imj.database.LinearSampler;
+import imj.database.Sample;
+import imj.database.TileDatabase;
 
 import java.util.HashMap;
 import java.util.Map;

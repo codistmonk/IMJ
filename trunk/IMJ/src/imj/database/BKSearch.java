@@ -1,4 +1,4 @@
-package imj.apps.modules;
+package imj.database;
 
 import static java.lang.Math.abs;
 import static java.lang.Math.min;

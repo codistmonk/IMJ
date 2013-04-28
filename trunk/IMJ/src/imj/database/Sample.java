@@ -1,123 +1,79 @@
-package imj.apps.modules;
+package imj.database;
 
 import static imj.IMJTools.forEachPixelInEachTile;
 import static imj.apps.modules.ShowActions.baseName;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.BLUE;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.GREEN;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.RED;
-import static junit.framework.Assert.assertNotNull;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-import static org.junit.Assert.assertEquals;
+
 import imj.Image;
 import imj.ImageWrangler;
+import imj.apps.modules.Annotations;
+import imj.apps.modules.RegionOfInterest;
+import imj.apps.modules.ShowActions;
+import imj.apps.modules.ViewFilter;
 import imj.apps.modules.Annotations.Annotation;
-import imj.apps.modules.BKSearch.Metric;
-import imj.apps.modules.Sampler.SampleProcessor;
-import imj.apps.modules.TileDatabase.Value;
+import imj.apps.modules.ShowActions.UseAnnotationAsROI;
 import imj.apps.modules.ViewFilter.Channel;
+import imj.database.BKSearch.Metric;
+import imj.database.BKSearchTest.EuclideanMetric;
+import imj.database.Sampler.SampleProcessor;
+import imj.database.TileDatabase.Value;
 
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import net.sourceforge.aprog.tools.TicToc;
 
-import org.junit.Test;
-
 /**
- * @author codistmonk (creation 2013-04-19)
+ * @author codistmonk (creation 2013-04-25)
  */
-public class TileDatabaseTest2 {
+public final class Sample implements Value {
 	
-	@Test
-	public final void test() {
-		final String imageId = "../Libraries/images/45656.svs";
-		final int lod = 2;
-		final TileDatabase<Sample> database = new TileDatabase<Sample>(Sample.class);
-		final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
-		gc();
-		final int tileRowCount = 3;
-		final int tileColumnCount = tileRowCount;
-		final int verticalTileStride = tileRowCount;
-		final int horizontalTileStride = verticalTileStride;
-		final int imageRowCount = image.getRowCount();
-		final int imageColumnCount = image.getColumnCount();
-		final int verticalTileCount = imageRowCount / tileRowCount;
-		final int horizontalTileCount = imageColumnCount / tileColumnCount;
-		final Map<String, RegionOfInterest> classes = new HashMap<String, RegionOfInterest>();
-		
-		debugPrint("imageRowCount:", imageRowCount, "imageColumnCount:", imageColumnCount);
-		debugPrint("verticalTileCount:", verticalTileCount, "horizontalTileCount:", horizontalTileCount);
-		
-		updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
-				LinearSampler.class, classes, database);
-		
-		final int databaseSampleCount = checkDatabase(classes, database);
-		
-		// k * verticalTileStride + tileRowCount <= imageRowCount
-		// k * verticalTileStride <= imageRowCount - tileRowCount
-		// k <= (imageRowCount - tileRowCount) / verticalTileStride
-		// k = (imageRowCount - tileRowCount) / verticalTileStride
-		assertEquals(((imageRowCount + verticalTileStride - tileRowCount) / verticalTileStride) *
-				((imageColumnCount + horizontalTileStride - tileColumnCount) / horizontalTileStride), databaseSampleCount);
-		
-		debugPrint();
+	private byte[] key;
+	
+	private final Collection<String> classes;
+	
+	private int count;
+	
+	public Sample() {
+		this.classes = new HashSet<String>();
+		this.count = 1;
 	}
 	
-	public static final int checkDatabase(final Map<String, RegionOfInterest> classes,
-			final TileDatabase<?> database) {
-		final TicToc timer = new TicToc();
-		
-		debugPrint("Checking database...", new Date(timer.tic()));
-		
-		int databaseEntryCount = 0;
-		int databaseSampleCount = 0;
-		final Map<String, AtomicInteger> classCounts = new HashMap<String, AtomicInteger>();
-		final Map<Collection<String>, AtomicInteger> groups = new HashMap<Collection<String>, AtomicInteger>();
-		
-		for (final String key : classes.keySet()) {
-			classCounts.put(key, new AtomicInteger());
-		}
-		
-		for (final Map.Entry<byte[], ? extends Value> entry : database) {
-			if (databaseEntryCount % 100000 == 0) {
-				System.out.print(databaseEntryCount + "/" + database.getEntryCount() + "\r");
-			}
-			assertNotNull(entry.getValue());
-			++databaseEntryCount;
-			databaseSampleCount += entry.getValue().getCount();
-			
-			final Sample tileData = (Sample) entry.getValue();
-			
-			count(groups, tileData.getClasses());
-			
-			for (final String classId : tileData.getClasses()) {
-				classCounts.get(classId).incrementAndGet();
-			}
-		}
-		
-		debugPrint("Checking database done", "time:", timer.toc());
-		
-		debugPrint("classCounts", classCounts);
-		debugPrint("groupCount:", groups.size());
-		debugPrint("entryCount:", database.getEntryCount());
-		debugPrint("sampleCount:", databaseSampleCount);
-		
-		for (final Map.Entry<Collection<String>, AtomicInteger> entry : groups.entrySet()) {
-			debugPrint(entry);
-		}
-		
-		assertEquals(database.getEntryCount(), databaseEntryCount);
-		
-		return databaseSampleCount;
+	public final byte[] getKey() {
+		return this.key;
 	}
-
+	
+	public final void setSample(final byte[] key) {
+		this.key = key;
+	}
+	
+	public final Collection<String> getClasses() {
+		return this.classes;
+	}
+	
+	@Override
+	public final int getCount() {
+		return this.count;
+	}
+	
+	@Override
+	public final void incrementCount() {
+		++this.count;
+	}
+	
+	/**
+	 * {@value}.
+	 */
+	private static final long serialVersionUID = -2244166134966161936L;
+	
 	public static final void updateDatabase(final String imageId, final int lod,
 			final int tileRowCount, final int tileColumnCount,
 			final int verticalTileStride, final int horizontalTileStride,
@@ -165,16 +121,6 @@ public class TileDatabaseTest2 {
 		}
 		
 		debugPrint("Loading regions done", "time:", timer.toc());
-	}
-	
-	public static final <K> void count(final Map<K, AtomicInteger> map, final K key) {
-		final AtomicInteger counter = map.get(key);
-		
-		if (counter == null) {
-			map.put(key, new AtomicInteger(1));
-		} else {
-			counter.incrementAndGet();
-		}
 	}
 	
 	/**
@@ -235,6 +181,34 @@ public class TileDatabaseTest2 {
 				this.tileRowIndex += this.verticalTileStride;
 			}
 		}
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-04-28)
+	 */
+	public static final class EuclideanMetric implements Metric<Sample> {
+		
+		@Override
+		public final long getDistance(final Sample sample0, final Sample sample1) {
+			return BKSearchTest.EuclideanMetric.INSTANCE.getDistance(sample0.getKey(), sample1.getKey());
+		}
+		
+		public static final EuclideanMetric INSTANCE = new EuclideanMetric();
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-04-28)
+	 */
+	public static final class KeyComparator implements Comparator<Sample> {
+		
+		@Override
+		public final int compare(final Sample sample0, final Sample sample1) {
+			return ByteArrayComparator.INSTANCE.compare(sample0.getKey(), sample1.getKey());
+		}
+		
+		public static final KeyComparator INSTANCE = new KeyComparator();
+		
 	}
 	
 }

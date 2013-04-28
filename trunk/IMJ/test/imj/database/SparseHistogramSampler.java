@@ -1,9 +1,11 @@
-package imj.apps.modules;
+package imj.database;
 
 import static java.util.Arrays.sort;
 
 import imj.Image;
+import imj.apps.modules.ViewFilter;
 import imj.apps.modules.ViewFilter.Channel;
+import imj.database.Sampler;
 
 import java.util.Arrays;
 import java.util.Comparator;
