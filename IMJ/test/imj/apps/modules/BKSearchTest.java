@@ -10,7 +10,8 @@ import static java.util.Arrays.sort;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import imj.apps.modules.BKSearch.Distance;
+import imj.apps.modules.BKSearch.BKDatabase;
+import imj.apps.modules.BKSearch.Metric;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -79,15 +80,13 @@ public final class BKSearchTest {
 	
 	public static final void testGenericBKSearch(final int dimension, int n) {
 		final TicToc timer = new TicToc();
-		final EuclideanDistance distance = EuclideanDistance.INSTANCE;
+		final EuclideanMetric distance = EuclideanMetric.INSTANCE;
 		final byte[][] values = newRandomSamples(dimension, n);
 		final byte[][] moreValues = newRandomSamples(dimension, n);
 		final byte[][] sortedValues = clone(values);
-		final byte[][] bkValues = clone(values);
+		final BKDatabase<byte[]> database = new BKDatabase<byte[]>(clone(values), distance, ByteArrayComparator.INSTANCE);
 		
 		sort(sortedValues, ByteArrayComparator.INSTANCE);
-		
-		final long[] bkDistances = bkSort(bkValues, distance, ByteArrayComparator.INSTANCE);
 		
 		debugPrint("n:", n);
 		
@@ -99,22 +98,20 @@ public final class BKSearchTest {
 		
 		timer.tic();
 		for (final byte[] value : values) {
-			assertArrayEquals(value, bkFind(value, bkValues, bkDistances, distance));
+			assertArrayEquals(value, database.findClosest(value));
 		}
 		debugPrint("time:", timer.toc());
 		
 		for (final byte[] value : moreValues) {
 			final byte[] linearClosest = findClosest(value, sortedValues, distance);
-			final byte[] bkClosest = bkFind(value, bkValues, bkDistances, distance);
+			final byte[] bkClosest = database.findClosest(value);
 			final long expected = distance.getDistance(value, linearClosest);
 			final long actual = distance.getDistance(value, bkClosest);
 			
 			if (expected != actual) {
 				debugPrint(Arrays.deepToString(values));
 				debugPrint(Arrays.deepToString(moreValues));
-				debugPrint(Arrays.deepToString(bkValues));
-				debugPrint(Arrays.toString(bkDistances));
-				debugPrint(Arrays.toString(value), distance.getDistance(value, bkValues[0]));
+				debugPrint(Arrays.toString(value), distance.getDistance(value, database.getValues()[0]));
 				debugPrint(Arrays.toString(linearClosest), expected);
 				debugPrint(Arrays.toString(bkClosest), actual);
 			}
@@ -151,7 +148,7 @@ public final class BKSearchTest {
 	/**
 	 * @author codistmonk (creation 2013-04-28)
 	 */
-	public static final class EuclideanDistance implements Distance<byte[]> {
+	public static final class EuclideanMetric implements Metric<byte[]> {
 		
 		@Override
 		public final long getDistance(final byte[] sample0, final byte[] sample1) {
@@ -165,7 +162,7 @@ public final class BKSearchTest {
 			return (long) ceil(sqrt(result));
 		}
 		
-		public static final EuclideanDistance INSTANCE = new EuclideanDistance();
+		public static final EuclideanMetric INSTANCE = new EuclideanMetric();
 		
 	}
 	
