@@ -8,7 +8,6 @@ import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.BKSearch.BKDatabase;
 import imj.apps.modules.BKSearchTest.EuclideanMetric;
-import imj.apps.modules.TileDatabaseTest2.TileData;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -32,7 +31,7 @@ public class TileDatabaseTest4 {
 //				"../Libraries/images/45659.svs",
 				"../Libraries/images/45660.svs" };
 		final int lod = 4;
-		final TileDatabase<TileData> tileDatabase = new TileDatabase<TileData>(TileData.class);
+		final TileDatabase<Sample> tileDatabase = new TileDatabase<Sample>(Sample.class);
 		
 		for (final String imageId : imageIds) {
 			debugPrint("imageId:", imageId);
@@ -60,15 +59,15 @@ public class TileDatabaseTest4 {
 			checkDatabase(classes, tileDatabase);
 			gc();
 			
-			final BKDatabase<byte[]> bkDatabase = newBKDatabase(tileDatabase);
+			final BKDatabase<Sample> bkDatabase = newBKDatabase(tileDatabase);
 			gc();
 		}
 	}
 	
-	public static final Collection<Collection<String>> extractMonoclassGroups(final TileDatabase<TileData> database) {
+	public static final Collection<Collection<String>> extractMonoclassGroups(final TileDatabase<Sample> database) {
 		final Collection<Collection<String>> result = new HashSet<Collection<String>>();
 		
-		for (final Map.Entry<byte[], TileData> entry : database) {
+		for (final Map.Entry<byte[], Sample> entry : database) {
 			if (entry.getValue().getClasses().size() == 1) {
 				result.add(entry.getValue().getClasses());
 			}
@@ -77,25 +76,27 @@ public class TileDatabaseTest4 {
 		return result;
 	}
 	
-	public static final BKDatabase<byte[]> newBKDatabase(final TileDatabase<TileData> tileDatabase,
+	public static final BKDatabase<Sample> newBKDatabase(final TileDatabase<Sample> tileDatabase,
 			final Collection<Collection<String>> groups) {
 		final int entryCount = tileDatabase.getEntryCount();
-		final byte[][] samples = new byte[entryCount][];
+		final Sample[] samples = new Sample[entryCount];
 		int i = 0;
 		
-		for (final Map.Entry<byte[], TileData> entry : tileDatabase) {
-			samples[i++] = entry.getKey();
+		for (final Map.Entry<byte[], Sample> entry : tileDatabase) {
+			samples[i++] = entry.getValue();
 		}
 		
-		return new BKDatabase<byte[]>(samples, EuclideanMetric.INSTANCE, ByteArrayComparator.INSTANCE);
+		return new BKDatabase<Sample>(samples, Sample.EuclideanMetric.INSTANCE, Sample.KeyComparator.INSTANCE);
 	}
 	
-	public static final BKDatabase<byte[]> newBKDatabase(final TileDatabase<TileData> tileDatabase) {
+	public static final BKDatabase<Sample> newBKDatabase(final TileDatabase<Sample> tileDatabase) {
 		final TicToc timer = new TicToc();
+		
 		debugPrint("Creating bk-database...");
 		timer.tic();
-		final BKDatabase<byte[]> result = newBKDatabase(tileDatabase, extractMonoclassGroups(tileDatabase));
+		final BKDatabase<Sample> result = newBKDatabase(tileDatabase, extractMonoclassGroups(tileDatabase));
 		debugPrint("Creating bk-database done", "time:", timer.toc());
+		
 		return result;
 	}
 	

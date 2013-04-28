@@ -13,11 +13,13 @@ import static org.junit.Assert.assertEquals;
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.Annotations.Annotation;
+import imj.apps.modules.BKSearch.Metric;
 import imj.apps.modules.Sampler.SampleProcessor;
 import imj.apps.modules.TileDatabase.Value;
 import imj.apps.modules.ViewFilter.Channel;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,7 +39,7 @@ public class TileDatabaseTest2 {
 	public final void test() {
 		final String imageId = "../Libraries/images/45656.svs";
 		final int lod = 2;
-		final TileDatabase<TileData> database = new TileDatabase<TileData>(TileData.class);
+		final TileDatabase<Sample> database = new TileDatabase<Sample>(Sample.class);
 		final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
 		gc();
 		final int tileRowCount = 3;
@@ -91,7 +93,7 @@ public class TileDatabaseTest2 {
 			++databaseEntryCount;
 			databaseSampleCount += entry.getValue().getCount();
 			
-			final TileData tileData = (TileData) entry.getValue();
+			final Sample tileData = (Sample) entry.getValue();
 			
 			count(groups, tileData.getClasses());
 			
@@ -120,7 +122,7 @@ public class TileDatabaseTest2 {
 			final int tileRowCount, final int tileColumnCount,
 			final int verticalTileStride, final int horizontalTileStride,
 			final Class<? extends Sampler> samplerFactory,
-			final Map<String, RegionOfInterest> classes, final TileDatabase<TileData> database) {
+			final Map<String, RegionOfInterest> classes, final TileDatabase<Sample> database) {
 		final TicToc timer = new TicToc();
 		final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
 		final int imageRowCount = image.getRowCount();
@@ -184,7 +186,7 @@ public class TileDatabaseTest2 {
 		
 		private final Map<String, RegionOfInterest> classes;
 		
-		private final TileDatabase<TileData> database;
+		private final TileDatabase<Sample> database;
 		
 		private final int horizontalTileStride;
 		
@@ -200,7 +202,7 @@ public class TileDatabaseTest2 {
 		
 		public Collector(final int imageColumnCount, final int tileRowCount, final int tileColumnCount,
 				final int verticalTileStride, final int horizontalTileStride,
-				final Map<String, RegionOfInterest> classes, final TileDatabase<TileData> database) {
+				final Map<String, RegionOfInterest> classes, final TileDatabase<Sample> database) {
 			this.tileRowCount = tileRowCount;
 			this.tileColumnCount = tileColumnCount;
 			this.classes = classes;
@@ -212,7 +214,9 @@ public class TileDatabaseTest2 {
 		
 		@Override
 		public final void process(final byte[] key) {
-			final TileData sample = this.database.add(key);
+			final Sample sample = this.database.add(key);
+			
+			sample.setSample(key);
 			
 			for (int rowIndex = this.tileRowIndex; rowIndex < this.tileRowIndex + this.tileRowCount; ++rowIndex) {
 				for (int columnIndex = this.tileColumnIndex; columnIndex < this.tileColumnIndex + this.tileColumnCount; ++columnIndex) {
@@ -231,36 +235,6 @@ public class TileDatabaseTest2 {
 				this.tileRowIndex += this.verticalTileStride;
 			}
 		}
-	}
-
-	/**
-	 * @author codistmonk (creation 2013-04-25)
-	 */
-	public static final class TileData implements Value {
-		
-		private final Collection<String> classes;
-		
-		private int count;
-		
-		public TileData() {
-			this.classes = new HashSet<String>();
-			this.count = 1;
-		}
-		
-		public final Collection<String> getClasses() {
-			return this.classes;
-		}
-		
-		@Override
-		public final int getCount() {
-			return this.count;
-		}
-		
-		@Override
-		public final void incrementCount() {
-			++this.count;
-		}
-		
 	}
 	
 }
