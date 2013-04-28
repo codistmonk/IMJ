@@ -84,7 +84,7 @@ public final class BKSearch {
 		return bkValues[i0];
 	}
 	
-	public static final <T> long[] bkSort(final T[] values, final Distance<T> distance, final Comparator<T> comparator) {
+	public static final <T> long[] bkSort(final T[] values, final Metric<T> distance, final Comparator<T> comparator) {
 		final int n = values.length;
 		@SuppressWarnings("unchecked")
 		final GenericDistant<T>[] vds = new GenericDistant[n];
@@ -108,7 +108,7 @@ public final class BKSearch {
 		return result;
 	}
 	
-	public static final <T> T bkFind(final T value, final T[] bkValues, final long[] bkDistances, final Distance<T> distance) {
+	public static final <T> T bkFind(final T value, final T[] bkValues, final long[] bkDistances, final Metric<T> distance) {
 		final int n = bkValues.length;
 		final long vv0 = distance.getDistance(value, bkValues[0]);
 		int i0 = binarySearch(bkDistances, vv0);
@@ -167,7 +167,7 @@ public final class BKSearch {
 		return result;
 	}
 	
-	public static final <T> T findClosest(final T value, final T[] values, final Distance<T> distance) {
+	public static final <T> T findClosest(final T value, final T[] values, final Metric<T> distance) {
 		long closestDistance = Long.MAX_VALUE;
 		T result = null;
 		
@@ -269,9 +269,46 @@ public final class BKSearch {
 	 *
 	 * @param <T>
 	 */
-	public static abstract interface Distance<T> {
+	public static abstract interface Metric<T> {
 		
 		public abstract long getDistance(T object0, T object1);
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-04-28)
+	 *
+	 * @param <T>
+	 */
+	public static final class BKDatabase<T> {
+		
+		private final T[] values;
+		
+		private final long[] distances;
+		
+		private final Metric<T> metric;
+		
+		public BKDatabase(final T[] values, final Metric<T> distance, final Comparator<T> comparator) {
+			this.values = values;
+			this.distances = bkSort(values, distance, comparator);
+			this.metric = distance;
+		}
+		
+		public final T[] getValues() {
+			return this.values;
+		}
+		
+		public final long[] getDistances() {
+			return this.distances;
+		}
+		
+		public final Metric<T> getMetric() {
+			return this.metric;
+		}
+		
+		public final T findClosest(final T value) {
+			return bkFind(value, this.getValues(), this.getDistances(), this.getMetric());
+		}
 		
 	}
 	
