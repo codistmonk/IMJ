@@ -1,4 +1,4 @@
-package imj.apps.modules;
+package imj.database;
 
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
