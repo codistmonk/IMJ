@@ -17,7 +17,6 @@ import imj.apps.modules.Sampler.SampleProcessor;
 import imj.apps.modules.TileDatabase.Value;
 import imj.apps.modules.ViewFilter.Channel;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -26,7 +25,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -36,7 +34,7 @@ import org.junit.Test;
 public class TileDatabaseTest2 {
 	
 	@Test
-	public final void test1() {
+	public final void test() {
 		final String imageId = "../Libraries/images/45656.svs";
 		final int lod = 2;
 		final TileDatabase<TileData> database = new TileDatabase<TileData>(TileData.class);

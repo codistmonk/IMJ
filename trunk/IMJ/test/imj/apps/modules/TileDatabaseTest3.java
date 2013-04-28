@@ -19,7 +19,7 @@ import org.junit.Test;
 public class TileDatabaseTest3 {
 	
 	@Test
-	public final void test1() {
+	public final void test() {
 		final String[] imageIds = {
 				"../Libraries/images/45656.svs",
 				"../Libraries/images/45657.svs",

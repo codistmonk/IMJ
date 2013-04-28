@@ -31,7 +31,7 @@ import org.junit.Test;
 public class TileDatabaseTest1 {
 	
 	@Test
-	public final void test1() {
+	public final void test() {
 //		final Image image = ImageWrangler.INSTANCE.load("test/imj/12003.jpg");
 //		final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/16088-4.png");
 		final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/45657.svs", 4);
