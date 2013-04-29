@@ -31,13 +31,18 @@ public final class TileDatabase<V extends TileDatabase.Value> implements Seriali
 		return this.data.entrySet().iterator();
 	}
 	
+	public final V get(final byte[] key) {
+		return this.data.get(key);
+	}
+	
 	public final V add(final byte[] key) {
-		V result = this.data.get(key);
+		V result = this.get(key);
 		
 		if (result == null) {
 			try {
 				result = (V) this.valueFactory.newInstance();
-				this.data.put(key.clone(), result);
+				result.setKey(key.clone());
+				this.data.put(result.getKey(), result);
 			} catch (final Exception exception) {
 				throw unchecked(exception);
 			}
@@ -45,7 +50,9 @@ public final class TileDatabase<V extends TileDatabase.Value> implements Seriali
 			result.incrementCount();
 		}
 		
-		return (V) result;
+		assert null != result.getKey() && key != result.getKey();
+		
+		return result;
 	}
 	
 	public final int getEntryCount() {
@@ -62,6 +69,10 @@ public final class TileDatabase<V extends TileDatabase.Value> implements Seriali
 	 */
 	public static abstract interface Value extends Serializable {
 		
+		public abstract byte[] getKey();
+		
+		public abstract void setKey(byte[] key);
+		
 		public abstract int getCount();
 		
 		public abstract void incrementCount();
@@ -71,7 +82,17 @@ public final class TileDatabase<V extends TileDatabase.Value> implements Seriali
 		 */
 		public static final class Default implements Value {
 			
+			private byte[] key;
+			
 			private int count = 1;
+			
+			public final byte[] getKey() {
+				return this.key;
+			}
+			
+			public final void setKey(final byte[] key) {
+				this.key = key;
+			}
 			
 			@Override
 			public final int getCount() {

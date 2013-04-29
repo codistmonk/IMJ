@@ -243,13 +243,7 @@ public final class ShowActions {
 			}
 			
 			final Image source = ViewFilter.getCurrentImage(this.getContext());
-			final BufferedImage destination = new BufferedImage(source.getColumnCount(), source.getRowCount(), TYPE_3BYTE_BGR);
-			
-			for (int y = 0; y < source.getRowCount(); ++y) {
-				for (int x = 0; x < source.getColumnCount(); ++x) {
-					destination.setRGB(x, y, source.getValue(y, x));
-				}
-			}
+			final BufferedImage destination = toBufferedImage(source);
 			
 			final Graphics2D g = destination.createGraphics();
 			
@@ -269,6 +263,18 @@ public final class ShowActions {
 			} catch (final IOException exception) {
 				exception.printStackTrace();
 			}
+		}
+		
+		public static final BufferedImage toBufferedImage(final Image source) {
+			final BufferedImage destination = new BufferedImage(source.getColumnCount(), source.getRowCount(), TYPE_3BYTE_BGR);
+			
+			for (int y = 0; y < source.getRowCount(); ++y) {
+				for (int x = 0; x < source.getColumnCount(); ++x) {
+					destination.setRGB(x, y, source.getValue(y, x));
+				}
+			}
+			
+			return destination;
 		}
 		
 	}

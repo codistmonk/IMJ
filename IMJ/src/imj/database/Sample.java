@@ -1,35 +1,17 @@
 package imj.database;
 
-import static imj.IMJTools.forEachPixelInEachTile;
-import static imj.apps.modules.ShowActions.baseName;
-import static imj.apps.modules.ViewFilter.Channel.Primitive.BLUE;
-import static imj.apps.modules.ViewFilter.Channel.Primitive.GREEN;
-import static imj.apps.modules.ViewFilter.Channel.Primitive.RED;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import static net.sourceforge.aprog.tools.Tools.gc;
-import static net.sourceforge.aprog.tools.Tools.unchecked;
-
-import imj.Image;
-import imj.ImageWrangler;
-import imj.apps.modules.Annotations;
 import imj.apps.modules.RegionOfInterest;
-import imj.apps.modules.ShowActions;
-import imj.apps.modules.ViewFilter;
-import imj.apps.modules.Annotations.Annotation;
-import imj.apps.modules.ShowActions.UseAnnotationAsROI;
-import imj.apps.modules.ViewFilter.Channel;
 import imj.database.BKSearch.Metric;
-import imj.database.BKSearchTest.EuclideanMetric;
 import imj.database.Sampler.SampleProcessor;
 import imj.database.TileDatabase.Value;
 
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Map;
 
-import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-04-25)
@@ -51,7 +33,7 @@ public final class Sample implements Value {
 		return this.key;
 	}
 	
-	public final void setSample(final byte[] key) {
+	public final void setKey(final byte[] key) {
 		this.key = key;
 	}
 	
@@ -74,59 +56,42 @@ public final class Sample implements Value {
 	 */
 	private static final long serialVersionUID = -2244166134966161936L;
 	
-	public static final void updateDatabase(final String imageId, final int lod,
-			final int tileRowCount, final int tileColumnCount,
-			final int verticalTileStride, final int horizontalTileStride,
-			final Class<? extends Sampler> samplerFactory,
-			final Map<String, RegionOfInterest> classes, final TileDatabase<Sample> database) {
-		final TicToc timer = new TicToc();
-		final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
-		final int imageRowCount = image.getRowCount();
-		final int imageColumnCount = image.getColumnCount();
-		final Channel[] channels = { RED, GREEN, BLUE };
-		final Annotations annotations = Annotations.fromXML(baseName(imageId) + ".xml");
+	public static final void processTile(final Sampler sampler, final int tileRowIndex, final int tileColumnIndex,
+			final int tileRowCount, final int tileColumnCount) {
+		final int imageColumnCount = sampler.getImage().getColumnCount();
+		final int nextTileRowIndex = tileRowIndex + tileRowCount;
+		final int nextTileColumnIndex = tileColumnIndex + tileColumnCount;
 		
-		loadRegions(lod, imageRowCount, imageColumnCount, annotations, classes);
-		
-		final SampleProcessor processor = new Collector(imageColumnCount, tileRowCount, tileColumnCount,
-				verticalTileStride, horizontalTileStride, classes, database);
-		final Sampler sampler;
-		
-		try {
-			sampler = samplerFactory.getConstructor(Image.class, Channel[].class, int.class, SampleProcessor.class)
-					.newInstance(image, channels, tileRowCount * tileColumnCount, processor);
-		} catch (final Exception exception) {
-			throw unchecked(exception);
+		for (int y = tileRowIndex; y < nextTileRowIndex; ++y) {
+			for (int x = tileColumnIndex; x < nextTileColumnIndex; ++x) {
+				sampler.process(y * imageColumnCount + x);
+			}
 		}
 		
-		timer.tic();
-		forEachPixelInEachTile(image, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride, sampler);
-		gc();
-		debugPrint("time:", timer.toc());
 	}
 	
-	public static final void loadRegions(final int lod, final int imageRowCount,
-			final int imageColumnCount, final Annotations annotations,
-			final Map<String, RegionOfInterest> classes) {
-		final TicToc timer = new TicToc();
+	/**
+	 * @author codistmonk (creation 2013-04-29)
+	 */
+	public static final class Collector implements SampleProcessor {
 		
-		debugPrint("Loading regions...", new Date(timer.tic()));
+		private final Sample sample = new Sample();
 		
-		for (final Annotation annotation : annotations.getAnnotations()) {
-			debugPrint("Loading", annotation.getUserObject());
-			final RegionOfInterest mask = RegionOfInterest.newInstance(imageRowCount, imageColumnCount);
-			ShowActions.UseAnnotationAsROI.set(mask, lod, annotation.getRegions());
-			classes.put(annotation.getUserObject().toString(), mask);
-			gc();
+		public final Sample getSample() {
+			return this.sample;
 		}
 		
-		debugPrint("Loading regions done", "time:", timer.toc());
+		@Override
+		public final void process(final byte[] sample) {
+			this.getSample().setKey(sample);
+		}
+		
 	}
 	
 	/**
 	 * @author codistmonk (creation 2013-04-26)
 	 */
-	public static final class Collector implements SampleProcessor {
+	public static final class ClassSetter implements SampleProcessor {
 		
 		private final int tileColumnCount;
 		
@@ -146,7 +111,7 @@ public final class Sample implements Value {
 		
 		private int tileColumnIndex;
 		
-		public Collector(final int imageColumnCount, final int tileRowCount, final int tileColumnCount,
+		public ClassSetter(final int imageColumnCount, final int tileRowCount, final int tileColumnCount,
 				final int verticalTileStride, final int horizontalTileStride,
 				final Map<String, RegionOfInterest> classes, final TileDatabase<Sample> database) {
 			this.tileRowCount = tileRowCount;
@@ -162,8 +127,6 @@ public final class Sample implements Value {
 		public final void process(final byte[] key) {
 			final Sample sample = this.database.add(key);
 			
-			sample.setSample(key);
-			
 			for (int rowIndex = this.tileRowIndex; rowIndex < this.tileRowIndex + this.tileRowCount; ++rowIndex) {
 				for (int columnIndex = this.tileColumnIndex; columnIndex < this.tileColumnIndex + this.tileColumnCount; ++columnIndex) {
 					for (final Map.Entry<String, RegionOfInterest> entry : this.classes.entrySet()) {
@@ -176,7 +139,7 @@ public final class Sample implements Value {
 			
 			this.tileColumnIndex += this.horizontalTileStride;
 			
-			if (this.imageColumnCount <= this.tileColumnIndex + this.tileColumnCount) {
+			if (this.imageColumnCount < this.tileColumnIndex + this.tileColumnCount) {
 				this.tileColumnIndex = 0;
 				this.tileRowIndex += this.verticalTileStride;
 			}
@@ -190,7 +153,7 @@ public final class Sample implements Value {
 		
 		@Override
 		public final long getDistance(final Sample sample0, final Sample sample1) {
-			return BKSearchTest.EuclideanMetric.INSTANCE.getDistance(sample0.getKey(), sample1.getKey());
+			return IMJDatabaseTools.EuclideanMetric.INSTANCE.getDistance(sample0.getKey(), sample1.getKey());
 		}
 		
 		public static final EuclideanMetric INSTANCE = new EuclideanMetric();

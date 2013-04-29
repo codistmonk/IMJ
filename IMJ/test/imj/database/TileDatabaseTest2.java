@@ -1,16 +1,15 @@
 package imj.database;
 
-import static imj.database.Sample.updateDatabase;
+import static imj.database.IMJDatabaseTools.RGB;
+import static imj.database.IMJDatabaseTools.updateDatabase;
 import static junit.framework.Assert.assertNotNull;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static org.junit.Assert.assertEquals;
+
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.RegionOfInterest;
-import imj.database.LinearSampler;
-import imj.database.Sample;
-import imj.database.TileDatabase;
 import imj.database.TileDatabase.Value;
 
 import java.util.Collection;
@@ -49,7 +48,7 @@ public class TileDatabaseTest2 {
 		debugPrint("verticalTileCount:", verticalTileCount, "horizontalTileCount:", horizontalTileCount);
 		
 		updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
-				LinearSampler.class, classes, database);
+				LinearSampler.class, RGB, classes, database);
 		
 		final int databaseSampleCount = checkDatabase(classes, database);
 		

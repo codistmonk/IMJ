@@ -1,6 +1,7 @@
 package imj.database;
 
-import static imj.database.Sample.updateDatabase;
+import static imj.database.IMJDatabaseTools.RGB;
+import static imj.database.IMJDatabaseTools.updateDatabase;
 import static imj.database.TileDatabaseTest2.checkDatabase;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
@@ -53,7 +54,7 @@ public class TileDatabaseTest3 {
 			debugPrint("verticalTileCount:", verticalTileCount, "horizontalTileCount:", horizontalTileCount);
 			
 			updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
-					LinearSampler.class, classes, database);
+					LinearSampler.class, RGB, classes, database);
 			gc();
 			checkDatabase(classes, database);
 			gc();
