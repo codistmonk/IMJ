@@ -4,16 +4,13 @@ import static imj.database.BKSearch.bkFind;
 import static imj.database.BKSearch.bkSort;
 import static imj.database.BKSearch.distance;
 import static imj.database.BKSearch.findClosest;
-import static java.lang.Math.ceil;
-import static java.lang.Math.sqrt;
 import static java.util.Arrays.sort;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import imj.apps.modules.RadixSortTest;
-import imj.database.ByteArrayComparator;
 import imj.database.BKSearch.BKDatabase;
-import imj.database.BKSearch.Metric;
+import imj.database.IMJDatabaseTools.EuclideanMetric;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -141,31 +138,6 @@ public final class BKSearchTest {
 		}
 		
 		return result;
-	}
-	
-	public static final long square(final int x) {
-		return (long) x * x;
-	}
-	
-	/**
-	 * @author codistmonk (creation 2013-04-28)
-	 */
-	public static final class EuclideanMetric implements Metric<byte[]> {
-		
-		@Override
-		public final long getDistance(final byte[] sample0, final byte[] sample1) {
-			long result = 0L;
-			final int n = sample0.length;
-			
-			for (int i = 0; i < n; ++i) {
-				result += square(sample1[i] - sample0[i]);
-			}
-			
-			return (long) ceil(sqrt(result));
-		}
-		
-		public static final EuclideanMetric INSTANCE = new EuclideanMetric();
-		
 	}
 	
 }

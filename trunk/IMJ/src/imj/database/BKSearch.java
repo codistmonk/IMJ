@@ -8,6 +8,7 @@ import static java.util.Arrays.sort;
 import java.util.Comparator;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-04-28)

@@ -1,8 +1,8 @@
 package imj.apps;
 
-import static imj.database.Sample.updateDatabase;
+import static imj.database.IMJDatabaseTools.RGB;
+import static imj.database.IMJDatabaseTools.updateDatabase;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
-
 import imj.apps.modules.RegionOfInterest;
 import imj.database.LinearSampler;
 import imj.database.Sample;
@@ -52,7 +52,7 @@ public final class GenerateSampleDatabase {
 		System.out.println("Collecting data... " + new Date(timer.tic()));
 		
 		updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
-				LinearSampler.class, new HashMap<String, RegionOfInterest>(), sampleDatabase);
+				LinearSampler.class, RGB, new HashMap<String, RegionOfInterest>(), sampleDatabase);
 		
 		database.put("samples", sampleDatabase);
 		

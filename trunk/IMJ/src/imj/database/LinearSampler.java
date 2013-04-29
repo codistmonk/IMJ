@@ -1,7 +1,6 @@
 package imj.database;
 
 import imj.Image;
-import imj.apps.modules.ViewFilter;
 import imj.apps.modules.ViewFilter.Channel;
 
 /**

@@ -6,7 +6,6 @@ import static java.lang.Math.min;
 import static javax.imageio.ImageIO.read;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj.ImageOfBufferedImage.Feature;
 import imj.apps.modules.FilteredImage;
 import imj.apps.modules.RegionOfInterest;
