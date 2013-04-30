@@ -52,20 +52,29 @@ public class TileDatabaseTest4 {
 	@Test
 	public final void test() {
 		final String[] imageIds = {
-//				"../Libraries/images/45656.svs",
+				"../Libraries/images/45656.svs",
 				"../Libraries/images/45657.svs",
 				"../Libraries/images/45659.svs",
 				"../Libraries/images/45660.svs"
 		};
-		final int lod = 4;
-		final int tileRowCount = 32;
+		final int nonTrainingIndex = 1;
+		final int lod = 5;
+		final int tileRowCount = 2;
 		final int tileColumnCount = tileRowCount;
-		final int verticalTileStride = tileRowCount;
+		
+		final int verticalTileStride = 1;
 		final int horizontalTileStride = verticalTileStride;
 		final TileDatabase<Sample> tileDatabase = new TileDatabase<Sample>(Sample.class);
-		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
+//		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
+		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
 		
-		for (final String imageId : imageIds) {
+		for (int i = 0; i < imageIds.length; ++i) {
+			if (nonTrainingIndex == i) {
+				continue;
+			}
+			
+			final String imageId = imageIds[i];
+			
 			debugPrint("imageId:", imageId);
 			
 			final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
@@ -148,7 +157,7 @@ public class TileDatabaseTest4 {
 			debugPrint(bkDatabase.getValues().length);
 			
 //			final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/16088.svs", lod);
-			final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/45656.svs", lod);
+			final Image image = ImageWrangler.INSTANCE.load(imageIds[nonTrainingIndex], lod);
 			final Sample.Collector collector = new Sample.Collector();
 			final Sampler sampler = newRGBSampler(samplerFactory, image, tileRowCount * tileColumnCount, collector);
 			
@@ -178,7 +187,9 @@ public class TileDatabaseTest4 {
 			
 			g.dispose();
 			
-			debugPrint(colors);
+			for (final Map.Entry<Collection<String>, Color> entry : colors.entrySet()) {
+				debugPrint(entry);
+			}
 			
 			SwingTools.show(labels, "Labels", true);
 		}
