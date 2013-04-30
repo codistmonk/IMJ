@@ -48,28 +48,28 @@ import org.junit.Test;
 /**
  * @author codistmonk (creation 2013-04-19)
  */
-public class TileDatabaseTest4 {
+public final class TileDatabaseTest4 {
 	
 	@Test
 	public final void test() {
 		final String[] imageIds = {
 				"../Libraries/images/45656.svs",
 				"../Libraries/images/45657.svs",
-				"../Libraries/images/45659.svs",
-				"../Libraries/images/45660.svs"
+//				"../Libraries/images/45659.svs",
+//				"../Libraries/images/45660.svs"
 		};
 		final AdaptiveQuantizer[] quantizers = new AdaptiveQuantizer[imageIds.length];
-		final int quantizationLevel = 3;
-		final int nonTrainingIndex = 1;
+		final int quantizationLevel = 2;
+		final int nonTrainingIndex = 0;
 		final int lod = 4;
-		final int tileRowCount = 16;
+		final int tileRowCount = 3;
 		final int tileColumnCount = tileRowCount;
 		
-		final int verticalTileStride = tileRowCount;
+		final int verticalTileStride = 1;
 		final int horizontalTileStride = verticalTileStride;
 		final TileDatabase<Sample> tileDatabase = new TileDatabase<Sample>(Sample.class);
-		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
-//		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
+//		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
+		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
 		
 		for (int i = 0; i < imageIds.length; ++i) {
 			if (nonTrainingIndex == i) {
@@ -111,10 +111,14 @@ public class TileDatabaseTest4 {
 			
 			debugPrint(bkDatabase.getValues().length);
 			
-//			final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/16088.svs", lod);
 			final Image image = ImageWrangler.INSTANCE.load(imageIds[nonTrainingIndex], lod);
+//			final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/40267.svs", lod);
+			final AdaptiveQuantizer quantizer = new AdaptiveQuantizer();
+			
+			quantizer.initialize(image, null, RGB, quantizationLevel);
+			
 			final Sample.Collector collector = new Sample.Collector();
-			final Sampler sampler = newRGBSampler(samplerFactory, image, quantizers[nonTrainingIndex], tileRowCount * tileColumnCount, collector);
+			final Sampler sampler = newRGBSampler(samplerFactory, image, quantizer, tileRowCount * tileColumnCount, collector);
 			
 			final BufferedImage labels = new BufferedImage(image.getColumnCount(), image.getRowCount(), BufferedImage.TYPE_3BYTE_BGR);
 			final Graphics2D g = labels.createGraphics();
