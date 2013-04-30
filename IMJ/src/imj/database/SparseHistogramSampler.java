@@ -1,18 +1,13 @@
 package imj.database;
 
 import static java.util.Arrays.sort;
-
 import imj.Image;
-import imj.apps.modules.ViewFilter;
+import imj.apps.modules.AdaptiveRoundingViewFilter.AdaptiveQuantizer;
 import imj.apps.modules.ViewFilter.Channel;
-import imj.database.Sampler;
 
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
-
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-04-22)
@@ -31,9 +26,9 @@ public final class SparseHistogramSampler extends Sampler {
 	
 	private int i;
 	
-	public SparseHistogramSampler(final Image image, final Channel[] channels,
+	public SparseHistogramSampler(final Image image, final AdaptiveQuantizer quantizer, final Channel[] channels,
 			final int tilePixelCount, final SampleProcessor processor) {
-		super(image, channels, tilePixelCount * (channels.length + 1), processor);
+		super(image, quantizer, channels, tilePixelCount * (channels.length + 1), processor);
 		this.tilePixelCount = tilePixelCount;
 		this.histogram = new HashMap<Integer, int[]>();
 		this.indices = new Integer[tilePixelCount];
@@ -54,7 +49,11 @@ public final class SparseHistogramSampler extends Sampler {
 	
 	@Override
 	public final void process(final int pixel) {
-		this.count(computeIndex(this.getImage().getValue(pixel), this.getChannels()));
+		if (this.getQuantizer() != null) {
+			this.count(computeIndex(this.getQuantizer(), this.getImage().getValue(pixel), this.getChannels()));
+		} else {
+			this.count(computeIndex(this.getImage().getValue(pixel), this.getChannels()));
+		}
 		
 		if (this.tilePixelCount <= ++this.i) {
 			this.i = 0;
@@ -136,6 +135,16 @@ public final class SparseHistogramSampler extends Sampler {
 		
 		for (final Channel channel : channels) {
 			result = (result << 8) | channel.getValue(pixelValue);
+		}
+		
+		return result;
+	}
+	
+	public static final int computeIndex(final AdaptiveQuantizer quantizer, final int pixelValue, final Channel... channels) {
+		int result = 0;
+		
+		for (final Channel channel : channels) {
+			result = (result << 8) | quantizer.getNewValue(channel, channel.getValue(pixelValue));
 		}
 		
 		return result;

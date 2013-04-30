@@ -1,6 +1,7 @@
 package imj.database;
 
 import imj.Image;
+import imj.apps.modules.AdaptiveRoundingViewFilter.AdaptiveQuantizer;
 import imj.apps.modules.ViewFilter.Channel;
 
 /**
@@ -10,17 +11,23 @@ public final class LinearSampler extends Sampler {
 	
 	private int i;
 	
-	public LinearSampler(final Image image, final Channel[] channels,
+	public LinearSampler(final Image image, final AdaptiveQuantizer quantizer, final Channel[] channels,
 			final int tilePixelCount, final SampleProcessor processor) {
-		super(image, channels, tilePixelCount * channels.length, processor);
+		super(image, quantizer, channels, tilePixelCount * channels.length, processor);
 	}
 	
 	@Override
 	public final void process(final int pixel) {
 		final int pixelValue = this.getImage().getValue(pixel);
 		
-		for (final Channel channel : this.getChannels()) {
-			this.getSample()[this.i++] = (byte) channel.getValue(pixelValue);
+		if (this.getQuantizer() != null) {
+			for (final Channel channel : this.getChannels()) {
+				this.getSample()[this.i++] = (byte) this.getQuantizer().getNewValue(channel, channel.getValue(pixelValue));
+			}
+		} else {
+			for (final Channel channel : this.getChannels()) {
+				this.getSample()[this.i++] = (byte) channel.getValue(pixelValue);
+			}
 		}
 		
 		if (this.getSample().length <= this.i) {

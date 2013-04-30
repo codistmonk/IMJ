@@ -9,6 +9,7 @@ import static org.junit.Assert.assertEquals;
 
 import imj.Image;
 import imj.ImageWrangler;
+import imj.apps.modules.AdaptiveRoundingViewFilter.AdaptiveQuantizer;
 import imj.apps.modules.RegionOfInterest;
 import imj.database.TileDatabase.Value;
 
@@ -43,12 +44,15 @@ public class TileDatabaseTest2 {
 		final int verticalTileCount = imageRowCount / tileRowCount;
 		final int horizontalTileCount = imageColumnCount / tileColumnCount;
 		final Map<String, RegionOfInterest> classes = new HashMap<String, RegionOfInterest>();
+		final AdaptiveQuantizer quantizer = new AdaptiveQuantizer();
 		
 		debugPrint("imageRowCount:", imageRowCount, "imageColumnCount:", imageColumnCount);
 		debugPrint("verticalTileCount:", verticalTileCount, "horizontalTileCount:", horizontalTileCount);
 		
+		quantizer.initialize(image, null, RGB, 0);
+		
 		updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
-				LinearSampler.class, RGB, classes, database);
+				LinearSampler.class, RGB, quantizer, classes, database);
 		
 		final int databaseSampleCount = checkDatabase(classes, database);
 		

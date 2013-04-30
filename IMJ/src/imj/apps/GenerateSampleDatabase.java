@@ -3,7 +3,9 @@ package imj.apps;
 import static imj.database.IMJDatabaseTools.RGB;
 import static imj.database.IMJDatabaseTools.updateDatabase;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
+import imj.ImageWrangler;
 import imj.apps.modules.RegionOfInterest;
+import imj.apps.modules.AdaptiveRoundingViewFilter.AdaptiveQuantizer;
 import imj.database.LinearSampler;
 import imj.database.Sample;
 import imj.database.TileDatabase;
@@ -48,11 +50,15 @@ public final class GenerateSampleDatabase {
 		final int horizontalTileStride = arguments.get("xStep", verticalTileStride)[0];
 		final int lod = arguments.get("lod", 4)[0];
 		final TileDatabase<Sample> sampleDatabase = new TileDatabase<Sample>(Sample.class);
+		final AdaptiveQuantizer quantizer = new AdaptiveQuantizer();
+		final int quantizationLevel = arguments.get("q", 0)[0];
 		
 		System.out.println("Collecting data... " + new Date(timer.tic()));
 		
+		quantizer.initialize(ImageWrangler.INSTANCE.load(imageId, lod), null, RGB, quantizationLevel);
+		
 		updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
-				LinearSampler.class, RGB, new HashMap<String, RegionOfInterest>(), sampleDatabase);
+				LinearSampler.class, RGB, quantizer, new HashMap<String, RegionOfInterest>(), sampleDatabase);
 		
 		database.put("samples", sampleDatabase);
 		
