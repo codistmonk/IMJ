@@ -3,6 +3,9 @@ package imj.database;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import imj.apps.modules.RegionOfInterest;
 import imj.database.BKSearch.Metric;
+import imj.database.IMJDatabaseTools.ChessboardMetric;
+import imj.database.IMJDatabaseTools.CityblockMetric;
+import imj.database.IMJDatabaseTools.EuclideanMetric;
 import imj.database.Sampler.SampleProcessor;
 import imj.database.TileDatabase.Value;
 
@@ -147,16 +150,26 @@ public final class Sample implements Value {
 	}
 	
 	/**
-	 * @author codistmonk (creation 2013-04-28)
+	 * @author codistmonk (creation 2013-04-30)
 	 */
-	public static final class EuclideanMetric implements Metric<Sample> {
+	public static final class SampleMetric implements Metric<Sample> {
 		
-		@Override
-		public final long getDistance(final Sample sample0, final Sample sample1) {
-			return IMJDatabaseTools.EuclideanMetric.INSTANCE.getDistance(sample0.getKey(), sample1.getKey());
+		private final Metric<byte[]> keyMetric;
+		
+		public SampleMetric(final Metric<byte[]> keyMetric) {
+			this.keyMetric = keyMetric;
 		}
 		
-		public static final EuclideanMetric INSTANCE = new EuclideanMetric();
+		@Override
+		public final long getDistance(final Sample object0, final Sample object1) {
+			return this.keyMetric.getDistance(object0.getKey(), object1.getKey());
+		}
+		
+		public static final SampleMetric EUCLIDEAN = new SampleMetric(EuclideanMetric.INSTANCE);
+		
+		public static final SampleMetric CITYBLOCK = new SampleMetric(CityblockMetric.INSTANCE);
+		
+		public static final SampleMetric CHESSBOARD = new SampleMetric(ChessboardMetric.INSTANCE);
 		
 	}
 	

@@ -10,6 +10,7 @@ import imj.database.BKSearch.BKDatabase;
 import imj.database.LinearSampler;
 import imj.database.Sample;
 import imj.database.Sample.Collector;
+import imj.database.Sample.SampleMetric;
 import imj.database.Sampler;
 import imj.database.TileDatabase;
 
@@ -146,7 +147,7 @@ public final class SampleDatabaseClusterViewFilter extends ViewFilter {
 			try {
 				final Map<Object, Object> database = (Map<Object, Object>) ois.readObject();
 				this.tileDatabase = (TileDatabase<Sample>) database.get("samples");
-				this.bkDatabase = newBKDatabase(this.tileDatabase);
+				this.bkDatabase = newBKDatabase(this.tileDatabase, SampleMetric.EUCLIDEAN);
 			} finally {
 				ois.close();
 			}
