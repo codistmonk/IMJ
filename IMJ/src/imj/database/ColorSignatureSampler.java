@@ -12,7 +12,7 @@ import java.util.Map;
 /**
  * @author codistmonk (creation 2013-04-22)
  */
-public final class SparseHistogramSampler extends Sampler {
+public final class ColorSignatureSampler extends Sampler {
 	
 	private final int tilePixelCount;
 	
@@ -26,7 +26,7 @@ public final class SparseHistogramSampler extends Sampler {
 	
 	private int i;
 	
-	public SparseHistogramSampler(final Image image, final AdaptiveQuantizer quantizer, final Channel[] channels,
+	public ColorSignatureSampler(final Image image, final AdaptiveQuantizer quantizer, final Channel[] channels,
 			final int tilePixelCount, final SampleProcessor processor) {
 		super(image, quantizer, channels, tilePixelCount * (channels.length + 1), processor);
 		this.tilePixelCount = tilePixelCount;
@@ -67,7 +67,7 @@ public final class SparseHistogramSampler extends Sampler {
 	}
 	
 	private final void updateSample() {
-		final int m = max(this.counts);
+		final int m = this.tilePixelCount;
 		
 		for (int j = 0, k = 0; j < this.getSample().length; ++k) {
 			final int index = this.indices[k];
