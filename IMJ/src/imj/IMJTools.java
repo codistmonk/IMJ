@@ -1,5 +1,6 @@
 package imj;
 
+import static imj.IMJTools.forEachPixel;
 import static imj.ImageOfBufferedImage.Feature.MAX_RGB;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -9,6 +10,7 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj.ImageOfBufferedImage.Feature;
 import imj.apps.modules.FilteredImage;
 import imj.apps.modules.RegionOfInterest;
+import imj.apps.modules.ViewFilter.Channel;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,6 +48,22 @@ public final class IMJTools {
 	 * {@value}.
 	 */
 	public static final int BLUE_MASK = 0x000000FF;
+	
+	public static final void updateHistograms(final Image image, final RegionOfInterest roi, final Channel[] channels,
+			final int[][] histograms) {
+		forEachPixel(image, roi, new PixelProcessor() {
+			
+			@Override
+			public final void process(final int pixel) {
+				if (roi == null || roi.get(pixel)) {
+					for (final Channel channel : channels) {
+						++histograms[channel.getChannelIndex()][channel.getValue(image.getValue(pixel))];
+					}
+				}
+			}
+			
+		});
+	}
 	
 	public static final void forEachPixel(final Image image, final RegionOfInterest roi, final PixelProcessor processor) {
 		final int imageRowCount = image.getRowCount();
