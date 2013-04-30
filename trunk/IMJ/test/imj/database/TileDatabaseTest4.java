@@ -14,14 +14,20 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.RegionOfInterest;
+import imj.apps.modules.ViewFilter.Channel;
 import imj.database.BKSearch.BKDatabase;
+import imj.database.BKSearch.Metric;
 import imj.database.IMJDatabaseTools.EuclideanMetric;
+import imj.database.IMJDatabaseTools.NoIdentityMetric;
+import imj.database.Sample.SampleMetric;
+import imj.database.Sampler.SampleProcessor;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,17 +52,18 @@ public class TileDatabaseTest4 {
 	@Test
 	public final void test() {
 		final String[] imageIds = {
-				"../Libraries/images/45656.svs",
-//				"../Libraries/images/45657.svs",
-//				"../Libraries/images/45659.svs",
-//				"../Libraries/images/45660.svs"
+//				"../Libraries/images/45656.svs",
+				"../Libraries/images/45657.svs",
+				"../Libraries/images/45659.svs",
+				"../Libraries/images/45660.svs"
 		};
-		final int lod = 5;
-		final int tileRowCount = 2;
+		final int lod = 4;
+		final int tileRowCount = 32;
 		final int tileColumnCount = tileRowCount;
 		final int verticalTileStride = tileRowCount;
 		final int horizontalTileStride = verticalTileStride;
 		final TileDatabase<Sample> tileDatabase = new TileDatabase<Sample>(Sample.class);
+		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
 		
 		for (final String imageId : imageIds) {
 			debugPrint("imageId:", imageId);
@@ -70,16 +77,19 @@ public class TileDatabaseTest4 {
 			final Map<String, RegionOfInterest> classes = new HashMap<String, RegionOfInterest>();
 			
 			updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
-					LinearSampler.class, RGB, classes, tileDatabase);
-//					SparseHistogramSampler.class, RGB, classes, tileDatabase);
+					samplerFactory, RGB, classes, tileDatabase);
 			gc();
+			
+//			diffuseClasses(tileDatabase, 10);
+//			gc();
+			
 			checkDatabase(classes, tileDatabase);
 			gc();
 		}
 		
-		{
-			final Map<Collection<String>, List<byte[]>> groups = new HashMap<Collection<String>, List<byte[]>>();
+		if (false) {
 			final TicToc timer = new TicToc();
+			final Map<Collection<String>, List<byte[]>> groups = new HashMap<Collection<String>, List<byte[]>>();
 			
 			for (final Map.Entry<byte[], Sample> entry : tileDatabase) {
 				put(groups, entry.getValue().getClasses(), entry.getKey());
@@ -131,8 +141,8 @@ public class TileDatabaseTest4 {
 			}
 		}
 		
-		if (false) {
-			final BKDatabase<Sample> bkDatabase = newBKDatabase(tileDatabase);
+		if (true) {
+			final BKDatabase<Sample> bkDatabase = newBKDatabase(tileDatabase, SampleMetric.EUCLIDEAN);
 			gc();
 			
 			debugPrint(bkDatabase.getValues().length);
@@ -140,40 +150,55 @@ public class TileDatabaseTest4 {
 //			final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/16088.svs", lod);
 			final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/45656.svs", lod);
 			final Sample.Collector collector = new Sample.Collector();
-			final Sampler sampler = new LinearSampler(image, RGB, tileRowCount * tileColumnCount, collector);
+			final Sampler sampler = newRGBSampler(samplerFactory, image, tileRowCount * tileColumnCount, collector);
 			
 			final BufferedImage labels = new BufferedImage(image.getColumnCount(), image.getRowCount(), BufferedImage.TYPE_3BYTE_BGR);
 			final Graphics2D g = labels.createGraphics();
 			final int imageRowCount = image.getRowCount();
 			final int imageColumnCount = image.getColumnCount();
+			final Map<Collection<String>, Color> colors = new HashMap<Collection<String>, Color>();
 			
 			for (int y = 0; y < imageRowCount; y += verticalTileStride) {
-				System.out.print(y + "/" + imageRowCount + " " + Tools.usedMemory() + "\r");
+				System.out.print(y + "/" + imageRowCount + " usedMemory:" + Tools.usedMemory() + "\r");
 				
 				for (int x = 0; x < imageColumnCount; x += horizontalTileStride) {
 					if (y + tileRowCount <= imageRowCount && x + tileColumnCount <= imageColumnCount) {
 						processTile(sampler, y, x, tileRowCount, tileColumnCount);
 //						final Sample sample = tileDatabase.get(collector.getSample().getKey());
 						final Sample sample = bkDatabase.findClosest(collector.getSample());
+						final Color color = new Color(generateColor(sample));
 						
-						g.setColor(new Color(generateColor(sample)));
+						g.setColor(color);
 						g.fillRect(x, y, tileColumnCount, tileRowCount);
+						
+						colors.put(sample.getClasses(), color);
 					}
 				}
 			}
 			
 			g.dispose();
 			
+			debugPrint(colors);
+			
 			SwingTools.show(labels, "Labels", true);
 		}
 	}
+	
+	public static final Sampler newRGBSampler(final Class<? extends Sampler> samplerFactory, final Image image, final int tilePixelCount, final SampleProcessor processor) {
+		try {
+			return samplerFactory.getConstructor(Image.class, Channel[].class, int.class, SampleProcessor.class)
+					.newInstance(image, RGB, tilePixelCount, processor);
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	private static final ExecutorService executor = Executors.newFixedThreadPool(SystemProperties.getAvailableProcessorCount());
 	
 	@AfterClass
 	public static final void afterClass() {
 		executor.shutdown();
 	}
-	
-	private static final ExecutorService executor = Executors.newFixedThreadPool(SystemProperties.getAvailableProcessorCount());
 	
 	public static final void parallelForEachDifferentPair(final int n, final ActionIJ action) {
 		final Collection<Future<?>> tasks = new ArrayList<Future<?>>(n);
@@ -200,6 +225,46 @@ public class TileDatabaseTest4 {
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
+	}
+	
+	public static final void diffuseClasses(final TileDatabase<Sample> database, final int iterationCount) {
+		final TicToc timer = new TicToc();
+		
+		debugPrint(new Date(timer.tic()));
+		
+		final Metric<Sample> noIdMetric = new NoIdentityMetric<Sample>(SampleMetric.EUCLIDEAN);
+		final BKDatabase<Sample> bkDatabase = new BKDatabase<Sample>(collectAllSamples(database), noIdMetric, Sample.KeyComparator.INSTANCE);
+		
+		for (int i = 0; i < iterationCount; ++i) {
+			int progress = 0;
+			
+			for (final Map.Entry<byte[], Sample> entry : database) {
+				if (((progress++) % 100) == 0) {
+					System.out.print(progress + "/" + database.getEntryCount() + "\r");
+				}
+				
+				final Sample sample = entry.getValue();
+				final Sample closest = bkDatabase.findClosest(sample);
+				
+				assert sample != closest;
+				
+				sample.getClasses().addAll(closest.getClasses());
+				closest.getClasses().addAll(sample.getClasses());
+			}
+		}
+		
+		debugPrint("time:", timer.toc());
+	}
+	
+	public static final Sample[] collectAllSamples(final TileDatabase<Sample> database) {
+		final Sample[] result = new Sample[database.getEntryCount()];
+		int i = 0;
+		
+		for (final Map.Entry<?, Sample> entry : database) {
+			result[i++] = entry.getValue();
+		}
+		
+		return result;
 	}
 	
 	public static final <K, V> void put(final Map<K, List<V>> map, final K key, final V value) {

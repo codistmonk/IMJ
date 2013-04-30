@@ -5,6 +5,7 @@ import static imj.apps.modules.ShowActions.baseName;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.BLUE;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.GREEN;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.RED;
+import static java.lang.Math.abs;
 import static java.lang.Math.ceil;
 import static java.lang.Math.sqrt;
 import static java.util.Arrays.copyOf;
@@ -103,7 +104,7 @@ public final class IMJDatabaseTools {
 	}
 	
 	public static final BKDatabase<Sample> newBKDatabase(final TileDatabase<Sample> tileDatabase,
-			final Collection<Collection<String>> groups) {
+			final Collection<Collection<String>> groups, final Metric<Sample> metric) {
 		final int entryCount = tileDatabase.getEntryCount();
 		final Sample[] samples = new Sample[entryCount];
 		int i = 0;
@@ -114,15 +115,15 @@ public final class IMJDatabaseTools {
 			}
 		}
 		
-		return new BKDatabase<Sample>(copyOf(samples, i), Sample.EuclideanMetric.INSTANCE, Sample.KeyComparator.INSTANCE);
+		return new BKDatabase<Sample>(copyOf(samples, i), metric, Sample.KeyComparator.INSTANCE);
 	}
 	
-	public static final BKDatabase<Sample> newBKDatabase(final TileDatabase<Sample> tileDatabase) {
+	public static final BKDatabase<Sample> newBKDatabase(final TileDatabase<Sample> tileDatabase, Metric<Sample> metric) {
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Creating bk-database...");
 		timer.tic();
-		final BKDatabase<Sample> result = newBKDatabase(tileDatabase, extractMonoclassGroups(tileDatabase));
+		final BKDatabase<Sample> result = newBKDatabase(tileDatabase, extractMonoclassGroups(tileDatabase), metric);
 		debugPrint("Creating bk-database done", "time:", timer.toc());
 		
 		return result;
@@ -150,6 +151,74 @@ public final class IMJDatabaseTools {
 		}
 		
 		public static final EuclideanMetric INSTANCE = new EuclideanMetric();
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-04-28)
+	 */
+	public static final class CityblockMetric implements Metric<byte[]> {
+		
+		@Override
+		public final long getDistance(final byte[] sample0, final byte[] sample1) {
+			long result = 0L;
+			final int n = sample0.length;
+			
+			for (int i = 0; i < n; ++i) {
+				result += abs(sample1[i] - sample0[i]);
+			}
+			
+			return result;
+		}
+		
+		public static final CityblockMetric INSTANCE = new CityblockMetric();
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-04-28)
+	 */
+	public static final class ChessboardMetric implements Metric<byte[]> {
+		
+		@Override
+		public final long getDistance(final byte[] sample0, final byte[] sample1) {
+			long result = 0L;
+			final int n = sample0.length;
+			
+			for (int i = 0; i < n; ++i) {
+				final long d = abs(sample1[i] - sample0[i]);
+				
+				if (result < d) {
+					result = d;
+				}
+			}
+			
+			return result;
+		}
+		
+		public static final CityblockMetric INSTANCE = new CityblockMetric();
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-04-30)
+	 * 
+	 * @param <T>
+	 */
+	public static final class NoIdentityMetric<T> implements Metric<T> {
+		
+		private final Metric<T> metric;
+		
+		public NoIdentityMetric(final Metric<T> metric) {
+			this.metric = metric;
+		}
+		
+		@Override
+		public final long getDistance(final T object0, final T object1) {
+			final long result = this.metric.getDistance(object0, object1);
+			
+			return result == 0L ? Long.MAX_VALUE : result;
+		}
 		
 	}
 	
