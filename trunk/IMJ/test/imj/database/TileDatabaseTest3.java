@@ -9,6 +9,7 @@ import static net.sourceforge.aprog.tools.Tools.gc;
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.RegionOfInterest;
+import imj.apps.modules.AdaptiveRoundingViewFilter.AdaptiveQuantizer;
 import imj.database.LinearSampler;
 import imj.database.Sample;
 import imj.database.TileDatabase;
@@ -30,10 +31,14 @@ public class TileDatabaseTest3 {
 				"../Libraries/images/45657.svs",
 				"../Libraries/images/45659.svs",
 				"../Libraries/images/45660.svs" };
+		final AdaptiveQuantizer[] quantizers = new AdaptiveQuantizer[imageIds.length];
+		final int quantizationLevel = 0;
 		final int lod = 4;
 		final TileDatabase<Sample> database = new TileDatabase<Sample>(Sample.class);
 		
-		for (final String imageId : imageIds) {
+		for (int i = 0; i < imageIds.length; ++i) {
+			final String imageId = imageIds[i];
+			
 			debugPrint("imageId:", imageId);
 			
 			final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
@@ -53,8 +58,11 @@ public class TileDatabaseTest3 {
 			debugPrint("imageRowCount:", imageRowCount, "imageColumnCount:", imageColumnCount);
 			debugPrint("verticalTileCount:", verticalTileCount, "horizontalTileCount:", horizontalTileCount);
 			
+			quantizers[i] = new AdaptiveQuantizer();
+			quantizers[i].initialize(image, null, RGB, quantizationLevel);
+			
 			updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
-					LinearSampler.class, RGB, classes, database);
+					LinearSampler.class, RGB, quantizers[i], classes, database);
 			gc();
 			checkDatabase(classes, database);
 			gc();

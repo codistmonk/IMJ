@@ -15,6 +15,7 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
+import imj.apps.modules.AdaptiveRoundingViewFilter.AdaptiveQuantizer;
 import imj.apps.modules.Annotations.Annotation;
 import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.ShowActions;
@@ -46,6 +47,7 @@ public final class IMJDatabaseTools {
 			final int tileRowCount, final int tileColumnCount,
 			final int verticalTileStride, final int horizontalTileStride,
 			final Class<? extends Sampler> samplerFactory, final Channel[] channels,
+			final AdaptiveQuantizer quantizer,
 			final Map<String, RegionOfInterest> classes, final TileDatabase<Sample> database) {
 		final TicToc timer = new TicToc();
 		final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
@@ -61,8 +63,8 @@ public final class IMJDatabaseTools {
 		final Sampler sampler;
 		
 		try {
-			sampler = samplerFactory.getConstructor(Image.class, Channel[].class, int.class, SampleProcessor.class)
-					.newInstance(image, channels, tileRowCount * tileColumnCount, processor);
+			sampler = samplerFactory.getConstructor(Image.class, AdaptiveQuantizer.class, Channel[].class, int.class, SampleProcessor.class)
+					.newInstance(image, quantizer, channels, tileRowCount * tileColumnCount, processor);
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}

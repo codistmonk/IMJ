@@ -14,6 +14,7 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.RegionOfInterest;
+import imj.apps.modules.AdaptiveRoundingViewFilter.AdaptiveQuantizer;
 import imj.apps.modules.ViewFilter.Channel;
 import imj.database.BKSearch.BKDatabase;
 import imj.database.BKSearch.Metric;
@@ -57,16 +58,18 @@ public class TileDatabaseTest4 {
 				"../Libraries/images/45659.svs",
 				"../Libraries/images/45660.svs"
 		};
+		final AdaptiveQuantizer[] quantizers = new AdaptiveQuantizer[imageIds.length];
+		final int quantizationLevel = 3;
 		final int nonTrainingIndex = 1;
-		final int lod = 5;
-		final int tileRowCount = 2;
+		final int lod = 4;
+		final int tileRowCount = 16;
 		final int tileColumnCount = tileRowCount;
 		
-		final int verticalTileStride = 1;
+		final int verticalTileStride = tileRowCount;
 		final int horizontalTileStride = verticalTileStride;
 		final TileDatabase<Sample> tileDatabase = new TileDatabase<Sample>(Sample.class);
-//		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
-		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
+		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
+//		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
 		
 		for (int i = 0; i < imageIds.length; ++i) {
 			if (nonTrainingIndex == i) {
@@ -78,15 +81,17 @@ public class TileDatabaseTest4 {
 			debugPrint("imageId:", imageId);
 			
 			final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
+			gc();
 			
 			debugPrint("imageRowCount:", image.getRowCount(), "imageColumnCount:", image.getColumnCount());
 			
-			gc();
+			quantizers[i] = new AdaptiveQuantizer();
+			quantizers[i].initialize(image, null, RGB, quantizationLevel);
 			
 			final Map<String, RegionOfInterest> classes = new HashMap<String, RegionOfInterest>();
 			
 			updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
-					samplerFactory, RGB, classes, tileDatabase);
+					samplerFactory, RGB, quantizers[i], classes, tileDatabase);
 			gc();
 			
 //			diffuseClasses(tileDatabase, 10);
@@ -97,57 +102,7 @@ public class TileDatabaseTest4 {
 		}
 		
 		if (false) {
-			final TicToc timer = new TicToc();
-			final Map<Collection<String>, List<byte[]>> groups = new HashMap<Collection<String>, List<byte[]>>();
-			
-			for (final Map.Entry<byte[], Sample> entry : tileDatabase) {
-				put(groups, entry.getValue().getClasses(), entry.getKey());
-			}
-			
-			debugPrint("groupCount:", groups.size());
-			
-			for (final Map.Entry<Collection<String>, List<byte[]>> entry : groups.entrySet()) {
-				final List<byte[]> samples = entry.getValue();
-				final int sampleCount = samples.size();
-				
-				debugPrint("group:", entry.getKey(), "sampleCount:", samples.size());
-				
-				if (sampleCount <= 1) {
-					continue;
-				}
-				
-				final Statistics statistics = new Statistics();
-				timer.tic();
-				
-				if (true) {
-					parallelForEachDifferentPair(sampleCount, new ActionIJ() {
-						
-						@Override
-						public final void perform(final int i, final int j) {
-							final byte[] sampleI = samples.get(i);
-							final byte[] sampleJ = samples.get(j);
-							
-							statistics.addValue(EuclideanMetric.INSTANCE.getDistance(sampleI, sampleJ));
-						}
-						
-					});
-				} else {
-					for (int i = 0; i < sampleCount; ++i) {
-						final byte[] sampleI = samples.get(i);
-						
-						for (int j = i + 1; j < sampleCount; ++j) {
-							final byte[] sampleJ = samples.get(j);
-							
-							statistics.addValue(EuclideanMetric.INSTANCE.getDistance(sampleI, sampleJ));
-						}
-					}
-				}
-				
-				debugPrint("meanDistance:", statistics.getMean(),
-						"minDistance:", statistics.getMinimum(), "maxDistance:", statistics.getMaximum(),
-						"variance:", statistics.getVariance());
-				debugPrint("time:", timer.toc());
-			}
+			printIntragroupDistanceStatistics(tileDatabase);
 		}
 		
 		if (true) {
@@ -159,7 +114,7 @@ public class TileDatabaseTest4 {
 //			final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/16088.svs", lod);
 			final Image image = ImageWrangler.INSTANCE.load(imageIds[nonTrainingIndex], lod);
 			final Sample.Collector collector = new Sample.Collector();
-			final Sampler sampler = newRGBSampler(samplerFactory, image, tileRowCount * tileColumnCount, collector);
+			final Sampler sampler = newRGBSampler(samplerFactory, image, quantizers[nonTrainingIndex], tileRowCount * tileColumnCount, collector);
 			
 			final BufferedImage labels = new BufferedImage(image.getColumnCount(), image.getRowCount(), BufferedImage.TYPE_3BYTE_BGR);
 			final Graphics2D g = labels.createGraphics();
@@ -195,10 +150,65 @@ public class TileDatabaseTest4 {
 		}
 	}
 	
-	public static final Sampler newRGBSampler(final Class<? extends Sampler> samplerFactory, final Image image, final int tilePixelCount, final SampleProcessor processor) {
+	public static final void printIntragroupDistanceStatistics(final TileDatabase<Sample> tileDatabase) {
+		final TicToc timer = new TicToc();
+		final Map<Collection<String>, List<byte[]>> groups = new HashMap<Collection<String>, List<byte[]>>();
+		
+		for (final Map.Entry<byte[], Sample> entry : tileDatabase) {
+			put(groups, entry.getValue().getClasses(), entry.getKey());
+		}
+		
+		debugPrint("groupCount:", groups.size());
+		
+		for (final Map.Entry<Collection<String>, List<byte[]>> entry : groups.entrySet()) {
+			final List<byte[]> samples = entry.getValue();
+			final int sampleCount = samples.size();
+			
+			debugPrint("group:", entry.getKey(), "sampleCount:", samples.size());
+			
+			if (sampleCount <= 1) {
+				continue;
+			}
+			
+			final Statistics statistics = new Statistics();
+			timer.tic();
+			
+			if (true) {
+				parallelForEachDifferentPair(sampleCount, new ActionIJ() {
+					
+					@Override
+					public final void perform(final int i, final int j) {
+						final byte[] sampleI = samples.get(i);
+						final byte[] sampleJ = samples.get(j);
+						
+						statistics.addValue(EuclideanMetric.INSTANCE.getDistance(sampleI, sampleJ));
+					}
+					
+				});
+			} else {
+				for (int i = 0; i < sampleCount; ++i) {
+					final byte[] sampleI = samples.get(i);
+					
+					for (int j = i + 1; j < sampleCount; ++j) {
+						final byte[] sampleJ = samples.get(j);
+						
+						statistics.addValue(EuclideanMetric.INSTANCE.getDistance(sampleI, sampleJ));
+					}
+				}
+			}
+			
+			debugPrint("meanDistance:", statistics.getMean(),
+					"minDistance:", statistics.getMinimum(), "maxDistance:", statistics.getMaximum(),
+					"variance:", statistics.getVariance());
+			debugPrint("time:", timer.toc());
+		}
+	}
+	
+	public static final Sampler newRGBSampler(final Class<? extends Sampler> samplerFactory,
+			final Image image, final AdaptiveQuantizer quantizer, final int tilePixelCount, final SampleProcessor processor) {
 		try {
-			return samplerFactory.getConstructor(Image.class, Channel[].class, int.class, SampleProcessor.class)
-					.newInstance(image, RGB, tilePixelCount, processor);
+			return samplerFactory.getConstructor(Image.class, AdaptiveQuantizer.class, Channel[].class, int.class, SampleProcessor.class)
+					.newInstance(image, quantizer, RGB, tilePixelCount, processor);
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
