@@ -1,7 +1,7 @@
 package imj.database;
 
 import imj.Image;
-import imj.apps.modules.AdaptiveRoundingViewFilter.AdaptiveQuantizer;
+import imj.apps.modules.AdaptiveQuantizationViewFilter.AdaptiveQuantizer;
 import imj.apps.modules.ViewFilter.Channel;
 
 /**

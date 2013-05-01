@@ -2,7 +2,7 @@ package imj.database;
 
 import static java.util.Arrays.sort;
 import imj.Image;
-import imj.apps.modules.AdaptiveRoundingViewFilter.AdaptiveQuantizer;
+import imj.apps.modules.AdaptiveQuantizationViewFilter.AdaptiveQuantizer;
 import imj.apps.modules.ViewFilter.Channel;
 
 import java.util.Comparator;
