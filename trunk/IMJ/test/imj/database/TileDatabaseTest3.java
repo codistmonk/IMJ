@@ -9,7 +9,7 @@ import static net.sourceforge.aprog.tools.Tools.gc;
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.RegionOfInterest;
-import imj.apps.modules.AdaptiveRoundingViewFilter.AdaptiveQuantizer;
+import imj.apps.modules.AdaptiveQuantizationViewFilter.AdaptiveQuantizer;
 import imj.database.LinearSampler;
 import imj.database.Sample;
 import imj.database.TileDatabase;

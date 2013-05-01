@@ -3,7 +3,6 @@ package imj.apps.modules;
 import static java.lang.Math.max;
 import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-
 import imj.IMJTools;
 import imj.Image;
 
@@ -14,11 +13,11 @@ import net.sourceforge.aprog.context.Context;
 /**
  * @author codistmonk (creation 2013-02-18)
  */
-public final class AdaptiveRoundingViewFilter extends ViewFilter {
+public final class AdaptiveQuantizationViewFilter extends ViewFilter {
 	
 	private final AdaptiveQuantizer quantizer;
 	
-	public AdaptiveRoundingViewFilter(final Context context) {
+	public AdaptiveQuantizationViewFilter(final Context context) {
 		super(context);
 		this.quantizer = new AdaptiveQuantizer();
 		
@@ -46,7 +45,7 @@ public final class AdaptiveRoundingViewFilter extends ViewFilter {
 			
 			@Override
 			public final int getNewValue(final int index, final int oldValue,  final Channel channel) {
-				return AdaptiveRoundingViewFilter.this.getNewValue(channel, channel.getValue(oldValue));
+				return AdaptiveQuantizationViewFilter.this.getNewValue(channel, channel.getValue(oldValue));
 			}
 			
 		};
@@ -101,7 +100,11 @@ public final class AdaptiveRoundingViewFilter extends ViewFilter {
 					++clusterSize;
 				}
 				
-				fill(a, clusterStart, clusterStart + clusterSize, clusterValue / clusterValueCount);
+				if (Channel.Synthetic.HUE.equals(channel)) {
+					fill(a, clusterStart, clusterStart + clusterSize, clusterValue / clusterValueCount);
+				} else {
+					fill(a, clusterStart, clusterStart + clusterSize, clusterStart + clusterSize - 1);
+				}
 			}
 		}
 	}
@@ -156,7 +159,7 @@ public final class AdaptiveRoundingViewFilter extends ViewFilter {
 		}
 		
 		private final void updateAccumulators() {
-			AdaptiveRoundingViewFilter.updateAccumulators(this.bitCount, this.channels, this.histograms, this.accumulators);
+			AdaptiveQuantizationViewFilter.updateAccumulators(this.bitCount, this.channels, this.histograms, this.accumulators);
 		}
 		
 		public final int getNewValue(final Channel channel, final int channelValue) {

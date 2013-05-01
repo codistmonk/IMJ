@@ -53,6 +53,10 @@ public abstract class Sieve extends Plugin {
 			final int pixelCount = rowCount * columnCount;
 			
 			for (int pixel = 0; pixel < pixelCount; ++pixel) {
+				if ((pixel % 1000) == 0) {
+					System.out.print(pixel + "/" + pixelCount + "\r");
+				}
+				
 				if (roi.get(pixel) && !this.accept(pixel, image.getValue(pixel))) {
 					roi.set(pixel, false);
 				}

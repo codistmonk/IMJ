@@ -9,7 +9,7 @@ import static org.junit.Assert.assertEquals;
 
 import imj.Image;
 import imj.ImageWrangler;
-import imj.apps.modules.AdaptiveRoundingViewFilter.AdaptiveQuantizer;
+import imj.apps.modules.AdaptiveQuantizationViewFilter.AdaptiveQuantizer;
 import imj.apps.modules.RegionOfInterest;
 import imj.database.TileDatabase.Value;
 

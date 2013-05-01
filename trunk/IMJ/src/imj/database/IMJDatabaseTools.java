@@ -5,6 +5,9 @@ import static imj.apps.modules.ShowActions.baseName;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.BLUE;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.GREEN;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.RED;
+import static imj.apps.modules.ViewFilter.Channel.Synthetic.BRIGHTNESS;
+import static imj.apps.modules.ViewFilter.Channel.Synthetic.HUE;
+import static imj.apps.modules.ViewFilter.Channel.Synthetic.SATURATION;
 import static java.lang.Math.abs;
 import static java.lang.Math.ceil;
 import static java.lang.Math.sqrt;
@@ -14,8 +17,8 @@ import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj.Image;
 import imj.ImageWrangler;
+import imj.apps.modules.AdaptiveQuantizationViewFilter.AdaptiveQuantizer;
 import imj.apps.modules.Annotations;
-import imj.apps.modules.AdaptiveRoundingViewFilter.AdaptiveQuantizer;
 import imj.apps.modules.Annotations.Annotation;
 import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.ShowActions;
@@ -42,6 +45,8 @@ public final class IMJDatabaseTools {
 	}
 	
 	public static final Channel[] RGB = { RED, GREEN, BLUE };
+	
+	public static final Channel[] HSB = { HUE, SATURATION, BRIGHTNESS };
 	
 	public static final void updateDatabase(final String imageId, final int lod,
 			final int tileRowCount, final int tileColumnCount,

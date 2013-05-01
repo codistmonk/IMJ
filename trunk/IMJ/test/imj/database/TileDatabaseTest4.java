@@ -2,6 +2,7 @@ package imj.database;
 
 import static imj.IMJTools.square;
 import static imj.IMJTools.unsigned;
+import static imj.database.IMJDatabaseTools.HSB;
 import static imj.database.IMJDatabaseTools.RGB;
 import static imj.database.IMJDatabaseTools.newBKDatabase;
 import static imj.database.IMJDatabaseTools.updateDatabase;
@@ -14,7 +15,7 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.RegionOfInterest;
-import imj.apps.modules.AdaptiveRoundingViewFilter.AdaptiveQuantizer;
+import imj.apps.modules.AdaptiveQuantizationViewFilter.AdaptiveQuantizer;
 import imj.apps.modules.ViewFilter.Channel;
 import imj.database.BKSearch.BKDatabase;
 import imj.database.BKSearch.Metric;
@@ -55,21 +56,22 @@ public final class TileDatabaseTest4 {
 		final String[] imageIds = {
 				"../Libraries/images/45656.svs",
 				"../Libraries/images/45657.svs",
-//				"../Libraries/images/45659.svs",
-//				"../Libraries/images/45660.svs"
+				"../Libraries/images/45659.svs",
+				"../Libraries/images/45660.svs"
 		};
 		final AdaptiveQuantizer[] quantizers = new AdaptiveQuantizer[imageIds.length];
-		final int quantizationLevel = 2;
-		final int nonTrainingIndex = 0;
-		final int lod = 4;
-		final int tileRowCount = 3;
+		final int quantizationLevel = 5;
+		final int nonTrainingIndex = 2;
+		final int lod = 6;
+		final int tileRowCount = 5;
 		final int tileColumnCount = tileRowCount;
 		
 		final int verticalTileStride = 1;
 		final int horizontalTileStride = verticalTileStride;
 		final TileDatabase<Sample> tileDatabase = new TileDatabase<Sample>(Sample.class);
-//		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
-		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
+		final Class<? extends Sampler> samplerFactory = ColorSignatureSampler.class;
+//		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
+		final Channel[] channels = HSB;
 		
 		for (int i = 0; i < imageIds.length; ++i) {
 			if (nonTrainingIndex == i) {
@@ -86,12 +88,12 @@ public final class TileDatabaseTest4 {
 			debugPrint("imageRowCount:", image.getRowCount(), "imageColumnCount:", image.getColumnCount());
 			
 			quantizers[i] = new AdaptiveQuantizer();
-			quantizers[i].initialize(image, null, RGB, quantizationLevel);
+			quantizers[i].initialize(image, null, channels, quantizationLevel);
 			
 			final Map<String, RegionOfInterest> classes = new HashMap<String, RegionOfInterest>();
 			
 			updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
-					samplerFactory, RGB, quantizers[i], classes, tileDatabase);
+					samplerFactory, channels, quantizers[i], classes, tileDatabase);
 			gc();
 			
 //			diffuseClasses(tileDatabase, 10);
@@ -115,7 +117,7 @@ public final class TileDatabaseTest4 {
 //			final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/40267.svs", lod);
 			final AdaptiveQuantizer quantizer = new AdaptiveQuantizer();
 			
-			quantizer.initialize(image, null, RGB, quantizationLevel);
+			quantizer.initialize(image, null, channels, quantizationLevel);
 			
 			final Sample.Collector collector = new Sample.Collector();
 			final Sampler sampler = newRGBSampler(samplerFactory, image, quantizer, tileRowCount * tileColumnCount, collector);
