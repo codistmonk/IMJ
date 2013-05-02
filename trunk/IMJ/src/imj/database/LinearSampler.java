@@ -1,7 +1,6 @@
 package imj.database;
 
 import imj.Image;
-import imj.apps.modules.AdaptiveQuantizationViewFilter.AdaptiveQuantizer;
 import imj.apps.modules.ViewFilter.Channel;
 
 /**
@@ -11,7 +10,7 @@ public final class LinearSampler extends Sampler {
 	
 	private int i;
 	
-	public LinearSampler(final Image image, final AdaptiveQuantizer quantizer, final Channel[] channels,
+	public LinearSampler(final Image image, final Quantizer quantizer, final Channel[] channels,
 			final int tilePixelCount, final SampleProcessor processor) {
 		super(image, quantizer, channels, tilePixelCount * channels.length, processor);
 	}

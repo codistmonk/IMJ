@@ -5,15 +5,14 @@ import static imj.IMJTools.unsigned;
 import static imj.database.IMJDatabaseTools.RGB;
 import static imj.database.IMJDatabaseTools.newBKDatabase;
 import static imj.database.IMJDatabaseTools.updateDatabase;
-import static imj.database.Sample.processTile;
 import static imj.database.PatchDatabaseTest2.checkDatabase;
+import static imj.database.Sample.processTile;
 import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj.Image;
 import imj.ImageWrangler;
-import imj.apps.modules.AdaptiveQuantizationViewFilter.AdaptiveQuantizer;
 import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.ViewFilter.Channel;
 import imj.database.BKSearch.BKDatabase;
@@ -61,8 +60,8 @@ public final class PatchDatabaseTest4 {
 				"../Libraries/images/45668.svs",
 				"../Libraries/images/45683.svs"
 		};
-		final AdaptiveQuantizer[] quantizers = new AdaptiveQuantizer[imageIds.length];
-		final int quantizationLevel = 0;
+		final Quantizer[] quantizers = new Quantizer[imageIds.length];
+		final int quantizationLevel = 4;
 		final int nonTrainingIndex = 5;
 		final int lod = 5;
 		final int tileRowCount = 8;
@@ -71,8 +70,8 @@ public final class PatchDatabaseTest4 {
 		final int verticalTileStride = tileRowCount;
 		final int horizontalTileStride = verticalTileStride;
 		final PatchDatabase<Sample> patchDatabase = new PatchDatabase<Sample>(Sample.class);
-//		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
-		final Class<? extends Sampler> samplerFactory = ColorSignatureSampler.class;
+		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
+//		final Class<? extends Sampler> samplerFactory = ColorSignatureSampler.class;
 //		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
 		final Channel[] channels = RGB;
 		
@@ -90,7 +89,7 @@ public final class PatchDatabaseTest4 {
 			
 			debugPrint("imageRowCount:", image.getRowCount(), "imageColumnCount:", image.getColumnCount());
 			
-			quantizers[i] = new AdaptiveQuantizer();
+			quantizers[i] = new BinningQuantizer();
 			quantizers[i].initialize(image, null, channels, quantizationLevel);
 			
 			final Map<String, RegionOfInterest> classes = new HashMap<String, RegionOfInterest>();
@@ -112,7 +111,7 @@ public final class PatchDatabaseTest4 {
 		
 		if (true) {
 			final Image image = ImageWrangler.INSTANCE.load(imageIds[nonTrainingIndex], lod);
-			final AdaptiveQuantizer quantizer = new AdaptiveQuantizer();
+			final Quantizer quantizer = new BinningQuantizer();
 			
 			quantizer.initialize(image, null, channels, quantizationLevel);
 			
@@ -223,9 +222,9 @@ public final class PatchDatabaseTest4 {
 	}
 	
 	public static final Sampler newRGBSampler(final Class<? extends Sampler> samplerFactory,
-			final Image image, final AdaptiveQuantizer quantizer, final int patchPixelCount, final SampleProcessor processor) {
+			final Image image, final Quantizer quantizer, final int patchPixelCount, final SampleProcessor processor) {
 		try {
-			return samplerFactory.getConstructor(Image.class, AdaptiveQuantizer.class, Channel[].class, int.class, SampleProcessor.class)
+			return samplerFactory.getConstructor(Image.class, Quantizer.class, Channel[].class, int.class, SampleProcessor.class)
 					.newInstance(image, quantizer, RGB, patchPixelCount, processor);
 		} catch (final Exception exception) {
 			throw unchecked(exception);

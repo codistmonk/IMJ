@@ -1,20 +1,17 @@
 package imj.database;
 
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import imj.apps.modules.RegionOfInterest;
 import imj.database.BKSearch.Metric;
 import imj.database.IMJDatabaseTools.ChessboardMetric;
 import imj.database.IMJDatabaseTools.CityblockMetric;
 import imj.database.IMJDatabaseTools.EuclideanMetric;
-import imj.database.Sampler.SampleProcessor;
 import imj.database.PatchDatabase.Value;
+import imj.database.Sampler.SampleProcessor;
 
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Map;
-
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-04-25)

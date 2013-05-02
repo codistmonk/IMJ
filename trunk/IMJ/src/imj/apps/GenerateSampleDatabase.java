@@ -5,10 +5,11 @@ import static imj.database.IMJDatabaseTools.updateDatabase;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.ImageWrangler;
 import imj.apps.modules.RegionOfInterest;
-import imj.apps.modules.AdaptiveQuantizationViewFilter.AdaptiveQuantizer;
+import imj.database.BinningQuantizer;
 import imj.database.LinearSampler;
-import imj.database.Sample;
 import imj.database.PatchDatabase;
+import imj.database.Quantizer;
+import imj.database.Sample;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -50,7 +51,7 @@ public final class GenerateSampleDatabase {
 		final int horizontalTileStride = arguments.get("xStep", verticalTileStride)[0];
 		final int lod = arguments.get("lod", 4)[0];
 		final PatchDatabase<Sample> sampleDatabase = new PatchDatabase<Sample>(Sample.class);
-		final AdaptiveQuantizer quantizer = new AdaptiveQuantizer();
+		final Quantizer quantizer = new BinningQuantizer();
 		final int quantizationLevel = arguments.get("q", 0)[0];
 		
 		System.out.println("Collecting data... " + new Date(timer.tic()));

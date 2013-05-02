@@ -8,14 +8,11 @@ import static junit.framework.Assert.assertNotNull;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static org.junit.Assert.assertEquals;
-
 import imj.Image;
 import imj.ImageWrangler;
-import imj.apps.modules.ViewFilter;
 import imj.apps.modules.ViewFilter.Channel;
-import imj.database.PatchDatabase;
-import imj.database.Sampler.SampleProcessor;
 import imj.database.PatchDatabase.Value;
+import imj.database.Sampler.SampleProcessor;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
