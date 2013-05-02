@@ -2,13 +2,11 @@ package imj.apps.modules;
 
 import static imj.apps.modules.ViewFilter.getCurrentImage;
 import static imj.apps.modules.ViewFilter.parseChannel;
-import static java.lang.Math.abs;
 import static java.lang.Math.max;
-
-import java.util.Locale;
-
 import imj.Image;
 import imj.apps.modules.ViewFilter.Channel;
+
+import java.util.Locale;
 
 import net.sourceforge.aprog.context.Context;
 
@@ -40,7 +38,6 @@ public final class SeamGridSegmentationSieve extends Sieve {
 		final int columnCount = roi.getColumnCount();
 		this.segmentation = RegionOfInterest.newInstance(rowCount, columnCount);
 		final int gridSize = this.getIntParameter("gridSize");
-		final int margin = 1;
 		
 		this.segmentation.reset(true);
 		
@@ -56,7 +53,7 @@ public final class SeamGridSegmentationSieve extends Sieve {
 					break;
 				}
 				
-				final long northEastCost = y0 + margin < y ?
+				final long northEastCost = y0 < y ?
 						getCost(image, channel, y - 1, x1) : Long.MAX_VALUE;
 				final long eastCost = getCost(image, channel, y, x1);
 				final long southEastCost = y + 1 < y0 + gridSize && y + 1 < rowCount ?
@@ -84,7 +81,7 @@ public final class SeamGridSegmentationSieve extends Sieve {
 					break;
 				}
 				
-				final long southWestCost = x0 + margin < x ?
+				final long southWestCost = x0 < x ?
 						getCost(image, channel, y1, x - 1) : Long.MAX_VALUE;
 				final long southCost = getCost(image, channel, y1, x);
 				final long southEastCost = x + 1 < x0 + gridSize && x + 1 < columnCount ?
@@ -106,21 +103,21 @@ public final class SeamGridSegmentationSieve extends Sieve {
 		final int lastColumnIndex = image.getColumnCount() - 1;
 		final int center = channel.getValue(image.getValue(rowIndex, columnIndex));
 		final int northWest = 0 < rowIndex && 0 < columnIndex ?
-				abs(channel.getValue(image.getValue(rowIndex - 1, columnIndex - 1)) - center) : 0;
+				channel.getDistance(channel.getValue(image.getValue(rowIndex - 1, columnIndex - 1)), center) : 0;
 		final int north = 0 < rowIndex ?
-				abs(channel.getValue(image.getValue(rowIndex - 1, columnIndex)) - center) : 0;
+				channel.getDistance(channel.getValue(image.getValue(rowIndex - 1, columnIndex)), center) : 0;
 		final int northEast = 0 < rowIndex && columnIndex < lastColumnIndex ?
-				abs(channel.getValue(image.getValue(rowIndex - 1, columnIndex + 1)) - center) : 0;
+				channel.getDistance(channel.getValue(image.getValue(rowIndex - 1, columnIndex + 1)), center) : 0;
 		final int west = 0 < rowIndex ?
-				abs(channel.getValue(image.getValue(rowIndex - 1, columnIndex)) - center) : 0;
+				channel.getDistance(channel.getValue(image.getValue(rowIndex - 1, columnIndex)), center) : 0;
 		final int east = columnIndex < lastColumnIndex ?
-				abs(channel.getValue(image.getValue(rowIndex, columnIndex + 1)) - center) : 0;
+				channel.getDistance(channel.getValue(image.getValue(rowIndex, columnIndex + 1)), center) : 0;
 		final int southWest = rowIndex < lastRowIndex && 0 < columnIndex ?
-				abs(channel.getValue(image.getValue(rowIndex + 1, columnIndex - 1)) - center) : 0;
+				channel.getDistance(channel.getValue(image.getValue(rowIndex + 1, columnIndex - 1)), center) : 0;
 		final int south = rowIndex < lastRowIndex ?
-				abs(channel.getValue(image.getValue(rowIndex + 1, columnIndex)) - center) : 0;
+				channel.getDistance(channel.getValue(image.getValue(rowIndex + 1, columnIndex)), center) : 0;
 		final int southEast = rowIndex < lastRowIndex && columnIndex < lastColumnIndex ?
-				abs(channel.getValue(image.getValue(rowIndex + 1, columnIndex + 1)) - center) : 0;
+				channel.getDistance(channel.getValue(image.getValue(rowIndex + 1, columnIndex + 1)), center) : 0;
 		
 		return -max(max(max(northWest, north), max(northEast, west)), max(max(east, southWest), max(south, southEast)));
 	}

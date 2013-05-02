@@ -2,6 +2,7 @@ package imj;
 
 import static imj.IMJTools.forEachPixel;
 import static imj.ImageOfBufferedImage.Feature.MAX_RGB;
+import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static javax.imageio.ImageIO.read;
@@ -48,6 +49,18 @@ public final class IMJTools {
 	 * {@value}.
 	 */
 	public static final int BLUE_MASK = 0x000000FF;
+	
+	public static final int acyclicDistance(final int a, final int b) {
+		return abs(b - a);
+	}
+	
+	public static final int cyclicDistance(final int a, final int b, final int n) {
+		if (b < a) {
+			return cyclicDistance(b, a, n);
+		}
+		
+		return min(b - a, n + a - b);
+	}
 	
 	public static final void updateHistograms(final Image image, final RegionOfInterest roi, final Channel[] channels,
 			final int[][] histograms) {

@@ -139,14 +139,6 @@ public final class DiffusionViewFilter extends ViewFilter.FromFilter {
 			(n + currentMean) * currentCount + newValue * newCount;
 	}
 	
-	public static final int cyclicDistance(final int a, final int b, final int n) {
-		if (b < a) {
-			return cyclicDistance(b, a, n);
-		}
-		
-		return min(b - a, n + a - b);
-	}
-	
 	public static final int chebyshevDistance(final int[] u, final int[] v) {
 		final int n = u.length;
 		int result = 0;
