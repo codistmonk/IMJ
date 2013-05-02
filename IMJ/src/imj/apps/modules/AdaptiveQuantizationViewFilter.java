@@ -1,13 +1,10 @@
 package imj.apps.modules;
 
-import static java.lang.Math.max;
 import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import imj.IMJTools;
+
 import imj.Image;
-
-import java.util.Arrays;
-
+import imj.database.AdaptiveQuantizer;
 import net.sourceforge.aprog.context.Context;
 
 /**
@@ -107,65 +104,6 @@ public final class AdaptiveQuantizationViewFilter extends ViewFilter {
 				}
 			}
 		}
-	}
-	
-	/**
-	 * @author codistmonk (creation 2013-04-30)
-	 */
-	public static final class AdaptiveQuantizer {
-		
-		private int bitCount;
-		
-		private Channel[] channels;
-		
-		private int[][] histograms;
-		
-		private int[][] accumulators;
-		
-		public final void initialize(final Image image, final RegionOfInterest roi, final Channel[] channels, final int bitCount) {
-			final Channel[] oldChannels = this.channels;
-			
-			this.channels = channels;
-			this.bitCount = bitCount;
-			
-			if (!Arrays.equals(this.channels, oldChannels)) {
-				int n = 0;
-				
-				for (final Channel channel : this.channels) {
-					n = max(n, channel.getChannelIndex() + 1);
-				}
-				
-				this.histograms = new int[n][256];
-				this.accumulators = new int[n][256];
-				
-				if (image != null) {
-					this.updateHistograms(image, roi);
-				}
-			} else {
-				this.updateAccumulators();
-			}
-		}
-		
-		public final void updateHistograms(final Image image, final RegionOfInterest roi) {
-			this.clearHistograms();
-			IMJTools.updateHistograms(image, roi, this.channels, this.histograms);
-			this.updateAccumulators();
-		}
-		
-		private final void clearHistograms() {
-			for (final int[] histogram : this.histograms) {
-				fill(histogram, 0);
-			}
-		}
-		
-		private final void updateAccumulators() {
-			AdaptiveQuantizationViewFilter.updateAccumulators(this.bitCount, this.channels, this.histograms, this.accumulators);
-		}
-		
-		public final int getNewValue(final Channel channel, final int channelValue) {
-			return this.accumulators[channel.getChannelIndex()][channelValue];
-		}
-		
 	}
 	
 }

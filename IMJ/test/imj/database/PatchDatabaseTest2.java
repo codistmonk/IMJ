@@ -6,10 +6,8 @@ import static junit.framework.Assert.assertNotNull;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static org.junit.Assert.assertEquals;
-
 import imj.Image;
 import imj.ImageWrangler;
-import imj.apps.modules.AdaptiveQuantizationViewFilter.AdaptiveQuantizer;
 import imj.apps.modules.RegionOfInterest;
 import imj.database.PatchDatabase.Value;
 
@@ -44,7 +42,7 @@ public class PatchDatabaseTest2 {
 		final int verticalTileCount = imageRowCount / tileRowCount;
 		final int horizontalTileCount = imageColumnCount / tileColumnCount;
 		final Map<String, RegionOfInterest> classes = new HashMap<String, RegionOfInterest>();
-		final AdaptiveQuantizer quantizer = new AdaptiveQuantizer();
+		final Quantizer quantizer = new BinningQuantizer();
 		
 		debugPrint("imageRowCount:", imageRowCount, "imageColumnCount:", imageColumnCount);
 		debugPrint("verticalTileCount:", verticalTileCount, "horizontalTileCount:", horizontalTileCount);

@@ -5,14 +5,9 @@ import static imj.database.IMJDatabaseTools.updateDatabase;
 import static imj.database.PatchDatabaseTest2.checkDatabase;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
-
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.RegionOfInterest;
-import imj.apps.modules.AdaptiveQuantizationViewFilter.AdaptiveQuantizer;
-import imj.database.LinearSampler;
-import imj.database.Sample;
-import imj.database.PatchDatabase;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,7 +26,7 @@ public class PatchDatabaseTest3 {
 				"../Libraries/images/45657.svs",
 				"../Libraries/images/45659.svs",
 				"../Libraries/images/45660.svs" };
-		final AdaptiveQuantizer[] quantizers = new AdaptiveQuantizer[imageIds.length];
+		final Quantizer[] quantizers = new Quantizer[imageIds.length];
 		final int quantizationLevel = 0;
 		final int lod = 4;
 		final PatchDatabase<Sample> database = new PatchDatabase<Sample>(Sample.class);
@@ -58,7 +53,7 @@ public class PatchDatabaseTest3 {
 			debugPrint("imageRowCount:", imageRowCount, "imageColumnCount:", imageColumnCount);
 			debugPrint("verticalTileCount:", verticalTileCount, "horizontalTileCount:", horizontalTileCount);
 			
-			quantizers[i] = new AdaptiveQuantizer();
+			quantizers[i] = new BinningQuantizer();
 			quantizers[i].initialize(image, null, RGB, quantizationLevel);
 			
 			updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,

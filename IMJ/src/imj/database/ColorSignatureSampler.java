@@ -2,7 +2,6 @@ package imj.database;
 
 import static java.util.Arrays.sort;
 import imj.Image;
-import imj.apps.modules.AdaptiveQuantizationViewFilter.AdaptiveQuantizer;
 import imj.apps.modules.ViewFilter.Channel;
 
 import java.util.Comparator;
@@ -26,7 +25,7 @@ public final class ColorSignatureSampler extends Sampler {
 	
 	private int i;
 	
-	public ColorSignatureSampler(final Image image, final AdaptiveQuantizer quantizer, final Channel[] channels,
+	public ColorSignatureSampler(final Image image, final Quantizer quantizer, final Channel[] channels,
 			final int tilePixelCount, final SampleProcessor processor) {
 		super(image, quantizer, channels, tilePixelCount * (channels.length + 1), processor);
 		this.tilePixelCount = tilePixelCount;
@@ -128,7 +127,7 @@ public final class ColorSignatureSampler extends Sampler {
 		return result;
 	}
 	
-	public static final int computeIndex(final AdaptiveQuantizer quantizer, final int pixelValue, final Channel... channels) {
+	public static final int computeIndex(final Quantizer quantizer, final int pixelValue, final Channel... channels) {
 		int result = 0;
 		
 		for (final Channel channel : channels) {

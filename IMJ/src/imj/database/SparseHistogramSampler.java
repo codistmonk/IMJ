@@ -5,14 +5,11 @@ import static imj.IMJTools.unsigned;
 import static java.lang.Math.ceil;
 import static java.lang.Math.sqrt;
 import imj.Image;
-import imj.apps.modules.AdaptiveQuantizationViewFilter.AdaptiveQuantizer;
 import imj.apps.modules.ViewFilter.Channel;
 import imj.database.BKSearch.Metric;
 
 import java.util.Map;
 import java.util.TreeMap;
-
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-04-22)
@@ -31,7 +28,7 @@ public final class SparseHistogramSampler extends Sampler {
 	
 	private int i;
 	
-	public SparseHistogramSampler(final Image image, final AdaptiveQuantizer quantizer, final Channel[] channels,
+	public SparseHistogramSampler(final Image image, final Quantizer quantizer, final Channel[] channels,
 			final int tilePixelCount, final SampleProcessor processor) {
 		super(image, quantizer, channels, tilePixelCount * (channels.length + 1), processor);
 		this.tilePixelCount = tilePixelCount;
@@ -117,7 +114,7 @@ public final class SparseHistogramSampler extends Sampler {
 		return result;
 	}
 	
-	public static final int computeIndex(final AdaptiveQuantizer quantizer, final int pixelValue, final Channel... channels) {
+	public static final int computeIndex(final Quantizer quantizer, final int pixelValue, final Channel... channels) {
 		int result = 0;
 		
 		for (final Channel channel : channels) {

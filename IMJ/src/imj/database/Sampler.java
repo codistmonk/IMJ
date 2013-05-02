@@ -2,8 +2,6 @@ package imj.database;
 
 import imj.IMJTools.PixelProcessor;
 import imj.Image;
-import imj.apps.modules.ViewFilter;
-import imj.apps.modules.AdaptiveQuantizationViewFilter.AdaptiveQuantizer;
 import imj.apps.modules.ViewFilter.Channel;
 
 /**
@@ -13,7 +11,7 @@ public abstract class Sampler implements PixelProcessor {
 	
 	private final Image image;
 	
-	private final AdaptiveQuantizer quantizer;
+	private final Quantizer quantizer;
 	
 	private final Channel[] channels;
 	
@@ -21,7 +19,7 @@ public abstract class Sampler implements PixelProcessor {
 	
 	private final SampleProcessor processor;
 	
-	protected Sampler(final Image image, final AdaptiveQuantizer quantizer, final Channel[] channels,
+	protected Sampler(final Image image, final Quantizer quantizer, final Channel[] channels,
 			final int sampleSize, final SampleProcessor processor) {
 		this.image = image;
 		this.quantizer = quantizer;
@@ -34,7 +32,7 @@ public abstract class Sampler implements PixelProcessor {
 		return this.image;
 	}
 	
-	public final AdaptiveQuantizer getQuantizer() {
+	public final Quantizer getQuantizer() {
 		return this.quantizer;
 	}
 	
