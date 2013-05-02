@@ -13,9 +13,9 @@ import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.ViewFilter;
 import imj.apps.modules.ViewFilter.Channel;
-import imj.database.TileDatabase;
+import imj.database.PatchDatabase;
 import imj.database.Sampler.SampleProcessor;
-import imj.database.TileDatabase.Value;
+import imj.database.PatchDatabase.Value;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -30,7 +30,7 @@ import org.junit.Test;
 /**
  * @author codistmonk (creation 2013-04-19)
  */
-public class TileDatabaseTest1 {
+public class PatchDatabaseTest1 {
 	
 	@Test
 	public final void test() {
@@ -46,7 +46,7 @@ public class TileDatabaseTest1 {
 		final int horizontalTileCount = imageColumnCount / tileColumnCount;
 		final int tilePixelCount = tileRowCount * tileColumnCount;
 		final Channel[] channels = { RED, GREEN, BLUE };
-		final TileDatabase<?> database = new TileDatabase<Value>();
+		final PatchDatabase<?> database = new PatchDatabase<Value>();
 		final int verticalTileStride = tileRowCount;
 		final int horizontalTileStride = verticalTileStride;
 		

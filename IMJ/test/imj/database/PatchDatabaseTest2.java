@@ -11,7 +11,7 @@ import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.AdaptiveQuantizationViewFilter.AdaptiveQuantizer;
 import imj.apps.modules.RegionOfInterest;
-import imj.database.TileDatabase.Value;
+import imj.database.PatchDatabase.Value;
 
 import java.util.Collection;
 import java.util.Date;
@@ -26,13 +26,13 @@ import org.junit.Test;
 /**
  * @author codistmonk (creation 2013-04-19)
  */
-public class TileDatabaseTest2 {
+public class PatchDatabaseTest2 {
 	
 	@Test
 	public final void test() {
 		final String imageId = "../Libraries/images/45656.svs";
 		final int lod = 2;
-		final TileDatabase<Sample> database = new TileDatabase<Sample>(Sample.class);
+		final PatchDatabase<Sample> database = new PatchDatabase<Sample>(Sample.class);
 		final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
 		gc();
 		final int tileRowCount = 3;
@@ -66,7 +66,7 @@ public class TileDatabaseTest2 {
 		debugPrint();
 	}
 	
-	public static final int checkDatabase(final Map<String, RegionOfInterest> classes, final TileDatabase<?> database) {
+	public static final int checkDatabase(final Map<String, RegionOfInterest> classes, final PatchDatabase<?> database) {
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Checking database...", new Date(timer.tic()));

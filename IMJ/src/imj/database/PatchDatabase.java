@@ -11,17 +11,17 @@ import java.util.TreeMap;
 /**
  * @author codistmonk (creation 2013-04-19)
  */
-public final class TileDatabase<V extends TileDatabase.Value> implements Serializable, Iterable<Map.Entry<byte[], V>> {
+public final class PatchDatabase<V extends PatchDatabase.Value> implements Serializable, Iterable<Map.Entry<byte[], V>> {
 	
 	private final Map<byte[], V> data;
 	
 	private final Class<? extends Value> valueFactory;
 	
-	public TileDatabase() {
+	public PatchDatabase() {
 		this(Value.Default.class);
 	}
 	
-	public TileDatabase(final Class<? extends Value> valueFactory) {
+	public PatchDatabase(final Class<? extends Value> valueFactory) {
 		this.data = new TreeMap<byte[], V>(ByteArrayComparator.INSTANCE);
 		this.valueFactory = valueFactory;
 	}

@@ -8,7 +8,7 @@ import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.AdaptiveQuantizationViewFilter.AdaptiveQuantizer;
 import imj.database.LinearSampler;
 import imj.database.Sample;
-import imj.database.TileDatabase;
+import imj.database.PatchDatabase;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -49,7 +49,7 @@ public final class GenerateSampleDatabase {
 		final int verticalTileStride = arguments.get("yStep", tileRowCount)[0];
 		final int horizontalTileStride = arguments.get("xStep", verticalTileStride)[0];
 		final int lod = arguments.get("lod", 4)[0];
-		final TileDatabase<Sample> sampleDatabase = new TileDatabase<Sample>(Sample.class);
+		final PatchDatabase<Sample> sampleDatabase = new PatchDatabase<Sample>(Sample.class);
 		final AdaptiveQuantizer quantizer = new AdaptiveQuantizer();
 		final int quantizationLevel = arguments.get("q", 0)[0];
 		

@@ -2,7 +2,7 @@ package imj.database;
 
 import static imj.database.IMJDatabaseTools.RGB;
 import static imj.database.IMJDatabaseTools.updateDatabase;
-import static imj.database.TileDatabaseTest2.checkDatabase;
+import static imj.database.PatchDatabaseTest2.checkDatabase;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 
@@ -12,7 +12,7 @@ import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.AdaptiveQuantizationViewFilter.AdaptiveQuantizer;
 import imj.database.LinearSampler;
 import imj.database.Sample;
-import imj.database.TileDatabase;
+import imj.database.PatchDatabase;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,7 +22,7 @@ import org.junit.Test;
 /**
  * @author codistmonk (creation 2013-04-19)
  */
-public class TileDatabaseTest3 {
+public class PatchDatabaseTest3 {
 	
 	@Test
 	public final void test() {
@@ -34,7 +34,7 @@ public class TileDatabaseTest3 {
 		final AdaptiveQuantizer[] quantizers = new AdaptiveQuantizer[imageIds.length];
 		final int quantizationLevel = 0;
 		final int lod = 4;
-		final TileDatabase<Sample> database = new TileDatabase<Sample>(Sample.class);
+		final PatchDatabase<Sample> database = new PatchDatabase<Sample>(Sample.class);
 		
 		for (int i = 0; i < imageIds.length; ++i) {
 			final String imageId = imageIds[i];
