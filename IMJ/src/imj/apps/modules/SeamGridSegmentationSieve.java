@@ -1,10 +1,15 @@
 package imj.apps.modules;
 
+import static imj.apps.modules.ViewFilter.getCurrentImage;
+import static imj.apps.modules.ViewFilter.parseChannel;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
 
+import java.util.Locale;
+
 import imj.Image;
 import imj.apps.modules.ViewFilter.Channel;
+
 import net.sourceforge.aprog.context.Context;
 
 /**
@@ -17,6 +22,7 @@ public final class SeamGridSegmentationSieve extends Sieve {
 	public SeamGridSegmentationSieve(final Context context) {
 		super(context);
 		
+		this.getParameters().put("channel", "brightness");
 		this.getParameters().put("gridSize", "32");
 	}
 	
@@ -27,7 +33,8 @@ public final class SeamGridSegmentationSieve extends Sieve {
 	
 	@Override
 	public final void initialize() {
-		final Image image = ViewFilter.getCurrentImage(this.getContext());
+		final Channel channel = parseChannel(this.getParameters().get("channel").toUpperCase(Locale.ENGLISH));
+		final Image image = getCurrentImage(this.getContext());
 		final RegionOfInterest roi = this.getROI();
 		final int rowCount = roi.getRowCount();
 		final int columnCount = roi.getColumnCount();
@@ -48,9 +55,11 @@ public final class SeamGridSegmentationSieve extends Sieve {
 					break;
 				}
 				
-				final long eastCost = this.getCost(image, y, x1);
-				final long northEastCost = y0 < y ? this.getCost(image, y - 1, x1) : Long.MAX_VALUE;
-				final long southEastCost = y + 1 < y0 + gridSize && y + 1 < rowCount ? this.getCost(image, y + 1, x1) : Long.MAX_VALUE;
+				final long northEastCost = y0 < y ?
+						getCost(image, channel, y - 1, x1) : Long.MAX_VALUE;
+				final long eastCost = getCost(image, channel, y, x1);
+				final long southEastCost = y + 1 < y0 + gridSize && y + 1 < rowCount ?
+						getCost(image, channel, y + 1, x1) : Long.MAX_VALUE;
 				
 				if (eastCost <= northEastCost && eastCost <= southEastCost) {
 					// NOP
@@ -74,9 +83,11 @@ public final class SeamGridSegmentationSieve extends Sieve {
 					break;
 				}
 				
-				final long southCost = this.getCost(image, y1, x);
-				final long southWestCost = x0 < x ? this.getCost(image, y1, x - 1) : Long.MAX_VALUE;
-				final long southEastCost = x + 1 < x0 + gridSize && x + 1 < columnCount ? this.getCost(image, y1, x + 1) : Long.MAX_VALUE;
+				final long southWestCost = x0 < x ?
+						getCost(image, channel, y1, x - 1) : Long.MAX_VALUE;
+				final long southCost = getCost(image, channel, y1, x);
+				final long southEastCost = x + 1 < x0 + gridSize && x + 1 < columnCount ?
+						getCost(image, channel, y1, x + 1) : Long.MAX_VALUE;
 				
 				if (southCost <= southWestCost && southCost <= southEastCost) {
 					// NOP
@@ -89,7 +100,7 @@ public final class SeamGridSegmentationSieve extends Sieve {
 		}
 	}
 	
-	private final long getCost(final Image image, final int rowIndex, final int columnIndex) {
+	public static final int getCost(final Image image, final Channel channel, final int rowIndex, final int columnIndex) {
 		final int lastRowIndex = image.getRowCount() - 1;
 		final int lastColumnIndex = image.getColumnCount() - 1;
 		final int center = channel.getValue(image.getValue(rowIndex, columnIndex));
@@ -112,7 +123,5 @@ public final class SeamGridSegmentationSieve extends Sieve {
 		
 		return -max(max(max(northWest, north), max(northEast, west)), max(max(east, southWest), max(south, southEast)));
 	}
-	
-	private static final Channel channel = Channel.Synthetic.BRIGHTNESS;
 	
 }
