@@ -66,8 +66,7 @@ public class TileDatabaseTest2 {
 		debugPrint();
 	}
 	
-	public static final int checkDatabase(final Map<String, RegionOfInterest> classes,
-			final TileDatabase<?> database) {
+	public static final int checkDatabase(final Map<String, RegionOfInterest> classes, final TileDatabase<?> database) {
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Checking database...", new Date(timer.tic()));
@@ -76,10 +75,6 @@ public class TileDatabaseTest2 {
 		int databaseSampleCount = 0;
 		final Map<String, AtomicInteger> classCounts = new HashMap<String, AtomicInteger>();
 		final Map<Collection<String>, AtomicInteger> groups = new HashMap<Collection<String>, AtomicInteger>();
-		
-		for (final String key : classes.keySet()) {
-			classCounts.put(key, new AtomicInteger());
-		}
 		
 		for (final Map.Entry<byte[], ? extends Value> entry : database) {
 			if (databaseEntryCount % 100000 == 0) {
@@ -94,7 +89,7 @@ public class TileDatabaseTest2 {
 			count(groups, tileData.getClasses());
 			
 			for (final String classId : tileData.getClasses()) {
-				classCounts.get(classId).incrementAndGet();
+				count(classCounts, classId);
 			}
 		}
 		
