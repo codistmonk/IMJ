@@ -53,7 +53,7 @@ public final class IMJDatabaseTools {
 			final int verticalTileStride, final int horizontalTileStride,
 			final Class<? extends Sampler> samplerFactory, final Channel[] channels,
 			final AdaptiveQuantizer quantizer,
-			final Map<String, RegionOfInterest> classes, final TileDatabase<Sample> database) {
+			final Map<String, RegionOfInterest> classes, final PatchDatabase<Sample> database) {
 		final TicToc timer = new TicToc();
 		final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
 		debugPrint("imageRowCount:", image.getRowCount(), "imageColumnCount:", image.getColumnCount());
@@ -98,7 +98,7 @@ public final class IMJDatabaseTools {
 		debugPrint("Loading regions done", "time:", timer.toc());
 	}
 	
-	public static final Collection<Collection<String>> extractMonoclassGroups(final TileDatabase<Sample> database) {
+	public static final Collection<Collection<String>> extractMonoclassGroups(final PatchDatabase<Sample> database) {
 		final Collection<Collection<String>> result = new HashSet<Collection<String>>();
 		
 		for (final Map.Entry<byte[], Sample> entry : database) {
@@ -110,7 +110,7 @@ public final class IMJDatabaseTools {
 		return result;
 	}
 	
-	public static final BKDatabase<Sample> newBKDatabase(final TileDatabase<Sample> tileDatabase,
+	public static final BKDatabase<Sample> newBKDatabase(final PatchDatabase<Sample> tileDatabase,
 			final Collection<Collection<String>> groups, final Metric<Sample> metric) {
 		final int entryCount = tileDatabase.getEntryCount();
 		final Sample[] samples = new Sample[entryCount];
@@ -125,7 +125,7 @@ public final class IMJDatabaseTools {
 		return new BKDatabase<Sample>(copyOf(samples, i), metric, Sample.KeyComparator.INSTANCE);
 	}
 	
-	public static final BKDatabase<Sample> newBKDatabase(final TileDatabase<Sample> tileDatabase, Metric<Sample> metric) {
+	public static final BKDatabase<Sample> newBKDatabase(final PatchDatabase<Sample> tileDatabase, Metric<Sample> metric) {
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Creating bk-database...");

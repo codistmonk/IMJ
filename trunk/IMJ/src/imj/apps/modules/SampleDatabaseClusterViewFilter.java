@@ -12,7 +12,7 @@ import imj.database.Sample;
 import imj.database.Sample.Collector;
 import imj.database.Sample.SampleMetric;
 import imj.database.Sampler;
-import imj.database.TileDatabase;
+import imj.database.PatchDatabase;
 
 import java.io.FileInputStream;
 import java.io.ObjectInputStream;
@@ -34,7 +34,7 @@ public final class SampleDatabaseClusterViewFilter extends ViewFilter {
 	
 	private int tileStride;
 	
-	private TileDatabase<Sample> tileDatabase;
+	private PatchDatabase<Sample> tileDatabase;
 	
 	private BKDatabase<Sample> bkDatabase;
 	
@@ -146,7 +146,7 @@ public final class SampleDatabaseClusterViewFilter extends ViewFilter {
 			
 			try {
 				final Map<Object, Object> database = (Map<Object, Object>) ois.readObject();
-				this.tileDatabase = (TileDatabase<Sample>) database.get("samples");
+				this.tileDatabase = (PatchDatabase<Sample>) database.get("samples");
 				this.bkDatabase = newBKDatabase(this.tileDatabase, SampleMetric.EUCLIDEAN);
 			} finally {
 				ois.close();

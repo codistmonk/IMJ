@@ -7,7 +7,7 @@ import imj.database.IMJDatabaseTools.ChessboardMetric;
 import imj.database.IMJDatabaseTools.CityblockMetric;
 import imj.database.IMJDatabaseTools.EuclideanMetric;
 import imj.database.Sampler.SampleProcessor;
-import imj.database.TileDatabase.Value;
+import imj.database.PatchDatabase.Value;
 
 import java.util.Collection;
 import java.util.Comparator;
@@ -100,7 +100,7 @@ public final class Sample implements Value {
 		
 		private final Map<String, RegionOfInterest> classes;
 		
-		private final TileDatabase<Sample> database;
+		private final PatchDatabase<Sample> database;
 		
 		private final int horizontalTileStride;
 		
@@ -116,7 +116,7 @@ public final class Sample implements Value {
 		
 		public ClassSetter(final int imageColumnCount, final int tileRowCount, final int tileColumnCount,
 				final int verticalTileStride, final int horizontalTileStride,
-				final Map<String, RegionOfInterest> classes, final TileDatabase<Sample> database) {
+				final Map<String, RegionOfInterest> classes, final PatchDatabase<Sample> database) {
 			this.tileRowCount = tileRowCount;
 			this.tileColumnCount = tileColumnCount;
 			this.classes = classes;

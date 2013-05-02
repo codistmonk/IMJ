@@ -6,7 +6,7 @@ import static imj.database.IMJDatabaseTools.RGB;
 import static imj.database.IMJDatabaseTools.newBKDatabase;
 import static imj.database.IMJDatabaseTools.updateDatabase;
 import static imj.database.Sample.processTile;
-import static imj.database.TileDatabaseTest2.checkDatabase;
+import static imj.database.PatchDatabaseTest2.checkDatabase;
 import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
@@ -49,7 +49,7 @@ import org.junit.Test;
 /**
  * @author codistmonk (creation 2013-04-19)
  */
-public final class TileDatabaseTest4 {
+public final class PatchDatabaseTest4 {
 	
 	@Test
 	public final void test() {
@@ -70,7 +70,7 @@ public final class TileDatabaseTest4 {
 		
 		final int verticalTileStride = tileRowCount;
 		final int horizontalTileStride = verticalTileStride;
-		final TileDatabase<Sample> tileDatabase = new TileDatabase<Sample>(Sample.class);
+		final PatchDatabase<Sample> patchDatabase = new PatchDatabase<Sample>(Sample.class);
 //		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
 		final Class<? extends Sampler> samplerFactory = ColorSignatureSampler.class;
 //		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
@@ -96,18 +96,18 @@ public final class TileDatabaseTest4 {
 			final Map<String, RegionOfInterest> classes = new HashMap<String, RegionOfInterest>();
 			
 			updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
-					samplerFactory, channels, quantizers[i], classes, tileDatabase);
+					samplerFactory, channels, quantizers[i], classes, patchDatabase);
 			gc();
 			
 //			diffuseClasses(tileDatabase, 10);
 //			gc();
 			
-			checkDatabase(classes, tileDatabase);
+			checkDatabase(classes, patchDatabase);
 			gc();
 		}
 		
 		if (false) {
-			printIntragroupDistanceStatistics(tileDatabase);
+			printIntragroupDistanceStatistics(patchDatabase);
 		}
 		
 		if (true) {
@@ -118,7 +118,7 @@ public final class TileDatabaseTest4 {
 			
 			final Sample.Collector collector = new Sample.Collector();
 			final Sampler sampler = newRGBSampler(samplerFactory, image, quantizer, tileRowCount * tileColumnCount, collector);
-			final BKDatabase<Sample> bkDatabase = newBKDatabase(tileDatabase, getPreferredMetric(sampler));
+			final BKDatabase<Sample> bkDatabase = newBKDatabase(patchDatabase, getPreferredMetric(sampler));
 			
 			gc();
 			
@@ -168,7 +168,7 @@ public final class TileDatabaseTest4 {
 		return SampleMetric.CHESSBOARD;
 	}
 	
-	public static final void printIntragroupDistanceStatistics(final TileDatabase<Sample> tileDatabase) {
+	public static final void printIntragroupDistanceStatistics(final PatchDatabase<Sample> tileDatabase) {
 		final TicToc timer = new TicToc();
 		final Map<Collection<String>, List<byte[]>> groups = new HashMap<Collection<String>, List<byte[]>>();
 		
@@ -223,10 +223,10 @@ public final class TileDatabaseTest4 {
 	}
 	
 	public static final Sampler newRGBSampler(final Class<? extends Sampler> samplerFactory,
-			final Image image, final AdaptiveQuantizer quantizer, final int tilePixelCount, final SampleProcessor processor) {
+			final Image image, final AdaptiveQuantizer quantizer, final int patchPixelCount, final SampleProcessor processor) {
 		try {
 			return samplerFactory.getConstructor(Image.class, AdaptiveQuantizer.class, Channel[].class, int.class, SampleProcessor.class)
-					.newInstance(image, quantizer, RGB, tilePixelCount, processor);
+					.newInstance(image, quantizer, RGB, patchPixelCount, processor);
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
@@ -266,7 +266,7 @@ public final class TileDatabaseTest4 {
 		}
 	}
 	
-	public static final void diffuseClasses(final TileDatabase<Sample> database, final int iterationCount) {
+	public static final void diffuseClasses(final PatchDatabase<Sample> database, final int iterationCount) {
 		final TicToc timer = new TicToc();
 		
 		debugPrint(new Date(timer.tic()));
@@ -295,7 +295,7 @@ public final class TileDatabaseTest4 {
 		debugPrint("time:", timer.toc());
 	}
 	
-	public static final Sample[] collectAllSamples(final TileDatabase<Sample> database) {
+	public static final Sample[] collectAllSamples(final PatchDatabase<Sample> database) {
 		final Sample[] result = new Sample[database.getEntryCount()];
 		int i = 0;
 		
