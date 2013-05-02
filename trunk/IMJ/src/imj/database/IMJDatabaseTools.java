@@ -67,8 +67,8 @@ public final class IMJDatabaseTools {
 		final Sampler sampler;
 		
 		try {
-			sampler = samplerFactory.getConstructor(Image.class, Quantizer.class, Channel[].class, int.class, SampleProcessor.class)
-					.newInstance(image, quantizer, channels, tileRowCount * tileColumnCount, processor);
+			sampler = samplerFactory.getConstructor(Image.class, Quantizer.class, Channel[].class, SampleProcessor.class)
+					.newInstance(image, quantizer, channels, processor);
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
@@ -120,6 +120,8 @@ public final class IMJDatabaseTools {
 				samples[i++] = entry.getValue();
 			}
 		}
+		
+		debugPrint(samples.length, i);
 		
 		return new BKDatabase<Sample>(copyOf(samples, i), metric, Sample.KeyComparator.INSTANCE);
 	}

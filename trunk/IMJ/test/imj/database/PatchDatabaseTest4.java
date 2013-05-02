@@ -72,8 +72,8 @@ public final class PatchDatabaseTest4 {
 		final int testVerticalTileStride = tileRowCount;
 		final int testHorizontalTileStride = testVerticalTileStride;
 		final PatchDatabase<Sample> patchDatabase = new PatchDatabase<Sample>(Sample.class);
-//		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
-		final Class<? extends Sampler> samplerFactory = ColorSignatureSampler.class;
+		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
+//		final Class<? extends Sampler> samplerFactory = ColorSignatureSampler.class;
 //		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
 		final Channel[] channels = RGB;
 		
@@ -119,7 +119,7 @@ public final class PatchDatabaseTest4 {
 			quantizer.initialize(image, null, channels, quantizationLevel);
 			
 			final Sample.Collector collector = new Sample.Collector();
-			final Sampler sampler = newRGBSampler(samplerFactory, image, quantizer, tileRowCount * tileColumnCount, collector);
+			final Sampler sampler = newRGBSampler(samplerFactory, image, quantizer, collector);
 			final BKDatabase<Sample> bkDatabase = newBKDatabase(patchDatabase, getPreferredMetric(sampler));
 			
 			gc();
@@ -224,10 +224,10 @@ public final class PatchDatabaseTest4 {
 	}
 	
 	public static final Sampler newRGBSampler(final Class<? extends Sampler> samplerFactory,
-			final Image image, final Quantizer quantizer, final int patchPixelCount, final SampleProcessor processor) {
+			final Image image, final Quantizer quantizer, final SampleProcessor processor) {
 		try {
-			return samplerFactory.getConstructor(Image.class, Quantizer.class, Channel[].class, int.class, SampleProcessor.class)
-					.newInstance(image, quantizer, RGB, patchPixelCount, processor);
+			return samplerFactory.getConstructor(Image.class, Quantizer.class, Channel[].class, SampleProcessor.class)
+					.newInstance(image, quantizer, RGB, processor);
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}

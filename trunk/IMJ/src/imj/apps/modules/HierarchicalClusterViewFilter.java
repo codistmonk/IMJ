@@ -189,6 +189,11 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 						}
 					}
 					
+					@Override
+					public final void finishPatch() {
+						// NOP
+					}
+					
 				};
 			} else if ("HISTOGRAM".equals(this.sampling)) {
 				final double[] sample = new double[1 << (this.channelBinningBitCount * channelCount)];
@@ -206,6 +211,11 @@ public final class HierarchicalClusterViewFilter extends ViewFilter {
 							this.i = 0;
 							fill(sample, 0.0);
 						}
+					}
+					
+					@Override
+					public final void finishPatch() {
+						// NOP
 					}
 					
 				};

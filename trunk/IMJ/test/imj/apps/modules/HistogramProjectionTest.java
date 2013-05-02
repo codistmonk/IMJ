@@ -70,6 +70,11 @@ public final class HistogramProjectionTest {
 				}
 			}
 			
+			@Override
+			public final void finishPatch() {
+				// NOP
+			}
+			
 		});
 		
 		for (int i = 0; i < axisCount; ++i) {
@@ -94,6 +99,11 @@ public final class HistogramProjectionTest {
 						histogramProjection.getValue(projectionIndex) + histogram[valueIndex(image, channels, pixel)]);
 			}
 			
+			@Override
+			public final void finishPatch() {
+				// NOP
+			}
+			
 		});
 	}
 	
@@ -105,6 +115,11 @@ public final class HistogramProjectionTest {
 			@Override
 			public final void process(final int pixel) {
 				++result[valueIndex(image, channels, pixel)];
+			}
+			
+			@Override
+			public final void finishPatch() {
+				// NOP
 			}
 			
 		});

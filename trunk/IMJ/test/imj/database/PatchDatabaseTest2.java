@@ -29,7 +29,7 @@ public class PatchDatabaseTest2 {
 	@Test
 	public final void test() {
 		final String imageId = "../Libraries/images/45656.svs";
-		final int lod = 2;
+		final int lod = 3;
 		final PatchDatabase<Sample> database = new PatchDatabase<Sample>(Sample.class);
 		final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
 		gc();

@@ -163,7 +163,7 @@ public final class SampleDatabaseClusterViewFilter extends ViewFilter {
 		
 		if (this.source != null) {
 			debugPrint(this.source.getRowCount(), this.source.getColumnCount());
-			this.sampler = new LinearSampler(this.source, null, RGB, this.tileSize * this.tileSize, this.collector);
+			this.sampler = new LinearSampler(this.source, null, RGB, this.collector);
 		}
 	}
 	

@@ -75,6 +75,11 @@ public final class IMJTools {
 				}
 			}
 			
+			@Override
+			public final void finishPatch() {
+				// NOP
+			}
+			
 		});
 	}
 	
@@ -100,6 +105,8 @@ public final class IMJTools {
 							}
 						}
 					}
+					
+					processor.finishPatch();
 				}
 			}
 		} else {
@@ -114,6 +121,8 @@ public final class IMJTools {
 					processor.process(pixel);
 				}
 			}
+			
+			processor.finishPatch();
 		}
 	}
 	
@@ -132,11 +141,14 @@ public final class IMJTools {
 						processor.process(rowIndex * imageColumnCount + columnIndex);
 					}
 				}
+				
+				processor.finishPatch();
 			}
 		}
 	}
 	
-	public static final void forEachPixelInEachTile(final Image image, final int verticalTileCount, final int horizontalTileCount, final PixelProcessor processor) {
+	public static final void forEachPixelInEachTile(final Image image, final int verticalTileCount, final int horizontalTileCount,
+			final PixelProcessor processor) {
 		final int imageRowCount = image.getRowCount();
 		final int imageColumnCount = image.getColumnCount();
 		final int tileRowCount = imageRowCount / verticalTileCount;
@@ -151,6 +163,8 @@ public final class IMJTools {
 						processor.process(rowIndex * imageColumnCount + columnIndex);
 					}
 				}
+				
+				processor.finishPatch();
 			}
 		}
 	}
@@ -591,6 +605,8 @@ public final class IMJTools {
 	public static abstract interface PixelProcessor {
 		
 		public abstract void process(int pixel);
+		
+		public abstract void finishPatch();
 		
 	}
 	
