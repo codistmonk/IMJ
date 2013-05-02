@@ -1,5 +1,6 @@
 package imj.database;
 
+import imj.ByteList;
 import imj.apps.modules.RegionOfInterest;
 import imj.database.BKSearch.Metric;
 import imj.database.IMJDatabaseTools.ChessboardMetric;
@@ -12,6 +13,8 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Map;
+
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-04-25)
@@ -68,6 +71,7 @@ public final class Sample implements Value {
 			}
 		}
 		
+		sampler.finishPatch();
 	}
 	
 	/**
@@ -82,8 +86,10 @@ public final class Sample implements Value {
 		}
 		
 		@Override
-		public final void process(final byte[] sample) {
-			this.getSample().setKey(sample);
+//		public final void process(final byte[] sample) {
+//			this.getSample().setKey(sample);
+		public final void process(final ByteList sample) {
+			this.getSample().setKey(sample.toArray());
 		}
 		
 	}
@@ -124,8 +130,11 @@ public final class Sample implements Value {
 		}
 		
 		@Override
-		public final void process(final byte[] key) {
-			final Sample sample = this.database.add(key);
+//		public final void process(final byte[] key) {
+		public final void process(final ByteList key) {
+//			Tools.debugPrint(key);
+//			final Sample sample = this.database.add(key);
+			final Sample sample = this.database.add(key.toArray());
 			
 			for (int rowIndex = this.tileRowIndex; rowIndex < this.tileRowIndex + this.tileRowCount; ++rowIndex) {
 				for (int columnIndex = this.tileColumnIndex; columnIndex < this.tileColumnIndex + this.tileColumnCount; ++columnIndex) {

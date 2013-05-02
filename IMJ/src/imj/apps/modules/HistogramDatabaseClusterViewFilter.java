@@ -225,6 +225,11 @@ public final class HistogramDatabaseClusterViewFilter extends ViewFilter {
 						}
 					}
 					
+					@Override
+					public final void finishPatch() {
+						// NOP
+					}
+					
 				};
 			}
 			

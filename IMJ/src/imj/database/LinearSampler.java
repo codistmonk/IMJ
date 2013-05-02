@@ -8,11 +8,8 @@ import imj.apps.modules.ViewFilter.Channel;
  */
 public final class LinearSampler extends Sampler {
 	
-	private int i;
-	
-	public LinearSampler(final Image image, final Quantizer quantizer, final Channel[] channels,
-			final int tilePixelCount, final SampleProcessor processor) {
-		super(image, quantizer, channels, tilePixelCount * channels.length, processor);
+	public LinearSampler(final Image image, final Quantizer quantizer, final Channel[] channels, final SampleProcessor processor) {
+		super(image, quantizer, channels, processor);
 	}
 	
 	@Override
@@ -21,19 +18,19 @@ public final class LinearSampler extends Sampler {
 		
 		if (this.getQuantizer() != null) {
 			for (final Channel channel : this.getChannels()) {
-				this.getSample()[this.i++] = (byte) this.getQuantizer().getNewValue(channel, channel.getValue(pixelValue));
+				this.getSample().add((byte) this.getQuantizer().getNewValue(channel, channel.getValue(pixelValue)));
 			}
 		} else {
 			for (final Channel channel : this.getChannels()) {
-				this.getSample()[this.i++] = (byte) channel.getValue(pixelValue);
+				this.getSample().add((byte) channel.getValue(pixelValue));
 			}
 		}
-		
-		if (this.getSample().length <= this.i) {
-			this.i = 0;
-			
-			this.getProcessor().process(this.getSample());
-		}
+	}
+	
+	@Override
+	public final void finishPatch() {
+		this.getProcessor().process(this.getSample());
+		this.getSample().clear();
 	}
 	
 }

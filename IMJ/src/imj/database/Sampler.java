@@ -1,5 +1,6 @@
 package imj.database;
 
+import imj.ByteList;
 import imj.IMJTools.PixelProcessor;
 import imj.Image;
 import imj.apps.modules.ViewFilter.Channel;
@@ -15,16 +16,15 @@ public abstract class Sampler implements PixelProcessor {
 	
 	private final Channel[] channels;
 	
-	private final byte[] sample;
+	private final ByteList sample;
 	
 	private final SampleProcessor processor;
 	
-	protected Sampler(final Image image, final Quantizer quantizer, final Channel[] channels,
-			final int sampleSize, final SampleProcessor processor) {
+	protected Sampler(final Image image, final Quantizer quantizer, final Channel[] channels, final SampleProcessor processor) {
 		this.image = image;
 		this.quantizer = quantizer;
 		this.channels = channels;
-		this.sample = new byte[sampleSize];
+		this.sample = new ByteList();
 		this.processor = processor;
 	}
 	
@@ -40,7 +40,7 @@ public abstract class Sampler implements PixelProcessor {
 		return this.channels;
 	}
 	
-	public final byte[] getSample() {
+	public final ByteList getSample() {
 		return this.sample;
 	}
 	
@@ -53,7 +53,7 @@ public abstract class Sampler implements PixelProcessor {
 	 */
 	public static abstract interface SampleProcessor {
 		
-		public abstract void process(byte[] sample);
+		public abstract void process(ByteList sample);
 		
 	}
 	

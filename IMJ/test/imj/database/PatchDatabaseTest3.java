@@ -27,7 +27,7 @@ public class PatchDatabaseTest3 {
 				"../Libraries/images/45659.svs",
 				"../Libraries/images/45660.svs" };
 		final Quantizer[] quantizers = new Quantizer[imageIds.length];
-		final int quantizationLevel = 0;
+		final int quantizationLevel = 2;
 		final int lod = 4;
 		final PatchDatabase<Sample> database = new PatchDatabase<Sample>(Sample.class);
 		

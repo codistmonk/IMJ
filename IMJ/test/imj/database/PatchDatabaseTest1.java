@@ -8,6 +8,7 @@ import static junit.framework.Assert.assertNotNull;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static org.junit.Assert.assertEquals;
+import imj.ByteList;
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.ViewFilter.Channel;
@@ -52,8 +53,8 @@ public class PatchDatabaseTest1 {
 		final SampleProcessor processor = new SampleProcessor() {
 			
 			@Override
-			public final void process(final byte[] key) {
-				database.add(key);
+			public final void process(final ByteList key) {
+				database.add(key.toArray());
 			}
 			
 		};
@@ -61,7 +62,7 @@ public class PatchDatabaseTest1 {
 		final TicToc timer = new TicToc();
 		timer.tic();
 		forEachPixelInEachTile(image, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
-				new ColorSignatureSampler(image, null, channels, tilePixelCount, processor));
+				new ColorSignatureSampler(image, null, channels, processor));
 		debugPrint("time:", timer.toc());
 		
 		debugPrint(database.getEntryCount());
