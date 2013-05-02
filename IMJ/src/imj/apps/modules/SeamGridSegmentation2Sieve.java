@@ -47,6 +47,7 @@ public final class SeamGridSegmentation2Sieve extends Sieve {
 		debugPrint("Setting horizontal band seams...", new Date(timer.tic()));
 		setHorizontalBandSeams(image, channel, gridSize, this.segmentation);
 		debugPrint("Setting horizontal band seams done", "time:", timer.toc());
+		
 		debugPrint("Setting vertical band seams...", new Date(timer.tic()));
 		setHorizontalBandSeams(new Transpose(image), channel, gridSize, new Transpose(this.segmentation));
 		debugPrint("Setting vertical band seams done", "time:", timer.toc());
