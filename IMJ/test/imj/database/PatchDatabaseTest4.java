@@ -61,18 +61,20 @@ public final class PatchDatabaseTest4 {
 				"../Libraries/images/45683.svs"
 		};
 		final Quantizer[] quantizers = new Quantizer[imageIds.length];
-		final int quantizationLevel = 4;
+		final int quantizationLevel = 5;
 		final int nonTrainingIndex = 5;
 		final int lod = 5;
-		final int tileRowCount = 8;
+		final int tileRowCount = 3;
 		final int tileColumnCount = tileRowCount;
 		
-		final int verticalTileStride = tileRowCount;
-		final int horizontalTileStride = verticalTileStride;
+		final int trainingVerticalTileStride = 1;
+		final int trainingHorizontalTileStride = trainingVerticalTileStride;
+		final int testVerticalTileStride = tileRowCount;
+		final int testHorizontalTileStride = testVerticalTileStride;
 		final PatchDatabase<Sample> patchDatabase = new PatchDatabase<Sample>(Sample.class);
-		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
+//		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
 //		final Class<? extends Sampler> samplerFactory = ColorSignatureSampler.class;
-//		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
+		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
 		final Channel[] channels = RGB;
 		
 		for (int i = 0; i < imageIds.length; ++i) {
@@ -94,7 +96,7 @@ public final class PatchDatabaseTest4 {
 			
 			final Map<String, RegionOfInterest> classes = new HashMap<String, RegionOfInterest>();
 			
-			updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
+			updateDatabase(imageId, lod, tileRowCount, tileColumnCount, trainingVerticalTileStride, trainingHorizontalTileStride,
 					samplerFactory, channels, quantizers[i], classes, patchDatabase);
 			gc();
 			
@@ -110,6 +112,7 @@ public final class PatchDatabaseTest4 {
 		}
 		
 		if (true) {
+//			final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/40267.svs", lod);
 			final Image image = ImageWrangler.INSTANCE.load(imageIds[nonTrainingIndex], lod);
 			final Quantizer quantizer = new BinningQuantizer();
 			
@@ -123,7 +126,6 @@ public final class PatchDatabaseTest4 {
 			
 			debugPrint(bkDatabase.getValues().length);
 			
-//			final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/40267.svs", lod);
 			
 			final BufferedImage labels = new BufferedImage(image.getColumnCount(), image.getRowCount(), BufferedImage.TYPE_3BYTE_BGR);
 			final Graphics2D g = labels.createGraphics();
@@ -131,10 +133,10 @@ public final class PatchDatabaseTest4 {
 			final int imageColumnCount = image.getColumnCount();
 			final Map<Collection<String>, Color> colors = new HashMap<Collection<String>, Color>();
 			
-			for (int y = 0; y < imageRowCount; y += verticalTileStride) {
+			for (int y = 0; y < imageRowCount; y += testVerticalTileStride) {
 				System.out.print(y + "/" + imageRowCount + " usedMemory:" + Tools.usedMemory() + "\r");
 				
-				for (int x = 0; x < imageColumnCount; x += horizontalTileStride) {
+				for (int x = 0; x < imageColumnCount; x += testHorizontalTileStride) {
 					if (y + tileRowCount <= imageRowCount && x + tileColumnCount <= imageColumnCount) {
 						processTile(sampler, y, x, tileRowCount, tileColumnCount);
 //						final Sample sample = tileDatabase.get(collector.getSample().getKey());
