@@ -2,7 +2,6 @@ package imj.database;
 
 import static imj.IMJTools.square;
 import static imj.IMJTools.unsigned;
-import static imj.database.IMJDatabaseTools.HSB;
 import static imj.database.IMJDatabaseTools.RGB;
 import static imj.database.IMJDatabaseTools.newBKDatabase;
 import static imj.database.IMJDatabaseTools.updateDatabase;
@@ -14,8 +13,8 @@ import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj.Image;
 import imj.ImageWrangler;
-import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.AdaptiveQuantizationViewFilter.AdaptiveQuantizer;
+import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.ViewFilter.Channel;
 import imj.database.BKSearch.BKDatabase;
 import imj.database.BKSearch.Metric;
@@ -23,6 +22,7 @@ import imj.database.IMJDatabaseTools.EuclideanMetric;
 import imj.database.IMJDatabaseTools.NoIdentityMetric;
 import imj.database.Sample.SampleMetric;
 import imj.database.Sampler.SampleProcessor;
+import imj.database.SparseHistogramSampler.SparseHistogramMetric;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -57,21 +57,24 @@ public final class TileDatabaseTest4 {
 				"../Libraries/images/45656.svs",
 				"../Libraries/images/45657.svs",
 				"../Libraries/images/45659.svs",
-				"../Libraries/images/45660.svs"
+				"../Libraries/images/45662.svs",
+				"../Libraries/images/45668.svs",
+				"../Libraries/images/45683.svs"
 		};
 		final AdaptiveQuantizer[] quantizers = new AdaptiveQuantizer[imageIds.length];
-		final int quantizationLevel = 5;
-		final int nonTrainingIndex = 2;
-		final int lod = 6;
-		final int tileRowCount = 5;
+		final int quantizationLevel = 0;
+		final int nonTrainingIndex = 5;
+		final int lod = 5;
+		final int tileRowCount = 8;
 		final int tileColumnCount = tileRowCount;
 		
-		final int verticalTileStride = 1;
+		final int verticalTileStride = tileRowCount;
 		final int horizontalTileStride = verticalTileStride;
 		final TileDatabase<Sample> tileDatabase = new TileDatabase<Sample>(Sample.class);
+//		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
 		final Class<? extends Sampler> samplerFactory = ColorSignatureSampler.class;
 //		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
-		final Channel[] channels = HSB;
+		final Channel[] channels = RGB;
 		
 		for (int i = 0; i < imageIds.length; ++i) {
 			if (nonTrainingIndex == i) {
@@ -108,19 +111,20 @@ public final class TileDatabaseTest4 {
 		}
 		
 		if (true) {
-			final BKDatabase<Sample> bkDatabase = newBKDatabase(tileDatabase, SampleMetric.EUCLIDEAN);
-			gc();
-			
-			debugPrint(bkDatabase.getValues().length);
-			
 			final Image image = ImageWrangler.INSTANCE.load(imageIds[nonTrainingIndex], lod);
-//			final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/40267.svs", lod);
 			final AdaptiveQuantizer quantizer = new AdaptiveQuantizer();
 			
 			quantizer.initialize(image, null, channels, quantizationLevel);
 			
 			final Sample.Collector collector = new Sample.Collector();
 			final Sampler sampler = newRGBSampler(samplerFactory, image, quantizer, tileRowCount * tileColumnCount, collector);
+			final BKDatabase<Sample> bkDatabase = newBKDatabase(tileDatabase, getPreferredMetric(sampler));
+			
+			gc();
+			
+			debugPrint(bkDatabase.getValues().length);
+			
+//			final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/40267.svs", lod);
 			
 			final BufferedImage labels = new BufferedImage(image.getColumnCount(), image.getRowCount(), BufferedImage.TYPE_3BYTE_BGR);
 			final Graphics2D g = labels.createGraphics();
@@ -154,6 +158,14 @@ public final class TileDatabaseTest4 {
 			
 			SwingTools.show(labels, "Labels", true);
 		}
+	}
+	
+	public static final Metric<Sample> getPreferredMetric(final Sampler sampler) {
+		if (sampler instanceof SparseHistogramSampler) {
+			return new SampleMetric(new SparseHistogramMetric(sampler.getChannels().length));
+		}
+		
+		return SampleMetric.CHESSBOARD;
 	}
 	
 	public static final void printIntragroupDistanceStatistics(final TileDatabase<Sample> tileDatabase) {
