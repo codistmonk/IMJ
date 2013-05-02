@@ -1,10 +1,12 @@
 package imj.apps.modules;
 
+import static imj.IMJTools.acyclicDistance;
 import static imj.IMJTools.alpha;
 import static imj.IMJTools.argb;
 import static imj.IMJTools.blue;
 import static imj.IMJTools.brightness;
 import static imj.IMJTools.channelValue;
+import static imj.IMJTools.cyclicDistance;
 import static imj.IMJTools.darkness;
 import static imj.IMJTools.green;
 import static imj.IMJTools.hue;
@@ -23,6 +25,7 @@ import static imj.apps.modules.ViewFilter.Channel.Synthetic.SATURATION;
 import static java.lang.Double.parseDouble;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.af.AFTools.fireUpdate;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -279,6 +282,8 @@ public abstract class ViewFilter extends Plugin {
 		
 		public abstract int getValue(int rgba);
 		
+		public abstract int getDistance(int channelValue1, int channelValue2);
+		
 		/**
 		 * @author codistmonk (creation 2013-02-20)
 		 */
@@ -296,6 +301,11 @@ public abstract class ViewFilter extends Plugin {
 					return red(rgba);
 				}
 				
+				@Override
+				public final int getDistance(final int channelValue1, final int channelValue2) {
+					return acyclicDistance(channelValue1, channelValue2);
+				}
+				
 			}, GREEN {
 				
 				@Override
@@ -306,6 +316,11 @@ public abstract class ViewFilter extends Plugin {
 				@Override
 				public final int getValue(final int rgba) {
 					return green(rgba);
+				}
+				
+				@Override
+				public final int getDistance(final int channelValue1, final int channelValue2) {
+					return acyclicDistance(channelValue1, channelValue2);
 				}
 				
 			}, BLUE {
@@ -320,6 +335,11 @@ public abstract class ViewFilter extends Plugin {
 					return blue(rgba);
 				}
 				
+				@Override
+				public final int getDistance(final int channelValue1, final int channelValue2) {
+					return acyclicDistance(channelValue1, channelValue2);
+				}
+				
 			}, ALPHA {
 				
 				@Override
@@ -330,6 +350,11 @@ public abstract class ViewFilter extends Plugin {
 				@Override
 				public final int getValue(final int rgba) {
 					return alpha(rgba);
+				}
+				
+				@Override
+				public final int getDistance(final int channelValue1, final int channelValue2) {
+					return acyclicDistance(channelValue1, channelValue2);
 				}
 				
 			}, INT {
@@ -344,6 +369,64 @@ public abstract class ViewFilter extends Plugin {
 					return rgba;
 				}
 				
+				@Override
+				public final int getDistance(final int channelValue1, final int channelValue2) {
+					return acyclicDistance(channelValue1, channelValue2);
+				}
+				
+			}, RGB {
+				
+				@Override
+				public final int getChannelIndex() {
+					return 0;
+				}
+				
+				@Override
+				public final int getValue(final int rgba) {
+					return rgba;
+				}
+				
+				@Override
+				public final int getDistance(final int channelValue1, final int channelValue2) {
+					final int r1 = Primitive.RED.getValue(channelValue1);
+					final int r2 = Primitive.RED.getValue(channelValue2);
+					final int g1 = Primitive.GREEN.getValue(channelValue1);
+					final int g2 = Primitive.GREEN.getValue(channelValue2);
+					final int b1 = Primitive.BLUE.getValue(channelValue1);
+					final int b2 = Primitive.BLUE.getValue(channelValue2);
+					
+					return max(Primitive.RED.getDistance(r1, r2),
+							max(Primitive.GREEN.getDistance(g1, g2), Primitive.BLUE.getDistance(b1, b2)));
+				}
+				
+			}, COMPUPHASE {
+				
+				@Override
+				public final int getChannelIndex() {
+					return 0;
+				}
+				
+				@Override
+				public final int getValue(final int rgba) {
+					return rgba;
+				}
+				
+				@Override
+				public final int getDistance(final int channelValue1, final int channelValue2) {
+					final int r1 = Primitive.RED.getValue(channelValue1);
+					final int r2 = Primitive.RED.getValue(channelValue2);
+					final int r = (r1 + r2) / 2;
+					final long dr = acyclicDistance(r1, r2);
+					final int g1 = Primitive.GREEN.getValue(channelValue1);
+					final int g2 = Primitive.GREEN.getValue(channelValue2);
+					final long dg = acyclicDistance(g1, g2);
+					final int b1 = Primitive.BLUE.getValue(channelValue1);
+					final int b2 = Primitive.BLUE.getValue(channelValue2);
+					final long db = acyclicDistance(b1, b2);
+					
+					return (int) (255 * sqrt((((512L + r) * dr * dr) >> 8L) + 4 * dg * dg + (((767 - r) * db * db) >> 8L)));
+				}
+				
 			}, ROW {
 				
 				@Override
@@ -356,6 +439,11 @@ public abstract class ViewFilter extends Plugin {
 					return rgba;
 				}
 				
+				@Override
+				public final int getDistance(final int channelValue1, final int channelValue2) {
+					return acyclicDistance(channelValue1, channelValue2);
+				}
+				
 			}, COLUMN {
 				
 				@Override
@@ -366,6 +454,11 @@ public abstract class ViewFilter extends Plugin {
 				@Override
 				public final int getValue(final int rgba) {
 					return rgba;
+				}
+				
+				@Override
+				public final int getDistance(final int channelValue1, final int channelValue2) {
+					return acyclicDistance(channelValue1, channelValue2);
 				}
 				
 			};
@@ -389,6 +482,11 @@ public abstract class ViewFilter extends Plugin {
 					return hue(rgba);
 				}
 				
+				@Override
+				public final int getDistance(final int channelValue1, final int channelValue2) {
+					return cyclicDistance(channelValue1, channelValue2, 256);
+				}
+				
 			}, SATURATION {
 				
 				@Override
@@ -399,6 +497,11 @@ public abstract class ViewFilter extends Plugin {
 				@Override
 				public final int getValue(final int rgba) {
 					return saturation(rgba);
+				}
+				
+				@Override
+				public final int getDistance(final int channelValue1, final int channelValue2) {
+					return acyclicDistance(channelValue1, channelValue2);
 				}
 				
 			}, BRIGHTNESS {
@@ -413,6 +516,11 @@ public abstract class ViewFilter extends Plugin {
 					return brightness(rgba);
 				}
 				
+				@Override
+				public final int getDistance(final int channelValue1, final int channelValue2) {
+					return acyclicDistance(channelValue1, channelValue2);
+				}
+				
 			}, DARKNESS {
 				
 				@Override
@@ -425,7 +533,23 @@ public abstract class ViewFilter extends Plugin {
 					return darkness(rgba);
 				}
 				
+				@Override
+				public final int getDistance(final int channelValue1, final int channelValue2) {
+					return acyclicDistance(channelValue1, channelValue2);
+				}
+				
 			};
+			
+		}
+		
+		/**
+		 * @author codistmonk (creation 2013-05-02)
+		 */
+		public static interface Distance {
+			
+			public abstract int getOperand(int rgba);
+			
+			public abstract int getDistance(int operand1, int operand2);
 			
 		}
 		
