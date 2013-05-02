@@ -40,6 +40,7 @@ public final class SeamGridSegmentationSieve extends Sieve {
 		final int columnCount = roi.getColumnCount();
 		this.segmentation = RegionOfInterest.newInstance(rowCount, columnCount);
 		final int gridSize = this.getIntParameter("gridSize");
+		final int margin = 1;
 		
 		this.segmentation.reset(true);
 		
@@ -55,7 +56,7 @@ public final class SeamGridSegmentationSieve extends Sieve {
 					break;
 				}
 				
-				final long northEastCost = y0 < y ?
+				final long northEastCost = y0 + margin < y ?
 						getCost(image, channel, y - 1, x1) : Long.MAX_VALUE;
 				final long eastCost = getCost(image, channel, y, x1);
 				final long southEastCost = y + 1 < y0 + gridSize && y + 1 < rowCount ?
@@ -83,7 +84,7 @@ public final class SeamGridSegmentationSieve extends Sieve {
 					break;
 				}
 				
-				final long southWestCost = x0 < x ?
+				final long southWestCost = x0 + margin < x ?
 						getCost(image, channel, y1, x - 1) : Long.MAX_VALUE;
 				final long southCost = getCost(image, channel, y1, x);
 				final long southEastCost = x + 1 < x0 + gridSize && x + 1 < columnCount ?

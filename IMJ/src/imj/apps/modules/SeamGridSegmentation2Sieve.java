@@ -132,6 +132,7 @@ public final class SeamGridSegmentation2Sieve extends Sieve {
 		final int rowCount = image.getRowCount();
 		final int columnCount = image.getColumnCount();
 		final Image band = new ImageOfInts(gridSize, columnCount, 1);
+		final int margin = 1;
 		
 		for (int rowIndex0 = gridSize; rowIndex0 + gridSize < rowCount; rowIndex0 += gridSize) {
 			System.out.print(rowIndex0 + "/" + rowCount + "\r");
@@ -142,7 +143,7 @@ public final class SeamGridSegmentation2Sieve extends Sieve {
 			
 			for (int columnIndex = 1; columnIndex < columnCount; ++columnIndex) {
 				for (int rowIndex = rowIndex0; rowIndex < rowIndex0 + gridSize; ++rowIndex) {
-					final int northWest = rowIndex0 < rowIndex ?
+					final int northWest = rowIndex0 + margin < rowIndex ?
 							getCost(image, channel, rowIndex - 1, columnIndex - 1) : Integer.MAX_VALUE;
 					final int west = getCost(image, channel, rowIndex, columnIndex - 1);
 					final int southWest = rowIndex + 1 < rowIndex0 + gridSize ?
