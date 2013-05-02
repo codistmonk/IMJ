@@ -64,7 +64,7 @@ public final class PatchDatabaseTest4 {
 		final int quantizationLevel = 5;
 		final int nonTrainingIndex = 5;
 		final int lod = 5;
-		final int tileRowCount = 3;
+		final int tileRowCount = 4;
 		final int tileColumnCount = tileRowCount;
 		
 		final int trainingVerticalTileStride = 1;
@@ -73,8 +73,8 @@ public final class PatchDatabaseTest4 {
 		final int testHorizontalTileStride = testVerticalTileStride;
 		final PatchDatabase<Sample> patchDatabase = new PatchDatabase<Sample>(Sample.class);
 //		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
-//		final Class<? extends Sampler> samplerFactory = ColorSignatureSampler.class;
-		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
+		final Class<? extends Sampler> samplerFactory = ColorSignatureSampler.class;
+//		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
 		final Channel[] channels = RGB;
 		
 		for (int i = 0; i < imageIds.length; ++i) {

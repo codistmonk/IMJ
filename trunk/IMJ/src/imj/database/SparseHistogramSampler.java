@@ -144,7 +144,7 @@ public final class SparseHistogramSampler extends Sampler {
 			int i0 = 0;
 			int i1 = 0;
 			
-			while (i0 < h0.length && i1 < h1.length) {
+			while (i0 < h0.length || i1 < h1.length) {
 				final int colorDifference = this.compare(h0, i0, h1, i1);
 				
 				if (colorDifference < 0) {
@@ -164,6 +164,14 @@ public final class SparseHistogramSampler extends Sampler {
 		}
 		
 		private final int compare(final byte[] h0, final int i0, final byte[] h1, final int i1) {
+			if (h0.length <= i0) {
+				return +1;
+			}
+			
+			if (h1.length <= i1) {
+				return -1;
+			}
+			
 			for (int j = 0; j < this.channelCount; ++j) {
 				final int result = unsigned(h0[i0 + j]) - unsigned(h1[i1 + j]);
 				
