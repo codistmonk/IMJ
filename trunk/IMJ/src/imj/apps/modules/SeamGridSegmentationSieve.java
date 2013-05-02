@@ -3,12 +3,15 @@ package imj.apps.modules;
 import static imj.apps.modules.ViewFilter.getCurrentImage;
 import static imj.apps.modules.ViewFilter.parseChannel;
 import static java.lang.Math.max;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import imj.Image;
 import imj.apps.modules.ViewFilter.Channel;
 
+import java.util.Date;
 import java.util.Locale;
 
 import net.sourceforge.aprog.context.Context;
+import net.sourceforge.aprog.tools.TicToc;
 
 /**
  * @author codistmonk (creation 2013-05-01)
@@ -38,10 +41,15 @@ public final class SeamGridSegmentationSieve extends Sieve {
 		final int columnCount = roi.getColumnCount();
 		this.segmentation = RegionOfInterest.newInstance(rowCount, columnCount);
 		final int gridSize = this.getIntParameter("gridSize");
+		final TicToc timer = new TicToc();
 		
 		this.segmentation.reset(true);
 		
+		debugPrint("Setting horizontal band seams...", new Date(timer.tic()));
+		
 		for (int y0 = gridSize; y0 < rowCount; y0 += gridSize) {
+			System.out.print(y0 + "/" + rowCount + "\r");
+			
 			int y = y0;
 			
 			for (int x = 0; x < columnCount; ++x) {
@@ -69,7 +77,13 @@ public final class SeamGridSegmentationSieve extends Sieve {
 			}
 		}
 		
+		debugPrint("Setting horizontal band seams done", "time:", timer.toc());
+		
+		debugPrint("Setting vertical band seams...", new Date(timer.tic()));
+		
 		for (int x0 = gridSize; x0 < columnCount; x0 += gridSize) {
+			System.out.print(x0 + "/" + columnCount + "\r");
+			
 			int x = x0;
 			
 			for (int y = 0; y < rowCount; ++y) {
@@ -96,6 +110,8 @@ public final class SeamGridSegmentationSieve extends Sieve {
 				}
 			}
 		}
+		
+		debugPrint("Setting vertical band seams done", "time:", timer.toc());
 	}
 	
 	public static final int getCost(final Image image, final Channel channel, final int rowIndex, final int columnIndex) {
