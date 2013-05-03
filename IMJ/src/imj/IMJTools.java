@@ -1,12 +1,12 @@
 package imj;
 
-import static imj.IMJTools.forEachPixel;
 import static imj.ImageOfBufferedImage.Feature.MAX_RGB;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static javax.imageio.ImageIO.read;
 import static net.sourceforge.aprog.tools.Tools.cast;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj.ImageOfBufferedImage.Feature;
 import imj.apps.modules.FilteredImage;
@@ -20,6 +20,7 @@ import java.util.Arrays;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-01-24)
@@ -81,6 +82,61 @@ public final class IMJTools {
 			}
 			
 		});
+	}
+	
+	public static final void forEachPixelInEachComponent4(final Image roi, final PixelProcessor processor) {
+		final int imageRowCount = roi.getRowCount();
+		final int imageColumnCount = roi.getColumnCount();
+		final int pixelCount = roi.getPixelCount();
+		final IntList todo = new IntList();
+		final RegionOfInterest done = new RegionOfInterest.UsingBitSet(imageRowCount, imageColumnCount, false);
+		
+		for (int pixel = 0; pixel < pixelCount; ++pixel) {
+			if (roi.getValue(pixel) == 0) {
+				done.set(pixel);
+			}
+		}
+		
+		for (int pixel = 0; pixel < pixelCount; ++pixel) {
+			if (!done.get(pixel)) {
+				todo.add(pixel);
+				done.set(pixel);
+				
+				while (!todo.isEmpty()) {
+					final int p = todo.remove(0);
+					final int pRowIndex = p / imageColumnCount;
+					final int pColumnIndex = p % imageColumnCount;
+					
+					processor.process(p);
+					
+					if (0 < pRowIndex) {
+						maybeScheduleNeighbor(done, todo, p - imageColumnCount);
+					}
+					
+					if (0 < pColumnIndex) {
+						maybeScheduleNeighbor(done, todo, p - 1);
+					}
+					
+					if (pColumnIndex + 1 < imageColumnCount) {
+						maybeScheduleNeighbor(done, todo, p + 1);
+					}
+					
+					if (pRowIndex + 1 < imageRowCount) {
+						maybeScheduleNeighbor(done, todo, p + imageColumnCount);
+					}
+				}
+				
+				processor.finishPatch();
+			}
+		}
+		
+	}
+	
+	private static final void maybeScheduleNeighbor(final RegionOfInterest done, final IntList todo, final int neighbor) {
+		if (!done.get(neighbor)) {
+			todo.add(neighbor);
+			done.set(neighbor);
+		}
 	}
 	
 	public static final void forEachPixel(final Image image, final RegionOfInterest roi, final PixelProcessor processor) {
