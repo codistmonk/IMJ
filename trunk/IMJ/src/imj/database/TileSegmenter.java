@@ -3,6 +3,7 @@ package imj.database;
 import static imj.IMJTools.forEachPixelInEachTile;
 
 import imj.Image;
+import imj.IMJTools.PixelProcessor;
 
 /**
  * @author codistmonk (creation 2013-05-03)
@@ -26,9 +27,9 @@ public final class TileSegmenter implements Segmenter {
 	}
 	
 	@Override
-	public final void process(final Image image, final Sampler sampler) {
+	public final void process(final Image image, final PixelProcessor processor) {
 		forEachPixelInEachTile(image, this.tileRowCount, this.tileColumnCount,
-				this.verticalTileStride, this.horizontalTileStride, sampler);
+				this.verticalTileStride, this.horizontalTileStride, processor);
 	}
 	
 }

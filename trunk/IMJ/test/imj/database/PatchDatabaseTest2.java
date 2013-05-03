@@ -52,7 +52,7 @@ public class PatchDatabaseTest2 {
 		
 		updateDatabase(imageId, lod, segmenter, LinearSampler.class, RGB, quantizer, classes, database);
 		
-		final int databaseSampleCount = checkDatabase(classes, database);
+		final int databaseSampleCount = checkDatabase(database);
 		
 		// k * verticalTileStride + tileRowCount <= imageRowCount
 		// k * verticalTileStride <= imageRowCount - tileRowCount
@@ -64,7 +64,7 @@ public class PatchDatabaseTest2 {
 		debugPrint();
 	}
 	
-	public static final int checkDatabase(final Map<String, RegionOfInterest> classes, final PatchDatabase<?> database) {
+	public static final int checkDatabase(final PatchDatabase<?> database) {
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Checking database...", new Date(timer.tic()));
