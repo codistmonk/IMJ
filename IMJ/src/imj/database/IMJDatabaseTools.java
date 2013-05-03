@@ -48,8 +48,7 @@ public final class IMJDatabaseTools {
 	public static final Channel[] HSB = { HUE, SATURATION, BRIGHTNESS };
 	
 	public static final void updateDatabase(final String imageId, final int lod,
-			final int tileRowCount, final int tileColumnCount,
-			final int verticalTileStride, final int horizontalTileStride,
+			final Segmenter segmenter,
 			final Class<? extends Sampler> samplerFactory, final Channel[] channels,
 			final Quantizer quantizer,
 			final Map<String, RegionOfInterest> classes, final PatchDatabase<Sample> database) {
@@ -62,8 +61,7 @@ public final class IMJDatabaseTools {
 		
 		loadRegions(lod, imageRowCount, imageColumnCount, annotations, classes);
 		
-		final SampleProcessor processor = new Sample.ClassSetter(imageColumnCount, tileRowCount, tileColumnCount,
-				verticalTileStride, horizontalTileStride, classes, database);
+		final SampleProcessor processor = new Sample.ClassSetter(classes, database);
 		final Sampler sampler;
 		
 		try {
@@ -74,7 +72,7 @@ public final class IMJDatabaseTools {
 		}
 		
 		timer.tic();
-		forEachPixelInEachTile(image, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride, sampler);
+		segmenter.process(image, sampler);
 		gc();
 		debugPrint("time:", timer.toc());
 	}

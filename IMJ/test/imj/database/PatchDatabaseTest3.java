@@ -49,6 +49,7 @@ public class PatchDatabaseTest3 {
 			final int verticalTileCount = imageRowCount / tileRowCount;
 			final int horizontalTileCount = imageColumnCount / tileColumnCount;
 			final Map<String, RegionOfInterest> classes = new HashMap<String, RegionOfInterest>();
+			final Segmenter segmenter = new TileSegmenter(tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride);
 			
 			debugPrint("imageRowCount:", imageRowCount, "imageColumnCount:", imageColumnCount);
 			debugPrint("verticalTileCount:", verticalTileCount, "horizontalTileCount:", horizontalTileCount);
@@ -56,8 +57,7 @@ public class PatchDatabaseTest3 {
 			quantizers[i] = new BinningQuantizer();
 			quantizers[i].initialize(image, null, RGB, quantizationLevel);
 			
-			updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
-					LinearSampler.class, RGB, quantizers[i], classes, database);
+			updateDatabase(imageId, lod, segmenter, LinearSampler.class, RGB, quantizers[i], classes, database);
 			gc();
 			checkDatabase(classes, database);
 			gc();

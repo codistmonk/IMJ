@@ -10,6 +10,8 @@ import imj.database.LinearSampler;
 import imj.database.PatchDatabase;
 import imj.database.Quantizer;
 import imj.database.Sample;
+import imj.database.Segmenter;
+import imj.database.TileSegmenter;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -53,13 +55,14 @@ public final class GenerateSampleDatabase {
 		final PatchDatabase<Sample> sampleDatabase = new PatchDatabase<Sample>(Sample.class);
 		final Quantizer quantizer = new BinningQuantizer();
 		final int quantizationLevel = arguments.get("q", 0)[0];
+		final Segmenter segmenter = new TileSegmenter(tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride);
 		
 		System.out.println("Collecting data... " + new Date(timer.tic()));
 		
 		quantizer.initialize(ImageWrangler.INSTANCE.load(imageId, lod), null, RGB, quantizationLevel);
 		
-		updateDatabase(imageId, lod, tileRowCount, tileColumnCount, verticalTileStride, horizontalTileStride,
-				LinearSampler.class, RGB, quantizer, new HashMap<String, RegionOfInterest>(), sampleDatabase);
+		updateDatabase(imageId, lod, segmenter, LinearSampler.class, RGB, quantizer,
+				new HashMap<String, RegionOfInterest>(), sampleDatabase);
 		
 		database.put("samples", sampleDatabase);
 		

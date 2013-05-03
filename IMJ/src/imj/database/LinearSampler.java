@@ -16,6 +16,8 @@ public final class LinearSampler extends Sampler {
 	public final void process(final int pixel) {
 		final int pixelValue = this.getImage().getValue(pixel);
 		
+		this.getProcessor().processPixel(pixel, pixelValue);
+		
 		if (this.getQuantizer() != null) {
 			for (final Channel channel : this.getChannels()) {
 				this.getSample().add((byte) this.getQuantizer().getNewValue(channel, channel.getValue(pixelValue)));
@@ -29,7 +31,7 @@ public final class LinearSampler extends Sampler {
 	
 	@Override
 	public final void finishPatch() {
-		this.getProcessor().process(this.getSample());
+		this.getProcessor().processSample(this.getSample());
 		this.getSample().clear();
 	}
 	
