@@ -1,5 +1,6 @@
 package imj.apps.modules;
 
+import static imj.apps.modules.SeamGridSegmentationSieve.countSegments4;
 import static imj.apps.modules.SeamGridSegmentationSieve.getCost;
 import static imj.apps.modules.ViewFilter.getCurrentImage;
 import static imj.apps.modules.ViewFilter.parseChannel;
@@ -25,7 +26,7 @@ public final class SeamGridSegmentation2Sieve extends Sieve {
 	public SeamGridSegmentation2Sieve(final Context context) {
 		super(context);
 		
-		this.getParameters().put("channel", "brightness");
+		this.getParameters().put("channel", "rgb");
 		this.getParameters().put("gridSize", "32");
 	}
 	
@@ -51,6 +52,8 @@ public final class SeamGridSegmentation2Sieve extends Sieve {
 		debugPrint("Setting vertical band seams...", new Date(timer.tic()));
 		setHorizontalBandSeams(new Transpose(image), channel, gridSize, new Transpose(this.segmentation));
 		debugPrint("Setting vertical band seams done", "time:", timer.toc());
+		
+		debugPrint("segmentCount:", countSegments4(this.segmentation));
 	}
 	
 	/**

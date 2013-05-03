@@ -1,9 +1,11 @@
 package imj.apps.modules;
 
+import static imj.IMJTools.forEachPixelInEachComponent4;
 import static imj.apps.modules.ViewFilter.getCurrentImage;
 import static imj.apps.modules.ViewFilter.parseChannel;
 import static java.lang.Math.max;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import imj.IMJTools.PixelProcessor;
 import imj.Image;
 import imj.apps.modules.ViewFilter.Channel;
 
@@ -23,7 +25,7 @@ public final class SeamGridSegmentationSieve extends Sieve {
 	public SeamGridSegmentationSieve(final Context context) {
 		super(context);
 		
-		this.getParameters().put("channel", "brightness");
+		this.getParameters().put("channel", "rgb");
 		this.getParameters().put("gridSize", "32");
 	}
 	
@@ -112,6 +114,28 @@ public final class SeamGridSegmentationSieve extends Sieve {
 		}
 		
 		debugPrint("Setting vertical band seams done", "time:", timer.toc());
+		
+		debugPrint("segmentCount:", countSegments4(this.segmentation));
+	}
+	
+	public static final int countSegments4(final Image segmentation) {
+		final int[] segmentCount = { 0 };
+		
+		forEachPixelInEachComponent4(segmentation, new PixelProcessor() {
+			
+			@Override
+			public final void process(final int pixel) {
+				// NOP
+			}
+			
+			@Override
+			public final void finishPatch() {
+				++segmentCount[0];
+			}
+			
+		});
+		
+		return segmentCount[0];
 	}
 	
 	public static final int getCost(final Image image, final Channel channel, final int rowIndex, final int columnIndex) {
