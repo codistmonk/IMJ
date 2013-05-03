@@ -26,7 +26,7 @@ public final class SeamGridSegmentationSieve extends Sieve {
 		super(context);
 		
 		this.getParameters().put("channel", "rgb");
-		this.getParameters().put("gridSize", "32");
+		this.getParameters().put("cellSize", "32");
 	}
 	
 	@Override
@@ -42,10 +42,19 @@ public final class SeamGridSegmentationSieve extends Sieve {
 		final int rowCount = roi.getRowCount();
 		final int columnCount = roi.getColumnCount();
 		this.segmentation = RegionOfInterest.newInstance(rowCount, columnCount);
-		final int gridSize = this.getIntParameter("gridSize");
-		final TicToc timer = new TicToc();
+		final int cellSize = this.getIntParameter("cellSize");
 		
 		this.segmentation.reset(true);
+		
+		setSeams(image, channel, cellSize, this.segmentation);
+		
+		debugPrint("segmentCount:", countSegments4(this.segmentation));
+	}
+	
+	public static final void setSeams(final Image image, final Channel channel, final int gridSize, final RegionOfInterest segmentation) {
+		final TicToc timer = new TicToc();
+		final int rowCount = image.getRowCount();
+		final int columnCount = image.getColumnCount();
 		
 		debugPrint("Setting horizontal band seams...", new Date(timer.tic()));
 		
@@ -55,7 +64,7 @@ public final class SeamGridSegmentationSieve extends Sieve {
 			int y = y0;
 			
 			for (int x = 0; x < columnCount; ++x) {
-				this.segmentation.set(y, x, false);
+				segmentation.set(y, x, false);
 				
 				final int x1 = x + 1;
 				
@@ -89,7 +98,7 @@ public final class SeamGridSegmentationSieve extends Sieve {
 			int x = x0;
 			
 			for (int y = 0; y < rowCount; ++y) {
-				this.segmentation.set(y, x, false);
+				segmentation.set(y, x, false);
 				
 				final int y1 = y + 1;
 				
@@ -114,8 +123,6 @@ public final class SeamGridSegmentationSieve extends Sieve {
 		}
 		
 		debugPrint("Setting vertical band seams done", "time:", timer.toc());
-		
-		debugPrint("segmentCount:", countSegments4(this.segmentation));
 	}
 	
 	public static final int countSegments4(final Image segmentation) {

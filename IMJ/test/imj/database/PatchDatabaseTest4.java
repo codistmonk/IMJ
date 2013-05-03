@@ -54,30 +54,33 @@ public final class PatchDatabaseTest4 {
 				"../Libraries/images/45656.svs",
 				"../Libraries/images/45657.svs",
 				"../Libraries/images/45659.svs",
+				"../Libraries/images/45660.svs",
 				"../Libraries/images/45662.svs",
 				"../Libraries/images/45668.svs",
 				"../Libraries/images/45683.svs"
 		};
 		final Quantizer[] quantizers = new Quantizer[imageIds.length];
-		final int quantizationLevel = 5;
-		final int nonTrainingIndex = 5;
-		final int lod = 5;
-		final int tileRowCount = 4;
+		final int quantizationLevel = 4;
+		final int nonTrainingIndex = -1;
+		final int lod = 4;
+		final int tileRowCount = 8;
 		final int tileColumnCount = tileRowCount;
 		
-		final int trainingVerticalTileStride = 4;
+		final int trainingVerticalTileStride = tileRowCount;
 		final int trainingHorizontalTileStride = trainingVerticalTileStride;
 		final int testVerticalTileStride = tileRowCount;
 		final int testHorizontalTileStride = testVerticalTileStride;
 		final PatchDatabase<Sample> patchDatabase = new PatchDatabase<Sample>(Sample.class);
-		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
-//		final Class<? extends Sampler> samplerFactory = ColorSignatureSampler.class;
+//		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
+		final Class<? extends Sampler> samplerFactory = ColorSignatureSampler.class;
 //		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
 		final Channel[] channels = RGB;
-		final Segmenter trainingSegmenter = new TileSegmenter(tileRowCount, tileColumnCount,
-				trainingVerticalTileStride, trainingHorizontalTileStride);
-		final Segmenter testSegmenter = new TileSegmenter(tileRowCount, tileColumnCount,
-				testVerticalTileStride, testHorizontalTileStride);
+//		final Segmenter trainingSegmenter = new TileSegmenter(tileRowCount, tileColumnCount,
+//				trainingVerticalTileStride, trainingHorizontalTileStride);
+//		final Segmenter testSegmenter = new TileSegmenter(tileRowCount, tileColumnCount,
+//				testVerticalTileStride, testHorizontalTileStride);
+		final Segmenter trainingSegmenter = new SeamGridSegmenter(tileRowCount);
+		final Segmenter testSegmenter = trainingSegmenter;
 		
 		for (int i = 0; i < imageIds.length; ++i) {
 			if (nonTrainingIndex == i) {
@@ -104,7 +107,7 @@ public final class PatchDatabaseTest4 {
 //			diffuseClasses(tileDatabase, 10);
 //			gc();
 			
-			checkDatabase(classes, patchDatabase);
+			checkDatabase(patchDatabase);
 			gc();
 		}
 		
@@ -113,8 +116,8 @@ public final class PatchDatabaseTest4 {
 		}
 		
 		if (true) {
-//			final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/40267.svs", lod);
-			final Image image = ImageWrangler.INSTANCE.load(imageIds[nonTrainingIndex], lod);
+			final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/16088.svs", lod);
+//			final Image image = ImageWrangler.INSTANCE.load(imageIds[nonTrainingIndex], lod);
 			final Quantizer quantizer = new BinningQuantizer();
 			
 			quantizer.initialize(image, null, channels, quantizationLevel);
@@ -162,6 +165,9 @@ public final class PatchDatabaseTest4 {
 				}
 				
 			});
+			
+			checkDatabase(patchDatabase);
+			gc();
 			
 			for (final Map.Entry<Collection<String>, Color> entry : colors.entrySet()) {
 				debugPrint(entry);

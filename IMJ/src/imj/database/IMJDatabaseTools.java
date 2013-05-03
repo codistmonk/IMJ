@@ -1,6 +1,5 @@
 package imj.database;
 
-import static imj.IMJTools.forEachPixelInEachTile;
 import static imj.apps.modules.ShowActions.baseName;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.BLUE;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.GREEN;
@@ -10,6 +9,7 @@ import static imj.apps.modules.ViewFilter.Channel.Synthetic.HUE;
 import static imj.apps.modules.ViewFilter.Channel.Synthetic.SATURATION;
 import static java.lang.Math.abs;
 import static java.lang.Math.ceil;
+import static java.lang.Math.max;
 import static java.lang.Math.sqrt;
 import static java.util.Arrays.copyOf;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -147,10 +147,14 @@ public final class IMJDatabaseTools {
 		@Override
 		public final long getDistance(final byte[] sample0, final byte[] sample1) {
 			long result = 0L;
-			final int n = sample0.length;
+			final int n0 = sample0.length;
+			final int n1 = sample1.length;
+			final int n = max(n0, n1);
 			
 			for (int i = 0; i < n; ++i) {
-				result += square(sample1[i] - sample0[i]);
+				final byte s0 = i < n0 ? sample0[i] : 0;
+				final byte s1 = i < n1 ? sample1[i] : 0;
+				result += square(s1 - s0);
 			}
 			
 			return (long) ceil(sqrt(result));
@@ -168,10 +172,15 @@ public final class IMJDatabaseTools {
 		@Override
 		public final long getDistance(final byte[] sample0, final byte[] sample1) {
 			long result = 0L;
-			final int n = sample0.length;
+			final int n0 = sample0.length;
+			final int n1 = sample1.length;
+			final int n = max(n0, n1);
 			
 			for (int i = 0; i < n; ++i) {
-				result += abs(sample1[i] - sample0[i]);
+				final byte s0 = i < n0 ? sample0[i] : 0;
+				final byte s1 = i < n1 ? sample1[i] : 0;
+				
+				result += abs(s1 - s0);
 			}
 			
 			return result;
@@ -189,10 +198,14 @@ public final class IMJDatabaseTools {
 		@Override
 		public final long getDistance(final byte[] sample0, final byte[] sample1) {
 			long result = 0L;
-			final int n = sample0.length;
+			final int n0 = sample0.length;
+			final int n1 = sample1.length;
+			final int n = max(n0, n1);
 			
 			for (int i = 0; i < n; ++i) {
-				final long d = abs(sample1[i] - sample0[i]);
+				final byte s0 = i < n0 ? sample0[i] : 0;
+				final byte s1 = i < n1 ? sample1[i] : 0;
+				final long d = abs(s1 - s0);
 				
 				if (result < d) {
 					result = d;

@@ -27,7 +27,7 @@ public final class SeamGridSegmentation2Sieve extends Sieve {
 		super(context);
 		
 		this.getParameters().put("channel", "rgb");
-		this.getParameters().put("gridSize", "32");
+		this.getParameters().put("cellSize", "32");
 	}
 	
 	@Override
@@ -38,7 +38,7 @@ public final class SeamGridSegmentation2Sieve extends Sieve {
 	@Override
 	public final void initialize() {
 		final Channel channel = parseChannel(this.getParameters().get("channel").toUpperCase(Locale.ENGLISH));
-		final int gridSize = this.getIntParameter("gridSize");
+		final int cellSize = this.getIntParameter("cellSize");
 		final Image image = getCurrentImage(this.getContext());
 		final RegionOfInterest roi = this.getROI();
 		this.segmentation = RegionOfInterest.newInstance(roi.getRowCount(), roi.getColumnCount());
@@ -46,11 +46,11 @@ public final class SeamGridSegmentation2Sieve extends Sieve {
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Setting horizontal band seams...", new Date(timer.tic()));
-		setHorizontalBandSeams(image, channel, gridSize, this.segmentation);
+		setHorizontalBandSeams(image, channel, cellSize, this.segmentation);
 		debugPrint("Setting horizontal band seams done", "time:", timer.toc());
 		
 		debugPrint("Setting vertical band seams...", new Date(timer.tic()));
-		setHorizontalBandSeams(new Transpose(image), channel, gridSize, new Transpose(this.segmentation));
+		setHorizontalBandSeams(new Transpose(image), channel, cellSize, new Transpose(this.segmentation));
 		debugPrint("Setting vertical band seams done", "time:", timer.toc());
 		
 		debugPrint("segmentCount:", countSegments4(this.segmentation));
@@ -132,24 +132,24 @@ public final class SeamGridSegmentation2Sieve extends Sieve {
 	}
 	
 	public static final void setHorizontalBandSeams(final Image image, final Channel channel,
-			final int gridSize, final Image segmentation) {
+			final int cellSize, final Image segmentation) {
 		final int rowCount = image.getRowCount();
 		final int columnCount = image.getColumnCount();
-		final Image band = new ImageOfInts(gridSize, columnCount, 1);
+		final Image band = new ImageOfInts(cellSize, columnCount, 1);
 		
-		for (int rowIndex0 = gridSize; rowIndex0 + gridSize < rowCount; rowIndex0 += gridSize) {
+		for (int rowIndex0 = cellSize; rowIndex0 + cellSize < rowCount; rowIndex0 += cellSize) {
 			System.out.print(rowIndex0 + "/" + rowCount + "\r");
 			
-			for (int rowIndex = rowIndex0; rowIndex < rowIndex0 + gridSize; ++rowIndex) {
+			for (int rowIndex = rowIndex0; rowIndex < rowIndex0 + cellSize; ++rowIndex) {
 				band.setValue(rowIndex - rowIndex0, 0, getCost(image, channel, rowIndex, 0));
 			}
 			
 			for (int columnIndex = 1; columnIndex < columnCount; ++columnIndex) {
-				for (int rowIndex = rowIndex0; rowIndex < rowIndex0 + gridSize; ++rowIndex) {
+				for (int rowIndex = rowIndex0; rowIndex < rowIndex0 + cellSize; ++rowIndex) {
 					final int northWest = rowIndex0 < rowIndex ?
 							getCost(image, channel, rowIndex - 1, columnIndex - 1) : Integer.MAX_VALUE;
 					final int west = getCost(image, channel, rowIndex, columnIndex - 1);
-					final int southWest = rowIndex + 1 < rowIndex0 + gridSize ?
+					final int southWest = rowIndex + 1 < rowIndex0 + cellSize ?
 							getCost(image, channel, rowIndex + 1, columnIndex - 1) : Integer.MAX_VALUE;
 					final int min = min(northWest, min(west, southWest));
 					
@@ -162,7 +162,7 @@ public final class SeamGridSegmentation2Sieve extends Sieve {
 			int rowIndexOfMin = rowIndex0;
 			int min = band.getValue(rowIndexOfMin - rowIndex0, lastColumnIndex);
 			
-			for (int rowIndex = rowIndex0; rowIndex < rowIndex0 + gridSize; ++rowIndex) {
+			for (int rowIndex = rowIndex0; rowIndex < rowIndex0 + cellSize; ++rowIndex) {
 				final int value = band.getValue(rowIndex - rowIndex0, lastColumnIndex);
 				
 				if (value < min) {
@@ -181,7 +181,7 @@ public final class SeamGridSegmentation2Sieve extends Sieve {
 				final int northWest = rowIndex0 < rowIndex ?
 						band.getValue(rowIndex - rowIndex0 - 1, columnIndex - 1) : Integer.MAX_VALUE;
 				final int west = band.getValue(rowIndex - rowIndex0, columnIndex - 1);
-				final int southWest = rowIndex + 1 < rowIndex0 + gridSize ?
+				final int southWest = rowIndex + 1 < rowIndex0 + cellSize ?
 						band.getValue(rowIndex - rowIndex0 + 1, columnIndex - 1) : Integer.MAX_VALUE;
 				
 				if (west <= northWest && west <= southWest) {

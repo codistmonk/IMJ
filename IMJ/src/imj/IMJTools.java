@@ -99,6 +99,8 @@ public final class IMJTools {
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
 			if (!done.get(pixel)) {
+				System.out.print(pixel + "/" + pixelCount + "\r");
+				
 				todo.add(pixel);
 				done.set(pixel);
 				

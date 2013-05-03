@@ -1,5 +1,6 @@
 package imj.database;
 
+import imj.IMJTools.PixelProcessor;
 import imj.Image;
 
 /**
@@ -7,7 +8,7 @@ import imj.Image;
  */
 public abstract interface Segmenter {
 	
-	public abstract void process(Image image, Sampler sampler);
+	public abstract void process(Image image, PixelProcessor processor);
 	
 }
 

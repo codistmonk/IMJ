@@ -59,7 +59,7 @@ public class PatchDatabaseTest3 {
 			
 			updateDatabase(imageId, lod, segmenter, LinearSampler.class, RGB, quantizers[i], classes, database);
 			gc();
-			checkDatabase(classes, database);
+			checkDatabase(database);
 			gc();
 			
 			debugPrint();
