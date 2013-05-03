@@ -6,13 +6,13 @@ import static imj.database.IMJDatabaseTools.RGB;
 import static imj.database.IMJDatabaseTools.newBKDatabase;
 import static imj.database.IMJDatabaseTools.updateDatabase;
 import static imj.database.PatchDatabaseTest2.checkDatabase;
-import static imj.database.Sample.processTile;
 import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj.Image;
 import imj.ImageWrangler;
+import imj.IntList;
 import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.ViewFilter.Channel;
 import imj.database.BKSearch.BKDatabase;
@@ -24,7 +24,6 @@ import imj.database.Sampler.SampleProcessor;
 import imj.database.SparseHistogramSampler.SparseHistogramMetric;
 
 import java.awt.Color;
-import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -40,7 +39,6 @@ import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.SystemProperties;
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -67,7 +65,7 @@ public final class PatchDatabaseTest4 {
 		final int tileRowCount = 4;
 		final int tileColumnCount = tileRowCount;
 		
-		final int trainingVerticalTileStride = 1;
+		final int trainingVerticalTileStride = 4;
 		final int trainingHorizontalTileStride = trainingVerticalTileStride;
 		final int testVerticalTileStride = tileRowCount;
 		final int testHorizontalTileStride = testVerticalTileStride;
@@ -76,6 +74,10 @@ public final class PatchDatabaseTest4 {
 //		final Class<? extends Sampler> samplerFactory = ColorSignatureSampler.class;
 //		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
 		final Channel[] channels = RGB;
+		final Segmenter trainingSegmenter = new TileSegmenter(tileRowCount, tileColumnCount,
+				trainingVerticalTileStride, trainingHorizontalTileStride);
+		final Segmenter testSegmenter = new TileSegmenter(tileRowCount, tileColumnCount,
+				testVerticalTileStride, testHorizontalTileStride);
 		
 		for (int i = 0; i < imageIds.length; ++i) {
 			if (nonTrainingIndex == i) {
@@ -96,8 +98,7 @@ public final class PatchDatabaseTest4 {
 			
 			final Map<String, RegionOfInterest> classes = new HashMap<String, RegionOfInterest>();
 			
-			updateDatabase(imageId, lod, tileRowCount, tileColumnCount, trainingVerticalTileStride, trainingHorizontalTileStride,
-					samplerFactory, channels, quantizers[i], classes, patchDatabase);
+			updateDatabase(imageId, lod, trainingSegmenter, samplerFactory, channels, quantizers[i], classes, patchDatabase);
 			gc();
 			
 //			diffuseClasses(tileDatabase, 10);
@@ -124,34 +125,43 @@ public final class PatchDatabaseTest4 {
 			
 			gc();
 			
-			debugPrint(bkDatabase.getValues().length);
-			
+			debugPrint("bkDatabaseEntryCount:", bkDatabase.getValues().length);
 			
 			final BufferedImage labels = new BufferedImage(image.getColumnCount(), image.getRowCount(), BufferedImage.TYPE_3BYTE_BGR);
-			final Graphics2D g = labels.createGraphics();
-			final int imageRowCount = image.getRowCount();
 			final int imageColumnCount = image.getColumnCount();
 			final Map<Collection<String>, Color> colors = new HashMap<Collection<String>, Color>();
 			
-			for (int y = 0; y < imageRowCount; y += testVerticalTileStride) {
-				System.out.print(y + "/" + imageRowCount + " usedMemory:" + Tools.usedMemory() + "\r");
+			testSegmenter.process(image, new Sampler(image, quantizer, channels, collector) {
 				
-				for (int x = 0; x < imageColumnCount; x += testHorizontalTileStride) {
-					if (y + tileRowCount <= imageRowCount && x + tileColumnCount <= imageColumnCount) {
-						processTile(sampler, y, x, tileRowCount, tileColumnCount);
-//						final Sample sample = tileDatabase.get(collector.getSample().getKey());
-						final Sample sample = bkDatabase.findClosest(collector.getSample());
-						final Color color = new Color(generateColor(sample));
-						
-						g.setColor(color);
-						g.fillRect(x, y, tileColumnCount, tileRowCount);
-						
-						colors.put(sample.getClasses(), color);
-					}
+				private final IntList xys = new IntList();
+				
+				@Override
+				public final void process(final int pixel) {
+					sampler.process(pixel);
+					
+					this.xys.add(pixel % imageColumnCount);
+					this.xys.add(pixel / imageColumnCount);
 				}
-			}
-			
-			g.dispose();
+				
+				@Override
+				public final void finishPatch() {
+					sampler.finishPatch();
+					
+					final Sample sample = bkDatabase.findClosest(collector.getSample());
+					final Color color = new Color(generateColor(sample));
+					
+					final int n = this.xys.size();
+					
+					for (int i = 0; i < n; i += 2) {
+						labels.setRGB(this.xys.get(i), this.xys.get(i + 1), color.getRGB());
+					}
+					
+					this.xys.clear();
+					
+					colors.put(sample.getClasses(), color);
+				}
+				
+			});
 			
 			for (final Map.Entry<Collection<String>, Color> entry : colors.entrySet()) {
 				debugPrint(entry);

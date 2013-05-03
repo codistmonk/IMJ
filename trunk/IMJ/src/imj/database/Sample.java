@@ -86,9 +86,12 @@ public final class Sample implements Value {
 		}
 		
 		@Override
-//		public final void process(final byte[] sample) {
-//			this.getSample().setKey(sample);
-		public final void process(final ByteList sample) {
+		public final void processPixel(final int pixel, final int pixelValue) {
+			// NOP
+		}
+		
+		@Override
+		public final void processSample(final ByteList sample) {
 			this.getSample().setKey(sample.toArray());
 		}
 		
@@ -99,60 +102,33 @@ public final class Sample implements Value {
 	 */
 	public static final class ClassSetter implements SampleProcessor {
 		
-		private final int tileColumnCount;
-		
 		private final Map<String, RegionOfInterest> classes;
 		
 		private final PatchDatabase<Sample> database;
 		
-		private final int horizontalTileStride;
+		private final Collection<String> group;
 		
-		private final int tileRowCount;
-		
-		private final int verticalTileStride;
-		
-		private final int imageColumnCount;
-		
-		private int tileRowIndex;
-		
-		private int tileColumnIndex;
-		
-		public ClassSetter(final int imageColumnCount, final int tileRowCount, final int tileColumnCount,
-				final int verticalTileStride, final int horizontalTileStride,
-				final Map<String, RegionOfInterest> classes, final PatchDatabase<Sample> database) {
-			this.tileRowCount = tileRowCount;
-			this.tileColumnCount = tileColumnCount;
+		public ClassSetter(final Map<String, RegionOfInterest> classes, final PatchDatabase<Sample> database) {
 			this.classes = classes;
 			this.database = database;
-			this.horizontalTileStride = horizontalTileStride;
-			this.verticalTileStride = verticalTileStride;
-			this.imageColumnCount = imageColumnCount;
+			this.group = new HashSet<String>();
 		}
 		
 		@Override
-//		public final void process(final byte[] key) {
-		public final void process(final ByteList key) {
-//			Tools.debugPrint(key);
-//			final Sample sample = this.database.add(key);
-			final Sample sample = this.database.add(key.toArray());
-			
-			for (int rowIndex = this.tileRowIndex; rowIndex < this.tileRowIndex + this.tileRowCount; ++rowIndex) {
-				for (int columnIndex = this.tileColumnIndex; columnIndex < this.tileColumnIndex + this.tileColumnCount; ++columnIndex) {
-					for (final Map.Entry<String, RegionOfInterest> entry : this.classes.entrySet()) {
-						if (entry.getValue().get(rowIndex, columnIndex)) {
-							sample.getClasses().add(entry.getKey());
-						}
-					}
+		public final void processPixel(final int pixel, final int pixelValue) {
+			for (final Map.Entry<String, RegionOfInterest> entry : this.classes.entrySet()) {
+				if (entry.getValue().get(pixel)) {
+					this.group.add(entry.getKey());
 				}
 			}
-			
-			this.tileColumnIndex += this.horizontalTileStride;
-			
-			if (this.imageColumnCount < this.tileColumnIndex + this.tileColumnCount) {
-				this.tileColumnIndex = 0;
-				this.tileRowIndex += this.verticalTileStride;
-			}
 		}
+		
+		@Override
+		public final void processSample(final ByteList key) {
+			this.database.add(key.toArray()).getClasses().addAll(this.group);
+			this.group.clear();
+		}
+		
 	}
 	
 	/**

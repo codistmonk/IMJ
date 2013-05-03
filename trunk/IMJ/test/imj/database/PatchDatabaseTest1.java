@@ -53,7 +53,12 @@ public class PatchDatabaseTest1 {
 		final SampleProcessor processor = new SampleProcessor() {
 			
 			@Override
-			public final void process(final ByteList key) {
+			public final void processPixel(final int pixel, final int pixelValue) {
+				// NOP
+			}
+			
+			@Override
+			public final void processSample(final ByteList key) {
 				database.add(key.toArray());
 			}
 			

@@ -53,7 +53,9 @@ public abstract class Sampler implements PixelProcessor {
 	 */
 	public static abstract interface SampleProcessor {
 		
-		public abstract void process(ByteList sample);
+		public abstract void processPixel(int pixel, int pixelValue);
+		
+		public abstract void processSample(ByteList sample);
 		
 	}
 	

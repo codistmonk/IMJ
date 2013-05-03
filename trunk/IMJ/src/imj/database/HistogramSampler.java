@@ -29,10 +29,14 @@ public abstract class HistogramSampler extends Sampler {
 	
 	@Override
 	public final void process(final int pixel) {
+		final int pixelValue = this.getImage().getValue(pixel);
+		
+		this.getProcessor().processPixel(pixel, pixelValue);
+		
 		if (this.getQuantizer() != null) {
-			this.count(computeIndex(this.getQuantizer(), this.getImage().getValue(pixel), this.getChannels()));
+			this.count(computeIndex(this.getQuantizer(), pixelValue, this.getChannels()));
 		} else {
-			this.count(computeIndex(this.getImage().getValue(pixel), this.getChannels()));
+			this.count(computeIndex(pixelValue, this.getChannels()));
 		}
 		
 		++this.patchPixelCount;
@@ -43,7 +47,7 @@ public abstract class HistogramSampler extends Sampler {
 		this.postprocessHistogram();
 		this.sortIndices(this.indices, this.counts);
 		this.updateSample();
-		this.getProcessor().process(this.getSample());
+		this.getProcessor().processSample(this.getSample());
 		this.getSample().clear();
 		this.patchPixelCount = 0;
 	}
