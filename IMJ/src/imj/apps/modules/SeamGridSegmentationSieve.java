@@ -4,6 +4,7 @@ import static imj.IMJTools.forEachPixelInEachComponent4;
 import static imj.apps.modules.ViewFilter.getCurrentImage;
 import static imj.apps.modules.ViewFilter.parseChannel;
 import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import imj.IMJTools.PixelProcessor;
 import imj.Image;
@@ -98,7 +99,8 @@ public final class SeamGridSegmentationSieve extends Sieve {
 			
 			int y = y0;
 			
-			for (int x = 0; x < columnCount; ++x) {
+//			for (int x = 0; x < columnCount; ++x) {
+			for (int x = 0; x < columnCount;) {
 				segmentation.setValue(y, x, 0);
 				
 				final int x1 = x + 1;
@@ -107,18 +109,29 @@ public final class SeamGridSegmentationSieve extends Sieve {
 					break;
 				}
 				
+				final long northCost = y0 < y && segmentation.getValue(y - 1, x) != 0 ?
+						getCost(band, channel, y - y0 - 1, x) : Long.MAX_VALUE;
 				final long northEastCost = y0 < y ?
 						getCost(band, channel, y - y0 - 1, x1) : Long.MAX_VALUE;
 				final long eastCost = getCost(band, channel, y - y0, x1);
 				final long southEastCost = y + 1 < y0 + cellSize && y + 1 < rowCount ?
 						getCost(band, channel, y - y0 + 1, x1) : Long.MAX_VALUE;
+				final long southCost = y + 1 < y0 + cellSize && y + 1 < rowCount && segmentation.getValue(y + 1, x) != 0 ?
+						getCost(band, channel, y - y0 + 1, x) : Long.MAX_VALUE;
+				final boolean eastIsCheaper = min(eastCost, min(northEastCost, southEastCost)) <= min(northCost, southCost);
+				final boolean southIsCheaper = min(southCost, southEastCost) < min(eastCost, min(northCost, northEastCost));
+				final boolean northIsCheaper = min(northCost, northEastCost) < min(eastCost, min(southCost, southEastCost));
 				
-				if (eastCost <= northEastCost && eastCost <= southEastCost) {
-					// NOP
-				} else if (northEastCost <= southEastCost) {
+				if (eastIsCheaper) {
+					x = x1;
+				}
+				
+				if (southIsCheaper) {
+					++y;
+				} else if (northIsCheaper) {
 					--y;
 				} else {
-					++y;
+					x = x1;
 				}
 			}
 		}
