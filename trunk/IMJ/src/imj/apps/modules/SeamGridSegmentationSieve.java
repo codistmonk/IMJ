@@ -51,20 +51,34 @@ public final class SeamGridSegmentationSieve extends Sieve {
 		debugPrint("segmentCount:", countSegments4(this.segmentation));
 	}
 	
-	public static final void setSeams(final Image image, final Channel channel, final int gridSize, final RegionOfInterest segmentation) {
+	public static final void setSeams(final Image image, final Channel channel, final int cellSize, final RegionOfInterest segmentation) {
 		final TicToc timer = new TicToc();
-		final int rowCount = image.getRowCount();
-		final int columnCount = image.getColumnCount();
 		
 		debugPrint("Setting horizontal band seams...", new Date(timer.tic()));
 		
-		for (int y0 = gridSize; y0 < rowCount; y0 += gridSize) {
+		setHorizontalBandSeams(image, channel, cellSize, segmentation);
+		
+		debugPrint("Setting horizontal band seams done", "time:", timer.toc());
+		
+		debugPrint("Setting vertical band seams...", new Date(timer.tic()));
+		
+		setHorizontalBandSeams(new Transpose(image), channel, cellSize, new Transpose(segmentation));
+		
+		debugPrint("Setting vertical band seams done", "time:", timer.toc());
+	}
+	
+	public static void setHorizontalBandSeams(final Image image, final Channel channel,
+			final int cellSize, final Image segmentation) {
+		final int rowCount = image.getRowCount();
+		final int columnCount = image.getColumnCount();
+		
+		for (int y0 = cellSize; y0 < rowCount; y0 += cellSize) {
 			System.out.print(y0 + "/" + rowCount + "\r");
 			
 			int y = y0;
 			
 			for (int x = 0; x < columnCount; ++x) {
-				segmentation.set(y, x, false);
+				segmentation.setValue(y, x, 0);
 				
 				final int x1 = x + 1;
 				
@@ -74,55 +88,19 @@ public final class SeamGridSegmentationSieve extends Sieve {
 				
 				final long northEastCost = y0 < y ?
 						getCost(image, channel, y - 1, x1) : Long.MAX_VALUE;
-				final long eastCost = getCost(image, channel, y, x1);
-				final long southEastCost = y + 1 < y0 + gridSize && y + 1 < rowCount ?
-						getCost(image, channel, y + 1, x1) : Long.MAX_VALUE;
-				
-				if (eastCost <= northEastCost && eastCost <= southEastCost) {
-					// NOP
-				} else if (northEastCost <= southEastCost) {
-					--y;
-				} else {
-					++y;
-				}
+						final long eastCost = getCost(image, channel, y, x1);
+						final long southEastCost = y + 1 < y0 + cellSize && y + 1 < rowCount ?
+								getCost(image, channel, y + 1, x1) : Long.MAX_VALUE;
+								
+								if (eastCost <= northEastCost && eastCost <= southEastCost) {
+									// NOP
+								} else if (northEastCost <= southEastCost) {
+									--y;
+								} else {
+									++y;
+								}
 			}
 		}
-		
-		debugPrint("Setting horizontal band seams done", "time:", timer.toc());
-		
-		debugPrint("Setting vertical band seams...", new Date(timer.tic()));
-		
-		for (int x0 = gridSize; x0 < columnCount; x0 += gridSize) {
-			System.out.print(x0 + "/" + columnCount + "\r");
-			
-			int x = x0;
-			
-			for (int y = 0; y < rowCount; ++y) {
-				segmentation.set(y, x, false);
-				
-				final int y1 = y + 1;
-				
-				if (rowCount <= y1) {
-					break;
-				}
-				
-				final long southWestCost = x0 < x ?
-						getCost(image, channel, y1, x - 1) : Long.MAX_VALUE;
-				final long southCost = getCost(image, channel, y1, x);
-				final long southEastCost = x + 1 < x0 + gridSize && x + 1 < columnCount ?
-						getCost(image, channel, y1, x + 1) : Long.MAX_VALUE;
-				
-				if (southCost <= southWestCost && southCost <= southEastCost) {
-					// NOP
-				} else if (southWestCost <= southEastCost) {
-					--x;
-				} else {
-					++x;
-				}
-			}
-		}
-		
-		debugPrint("Setting vertical band seams done", "time:", timer.toc());
 	}
 	
 	public static final int countSegments4(final Image segmentation) {

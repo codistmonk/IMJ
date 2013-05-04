@@ -60,9 +60,9 @@ public final class PatchDatabaseTest4 {
 				"../Libraries/images/45683.svs"
 		};
 		final Quantizer[] quantizers = new Quantizer[imageIds.length];
-		final int quantizationLevel = 4;
-		final int nonTrainingIndex = -1;
-		final int lod = 4;
+		final int quantizationLevel = 2;
+		final int nonTrainingIndex = 1;
+		final int lod = 3;
 		final int tileRowCount = 8;
 		final int tileColumnCount = tileRowCount;
 		
@@ -116,8 +116,8 @@ public final class PatchDatabaseTest4 {
 		}
 		
 		if (true) {
-			final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/16088.svs", lod);
-//			final Image image = ImageWrangler.INSTANCE.load(imageIds[nonTrainingIndex], lod);
+//			final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/16088.svs", lod);
+			final Image image = ImageWrangler.INSTANCE.load(imageIds[nonTrainingIndex], lod);
 			final Quantizer quantizer = new BinningQuantizer();
 			
 			quantizer.initialize(image, null, channels, quantizationLevel);
