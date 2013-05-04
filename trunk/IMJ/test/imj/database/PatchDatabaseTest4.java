@@ -60,9 +60,9 @@ public final class PatchDatabaseTest4 {
 				"../Libraries/images/45683.svs"
 		};
 		final Quantizer[] quantizers = new Quantizer[imageIds.length];
-		final int quantizationLevel = 1;
+		final int quantizationLevel = 3;
 		final int nonTrainingIndex = 0;
-		final int lod = 4;
+		final int lod = 5;
 		final int tileRowCount = 8;
 		final int tileColumnCount = tileRowCount;
 		
@@ -71,9 +71,9 @@ public final class PatchDatabaseTest4 {
 		final int testVerticalTileStride = tileRowCount;
 		final int testHorizontalTileStride = testVerticalTileStride;
 		final PatchDatabase<Sample> patchDatabase = new PatchDatabase<Sample>(Sample.class);
-//		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
+		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
 //		final Class<? extends Sampler> samplerFactory = ColorSignatureSampler.class;
-		final Class<? extends Sampler> samplerFactory = StatisticsSampler.class;
+//		final Class<? extends Sampler> samplerFactory = StatisticsSampler.class;
 //		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
 		final Channel[] channels = RGB;
 //		final Segmenter trainingSegmenter = new TileSegmenter(tileRowCount, tileColumnCount,
