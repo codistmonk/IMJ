@@ -60,9 +60,9 @@ public final class PatchDatabaseTest4 {
 				"../Libraries/images/45683.svs"
 		};
 		final Quantizer[] quantizers = new Quantizer[imageIds.length];
-		final int quantizationLevel = 2;
+		final int quantizationLevel = 3;
 		final int nonTrainingIndex = 1;
-		final int lod = 3;
+		final int lod = 4;
 		final int tileRowCount = 8;
 		final int tileColumnCount = tileRowCount;
 		
