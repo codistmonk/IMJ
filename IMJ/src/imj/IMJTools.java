@@ -84,7 +84,7 @@ public final class IMJTools {
 		});
 	}
 	
-	public static final void forEachPixelInEachComponent4(final Image roi, final PixelProcessor processor) {
+	public static final void forEachPixelInEachComponent4(final Image roi, final boolean processBarriers, final PixelProcessor processor) {
 		final int imageRowCount = roi.getRowCount();
 		final int imageColumnCount = roi.getColumnCount();
 		final int pixelCount = roi.getPixelCount();
@@ -111,6 +111,10 @@ public final class IMJTools {
 					
 					processor.process(p);
 					
+					if (processBarriers && roi.getValue(p) == 0) {
+						continue;
+					}
+					
 					if (0 < pRowIndex) {
 						maybeScheduleNeighbor(done, todo, p - imageColumnCount);
 					}
@@ -120,11 +124,23 @@ public final class IMJTools {
 					}
 					
 					if (pColumnIndex + 1 < imageColumnCount) {
-						maybeScheduleNeighbor(done, todo, p + 1);
+						final int neighbor = p + 1;
+						
+						if (processBarriers && roi.getValue(neighbor) == 0) {
+							todo.add(neighbor);
+						} else {
+							maybeScheduleNeighbor(done, todo, neighbor);
+						}
 					}
 					
 					if (pRowIndex + 1 < imageRowCount) {
-						maybeScheduleNeighbor(done, todo, p + imageColumnCount);
+						final int neighbor = p + imageColumnCount;
+						
+						if (processBarriers && roi.getValue(neighbor) == 0) {
+							todo.add(neighbor);
+						} else {
+							maybeScheduleNeighbor(done, todo, neighbor);
+						}
 					}
 				}
 				

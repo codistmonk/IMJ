@@ -5,7 +5,7 @@ import imj.apps.modules.FilteredImage.StatisticsFilter.ChannelStatistics;
 import imj.apps.modules.ViewFilter.Channel;
 
 /**
- * @author codistmonk (creation 2013-04-22)
+ * @author codistmonk (creation 2013-05-04)
  */
 public final class StatisticsSampler extends Sampler {
 	

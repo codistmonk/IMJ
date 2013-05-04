@@ -140,7 +140,7 @@ public final class SeamGridSegmentationSieve extends Sieve {
 	public static final int countSegments4(final Image segmentation) {
 		final int[] segmentCount = { 0 };
 		
-		forEachPixelInEachComponent4(segmentation, new PixelProcessor() {
+		forEachPixelInEachComponent4(segmentation, false, new PixelProcessor() {
 			
 			@Override
 			public final void process(final int pixel) {

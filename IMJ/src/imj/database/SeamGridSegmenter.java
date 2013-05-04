@@ -24,7 +24,7 @@ public final class SeamGridSegmenter implements Segmenter {
 		
 		SeamGridSegmentationSieve.setSeams(image, Channel.Primitive.RGB, this.cellSize, segmentation);
 		
-		forEachPixelInEachComponent4(segmentation, processor);
+		forEachPixelInEachComponent4(segmentation, true, processor);
 	}
 	
 }
