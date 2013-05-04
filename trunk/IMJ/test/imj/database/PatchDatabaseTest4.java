@@ -60,8 +60,8 @@ public final class PatchDatabaseTest4 {
 				"../Libraries/images/45683.svs"
 		};
 		final Quantizer[] quantizers = new Quantizer[imageIds.length];
-		final int quantizationLevel = 3;
-		final int nonTrainingIndex = 1;
+		final int quantizationLevel = 1;
+		final int nonTrainingIndex = 0;
 		final int lod = 4;
 		final int tileRowCount = 8;
 		final int tileColumnCount = tileRowCount;
@@ -72,7 +72,8 @@ public final class PatchDatabaseTest4 {
 		final int testHorizontalTileStride = testVerticalTileStride;
 		final PatchDatabase<Sample> patchDatabase = new PatchDatabase<Sample>(Sample.class);
 //		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
-		final Class<? extends Sampler> samplerFactory = ColorSignatureSampler.class;
+//		final Class<? extends Sampler> samplerFactory = ColorSignatureSampler.class;
+		final Class<? extends Sampler> samplerFactory = StatisticsSampler.class;
 //		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
 		final Channel[] channels = RGB;
 //		final Segmenter trainingSegmenter = new TileSegmenter(tileRowCount, tileColumnCount,
@@ -116,7 +117,7 @@ public final class PatchDatabaseTest4 {
 		}
 		
 		if (true) {
-//			final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/16088.svs", lod);
+//			final Image image = ImageWrangler.INSTANCE.load("../Libraries/images/40267.svs", lod);
 			final Image image = ImageWrangler.INSTANCE.load(imageIds[nonTrainingIndex], lod);
 			final Quantizer quantizer = new BinningQuantizer();
 			
@@ -335,7 +336,8 @@ public final class PatchDatabaseTest4 {
 	}
 	
 	public static final int generateColor(final Sample sample) {
-		return sample == null || sample.getClasses().size() != 1 ? 0 : sample.getClasses().iterator().next().hashCode() | 0xFF000000;
+//		return sample == null || sample.getClasses().size() != 1 ? 0 : sample.getClasses().iterator().next().hashCode() | 0xFF000000;
+		return sample == null ? 0 : sample.getClasses().hashCode() | 0xFF000000;
 	}
 	
 	/**

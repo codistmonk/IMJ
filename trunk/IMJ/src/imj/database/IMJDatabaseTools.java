@@ -114,7 +114,6 @@ public final class IMJDatabaseTools {
 		int i = 0;
 		
 		for (final Map.Entry<byte[], Sample> entry : tileDatabase) {
-//			samples[i++] = entry.getValue();
 			if (groups.contains(entry.getValue().getClasses())) {
 				samples[i++] = entry.getValue();
 			}
