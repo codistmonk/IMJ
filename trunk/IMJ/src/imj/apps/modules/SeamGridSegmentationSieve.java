@@ -7,6 +7,7 @@ import static java.lang.Math.max;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import imj.IMJTools.PixelProcessor;
 import imj.Image;
+import imj.ImageOfInts;
 import imj.apps.modules.ViewFilter.Channel;
 
 import java.util.Date;
@@ -67,13 +68,33 @@ public final class SeamGridSegmentationSieve extends Sieve {
 		debugPrint("Setting vertical band seams done", "time:", timer.toc());
 	}
 	
+	public static final void copyHorizontalBand(final Image source, final int rowIndex0, final Image destination) {
+		final int sourceRowCount = source.getRowCount();
+		final int rowIndex1 = rowIndex0 + destination.getRowCount();
+		final int columnIndex0 = 0;
+		final int columnIndex1 = columnIndex0 + destination.getColumnCount();
+		
+		for (int rowIndex = rowIndex0, r = rowIndex, i = 0; rowIndex < rowIndex1; ++rowIndex) {
+			for (int columnIndex = columnIndex0; columnIndex < columnIndex1; ++columnIndex, ++i) {
+				destination.setValue(i, source.getValue(r, columnIndex));
+			}
+			
+			if (r + 1 < sourceRowCount) {
+				++r;
+			}
+		}
+	}
+	
 	public static void setHorizontalBandSeams(final Image image, final Channel channel,
 			final int cellSize, final Image segmentation) {
 		final int rowCount = image.getRowCount();
 		final int columnCount = image.getColumnCount();
+		final Image band = new ImageOfInts(cellSize, columnCount, 1);
 		
 		for (int y0 = cellSize; y0 < rowCount; y0 += cellSize) {
 			System.out.print(y0 + "/" + rowCount + "\r");
+			
+			copyHorizontalBand(image, y0, band);
 			
 			int y = y0;
 			
@@ -87,18 +108,18 @@ public final class SeamGridSegmentationSieve extends Sieve {
 				}
 				
 				final long northEastCost = y0 < y ?
-						getCost(image, channel, y - 1, x1) : Long.MAX_VALUE;
-						final long eastCost = getCost(image, channel, y, x1);
-						final long southEastCost = y + 1 < y0 + cellSize && y + 1 < rowCount ?
-								getCost(image, channel, y + 1, x1) : Long.MAX_VALUE;
-								
-								if (eastCost <= northEastCost && eastCost <= southEastCost) {
-									// NOP
-								} else if (northEastCost <= southEastCost) {
-									--y;
-								} else {
-									++y;
-								}
+						getCost(band, channel, y - y0 - 1, x1) : Long.MAX_VALUE;
+				final long eastCost = getCost(band, channel, y - y0, x1);
+				final long southEastCost = y + 1 < y0 + cellSize && y + 1 < rowCount ?
+						getCost(band, channel, y - y0 + 1, x1) : Long.MAX_VALUE;
+				
+				if (eastCost <= northEastCost && eastCost <= southEastCost) {
+					// NOP
+				} else if (northEastCost <= southEastCost) {
+					--y;
+				} else {
+					++y;
+				}
 			}
 		}
 	}

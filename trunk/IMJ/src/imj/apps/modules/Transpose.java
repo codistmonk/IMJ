@@ -67,12 +67,10 @@ public final class Transpose implements Image {
 	}
 	
 	@Override
-	public final int setValue(int index, int value) {
-		final int sourceColumnCount = this.getSource().getColumnCount();
-		final int rowIndexInSource = index / sourceColumnCount;
-		final int columnIndexInSource = index % sourceColumnCount;
+	public final int setValue(final int index, final int value) {
+		final int columnCount = this.getColumnCount();
 		
-		return this.setValue(columnIndexInSource, rowIndexInSource, value);
+		return this.setValue(index / columnCount, index % columnCount, value);
 	}
 	
 }
