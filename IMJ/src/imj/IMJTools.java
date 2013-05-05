@@ -6,7 +6,6 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static javax.imageio.ImageIO.read;
 import static net.sourceforge.aprog.tools.Tools.cast;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj.ImageOfBufferedImage.Feature;
 import imj.apps.modules.FilteredImage;
@@ -20,7 +19,6 @@ import java.util.Arrays;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-01-24)
