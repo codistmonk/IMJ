@@ -41,8 +41,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -243,8 +241,7 @@ public final class ShowActions {
 			}
 			
 			final Image source = ViewFilter.getCurrentImage(this.getContext());
-			final BufferedImage destination = toBufferedImage(source);
-			
+			final BufferedImage destination = toBufferedImage(source, Sieve.getROI(this.getContext()));
 			final Graphics2D g = destination.createGraphics();
 			
 			BigImageComponent.drawAnnotations(this.getContext(), g);
@@ -265,12 +262,16 @@ public final class ShowActions {
 			}
 		}
 		
-		public static final BufferedImage toBufferedImage(final Image source) {
-			final BufferedImage destination = new BufferedImage(source.getColumnCount(), source.getRowCount(), TYPE_3BYTE_BGR);
+		public static final BufferedImage toBufferedImage(final Image source, final RegionOfInterest roi) {
+			final int rowCount = source.getRowCount();
+			final int columnCount = source.getColumnCount();
+			final BufferedImage destination = new BufferedImage(columnCount, rowCount, TYPE_3BYTE_BGR);
 			
-			for (int y = 0; y < source.getRowCount(); ++y) {
-				for (int x = 0; x < source.getColumnCount(); ++x) {
-					destination.setRGB(x, y, source.getValue(y, x));
+			for (int y = 0, pixel = 0; y < rowCount; ++y) {
+				for (int x = 0; x < columnCount; ++x, ++pixel) {
+					if (roi.get(pixel)) {
+						destination.setRGB(x, y, source.getValue(pixel));
+					}
 				}
 			}
 			
