@@ -82,6 +82,24 @@ public final class IMJTools {
 		});
 	}
 	
+	public static final void cleanupBarriers(final Image roi) {
+		final int imageRowCount = roi.getRowCount();
+		final int imageColumnCount = roi.getColumnCount();
+		final int lastRowIndex = imageRowCount - 1;
+		final int lastColumnIndex = imageColumnCount - 1;
+		
+		for (int rowIndex = 0, pixel = 0; rowIndex < lastRowIndex; ++rowIndex, ++pixel) {
+			for (int columnIndex = 0; columnIndex < lastColumnIndex; ++columnIndex, ++pixel) {
+				if (roi.getValue(pixel) == 0 && roi.getValue(pixel + 1) == 0 &&
+						roi.getValue(pixel + imageColumnCount) == 0 && roi.getValue(pixel + imageColumnCount + 1) == 0) {
+					if (rowIndex == 0 || columnIndex == 0 || roi.getValue(pixel - imageColumnCount - 1) != 0) {
+						roi.setValue(pixel, Integer.MAX_VALUE);
+					}
+				}
+			}
+		}
+	}
+	
 	public static final void forEachPixelInEachComponent4(final Image roi, final boolean processBarriers, final PixelProcessor processor) {
 		final int imageRowCount = roi.getRowCount();
 		final int imageColumnCount = roi.getColumnCount();
@@ -121,23 +139,45 @@ public final class IMJTools {
 						maybeScheduleNeighbor(done, todo, p - 1);
 					}
 					
+					final boolean eastIsProcessedBarrier;
+					
 					if (pColumnIndex + 1 < imageColumnCount) {
 						final int neighbor = p + 1;
+						eastIsProcessedBarrier = processBarriers && roi.getValue(neighbor) == 0;
 						
 						if (processBarriers && roi.getValue(neighbor) == 0) {
 							todo.add(neighbor);
 						} else {
 							maybeScheduleNeighbor(done, todo, neighbor);
 						}
+					} else {
+						eastIsProcessedBarrier = false;
 					}
+					
+					final boolean southIsProcessedBarrier;
 					
 					if (pRowIndex + 1 < imageRowCount) {
 						final int neighbor = p + imageColumnCount;
+						southIsProcessedBarrier = processBarriers && roi.getValue(neighbor) == 0;
 						
-						if (processBarriers && roi.getValue(neighbor) == 0) {
+						if (southIsProcessedBarrier) {
 							todo.add(neighbor);
+							
+							if (pRowIndex + 2 < imageRowCount) {
+								
+							}
 						} else {
 							maybeScheduleNeighbor(done, todo, neighbor);
+						}
+					} else {
+						southIsProcessedBarrier = false;
+					}
+					
+					if (eastIsProcessedBarrier && southIsProcessedBarrier) {
+						final int neighbor = p + imageColumnCount + 1;
+						
+						if (roi.getValue(neighbor) == 0) {
+							todo.add(neighbor);
 						}
 					}
 				}
