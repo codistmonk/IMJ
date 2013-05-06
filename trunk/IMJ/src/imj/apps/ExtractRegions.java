@@ -15,7 +15,7 @@ import imj.apps.modules.Annotations;
 import imj.apps.modules.Annotations.Annotation;
 import imj.apps.modules.Annotations.Annotation.Region;
 import imj.apps.modules.RegionOfInterest;
-import imj.apps.modules.ShowActions;
+import imj.apps.modules.ShowActions.UseAnnotationAsROI;
 
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
@@ -80,8 +80,9 @@ public final class ExtractRegions {
 			final Image image = lods.get(lod);
 			final RegionOfInterest roi = RegionOfInterest.newInstance(image.getRowCount(), image.getColumnCount());
 			int regionId = 1;
+			final Collection<Region> allRegions = UseAnnotationAsROI.collectAllRegions(annotations);
 			
-			for (final Region region : collectRegions(annotations)) {
+			for (final Region region : allRegions) {
 				System.out.println("Processing region " + regionId + "... (" + new Date(timer.tic()) + ")");
 				
 				final Annotation annotation = (Annotation) region.getParent();
@@ -89,7 +90,7 @@ public final class ExtractRegions {
 				
 				categoryDirectory.mkdir();
 				
-				ShowActions.UseAnnotationAsROI.set(roi, lod, asList(region));
+				UseAnnotationAsROI.set(roi, lod, asList(region), allRegions);
 				
 				final Rectangle bounds = getBounds(roi);
 				final BufferedImage out = new BufferedImage(bounds.width, bounds.height, TYPE_3BYTE_BGR);
@@ -140,16 +141,6 @@ public final class ExtractRegions {
 		
 		result.width = max(1, 1 + maxX - result.x);
 		result.height = max(1, 1 + maxY - result.y);
-		
-		return result;
-	}
-	
-	public static final Iterable<Region> collectRegions(final Annotations annotations) {
-		final Collection<Region> result = new ArrayList<Region>();
-		
-		for (final Annotation annotation : annotations.getAnnotations()) {
-			result.addAll(annotation.getRegions());
-		}
 		
 		return result;
 	}

@@ -9,6 +9,7 @@ import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.Image;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.Annotations.Annotation;
+import imj.apps.modules.Annotations.Annotation.Region;
 import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.ShowActions.UseAnnotationAsROI;
 import imj.apps.modules.Sieve;
@@ -17,6 +18,7 @@ import imj.apps.modules.SimpleSieve;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -118,6 +120,7 @@ public final class GenerateROCData {
 	public static final List<RegionOfInterest> generateReferences(final Annotations annotations, final List<String> classIds,
 			final int lod, final int rowCount, final int columnCount) {
 		final List<RegionOfInterest> result = new ArrayList<RegionOfInterest>(classIds.size());
+		final Collection<Region> allRegions = UseAnnotationAsROI.collectAllRegions(annotations);
 		
 		for (final Annotation annotation : annotations.getAnnotations()) {
 			final int classIndex = classIds.indexOf(annotation.getUserObject());
@@ -134,7 +137,7 @@ public final class GenerateROCData {
 				result.set(classIndex, RegionOfInterest.newInstance(rowCount, columnCount));
 			}
 			
-			UseAnnotationAsROI.set(result.get(classIndex), lod, annotation.getRegions());
+			UseAnnotationAsROI.set(result.get(classIndex), lod, annotation.getRegions(), allRegions);
 		}
 		
 		return result;
