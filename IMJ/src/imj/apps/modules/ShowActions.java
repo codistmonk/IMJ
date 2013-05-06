@@ -44,6 +44,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -269,7 +270,7 @@ public final class ShowActions {
 			
 			for (int y = 0, pixel = 0; y < rowCount; ++y) {
 				for (int x = 0; x < columnCount; ++x, ++pixel) {
-					if (roi.get(pixel)) {
+					if (roi == null || roi.get(pixel)) {
 						destination.setRGB(x, y, source.getValue(pixel));
 					}
 				}
@@ -615,29 +616,45 @@ public final class ShowActions {
 				return;
 			}
 			
+			final Annotations annotations = this.getContext().get("annotations");
 			final int lod = this.getContext().get("lod");
 			
-			set(roi, lod, extractRegions(selectedAnnotations));
+			set(roi, lod, extractRegions(selectedAnnotations), collectAllRegions(annotations));
 			
 			fireUpdate(this.getContext(), "sieve");
 		}
 		
-		public static final void set(final RegionOfInterest roi, final int lod, final Iterable<Region> selectedRegions) {
+		public static final Collection<Region> collectAllRegions(final Annotations annotations) {
+			final Collection<Region> result = new LinkedHashSet<Region>();
+			
+			for (final Annotation annotation : annotations.getAnnotations()) {
+				result.addAll(annotation.getRegions());
+			}
+			
+			return result;
+		}
+		
+		public static final void set(final RegionOfInterest roi, final int lod,
+				final Collection<Region> selectedRegions, final Collection<Region> allRegions) {
 			final int rowCount = roi.getRowCount();
 			final int columnCount = roi.getColumnCount();
 			final BufferedImage buffer = new BufferedImage(columnCount, rowCount, BufferedImage.TYPE_BYTE_BINARY);
 			final Graphics2D g = buffer.createGraphics();
 			final double s = pow(2.0, -lod);
+			final Collection<Region> regionsToExclude = new LinkedHashSet<Region>(allRegions);
+			
+			regionsToExclude.removeAll(selectedRegions);
 			
 			g.scale(s, s);
 			g.setStroke(new BasicStroke((float) (3.0 / s)));
 			
 			if (regionsAreClosed(selectedRegions)) {
-				fillClosedRegions(roi, selectedRegions, buffer, g, s);
+//				fillClosedRegions(roi, selectedRegions, buffer, g, s);
+				fillClosedRegions(roi, allRegions, regionsToExclude, buffer, g, s);
 			} else {
 				debugPrint("Result may be incorrect because some regions are not closed");
 				
-				fillUnclosedRegions(roi, selectedRegions, buffer, g);
+				fillUnclosedRegions(roi, allRegions, regionsToExclude, buffer, g);
 			}
 			
 			g.dispose();
@@ -677,13 +694,13 @@ public final class ShowActions {
 		}
 		
 		private static final void fillUnclosedRegions(final RegionOfInterest roi,
-				final Iterable<Region> selectedRegions, final BufferedImage buffer,
+				final Iterable<Region> allRegions, final Collection<Region> regionsToExclude, final BufferedImage buffer,
 				final Graphics2D g) {
 			final int rowCount = roi.getRowCount();
 			final int columnCount = roi.getColumnCount();
 			
-			for (final Region region : selectedRegions) {
-				if (region.isNegative()) {
+			for (final Region region : allRegions) {
+				if (region.isNegative() != regionsToExclude.contains(region)) {
 					drawRegionOutline(region, g);
 				}
 			}
@@ -696,8 +713,8 @@ public final class ShowActions {
 			
 			fillContours(roi);
 			
-			for (final Region region : selectedRegions) {
-				if (!region.isNegative()) {
+			for (final Region region : allRegions) {
+				if (!region.isNegative() && !regionsToExclude.contains(region)) {
 					drawRegionOutline(region, g);
 				}
 			}
@@ -714,17 +731,24 @@ public final class ShowActions {
 		}
 
 		private static final void fillClosedRegions(final RegionOfInterest roi,
-				final Iterable<Region> selectedRegions, final BufferedImage buffer,
+				final Iterable<Region> allRegions, final Collection<Region> regionsToExclude, final BufferedImage buffer,
 				final Graphics2D g, final double s) {
 			final int rowCount = roi.getRowCount();
 			final int columnCount = roi.getColumnCount();
-			final List<Region> sortedRegions = list(selectedRegions);
+			final List<Region> sortedRegions = list(allRegions);
 			
 			sort(sortedRegions, DECREASING_AREA);
 			
 			roi.reset(false);
 			
 			for (final Region region : sortedRegions) {
+				final boolean regionIsNegative = region.isNegative();
+				final boolean regionIsExcluded = regionsToExclude.contains(region);
+				
+				if (regionIsNegative && regionIsExcluded) {
+					continue;
+				}
+				
 				g.setColor(Color.BLACK);
 				g.fillRect(0, 0, (int) (columnCount / s), (int) (rowCount / s));
 				g.setColor(Color.WHITE);
@@ -734,7 +758,7 @@ public final class ShowActions {
 				for (int y = 0; y < rowCount; ++y) {
 					for (int x = 0; x < columnCount; ++x) {
 						if ((buffer.getRGB(x, y) & 0x00FFFFFF) != 0) {
-							roi.set(y, x, !region.isNegative());
+							roi.set(y, x, !regionIsNegative && !regionIsExcluded);
 						}
 					}
 				}

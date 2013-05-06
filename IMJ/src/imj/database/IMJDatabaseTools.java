@@ -19,17 +19,23 @@ import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.Annotations.Annotation;
+import imj.apps.modules.Annotations.Annotation.Region;
 import imj.apps.modules.RegionOfInterest;
-import imj.apps.modules.ShowActions;
+import imj.apps.modules.ShowActions.ExportView;
+import imj.apps.modules.ShowActions.UseAnnotationAsROI;
 import imj.apps.modules.ViewFilter.Channel;
 import imj.database.BKSearch.BKDatabase;
 import imj.database.BKSearch.Metric;
 import imj.database.Sampler.SampleProcessor;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Map;
+
+import javax.imageio.ImageIO;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
@@ -84,15 +90,27 @@ public final class IMJDatabaseTools {
 		
 		debugPrint("Loading regions...", new Date(timer.tic()));
 		
+		final Collection<Region> allRegions = UseAnnotationAsROI.collectAllRegions(annotations);
+		
 		for (final Annotation annotation : annotations.getAnnotations()) {
 			debugPrint("Loading", annotation.getUserObject());
 			final RegionOfInterest mask = RegionOfInterest.newInstance(imageRowCount, imageColumnCount);
-			ShowActions.UseAnnotationAsROI.set(mask, lod, annotation.getRegions());
+			UseAnnotationAsROI.set(mask, lod, annotation.getRegions(), allRegions);
 			classes.put(annotation.getUserObject().toString(), mask);
 			gc();
+			
+//			writePNG(mask, annotation.getUserObject().toString());
 		}
 		
 		debugPrint("Loading regions done", "time:", timer.toc());
+	}
+	
+	public static final void writePNG(final Image image, final String baseName) {
+		try {
+			ImageIO.write(ExportView.toBufferedImage(image, null), "png", new File(baseName + ".png"));
+		} catch (final IOException exception) {
+			exception.printStackTrace();
+		}
 	}
 	
 	public static final Collection<Collection<String>> extractMonoclassGroups(final PatchDatabase<Sample> database) {
