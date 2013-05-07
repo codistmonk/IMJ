@@ -1,8 +1,8 @@
 package imj.database;
 
 import static imj.database.IMJDatabaseTools.RGB;
+import static imj.database.IMJDatabaseTools.checkDatabase;
 import static imj.database.IMJDatabaseTools.updateDatabase;
-import static imj.database.PatchDatabaseTest2.checkDatabase;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import imj.Image;

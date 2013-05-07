@@ -1,6 +1,6 @@
 package imj.apps;
 
-import static imj.IMJTools.maybeCacheImage;
+import static imj.IMJTools.loadAndTryToCache;
 import static imj.apps.modules.ShowActions.baseName;
 import static java.awt.image.BufferedImage.TYPE_3BYTE_BGR;
 import static java.lang.Math.max;
@@ -8,7 +8,6 @@ import static java.lang.Math.min;
 import static java.util.Arrays.asList;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.Image;
-import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.Annotations.Annotation;
 import imj.apps.modules.Annotations.Annotation.Region;
@@ -158,11 +157,11 @@ public final class ExtractRegions {
 	public static final List<Image> loadLods(final String imageId) {
 		final List<Image> result = new ArrayList<Image>();
 		int lod = 0;
-		Image image = maybeCacheImage(ImageWrangler.INSTANCE.load(imageId, lod));
+		Image image = loadAndTryToCache(imageId, lod);
 		result.add(image);
 		
 		while (1 < image.getRowCount() && 1 < image.getColumnCount()) {
-			image = maybeCacheImage(ImageWrangler.INSTANCE.load(imageId, ++lod));
+			image = loadAndTryToCache(imageId, ++lod);
 			
 			result.add(image);
 		}

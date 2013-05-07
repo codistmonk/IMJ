@@ -1,11 +1,10 @@
 package imj.apps;
 
-import static imj.IMJTools.maybeCacheImage;
+import static imj.IMJTools.loadAndTryToCache;
 import static imj.apps.modules.Annotations.parseBoolean;
 import static imj.apps.modules.ViewFilter.parseChannels;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.Image;
-import imj.ImageWrangler;
 import imj.apps.modules.ViewFilter.Channel;
 
 import java.io.File;
@@ -40,7 +39,7 @@ public final class ExtractData {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String imageId = arguments.get("file", "");
 		final int lod = arguments.get("lod", 0)[0];
-		final Image image = maybeCacheImage(ImageWrangler.INSTANCE.load(imageId, lod));
+		final Image image = loadAndTryToCache(imageId, lod);
 		final String channelsAsString = arguments.get("channels", "red green blue");
 		final String groupingAsString = arguments.get("grouping", "tile 1 1");
 		final boolean interleaved = parseBoolean(arguments.get("interleaved", "1"));
