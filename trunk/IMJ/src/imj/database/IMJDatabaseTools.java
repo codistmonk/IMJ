@@ -1,5 +1,6 @@
 package imj.database;
 
+import static imj.IMJTools.maybeCacheImage;
 import static imj.apps.modules.ShowActions.baseName;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.BLUE;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.GREEN;
@@ -59,7 +60,7 @@ public final class IMJDatabaseTools {
 			final Quantizer quantizer,
 			final Map<String, RegionOfInterest> classes, final PatchDatabase<Sample> database) {
 		final TicToc timer = new TicToc();
-		final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
+		final Image image = maybeCacheImage(ImageWrangler.INSTANCE.load(imageId, lod));
 		debugPrint("imageRowCount:", image.getRowCount(), "imageColumnCount:", image.getColumnCount());
 		final int imageRowCount = image.getRowCount();
 		final int imageColumnCount = image.getColumnCount();

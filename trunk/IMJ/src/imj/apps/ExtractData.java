@@ -1,6 +1,6 @@
 package imj.apps;
 
-import static imj.apps.ExtractRegions.maybeCacheImage;
+import static imj.IMJTools.maybeCacheImage;
 import static imj.apps.modules.Annotations.parseBoolean;
 import static imj.apps.modules.ViewFilter.parseChannels;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
