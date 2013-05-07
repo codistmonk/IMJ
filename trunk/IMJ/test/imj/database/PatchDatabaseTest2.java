@@ -1,23 +1,17 @@
 package imj.database;
 
 import static imj.database.IMJDatabaseTools.RGB;
+import static imj.database.IMJDatabaseTools.checkDatabase;
 import static imj.database.IMJDatabaseTools.updateDatabase;
-import static junit.framework.Assert.assertNotNull;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static org.junit.Assert.assertEquals;
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.RegionOfInterest;
-import imj.database.PatchDatabase.Value;
 
-import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import net.sourceforge.aprog.tools.TicToc;
 
 import org.junit.Test;
 
@@ -62,59 +56,6 @@ public class PatchDatabaseTest2 {
 				((imageColumnCount + horizontalTileStride - tileColumnCount) / horizontalTileStride), databaseSampleCount);
 		
 		debugPrint();
-	}
-	
-	public static final int checkDatabase(final PatchDatabase<?> database) {
-		final TicToc timer = new TicToc();
-		
-		debugPrint("Checking database...", new Date(timer.tic()));
-		
-		int databaseEntryCount = 0;
-		int databaseSampleCount = 0;
-		final Map<String, AtomicInteger> classCounts = new HashMap<String, AtomicInteger>();
-		final Map<Collection<String>, AtomicInteger> groups = new HashMap<Collection<String>, AtomicInteger>();
-		
-		for (final Map.Entry<byte[], ? extends Value> entry : database) {
-			if (databaseEntryCount % 100000 == 0) {
-				System.out.print(databaseEntryCount + "/" + database.getEntryCount() + "\r");
-			}
-			assertNotNull(entry.getValue());
-			++databaseEntryCount;
-			databaseSampleCount += entry.getValue().getCount();
-			
-			final Sample tileData = (Sample) entry.getValue();
-			
-			count(groups, tileData.getClasses());
-			
-			for (final String classId : tileData.getClasses()) {
-				count(classCounts, classId);
-			}
-		}
-		
-		debugPrint("Checking database done", "time:", timer.toc());
-		
-		debugPrint("classCounts", classCounts);
-		debugPrint("groupCount:", groups.size());
-		debugPrint("entryCount:", database.getEntryCount());
-		debugPrint("sampleCount:", databaseSampleCount);
-		
-		for (final Map.Entry<Collection<String>, AtomicInteger> entry : groups.entrySet()) {
-			debugPrint(entry);
-		}
-		
-		assertEquals(database.getEntryCount(), databaseEntryCount);
-		
-		return databaseSampleCount;
-	}
-	
-	public static final <K> void count(final Map<K, AtomicInteger> map, final K key) {
-		final AtomicInteger counter = map.get(key);
-		
-		if (counter == null) {
-			map.put(key, new AtomicInteger(1));
-		} else {
-			counter.incrementAndGet();
-		}
 	}
 	
 }

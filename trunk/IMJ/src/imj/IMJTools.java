@@ -59,7 +59,9 @@ public final class IMJTools {
 	
 	private static final Map<Image, WeakReference<Image>> cache = new HashMap<Image, WeakReference<Image>>();
 	
-	public static Image maybeCacheImage(final Image image) {
+	public static Image loadAndTryToCache(final String imageId, final int lod) {
+		final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
+		
 		{
 			final WeakReference<Image> reference = cache.get(image);
 			

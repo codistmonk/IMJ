@@ -1,6 +1,6 @@
 package imj.database;
 
-import static imj.IMJTools.maybeCacheImage;
+import static imj.IMJTools.loadAndTryToCache;
 import static imj.apps.modules.ShowActions.baseName;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.BLUE;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.GREEN;
@@ -13,11 +13,13 @@ import static java.lang.Math.ceil;
 import static java.lang.Math.max;
 import static java.lang.Math.sqrt;
 import static java.util.Arrays.copyOf;
+import static junit.framework.Assert.assertNotNull;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
+import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+import static org.junit.Assert.assertEquals;
 import imj.Image;
-import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.Annotations.Annotation;
 import imj.apps.modules.Annotations.Annotation.Region;
@@ -27,14 +29,21 @@ import imj.apps.modules.ShowActions.UseAnnotationAsROI;
 import imj.apps.modules.ViewFilter.Channel;
 import imj.database.BKSearch.BKDatabase;
 import imj.database.BKSearch.Metric;
+import imj.database.PatchDatabase.Value;
 import imj.database.Sampler.SampleProcessor;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
 
@@ -60,13 +69,13 @@ public final class IMJDatabaseTools {
 			final Quantizer quantizer,
 			final Map<String, RegionOfInterest> classes, final PatchDatabase<Sample> database) {
 		final TicToc timer = new TicToc();
-		final Image image = maybeCacheImage(ImageWrangler.INSTANCE.load(imageId, lod));
+		final Image image = loadAndTryToCache(imageId, lod);
 		debugPrint("imageRowCount:", image.getRowCount(), "imageColumnCount:", image.getColumnCount());
 		final int imageRowCount = image.getRowCount();
 		final int imageColumnCount = image.getColumnCount();
 		final Annotations annotations = Annotations.fromXML(baseName(imageId) + ".xml");
 		
-		loadRegions(lod, imageRowCount, imageColumnCount, annotations, classes);
+		loadRegions(imageId, lod, imageRowCount, imageColumnCount, annotations, classes);
 		
 		final SampleProcessor processor = new Sample.ClassSetter(classes, database);
 		final Sampler sampler;
@@ -84,7 +93,7 @@ public final class IMJDatabaseTools {
 		debugPrint("time:", timer.toc());
 	}
 	
-	public static final void loadRegions(final int lod, final int imageRowCount,
+	public static final void loadRegions(final String imageId, final int lod, final int imageRowCount,
 			final int imageColumnCount, final Annotations annotations,
 			final Map<String, RegionOfInterest> classes) {
 		final TicToc timer = new TicToc();
@@ -94,10 +103,55 @@ public final class IMJDatabaseTools {
 		final Collection<Region> allRegions = UseAnnotationAsROI.collectAllRegions(annotations);
 		
 		for (final Annotation annotation : annotations.getAnnotations()) {
-			debugPrint("Loading", annotation.getUserObject());
-			final RegionOfInterest mask = RegionOfInterest.newInstance(imageRowCount, imageColumnCount);
-			UseAnnotationAsROI.set(mask, lod, annotation.getRegions(), allRegions);
-			classes.put(annotation.getUserObject().toString(), mask);
+			final String annotationName = "" + annotation.getUserObject();
+			
+			debugPrint("Loading", annotationName);
+			
+			final File file = new File(baseName(imageId) + ".lod" + lod + "." + annotationName + ".jo");
+			RegionOfInterest.UsingBitSet mask = null;
+			
+			if (file.isFile()) {
+				debugPrint("Reading data from", file);
+				
+				try {
+					final ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
+					
+					try {
+						mask = new RegionOfInterest.UsingBitSet(imageRowCount, imageColumnCount, ois);
+						
+						debugPrint("OK");
+					} finally {
+						ois.close();
+					}
+				} catch (final Exception exception) {
+					exception.printStackTrace();
+				}
+			} 
+			
+			if (mask == null) {
+				debugPrint("Creating mask");
+				
+				mask = new RegionOfInterest.UsingBitSet(imageRowCount, imageColumnCount);
+				UseAnnotationAsROI.set(mask, lod, annotation.getRegions(), allRegions);
+				
+				try {
+					debugPrint("Writing data to", file);
+					
+					final ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file));
+					
+					try {
+						mask.writeDataTo(oos);
+						
+						debugPrint("OK");
+					} finally {
+						oos.close();
+					}
+				} catch (final Exception exception) {
+					exception.printStackTrace();
+				}
+			}
+			
+			classes.put(annotationName.toString(), mask);
 			gc();
 			
 //			writePNG(mask, annotation.getUserObject().toString());
@@ -156,6 +210,74 @@ public final class IMJDatabaseTools {
 	
 	public static final long square(final int x) {
 		return (long) x * x;
+	}
+	
+	public static final int checkDatabase(final PatchDatabase<?> database) {
+		boolean junitAvailable = false;
+		
+		try {
+			Class.forName("org.junit.Assert");
+			junitAvailable = true;
+		} catch (final Exception exception) {
+			ignore(exception);
+		}
+		
+		final TicToc timer = new TicToc();
+		
+		debugPrint("Checking database...", new Date(timer.tic()));
+		
+		int databaseEntryCount = 0;
+		int databaseSampleCount = 0;
+		final Map<String, AtomicInteger> classCounts = new HashMap<String, AtomicInteger>();
+		final Map<Collection<String>, AtomicInteger> groups = new HashMap<Collection<String>, AtomicInteger>();
+		
+		for (final Map.Entry<byte[], ? extends Value> entry : database) {
+			if (databaseEntryCount % 100000 == 0) {
+				System.out.print(databaseEntryCount + "/" + database.getEntryCount() + "\r");
+			}
+			
+			if (junitAvailable) {
+				assertNotNull(entry.getValue());
+			}
+			
+			++databaseEntryCount;
+			databaseSampleCount += entry.getValue().getCount();
+			
+			final Sample tileData = (Sample) entry.getValue();
+			
+			count(groups, tileData.getClasses());
+			
+			for (final String classId : tileData.getClasses()) {
+				count(classCounts, classId);
+			}
+		}
+		
+		debugPrint("Checking database done", "time:", timer.toc());
+		
+		debugPrint("classCounts", classCounts);
+		debugPrint("groupCount:", groups.size());
+		debugPrint("entryCount:", database.getEntryCount());
+		debugPrint("sampleCount:", databaseSampleCount);
+		
+		for (final Map.Entry<Collection<String>, AtomicInteger> entry : groups.entrySet()) {
+			debugPrint(entry);
+		}
+		
+		if (junitAvailable) {
+			assertEquals(database.getEntryCount(), databaseEntryCount);
+		}
+		
+		return databaseSampleCount;
+	}
+	
+	public static final <K> void count(final Map<K, AtomicInteger> map, final K key) {
+		final AtomicInteger counter = map.get(key);
+		
+		if (counter == null) {
+			map.put(key, new AtomicInteger(1));
+		} else {
+			counter.incrementAndGet();
+		}
 	}
 	
 	/**

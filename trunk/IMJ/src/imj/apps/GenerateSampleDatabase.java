@@ -1,12 +1,12 @@
 package imj.apps;
 
-import static imj.IMJTools.maybeCacheImage;
+import static imj.IMJTools.loadAndTryToCache;
 import static imj.apps.modules.ShowActions.baseName;
 import static imj.database.IMJDatabaseTools.RGB;
+import static imj.database.IMJDatabaseTools.checkDatabase;
 import static imj.database.IMJDatabaseTools.updateDatabase;
 import static java.util.Locale.ENGLISH;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
-import imj.ImageWrangler;
 import imj.apps.modules.RegionOfInterest;
 import imj.database.BinningQuantizer;
 import imj.database.LinearSampler;
@@ -89,7 +89,7 @@ public final class GenerateSampleDatabase {
 		
 		System.out.println("Collecting data... " + new Date(timer.tic()));
 		
-		quantizer.initialize(maybeCacheImage(ImageWrangler.INSTANCE.load(imageId, lod)), null, RGB, quantizationLevel);
+		quantizer.initialize(loadAndTryToCache(imageId, lod), null, RGB, quantizationLevel);
 		
 		updateDatabase(imageId, lod, segmenter, LinearSampler.class, RGB, quantizer,
 				new HashMap<String, RegionOfInterest>(), sampleDatabase);
@@ -97,6 +97,8 @@ public final class GenerateSampleDatabase {
 		database.put("samples", sampleDatabase);
 		
 		System.out.println("Collecting data done" + " time: " + timer.toc() + " memory: " + usedMemory());
+		
+		checkDatabase(sampleDatabase);
 		
 		System.out.println("Writing data... " + new Date(timer.tic()));
 		

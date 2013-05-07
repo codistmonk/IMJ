@@ -1,6 +1,7 @@
 package imj.apps.modules;
 
 import static java.awt.Color.BLACK;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj.Image.Abstract;
 
 import java.awt.Color;
@@ -8,7 +9,13 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.ByteLookupTable;
 import java.awt.image.LookupOp;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.BitSet;
+
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-15)
@@ -39,7 +46,6 @@ public abstract class RegionOfInterest extends Abstract {
 	
 	public static final RegionOfInterest newInstance(final int rowCount, final int columnCount) {
 		return new UsingBitSet(rowCount, columnCount);
-//		return new UsingBufferedImage(rowCount, columnCount);
 	}
 	
 	/**
@@ -48,6 +54,16 @@ public abstract class RegionOfInterest extends Abstract {
 	public static final class UsingBitSet extends RegionOfInterest {
 		
 		private final BitSet data;
+		
+		public UsingBitSet(final int rowCount, final int columnCount, final ObjectInputStream data) {
+			super(rowCount, columnCount);
+			
+			try {
+				this.data = (BitSet) data.readObject();
+			} catch (final Exception exception) {
+				throw Tools.unchecked(exception);
+			}
+		}
 		
 		public UsingBitSet(final int rowCount, final int columnCount) {
 			this(rowCount, columnCount, true);
@@ -60,6 +76,14 @@ public abstract class RegionOfInterest extends Abstract {
 			
 			if (initialState) {
 				this.reset(true);
+			}
+		}
+		
+		public final void writeDataTo(final ObjectOutputStream output) {
+			try {
+				output.writeObject(this.data);
+			} catch (final IOException exception) {
+				throw unchecked(exception);
 			}
 		}
 		
@@ -159,6 +183,11 @@ public abstract class RegionOfInterest extends Abstract {
 				}
 			}
 		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 1598389445959512340L;
 		
 	}
 	
