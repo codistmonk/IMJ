@@ -6,7 +6,10 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static javax.imageio.ImageIO.read;
 import static net.sourceforge.aprog.tools.Tools.cast;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.ImageOfBufferedImage.Feature;
 import imj.apps.modules.FilteredImage;
 import imj.apps.modules.RegionOfInterest;
@@ -15,9 +18,14 @@ import imj.apps.modules.ViewFilter.Channel;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.ref.WeakReference;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
 
 /**
@@ -48,6 +56,52 @@ public final class IMJTools {
 	 * {@value}.
 	 */
 	public static final int BLUE_MASK = 0x000000FF;
+	
+	private static final Map<Image, WeakReference<Image>> cache = new HashMap<Image, WeakReference<Image>>();
+	
+	public static Image maybeCacheImage(final Image image) {
+		{
+			final WeakReference<Image> reference = cache.get(image);
+			
+			if (reference != null) {
+				final Image cached = reference.get();
+				
+				if (cached != null) {
+					return cached;
+				}
+			}
+		}
+		
+		final int rowCount = image.getRowCount();
+		final int columnCount = image.getColumnCount();
+		final int pixelCount = rowCount * columnCount;
+		final long byteCount = 4L * pixelCount;
+		
+		gc();
+		
+		final long availableMemory = Runtime.getRuntime().maxMemory() - usedMemory();
+		
+		debugPrint("byteCount:", byteCount, "availableMemory:", availableMemory);
+		
+		if (byteCount * 3L / 2L <= availableMemory) {
+			final TicToc timer = new TicToc();
+			debugPrint("Copying image in RAM...", "(" + new Date(timer.tic()) + ")");
+			
+			final Image imageInRAM = new ImageOfInts(rowCount, columnCount, image.getChannelCount());
+			
+			for (int pixel = 0; pixel < pixelCount; ++pixel) {
+				imageInRAM.setValue(pixel, image.getValue(pixel));
+			}
+			
+			debugPrint("Done", "time:", timer.toc(), "memory:", usedMemory());
+			
+			cache.put(image, new WeakReference<Image>(imageInRAM));
+			
+			return imageInRAM;
+		}
+		
+		return image;
+	}
 	
 	public static final int acyclicDistance(final int a, final int b) {
 		return abs(b - a);

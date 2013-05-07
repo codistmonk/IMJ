@@ -1,15 +1,13 @@
 package imj.apps;
 
+import static imj.IMJTools.maybeCacheImage;
 import static imj.apps.modules.ShowActions.baseName;
 import static java.awt.image.BufferedImage.TYPE_3BYTE_BGR;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Arrays.asList;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 import imj.Image;
-import imj.ImageOfInts;
 import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.Annotations.Annotation;
@@ -170,37 +168,6 @@ public final class ExtractRegions {
 		}
 		
 		return result;
-	}
-
-	public static Image maybeCacheImage(final Image image) {
-		final int rowCount = image.getRowCount();
-		final int columnCount = image.getColumnCount();
-		final int pixelCount = rowCount * columnCount;
-		final long byteCount = 4L * pixelCount;
-		
-		gc();
-		
-//		final long freeMemory = Runtime.getRuntime().freeMemory();
-		final long availableMemory = Runtime.getRuntime().maxMemory() - usedMemory();
-		
-		debugPrint("byteCount:", byteCount, "availableMemory:", availableMemory);
-		
-		if (byteCount * 2L <= availableMemory) {
-			final TicToc timer = new TicToc();
-			debugPrint("Copying image in RAM...", "(" + new Date(timer.tic()) + ")");
-			
-			final Image imageInRAM = new ImageOfInts(rowCount, columnCount, image.getChannelCount());
-			
-			for (int pixel = 0; pixel < pixelCount; ++pixel) {
-				imageInRAM.setValue(pixel, image.getValue(pixel));
-			}
-			
-			debugPrint("Done", "time:", timer.toc(), "memory:", usedMemory());
-			
-			return imageInRAM;
-		}
-		
-		return image;
 	}
 	
 }
