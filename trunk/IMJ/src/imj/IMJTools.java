@@ -57,13 +57,14 @@ public final class IMJTools {
 	 */
 	public static final int BLUE_MASK = 0x000000FF;
 	
-	private static final Map<Image, WeakReference<Image>> cache = new HashMap<Image, WeakReference<Image>>();
+	private static final Map<String, WeakReference<Image>> cache = new HashMap<String, WeakReference<Image>>();
 	
 	public static Image loadAndTryToCache(final String imageId, final int lod) {
 		final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
+		final String key = imageId + ".lod" + lod;
 		
 		{
-			final WeakReference<Image> reference = cache.get(image);
+			final WeakReference<Image> reference = cache.get(key);
 			
 			if (reference != null) {
 				final Image cached = reference.get();
@@ -97,7 +98,7 @@ public final class IMJTools {
 			
 			debugPrint("Done", "time:", timer.toc(), "memory:", usedMemory());
 			
-			cache.put(image, new WeakReference<Image>(imageInRAM));
+			cache.put(key, new WeakReference<Image>(imageInRAM));
 			
 			return imageInRAM;
 		}

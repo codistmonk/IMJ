@@ -13,6 +13,7 @@ import static java.lang.Math.ceil;
 import static java.lang.Math.max;
 import static java.lang.Math.sqrt;
 import static java.util.Arrays.copyOf;
+import static java.util.concurrent.Executors.newFixedThreadPool;
 import static junit.framework.Assert.assertNotNull;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
@@ -38,11 +39,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
@@ -96,68 +100,112 @@ public final class IMJDatabaseTools {
 	public static final void loadRegions(final String imageId, final int lod, final int imageRowCount,
 			final int imageColumnCount, final Annotations annotations,
 			final Map<String, RegionOfInterest> classes) {
+		final ExecutorService executor = newFixedThreadPool(2);
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Loading regions...", new Date(timer.tic()));
 		
 		final Collection<Region> allRegions = UseAnnotationAsROI.collectAllRegions(annotations);
 		
-		for (final Annotation annotation : annotations.getAnnotations()) {
-			final String annotationName = "" + annotation.getUserObject();
+		try {
+			final Collection<Future<?>> tasks = new ArrayList<Future<?>>(annotations.getAnnotations().size());
 			
-			debugPrint("Loading", annotationName);
-			
-			final File file = new File(baseName(imageId) + ".lod" + lod + "." + annotationName + ".jo");
-			RegionOfInterest.UsingBitSet mask = null;
-			
-			if (file.isFile()) {
-				debugPrint("Reading data from", file);
-				
-				try {
-					final ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
+			for (final Annotation annotation : annotations.getAnnotations()) {
+				tasks.add(executor.submit(new Runnable() {
 					
-					try {
-						mask = new RegionOfInterest.UsingBitSet(imageRowCount, imageColumnCount, ois);
+					@Override
+					public final void run() {
+						final String annotationName = "" + annotation.getUserObject();
 						
-						debugPrint("OK");
-					} finally {
-						ois.close();
-					}
-				} catch (final Exception exception) {
-					exception.printStackTrace();
-				}
-			} 
-			
-			if (mask == null) {
-				debugPrint("Creating mask");
-				
-				mask = new RegionOfInterest.UsingBitSet(imageRowCount, imageColumnCount);
-				UseAnnotationAsROI.set(mask, lod, annotation.getRegions(), allRegions);
-				
-				try {
-					debugPrint("Writing data to", file);
-					
-					final ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file));
-					
-					try {
-						mask.writeDataTo(oos);
+						debugPrint("Loading", annotationName);
 						
-						debugPrint("OK");
-					} finally {
-						oos.close();
+						final File file = new File(baseName(imageId) + ".lod" + lod + "." + annotationName + ".jo");
+						RegionOfInterest.UsingBitSet mask = null;
+						
+						if (file.isFile()) {
+							mask = readMask(imageRowCount, imageColumnCount, file);
+						} 
+						
+						if (mask == null) {
+							mask = createMask(lod, imageRowCount, imageColumnCount, allRegions, annotation, file);
+						}
+						
+						synchronized (classes) {
+							classes.put(annotationName.toString(), mask);
+						}
+						
+						gc();
+						
+//						writePNG(mask, annotation.getUserObject().toString());
 					}
-				} catch (final Exception exception) {
-					exception.printStackTrace();
-				}
+					
+				}));
 			}
 			
-			classes.put(annotationName.toString(), mask);
-			gc();
-			
-//			writePNG(mask, annotation.getUserObject().toString());
+			try {
+				for (final Future<?> task : tasks) {
+					task.get();
+				}
+			} catch (final Exception exception) {
+				throw unchecked(exception);
+			}
+		} finally {
+			executor.shutdown();
 		}
 		
 		debugPrint("Loading regions done", "time:", timer.toc());
+	}
+
+	public static RegionOfInterest.UsingBitSet readMask(
+			final int imageRowCount, final int imageColumnCount,
+			final File file) {
+		debugPrint("Reading data from", file);
+		
+		try {
+			final ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
+			
+			try {
+				final RegionOfInterest.UsingBitSet result = new RegionOfInterest.UsingBitSet(imageRowCount, imageColumnCount, ois);
+				
+				debugPrint("OK");
+				
+				return result;
+			} finally {
+				ois.close();
+			}
+		} catch (final Exception exception) {
+			exception.printStackTrace();
+		}
+		
+		return null;
+	}
+
+	public static RegionOfInterest.UsingBitSet createMask(final int lod,
+			final int imageRowCount, final int imageColumnCount,
+			final Collection<Region> allRegions, final Annotation annotation,
+			final File file) {
+		RegionOfInterest.UsingBitSet mask;
+		debugPrint("Creating mask");
+		
+		mask = new RegionOfInterest.UsingBitSet(imageRowCount, imageColumnCount);
+		UseAnnotationAsROI.set(mask, lod, annotation.getRegions(), allRegions);
+		
+		try {
+			debugPrint("Writing data to", file);
+			
+			final ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file));
+			
+			try {
+				mask.writeDataTo(oos);
+				
+				debugPrint("OK");
+			} finally {
+				oos.close();
+			}
+		} catch (final Exception exception) {
+			exception.printStackTrace();
+		}
+		return mask;
 	}
 	
 	public static final void writePNG(final Image image, final String baseName) {
