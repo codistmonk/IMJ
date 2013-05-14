@@ -34,9 +34,9 @@ public abstract class HistogramSampler extends Sampler {
 		this.getProcessor().processPixel(pixel, pixelValue);
 		
 		if (this.getQuantizer() != null) {
-			this.count(computeIndex(this.getQuantizer(), pixelValue, this.getChannels()));
+			count(this.histogram, computeIndex(this.getQuantizer(), pixelValue, this.getChannels()));
 		} else {
-			this.count(computeIndex(pixelValue, this.getChannels()));
+			count(this.histogram, computeIndex(pixelValue, this.getChannels()));
 		}
 		
 		++this.patchPixelCount;
@@ -44,9 +44,11 @@ public abstract class HistogramSampler extends Sampler {
 	
 	@Override
 	public final void finishPatch() {
+//		Tools.debugPrint(this.histogram.size());
 		this.postprocessHistogram();
 		this.sortIndices(this.indices, this.counts);
 		this.updateSample();
+//		Tools.debugPrint(this.patchPixelCount, this.getSample());
 		this.getProcessor().processSample(this.getSample());
 		this.getSample().clear();
 		this.patchPixelCount = 0;
@@ -54,34 +56,6 @@ public abstract class HistogramSampler extends Sampler {
 	
 	protected void sortIndices(final Integer[] indices, final int[] counts) {
 		// NOP
-	}
-	
-	private final void count(final Integer value) {
-		int[] count = this.histogram.get(value);
-		
-		if (count == null) {
-			count = new int[] { 1 };
-			this.histogram.put(value, count);
-		} else {
-			++count[0];
-		}
-	}
-	
-	private final void updateSample() {
-		final int m = this.patchPixelCount;
-		
-		for (int k = 0; k < this.patchPixelCount; ++k) {
-			final int index = this.indices[k];
-			int value = this.values[index];
-			final int count = this.counts[index];
-			
-			for (int channelIndex = this.getChannels().length - 1; 0 <= channelIndex; --channelIndex) {
-				this.getSample().add((byte) (value & 0x000000FF));
-				value >>= 8;
-			}
-			
-			this.getSample().add((byte) (count * 255L / m));
-		}
 	}
 	
 	private final void postprocessHistogram() {
@@ -106,6 +80,27 @@ public abstract class HistogramSampler extends Sampler {
 		}
 	}
 	
+	private final void updateSample() {
+		final int m = this.patchPixelCount;
+		
+		for (int k = 0; k < this.patchPixelCount; ++k) {
+			final int index = this.indices[k];
+			int value = this.values[index];
+			final int count = this.counts[index];
+			
+			if (count <= 0) {
+				break;
+			}
+			
+			for (int channelIndex = this.getChannels().length - 1; 0 <= channelIndex; --channelIndex) {
+				this.getSample().add((byte) (value & 0x000000FF));
+				value >>= 8;
+			}
+			
+			this.getSample().add((byte) (count * 255L / m));
+		}
+	}
+	
 	public static final int computeIndex(final int pixelValue, final Channel... channels) {
 		int result = 0;
 		
@@ -124,6 +119,16 @@ public abstract class HistogramSampler extends Sampler {
 		}
 		
 		return result;
+	}
+	
+	public static final void count(final Map<Integer, int[]> histogram, final Integer value) {
+		final int[] count = histogram.get(value);
+		
+		if (count == null) {
+			histogram.put(value, new int[] { 1 });
+		} else {
+			++count[0];
+		}
 	}
 	
 }

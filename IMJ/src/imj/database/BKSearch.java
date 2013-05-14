@@ -88,7 +88,7 @@ public final class BKSearch {
 		final int n = values.length;
 		@SuppressWarnings("unchecked")
 		final GenericDistant<T>[] vds = new GenericDistant[n];
-		final T v0 = values[0];
+		final T v0 = 0 < n ? values[0] : null;
 		
 		for (int i = 0; i < n; ++i) {
 			final T vi = values[i];
@@ -110,6 +110,11 @@ public final class BKSearch {
 	
 	public static final <T> T bkFind(final T value, final T[] bkValues, final long[] bkDistances, final Metric<T> distance) {
 		final int n = bkValues.length;
+		
+		if (n == 0) {
+			return null;
+		}
+		
 		final long vv0 = distance.getDistance(value, bkValues[0]);
 		int i0 = binarySearch(bkDistances, vv0);
 		

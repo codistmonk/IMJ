@@ -19,6 +19,7 @@ import imj.database.BKSearch.BKDatabase;
 import imj.database.BKSearch.Metric;
 import imj.database.IMJDatabaseTools.EuclideanMetric;
 import imj.database.IMJDatabaseTools.NoIdentityMetric;
+import imj.database.PatterngramSampler.PatterngramMetric;
 import imj.database.Sample.SampleMetric;
 import imj.database.Sampler.SampleProcessor;
 import imj.database.SparseHistogramSampler.SparseHistogramMetric;
@@ -27,6 +28,7 @@ import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -61,7 +63,7 @@ public final class PatchDatabaseTest4 {
 		};
 		final int nonTrainingIndex = 3;
 		final Quantizer[] quantizers = new Quantizer[imageIds.length];
-		final int quantizationLevel = 3;
+		final int quantizationLevel = 5;
 		final int lod = 5;
 		final int tileRowCount = 12;
 		final int tileColumnCount = tileRowCount;
@@ -71,7 +73,8 @@ public final class PatchDatabaseTest4 {
 		final int testVerticalTileStride = tileRowCount;
 		final int testHorizontalTileStride = testVerticalTileStride;
 		final PatchDatabase<Sample> patchDatabase = new PatchDatabase<Sample>(Sample.class);
-		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
+//		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
+		final Class<? extends Sampler> samplerFactory = PatterngramSampler.class;
 //		final Class<? extends Sampler> samplerFactory = ColorSignatureSampler.class;
 //		final Class<? extends Sampler> samplerFactory = StatisticsSampler.class;
 //		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
@@ -110,6 +113,8 @@ public final class PatchDatabaseTest4 {
 			
 			checkDatabase(patchDatabase);
 			gc();
+			
+//			assert false;
 		}
 		
 		if (false) {
@@ -162,7 +167,7 @@ public final class PatchDatabaseTest4 {
 					
 					this.xys.clear();
 					
-					colors.put(sample.getClasses(), color);
+					colors.put(sample != null ? sample.getClasses() : Collections.EMPTY_SET, color);
 				}
 				
 			});
@@ -181,6 +186,8 @@ public final class PatchDatabaseTest4 {
 	public static final Metric<Sample> getPreferredMetric(final Sampler sampler) {
 		if (sampler instanceof SparseHistogramSampler) {
 			return new SampleMetric(new SparseHistogramMetric(sampler.getChannels().length));
+		} else if (sampler instanceof PatterngramSampler) {
+			return new SampleMetric(new PatterngramMetric(sampler.getChannels().length));
 		}
 		
 		return SampleMetric.CHESSBOARD;
