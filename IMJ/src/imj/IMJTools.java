@@ -88,6 +88,7 @@ public final class IMJTools {
 		
 		if (byteCount * 3L / 2L <= availableMemory) {
 			final TicToc timer = new TicToc();
+			
 			debugPrint("Copying image in RAM...", "(" + new Date(timer.tic()) + ")");
 			
 			final Image imageInRAM = new ImageOfInts(rowCount, columnCount, image.getChannelCount());
@@ -153,6 +154,143 @@ public final class IMJTools {
 						roi.setValue(pixel, Integer.MAX_VALUE);
 					}
 				}
+			}
+		}
+	}
+	
+	public static final void forEachPixelInEachComponent4b(final Image roi, final boolean processBarriers, final PixelProcessor processor) {
+		final int imageRowCount = roi.getRowCount();
+		final int imageColumnCount = roi.getColumnCount();
+		final int pixelCount = roi.getPixelCount();
+		final IntList todo = new IntList();
+		final RegionOfInterest done = new RegionOfInterest.UsingBitSet(imageRowCount, imageColumnCount, false);
+		final int lastRowIndex = imageRowCount - 1;
+		final int lastColumnIndex = imageColumnCount - 1;
+		
+		if (!processBarriers) {
+			for (int pixel = 0; pixel < pixelCount; ++pixel) {
+				if (roi.getValue(pixel) == 0) {
+					done.set(pixel);
+				}
+			}
+		}
+		
+		for (int i = 0; i < pixelCount; ++i) {
+			if (!done.get(i)) {
+//				debugPrint("NEW COMPONENT");
+				
+				todo.add(i);
+				
+				while (0 < todo.size()) {
+					final int pixel = todo.remove(0);
+					
+					if (done.get(pixel)) {
+						continue;
+					}
+					
+					processor.process(pixel);
+					done.set(pixel);
+					
+					final int pixelIsInAComponent = roi.getValue(pixel) & 1;
+					final int rowIndex = pixel / imageColumnCount;
+					final int columnIndex = pixel % imageColumnCount;
+					
+//					debugPrint("PROCESSING PIXEL:", rowIndex, columnIndex);
+					
+					if (0 < rowIndex) {
+						final int neighbor = pixel - imageColumnCount;
+						
+						if (0 != roi.getValue(pixel) && !done.get(neighbor)) {
+//							debugPrint("SCHEDULING NEIHGBOR:", neighbor / imageColumnCount, neighbor % imageColumnCount);
+							todo.add(neighbor);
+						}
+					}
+					
+					if (0 < columnIndex) {
+						final int neighbor = pixel - 1;
+						
+						if (0 != roi.getValue(pixel) && !done.get(neighbor)) {
+//							debugPrint("SCHEDULING NEIHGBOR:", neighbor / imageColumnCount, neighbor % imageColumnCount);
+							todo.add(neighbor);
+						}
+					}
+					
+					if (columnIndex < lastColumnIndex) {
+						final int neighbor = pixel + 1;
+						final int neighborIsInAComponent = roi.getValue(neighbor) & 1;
+						
+						if (!processBarriers && 0 != pixelIsInAComponent && !done.get(neighbor)) {
+//							debugPrint("SCHEDULING NEIHGBOR:", neighbor / imageColumnCount, neighbor % imageColumnCount);
+							todo.add(neighbor);
+						} else if (processBarriers & neighborIsInAComponent <= pixelIsInAComponent) {
+							final int m = rowIndex + columnIndex + 1;
+							
+//							debugPrint("PROCESSING EAST BARRIER", "m:", m);
+							
+							schedule_if_nearest_component_pixel_is_done:
+							for (int j = 1; j <= m; ++j) {
+								for (int k = 0; k <= j; ++k) {
+									final int r = rowIndex - (j - k);
+									final int c = columnIndex + 1 - k;
+									
+//									debugPrint("TESTING:", r, c);
+									
+									if (0 <= r && 0 <= c) {
+										final int n = r * imageColumnCount + c;
+										
+										if (0 != roi.getValue(n)) {
+											if (done.get(n)) {
+//												debugPrint("SCHEDULING NEIHGBOR:", neighbor / imageColumnCount, neighbor % imageColumnCount);
+												todo.add(neighbor);
+											}
+											
+											break schedule_if_nearest_component_pixel_is_done;
+										}
+									}
+								}
+							}
+						}
+					}
+					
+					if (rowIndex < lastRowIndex) {
+						final int neighbor = pixel + imageColumnCount;
+						final int neighborIsInAComponent = roi.getValue(neighbor) & 1;
+						
+						if (!processBarriers && 0 != pixelIsInAComponent && !done.get(neighbor)) {
+//							debugPrint("SCHEDULING NEIHGBOR:", neighbor / imageColumnCount, neighbor % imageColumnCount);
+							todo.add(neighbor);
+						} else if (processBarriers & neighborIsInAComponent <= pixelIsInAComponent) {
+							final int m = rowIndex + columnIndex + 1;
+							
+//							debugPrint("PROCESSING SOUTH BARRIER", "m:", m);
+							
+							schedule_if_nearest_component_pixel_is_done:
+							for (int j = 1; j <= m; ++j) {
+								for (int k = 0; k <= j; ++k) {
+									final int r = rowIndex + 1 - (j - k);
+									final int c = columnIndex - k;
+									
+//									debugPrint("TESTING:", r, c);
+									
+									if (0 <= r && 0 <= c) {
+										final int n = r * imageColumnCount + c;
+										
+										if (0 != roi.getValue(n)) {
+											if (done.get(n)) {
+//												debugPrint("SCHEDULING NEIHGBOR:", neighbor / imageColumnCount, neighbor % imageColumnCount);
+												todo.add(neighbor);
+											}
+											
+											break schedule_if_nearest_component_pixel_is_done;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				
+				processor.finishPatch();
 			}
 		}
 	}
