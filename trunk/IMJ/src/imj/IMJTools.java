@@ -255,7 +255,7 @@ public final class IMJTools {
 									if (0 <= r && 0 <= c) {
 										final int n = r * imageColumnCount + c;
 										
-										if (0 != roi.getValue(n)) {
+										if (0 == n || 0 != roi.getValue(n)) {
 											if (done.get(n)) {
 												if (debug) {
 													debugPrint("SCHEDULING NEIHGBOR:", neighbor / imageColumnCount, neighbor % imageColumnCount);
@@ -300,7 +300,7 @@ public final class IMJTools {
 									if (0 <= r && 0 <= c) {
 										final int n = r * imageColumnCount + c;
 										
-										if (0 != roi.getValue(n)) {
+										if (0 == n || 0 != roi.getValue(n)) {
 											if (done.get(n)) {
 												if (debug) {
 													debugPrint("SCHEDULING NEIHGBOR:", neighbor / imageColumnCount, neighbor % imageColumnCount);

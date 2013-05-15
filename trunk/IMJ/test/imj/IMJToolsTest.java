@@ -6,9 +6,9 @@ import static java.lang.Long.toBinaryString;
 import static junit.framework.Assert.assertTrue;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+
 import imj.IMJTools.PixelProcessor;
 import imj.apps.modules.RegionOfInterest;
-import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -109,7 +109,7 @@ public class IMJToolsTest {
 			final PixelCounter counter = new PixelCounter();
 			
 			forEachPixelInEachComponent4b(roi, true, counter);
-			Tools.debugPrint(counter.getCounts());
+			
 			assertArrayEquals(new int[] { 6, 6, 4 }, counter.getCounts().toArray());
 		}
 	}
@@ -146,7 +146,7 @@ public class IMJToolsTest {
 				if (0L != (i >> (n * n - 1L))) {
 					assertEquals("n: " + n + ", i:" + toBinaryString(i), componentCount, counter.getCounts().size());
 				} else {
-					assertTrue("n: " + n + ", i:" + toBinaryString(i), componentCount <= counter.getCounts().size());
+					assertEquals("n: " + n + ", i:" + toBinaryString(i), componentCount + 1, counter.getCounts().size());
 				}
 			}
 		}
