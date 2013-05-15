@@ -63,9 +63,9 @@ public final class PatchDatabaseTest4 {
 		};
 		final int nonTrainingIndex = 3;
 		final Quantizer[] quantizers = new Quantizer[imageIds.length];
-		final int quantizationLevel = 5;
+		final int quantizationLevel = 6;
 		final int lod = 5;
-		final int tileRowCount = 12;
+		final int tileRowCount = 8;
 		final int tileColumnCount = tileRowCount;
 		
 		final int trainingVerticalTileStride = tileRowCount;
