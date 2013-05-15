@@ -1,9 +1,10 @@
 package imj;
 
-import static imj.IMJTools.forEachPixelInEachComponent4;
 import static imj.IMJTools.forEachPixelInEachComponent4b;
-import static java.lang.Math.sqrt;
-import static org.junit.Assert.*;
+import static java.lang.Long.bitCount;
+import static java.lang.Long.toBinaryString;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import imj.IMJTools.PixelProcessor;
 import imj.apps.modules.RegionOfInterest;
 
@@ -64,18 +65,27 @@ public class IMJToolsTest {
 	
 	@Test
 	public final void testComponentIteration3() {
-		for (int i = 0; i < ~((~0) << 9); ++i) {
-			final Image roi = roi(3,
-					(i >> 8) & 1, (i >> 7) & 1, (i >> 6) & 1,
-					(i >> 5) & 1, (i >> 4) & 1, (i >> 3) & 1,
-					(i >> 2) & 1, (i >> 1) & 1, (i >> 0) & 1);
+		for (int n = 1; n <= 4; ++n) {
+			testAllBinarySquares(n);
+		}
+	}
+	
+	public static final void testAllBinarySquares(final int n) {
+		for (long i = 0L; i < ~((~0L) << (n * n)); ++i) {
+			final RegionOfInterest roi = new RegionOfInterest.UsingBitSet(n, n, false);
+			
+			for (int j = 0; j < n * n; ++j) {
+				if (0L != ((i >> (n * n - 1L - j)) & 1L)) {
+					roi.set(j);
+				}
+			}
 			
 			{
 				final PixelCounter counter = new PixelCounter();
 				
 				forEachPixelInEachComponent4b(roi, false, counter);
 				
-				assertEquals(Integer.bitCount(i), counter.getPixelCount());
+				assertEquals("n: " + n + ", i: " + toBinaryString(i), bitCount(i), counter.getPixelCount());
 			}
 			
 			{
@@ -83,7 +93,7 @@ public class IMJToolsTest {
 				
 				forEachPixelInEachComponent4b(roi, true, counter);
 				
-				assertEquals(roi.getPixelCount(), counter.getPixelCount());
+				assertEquals("n: " + n + ", i:" + toBinaryString(i), roi.getPixelCount(), counter.getPixelCount());
 			}
 		}
 	}
