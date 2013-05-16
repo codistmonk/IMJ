@@ -1,6 +1,5 @@
 package imj.apps.modules;
 
-import static imj.IMJTools.cleanupBarriers;
 import static imj.apps.modules.SeamGridSegmentationSieve.countSegments4;
 import static imj.apps.modules.SeamGridSegmentationSieve.getCost;
 import static imj.apps.modules.ViewFilter.getCurrentImage;
@@ -53,11 +52,6 @@ public final class SeamGridSegmentation2Sieve extends Sieve {
 		debugPrint("Setting vertical band seams...", new Date(timer.tic()));
 		setHorizontalBandSeams(new Transpose(image), channel, cellSize, new Transpose(this.segmentation));
 		debugPrint("Setting vertical band seams done", "time:", timer.toc());
-		
-		
-		debugPrint("Cleaning barriers...", new Date(timer.tic()));
-		cleanupBarriers(this.segmentation);
-		debugPrint("Cleaning barriers done", new Date(timer.tic()));
 		
 		debugPrint("segmentCount:", countSegments4(this.segmentation));
 	}

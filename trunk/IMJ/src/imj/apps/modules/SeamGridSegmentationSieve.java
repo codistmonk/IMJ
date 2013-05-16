@@ -1,6 +1,5 @@
 package imj.apps.modules;
 
-import static imj.IMJTools.cleanupBarriers;
 import static imj.IMJTools.forEachPixelInEachComponent4;
 import static imj.apps.modules.ViewFilter.getCurrentImage;
 import static imj.apps.modules.ViewFilter.parseChannel;
@@ -64,10 +63,6 @@ public final class SeamGridSegmentationSieve extends Sieve {
 		debugPrint("Setting vertical band seams...", new Date(timer.tic()));
 		setHorizontalBandSeams(new Transpose(image), channel, cellSize, new Transpose(segmentation));
 		debugPrint("Setting vertical band seams done", "time:", timer.toc());
-		
-		debugPrint("Cleaning barriers...", new Date(timer.tic()));
-		cleanupBarriers(segmentation);
-		debugPrint("Cleaning barriers done", new Date(timer.tic()));
 	}
 	
 	public static final void copyHorizontalBand(final Image source, final int rowIndex0, final Image destination) {
