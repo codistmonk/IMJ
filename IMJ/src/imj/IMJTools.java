@@ -140,25 +140,7 @@ public final class IMJTools {
 		});
 	}
 	
-	public static final void cleanupBarriers(final Image roi) {
-		final int imageRowCount = roi.getRowCount();
-		final int imageColumnCount = roi.getColumnCount();
-		final int lastRowIndex = imageRowCount - 1;
-		final int lastColumnIndex = imageColumnCount - 1;
-		
-		for (int rowIndex = 0, pixel = 0; rowIndex < lastRowIndex; ++rowIndex, ++pixel) {
-			for (int columnIndex = 0; columnIndex < lastColumnIndex; ++columnIndex, ++pixel) {
-				if (roi.getValue(pixel) == 0 && roi.getValue(pixel + 1) == 0 &&
-						roi.getValue(pixel + imageColumnCount) == 0 && roi.getValue(pixel + imageColumnCount + 1) == 0) {
-					if (rowIndex == 0 || columnIndex == 0 || roi.getValue(pixel - imageColumnCount - 1) != 0) {
-						roi.setValue(pixel, Integer.MAX_VALUE);
-					}
-				}
-			}
-		}
-	}
-	
-	public static final void forEachPixelInEachComponent4b(final Image roi, final boolean processBarriers, final PixelProcessor processor) {
+	public static final void forEachPixelInEachComponent4(final Image roi, final boolean processBarriers, final PixelProcessor processor) {
 		final boolean debug = false;
 		final int imageRowCount = roi.getRowCount();
 		final int imageColumnCount = roi.getColumnCount();
@@ -178,6 +160,8 @@ public final class IMJTools {
 		
 		for (int i = 0; i < pixelCount; ++i) {
 			if (!done.get(i)) {
+				System.out.print(i + "/" + pixelCount + "\r");
+				
 				if (debug) {
 					debugPrint("NEW COMPONENT");
 				}
@@ -319,101 +303,6 @@ public final class IMJTools {
 				
 				processor.finishPatch();
 			}
-		}
-	}
-	
-	public static final void forEachPixelInEachComponent4(final Image roi, final boolean processBarriers, final PixelProcessor processor) {
-		final int imageRowCount = roi.getRowCount();
-		final int imageColumnCount = roi.getColumnCount();
-		final int pixelCount = roi.getPixelCount();
-		final IntList todo = new IntList();
-		final RegionOfInterest done = new RegionOfInterest.UsingBitSet(imageRowCount, imageColumnCount, false);
-		
-		for (int pixel = 0; pixel < pixelCount; ++pixel) {
-			if (roi.getValue(pixel) == 0) {
-				done.set(pixel);
-			}
-		}
-		
-		for (int pixel = 0; pixel < pixelCount; ++pixel) {
-			if (!done.get(pixel)) {
-				System.out.print(pixel + "/" + pixelCount + "\r");
-				
-				todo.add(pixel);
-				done.set(pixel);
-				
-				while (!todo.isEmpty()) {
-					final int p = todo.remove(0);
-					final int pRowIndex = p / imageColumnCount;
-					final int pColumnIndex = p % imageColumnCount;
-					
-					processor.process(p);
-					
-					if (processBarriers && roi.getValue(p) == 0) {
-						continue;
-					}
-					
-					if (0 < pRowIndex) {
-						maybeScheduleNeighbor(done, todo, p - imageColumnCount);
-					}
-					
-					if (0 < pColumnIndex) {
-						maybeScheduleNeighbor(done, todo, p - 1);
-					}
-					
-					final boolean eastIsProcessedBarrier;
-					
-					if (pColumnIndex + 1 < imageColumnCount) {
-						final int neighbor = p + 1;
-						eastIsProcessedBarrier = processBarriers && roi.getValue(neighbor) == 0;
-						
-						if (processBarriers && roi.getValue(neighbor) == 0) {
-							todo.add(neighbor);
-						} else {
-							maybeScheduleNeighbor(done, todo, neighbor);
-						}
-					} else {
-						eastIsProcessedBarrier = false;
-					}
-					
-					final boolean southIsProcessedBarrier;
-					
-					if (pRowIndex + 1 < imageRowCount) {
-						final int neighbor = p + imageColumnCount;
-						southIsProcessedBarrier = processBarriers && roi.getValue(neighbor) == 0;
-						
-						if (southIsProcessedBarrier) {
-							todo.add(neighbor);
-							
-							if (pRowIndex + 2 < imageRowCount) {
-								
-							}
-						} else {
-							maybeScheduleNeighbor(done, todo, neighbor);
-						}
-					} else {
-						southIsProcessedBarrier = false;
-					}
-					
-					if (eastIsProcessedBarrier && southIsProcessedBarrier) {
-						final int neighbor = p + imageColumnCount + 1;
-						
-						if (roi.getValue(neighbor) == 0) {
-							todo.add(neighbor);
-						}
-					}
-				}
-				
-				processor.finishPatch();
-			}
-		}
-		
-	}
-	
-	private static final void maybeScheduleNeighbor(final RegionOfInterest done, final IntList todo, final int neighbor) {
-		if (!done.get(neighbor)) {
-			todo.add(neighbor);
-			done.set(neighbor);
 		}
 	}
 	

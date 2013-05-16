@@ -63,7 +63,7 @@ public final class PatchDatabaseTest4 {
 		};
 		final int nonTrainingIndex = 3;
 		final Quantizer[] quantizers = new Quantizer[imageIds.length];
-		final int quantizationLevel = 6;
+		final int quantizationLevel = 4;
 		final int lod = 5;
 		final int tileRowCount = 8;
 		final int tileColumnCount = tileRowCount;
@@ -139,33 +139,38 @@ public final class PatchDatabaseTest4 {
 			final BufferedImage labels = new BufferedImage(image.getColumnCount(), image.getRowCount(), BufferedImage.TYPE_3BYTE_BGR);
 			final int imageColumnCount = image.getColumnCount();
 			final Map<Collection<String>, Color> colors = new HashMap<Collection<String>, Color>();
+			final int[] patchCount = { 0 };
 			
 			testSegmenter.process(image, new Sampler(image, quantizer, channels, collector) {
 				
-				private final IntList xys = new IntList();
+				private final IntList pixels = new IntList();
 				
 				@Override
 				public final void process(final int pixel) {
 					sampler.process(pixel);
 					
-					this.xys.add(pixel % imageColumnCount);
-					this.xys.add(pixel / imageColumnCount);
+					this.pixels.add(pixel);
 				}
 				
 				@Override
 				public final void finishPatch() {
+					++patchCount[0];
+					
 					sampler.finishPatch();
 					
 					final Sample sample = bkDatabase.findClosest(collector.getSample());
 					final Color color = new Color(generateColor(sample));
 					
-					final int n = this.xys.size();
+					this.pixels.forEach(new IntList.Processor() {
+						
+						@Override
+						public final void process(final int pixel) {
+							labels.setRGB(pixel % imageColumnCount, pixel / imageColumnCount, color.getRGB());
+						}
+						
+					});
 					
-					for (int i = 0; i < n; i += 2) {
-						labels.setRGB(this.xys.get(i), this.xys.get(i + 1), color.getRGB());
-					}
-					
-					this.xys.clear();
+					this.pixels.clear();
 					
 					colors.put(sample != null ? sample.getClasses() : Collections.EMPTY_SET, color);
 				}
@@ -178,6 +183,8 @@ public final class PatchDatabaseTest4 {
 			for (final Map.Entry<Collection<String>, Color> entry : colors.entrySet()) {
 				debugPrint(entry);
 			}
+			
+			debugPrint("patchCount:", patchCount[0]);
 			
 			SwingTools.show(labels, "Labels", true);
 		}

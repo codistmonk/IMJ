@@ -1,9 +1,8 @@
 package imj;
 
-import static imj.IMJTools.forEachPixelInEachComponent4b;
+import static imj.IMJTools.forEachPixelInEachComponent4;
 import static java.lang.Long.bitCount;
 import static java.lang.Long.toBinaryString;
-import static junit.framework.Assert.assertTrue;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
@@ -27,7 +26,7 @@ public class IMJToolsTest {
 		{
 			final PixelCounter counter = new PixelCounter();
 			
-			forEachPixelInEachComponent4b(roi, false, counter);
+			forEachPixelInEachComponent4(roi, false, counter);
 			
 			assertArrayEquals(new int[] { 1, 1, 1, 1 }, counter.getCounts().toArray());
 		}
@@ -35,7 +34,7 @@ public class IMJToolsTest {
 		{
 			final PixelCounter counter = new PixelCounter();
 			
-			forEachPixelInEachComponent4b(roi, true, counter);
+			forEachPixelInEachComponent4(roi, true, counter);
 			
 			assertArrayEquals(new int[] { 4, 2, 2, 1 }, counter.getCounts().toArray());
 		}
@@ -51,7 +50,7 @@ public class IMJToolsTest {
 		{
 			final PixelCounter counter = new PixelCounter();
 			
-			forEachPixelInEachComponent4b(roi, false, counter);
+			forEachPixelInEachComponent4(roi, false, counter);
 			
 			assertArrayEquals(new int[] { 4, 1, 1 }, counter.getCounts().toArray());
 		}
@@ -59,7 +58,7 @@ public class IMJToolsTest {
 		{
 			final PixelCounter counter = new PixelCounter();
 			
-			forEachPixelInEachComponent4b(roi, true, counter);
+			forEachPixelInEachComponent4(roi, true, counter);
 			
 			assertArrayEquals(new int[] { 6, 2, 1 }, counter.getCounts().toArray());
 		}
@@ -75,7 +74,7 @@ public class IMJToolsTest {
 		{
 			final PixelCounter counter = new PixelCounter();
 			
-			forEachPixelInEachComponent4b(roi, false, counter);
+			forEachPixelInEachComponent4(roi, false, counter);
 			
 			assertArrayEquals(new int[] { 6 }, counter.getCounts().toArray());
 		}
@@ -83,7 +82,7 @@ public class IMJToolsTest {
 		{
 			final PixelCounter counter = new PixelCounter();
 			
-			forEachPixelInEachComponent4b(roi, true, counter);
+			forEachPixelInEachComponent4(roi, true, counter);
 			
 			assertArrayEquals(new int[] { 9 }, counter.getCounts().toArray());
 		}
@@ -100,7 +99,7 @@ public class IMJToolsTest {
 		{
 			final PixelCounter counter = new PixelCounter();
 			
-			forEachPixelInEachComponent4b(roi, false, counter);
+			forEachPixelInEachComponent4(roi, false, counter);
 			
 			assertArrayEquals(new int[] { 1, 4, 1 }, counter.getCounts().toArray());
 		}
@@ -108,7 +107,7 @@ public class IMJToolsTest {
 		{
 			final PixelCounter counter = new PixelCounter();
 			
-			forEachPixelInEachComponent4b(roi, true, counter);
+			forEachPixelInEachComponent4(roi, true, counter);
 			
 			assertArrayEquals(new int[] { 6, 6, 4 }, counter.getCounts().toArray());
 		}
@@ -129,7 +128,7 @@ public class IMJToolsTest {
 			{
 				final PixelCounter counter = new PixelCounter();
 				
-				forEachPixelInEachComponent4b(roi, false, counter);
+				forEachPixelInEachComponent4(roi, false, counter);
 				
 				assertEquals("n: " + n + ", i: " + toBinaryString(i), bitCount(i), counter.getPixelCount());
 				
@@ -139,7 +138,7 @@ public class IMJToolsTest {
 			{
 				final PixelCounter counter = new PixelCounter();
 				
-				forEachPixelInEachComponent4b(roi, true, counter);
+				forEachPixelInEachComponent4(roi, true, counter);
 				
 				assertEquals("n: " + n + ", i:" + toBinaryString(i), roi.getPixelCount(), counter.getPixelCount());
 				
