@@ -1,6 +1,7 @@
 package imj.apps.modules;
 
 import static imj.IMJTools.argb;
+import static imj.IMJTools.max;
 import static imj.apps.modules.BigImageComponent.SOURCE_IMAGE;
 import static imj.apps.modules.Plugin.onChange;
 import static imj.apps.modules.ViewFilter.VIEW_FILTER;
@@ -177,18 +178,6 @@ public final class HistogramPanel extends JPanel {
 			this.invalidate();
 			this.repaint();
 		}
-	}
-	
-	public static final int max(final int... values) {
-		int result = values[0];
-		
-		for (final int value : values) {
-			if (result < value) {
-				result = value;
-			}
-		}
-		
-		return result;
 	}
 	
 	public static final int nonZeroMin(final int... values) {
@@ -564,13 +553,6 @@ public final class HistogramPanel extends JPanel {
 				roi = null;
 			}
 			
-//			for (int pixel = 0; pixel < pixelCount; ++pixel) {
-//				final int rgba = image.getValue(pixel);
-//				
-//				if (roi != null && roi.get(pixel)) {
-//					++this.data[channel0.getValue(rgba)][channel1.getValue(rgba)];
-//				}
-//			}
 			final FilteredImage f = cast(FilteredImage.class, image);
 			
 			if (f != null) {

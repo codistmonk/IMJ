@@ -50,6 +50,8 @@ import org.junit.Test;
  */
 public final class PatchDatabaseTest4 {
 	
+	public static final String EDGES_ARTIFACTS_TO_BE_EXCLUDED = "Edges & Artifacts to be excluded";
+
 	@Test
 	public final void test() {
 		final String[] imageIds = {
@@ -64,8 +66,8 @@ public final class PatchDatabaseTest4 {
 		final int nonTrainingIndex = 3;
 		final Quantizer[] quantizers = new Quantizer[imageIds.length];
 		final int quantizationLevel = 4;
-		final int lod = 5;
-		final int tileRowCount = 8;
+		final int lod = 4;
+		final int tileRowCount = 16;
 		final int tileColumnCount = tileRowCount;
 		
 		final int trainingVerticalTileStride = tileRowCount;
@@ -73,8 +75,8 @@ public final class PatchDatabaseTest4 {
 		final int testVerticalTileStride = tileRowCount;
 		final int testHorizontalTileStride = testVerticalTileStride;
 		final PatchDatabase<Sample> patchDatabase = new PatchDatabase<Sample>(Sample.class);
-//		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
-		final Class<? extends Sampler> samplerFactory = PatterngramSampler.class;
+		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
+//		final Class<? extends Sampler> samplerFactory = PatterngramSampler.class;
 //		final Class<? extends Sampler> samplerFactory = ColorSignatureSampler.class;
 //		final Class<? extends Sampler> samplerFactory = StatisticsSampler.class;
 //		final Class<? extends Sampler> samplerFactory = LinearSampler.class;
@@ -113,8 +115,12 @@ public final class PatchDatabaseTest4 {
 			
 			checkDatabase(patchDatabase);
 			gc();
+		}
+		
+		if (true) {
+			updateNegativeGroups(patchDatabase);
 			
-//			assert false;
+			checkDatabase(patchDatabase);
 		}
 		
 		if (false) {
@@ -165,7 +171,10 @@ public final class PatchDatabaseTest4 {
 						
 						@Override
 						public final void process(final int pixel) {
-							labels.setRGB(pixel % imageColumnCount, pixel / imageColumnCount, color.getRGB());
+							final int x = pixel % imageColumnCount;
+							final int y = pixel / imageColumnCount;
+							
+							labels.setRGB(x, y, ((x | y) & 1) == 0 ? color.getRGB() : image.getValue(pixel));
 						}
 						
 					});
@@ -187,6 +196,20 @@ public final class PatchDatabaseTest4 {
 			debugPrint("patchCount:", patchCount[0]);
 			
 			SwingTools.show(labels, "Labels", true);
+		}
+	}
+	
+	public static final void updateNegativeGroups(final PatchDatabase<Sample> patchDatabase) {
+		for (final Map.Entry<byte[], Sample> entry : patchDatabase) {
+			final Collection<String> group = entry.getValue().getClasses();
+			
+			if (1 < group.size() && group.contains(EDGES_ARTIFACTS_TO_BE_EXCLUDED)) {
+				group.clear();
+			}
+			
+			if (group.isEmpty()) {
+				group.add(EDGES_ARTIFACTS_TO_BE_EXCLUDED);
+			}
 		}
 	}
 	

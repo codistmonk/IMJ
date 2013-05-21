@@ -44,11 +44,9 @@ public abstract class HistogramSampler extends Sampler {
 	
 	@Override
 	public final void finishPatch() {
-//		Tools.debugPrint(this.histogram.size());
 		this.postprocessHistogram();
 		this.sortIndices(this.indices, this.counts);
 		this.updateSample();
-//		Tools.debugPrint(this.patchPixelCount, this.getSample());
 		this.getProcessor().processSample(this.getSample());
 		this.getSample().clear();
 		this.patchPixelCount = 0;
@@ -82,6 +80,7 @@ public abstract class HistogramSampler extends Sampler {
 	
 	private final void updateSample() {
 		final int m = this.patchPixelCount;
+		final int countQuantizationMask = 0x000000F8;
 		
 		for (int k = 0; k < this.patchPixelCount; ++k) {
 			final int index = this.indices[k];
@@ -97,7 +96,7 @@ public abstract class HistogramSampler extends Sampler {
 				value >>= 8;
 			}
 			
-			this.getSample().add((byte) (count * 255L / m));
+			this.getSample().add((byte) ((count * 255L / m) & countQuantizationMask));
 		}
 	}
 	
