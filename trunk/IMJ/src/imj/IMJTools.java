@@ -2,7 +2,6 @@ package imj;
 
 import static imj.ImageOfBufferedImage.Feature.MAX_RGB;
 import static java.lang.Math.abs;
-import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static javax.imageio.ImageIO.read;
 import static net.sourceforge.aprog.tools.Tools.cast;
@@ -25,8 +24,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
+import net.sourceforge.aprog.tools.TicToc;
 
 /**
  * @author codistmonk (creation 2013-01-24)
@@ -704,7 +703,7 @@ public final class IMJTools {
 		final int pixelCount = image.getRowCount() * image.getColumnCount();
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
-			result = max(result, image.getValue(pixel));
+			result = Math.max(result, image.getValue(pixel));
 		}
 		
 		return result;
@@ -716,8 +715,8 @@ public final class IMJTools {
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
 			final int value = image.getValue(pixel);
-			result[0] = min(result[0], value);
-			result[1] = max(result[1], value);
+			result[0] = Math.min(result[0], value);
+			result[1] = Math.max(result[1], value);
 		}
 		
 		return result;
@@ -731,6 +730,18 @@ public final class IMJTools {
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
 			getOrCreate(result, labels.getValue(pixel)).addValue(image.getValue(pixel));
+		}
+		
+		return result;
+	}
+	
+	public static final int max(final int[] values) {
+		int result = Integer.MIN_VALUE;
+		
+		for (final int value : values) {
+			if (result < value) {
+				result = value;
+			}
 		}
 		
 		return result;
