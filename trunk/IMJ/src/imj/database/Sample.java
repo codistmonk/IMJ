@@ -50,8 +50,8 @@ public final class Sample implements Value {
 	}
 	
 	@Override
-	public final void incrementCount() {
-		++this.count;
+	public final void incrementCount(final int increment) {
+		this.count += increment;
 	}
 	
 	/**

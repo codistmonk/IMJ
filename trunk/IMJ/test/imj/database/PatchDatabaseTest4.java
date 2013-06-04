@@ -4,8 +4,11 @@ import static imj.IMJTools.square;
 import static imj.IMJTools.unsigned;
 import static imj.database.IMJDatabaseTools.RGB;
 import static imj.database.IMJDatabaseTools.checkDatabase;
+import static imj.database.IMJDatabaseTools.getPreferredMetric;
 import static imj.database.IMJDatabaseTools.newBKDatabase;
+import static imj.database.IMJDatabaseTools.newRGBSampler;
 import static imj.database.IMJDatabaseTools.updateDatabase;
+import static imj.database.IMJDatabaseTools.updateNegativeGroups;
 import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
@@ -19,10 +22,7 @@ import imj.database.BKSearch.BKDatabase;
 import imj.database.BKSearch.Metric;
 import imj.database.IMJDatabaseTools.EuclideanMetric;
 import imj.database.IMJDatabaseTools.NoIdentityMetric;
-import imj.database.PatterngramSampler.PatterngramMetric;
 import imj.database.Sample.SampleMetric;
-import imj.database.Sampler.SampleProcessor;
-import imj.database.SparseHistogramSampler.SparseHistogramMetric;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
@@ -50,8 +50,6 @@ import org.junit.Test;
  */
 public final class PatchDatabaseTest4 {
 	
-	public static final String EDGES_ARTIFACTS_TO_BE_EXCLUDED = "Edges & Artifacts to be excluded";
-
 	@Test
 	public final void test() {
 		final String[] imageIds = {
@@ -186,41 +184,17 @@ public final class PatchDatabaseTest4 {
 				
 			});
 			
-			checkDatabase(patchDatabase);
-			gc();
+			debugPrint("patchCount:", patchCount[0]);
 			
 			for (final Map.Entry<Collection<String>, Color> entry : colors.entrySet()) {
 				debugPrint(entry);
 			}
 			
-			debugPrint("patchCount:", patchCount[0]);
+			checkDatabase(patchDatabase);
+			gc();
 			
 			SwingTools.show(labels, "Labels", true);
 		}
-	}
-	
-	public static final void updateNegativeGroups(final PatchDatabase<Sample> patchDatabase) {
-		for (final Map.Entry<byte[], Sample> entry : patchDatabase) {
-			final Collection<String> group = entry.getValue().getClasses();
-			
-			if (1 < group.size() && group.contains(EDGES_ARTIFACTS_TO_BE_EXCLUDED)) {
-				group.clear();
-			}
-			
-			if (group.isEmpty()) {
-				group.add(EDGES_ARTIFACTS_TO_BE_EXCLUDED);
-			}
-		}
-	}
-	
-	public static final Metric<Sample> getPreferredMetric(final Sampler sampler) {
-		if (sampler instanceof SparseHistogramSampler) {
-			return new SampleMetric(new SparseHistogramMetric(sampler.getChannels().length));
-		} else if (sampler instanceof PatterngramSampler) {
-			return new SampleMetric(new PatterngramMetric(sampler.getChannels().length));
-		}
-		
-		return SampleMetric.CHESSBOARD;
 	}
 	
 	public static final void printIntragroupDistanceStatistics(final PatchDatabase<Sample> tileDatabase) {
@@ -274,16 +248,6 @@ public final class PatchDatabaseTest4 {
 					"minDistance:", statistics.getMinimum(), "maxDistance:", statistics.getMaximum(),
 					"variance:", statistics.getVariance());
 			debugPrint("time:", timer.toc());
-		}
-	}
-	
-	public static final Sampler newRGBSampler(final Class<? extends Sampler> samplerFactory,
-			final Image image, final Quantizer quantizer, final SampleProcessor processor) {
-		try {
-			return samplerFactory.getConstructor(Image.class, Quantizer.class, Channel[].class, SampleProcessor.class)
-					.newInstance(image, quantizer, RGB, processor);
-		} catch (final Exception exception) {
-			throw unchecked(exception);
 		}
 	}
 	

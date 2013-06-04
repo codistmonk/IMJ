@@ -51,7 +51,7 @@ public final class PatchDatabase<V extends PatchDatabase.Value> implements Seria
 				throw unchecked(exception);
 			}
 		} else {
-			result.incrementCount();
+			result.incrementCount(1);
 		}
 		
 		assert null != result.getKey() && key != result.getKey();
@@ -79,7 +79,7 @@ public final class PatchDatabase<V extends PatchDatabase.Value> implements Seria
 		
 		public abstract int getCount();
 		
-		public abstract void incrementCount();
+		public abstract void incrementCount(int increment);
 		
 		/**
 		 * @author codistmonk (creation 2013-04-22)
@@ -104,8 +104,8 @@ public final class PatchDatabase<V extends PatchDatabase.Value> implements Seria
 			}
 			
 			@Override
-			public final void incrementCount() {
-				++this.count;
+			public final void incrementCount(final int increment) {
+				this.count += increment;
 			}
 			
 			/**

@@ -8,6 +8,7 @@ import static imj.apps.modules.ViewFilter.Channel.Primitive.RED;
 import static imj.apps.modules.ViewFilter.Channel.Synthetic.BRIGHTNESS;
 import static imj.apps.modules.ViewFilter.Channel.Synthetic.HUE;
 import static imj.apps.modules.ViewFilter.Channel.Synthetic.SATURATION;
+import static imj.database.IMJDatabaseTools.RGB;
 import static java.lang.Math.abs;
 import static java.lang.Math.ceil;
 import static java.lang.Math.max;
@@ -31,7 +32,10 @@ import imj.apps.modules.ViewFilter.Channel;
 import imj.database.BKSearch.BKDatabase;
 import imj.database.BKSearch.Metric;
 import imj.database.PatchDatabase.Value;
+import imj.database.PatterngramSampler.PatterngramMetric;
+import imj.database.Sample.SampleMetric;
 import imj.database.Sampler.SampleProcessor;
+import imj.database.SparseHistogramSampler.SparseHistogramMetric;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -66,6 +70,45 @@ public final class IMJDatabaseTools {
 	public static final Channel[] RGB = { RED, GREEN, BLUE };
 	
 	public static final Channel[] HSB = { HUE, SATURATION, BRIGHTNESS };
+	
+	/**
+	 * {@value}.
+	 */
+	public static final String EDGES_ARTIFACTS_TO_BE_EXCLUDED = "Edges & Artifacts to be excluded";
+	
+	public static final void updateNegativeGroups(final PatchDatabase<Sample> patchDatabase) {
+		for (final Map.Entry<byte[], Sample> entry : patchDatabase) {
+			final Collection<String> group = entry.getValue().getClasses();
+			
+			if (1 < group.size() && group.contains(EDGES_ARTIFACTS_TO_BE_EXCLUDED)) {
+				group.clear();
+			}
+			
+			if (group.isEmpty()) {
+				group.add(EDGES_ARTIFACTS_TO_BE_EXCLUDED);
+			}
+		}
+	}
+	
+	public static final Sampler newRGBSampler(final Class<? extends Sampler> samplerFactory,
+			final Image image, final Quantizer quantizer, final SampleProcessor processor) {
+		try {
+			return samplerFactory.getConstructor(Image.class, Quantizer.class, Channel[].class, SampleProcessor.class)
+					.newInstance(image, quantizer, RGB, processor);
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	public static final Metric<Sample> getPreferredMetric(final Sampler sampler) {
+		if (sampler instanceof SparseHistogramSampler) {
+			return new SampleMetric(new SparseHistogramMetric(sampler.getChannels().length));
+		} else if (sampler instanceof PatterngramSampler) {
+			return new SampleMetric(new PatterngramMetric(sampler.getChannels().length));
+		}
+		
+		return SampleMetric.CHESSBOARD;
+	}
 	
 	public static final void updateDatabase(final String imageId, final int lod,
 			final Segmenter segmenter,
@@ -239,8 +282,6 @@ public final class IMJDatabaseTools {
 				samples[i++] = entry.getValue();
 			}
 		}
-		
-		debugPrint(samples.length, i);
 		
 		return new BKDatabase<Sample>(copyOf(samples, i), metric, Sample.KeyComparator.INSTANCE);
 	}
