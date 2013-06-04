@@ -227,7 +227,7 @@ public final class ImageWrangler {
 	public static final ImageWrangler INSTANCE = new ImageWrangler();
 	
 	public static final void printProgress(final int progress, final int last) {
-		System.out.print(progress * 10000 / last / 100.0 + "%\r");
+		System.out.print(progress * 10000 / last / 100.0 + "%  \r");
 	}
 	
 }
