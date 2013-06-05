@@ -26,7 +26,9 @@ import imj.database.Sample;
 import imj.database.Sampler;
 
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.Arrays;
@@ -51,8 +53,9 @@ public final class GenerateClassificationData {
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
+	 * @throws Exception 
 	 */
-	public static final void main(final String[] commandLineArguments) {
+	public static final void main(final String[] commandLineArguments) throws Exception {
 		final Configuration configuration = new Configuration(commandLineArguments);
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final TicToc timer = new TicToc();
@@ -127,7 +130,19 @@ public final class GenerateClassificationData {
 			System.out.println("class: " + entry.getKey() + ", FPR: " + format(fpr) + ", TPR: " + format(tpr));
 		}
 		
-		
+		{
+			System.out.println("Saving confusion tables... " + new Date(timer.tic()));
+			
+			final ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("confusion" + configuration.getSuffix()));
+			
+			try {
+				oos.writeObject(allConfusionTables);
+				
+				System.out.println("Saving confusion tables done, time: " + timer.toc());
+			} finally {
+				oos.close();
+			}
+		}
 	}
 	
 	public static final String format(final Statistics statistics) {
