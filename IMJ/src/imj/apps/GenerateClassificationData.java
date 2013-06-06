@@ -9,6 +9,7 @@ import static imj.database.IMJDatabaseTools.loadRegions;
 import static imj.database.IMJDatabaseTools.newBKDatabase;
 import static imj.database.IMJDatabaseTools.newRGBSampler;
 import static imj.database.IMJDatabaseTools.updateNegativeGroups;
+import static java.util.concurrent.Executors.newFixedThreadPool;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
@@ -31,10 +32,14 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -58,6 +63,7 @@ public final class GenerateClassificationData {
 	public static final void main(final String[] commandLineArguments) throws Exception {
 		final Configuration configuration = new Configuration(commandLineArguments);
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
+		final int threadCount = arguments.get("threads", 3)[0];
 		final TicToc timer = new TicToc();
 		final String[] trainingSet0 = arguments.get("using", "").split(",");
 		final String testImageId0 = arguments.get("on", "");
@@ -79,41 +85,52 @@ public final class GenerateClassificationData {
 		}
 		
 		final Map<String, ConfusionTable[]> allConfusionTables = new HashMap<String, ConfusionTable[]>();
+		final int n = trainingSets.length;
+		final Collection<Future<?>> tasks = new ArrayList<Future<?>>();
+		final ExecutorService executor = newFixedThreadPool(threadCount);
 		
-		for (int i = 0; i < trainingSets.length; ++i) {
-			final String[] trainingSet = trainingSets[i];
-			final String testImageId = testImageIds[i];
-			final PatchDatabase<Sample> sampleDatabase = new PatchDatabase<Sample>(Sample.class);
-			
-			System.out.println("trainingSet: " + Arrays.toString(trainingSet));
-			System.out.println("testImageId: " + testImageId);
-			
-			System.out.println("Loading training set... " + new Date(timer.tic()));
-			
-			loadTrainingSet(configuration, trainingSet, sampleDatabase);
-			
-			System.out.println("Loading training set done, time: " + timer.toc());
-			
-			checkDatabase(sampleDatabase);
-			
-			System.out.println("Processing image... " + new Date(timer.tic()));
-			
-			final Map<String, ConfusionTable> confusionTables = computeConfusionTables(
-					configuration, testImageId, sampleDatabase);
-			
-			for (final Map.Entry<String, ConfusionTable> entry : confusionTables.entrySet()) {
-				ConfusionTable[] tables = allConfusionTables.get(entry.getKey());
+		try {
+			for (int i0 = 0; i0 < n; ++i0) {
+				final int i = i0;
 				
-				if (tables == null) {
-					tables = new ConfusionTable[trainingSets.length];
-					allConfusionTables.put(entry.getKey(), tables);
-				}
-				
-				tables[i] = entry.getValue();
+				tasks.add(executor.submit(new Runnable() {
+					
+					@Override
+					public final void run() {
+						final String[] trainingSet = trainingSets[i];
+						final String testImageId = testImageIds[i];
+						final PatchDatabase<Sample> sampleDatabase = new PatchDatabase<Sample>(Sample.class);
+						
+						System.out.println("trainingSet: " + Arrays.toString(trainingSet));
+						System.out.println("testImageId: " + testImageId);
+						
+						System.out.println("Loading training set... " + new Date(timer.tic()));
+						
+						loadTrainingSet(configuration, trainingSet, sampleDatabase);
+						
+						System.out.println("Loading training set done, time: " + timer.toc());
+						
+						checkDatabase(sampleDatabase);
+						
+						System.out.println("Processing image... " + new Date(timer.tic()));
+						
+						final Map<String, ConfusionTable> confusionTables = computeConfusionTables(
+								configuration, testImageId, sampleDatabase);
+						
+						synchronizedUpdate(allConfusionTables, n, i, confusionTables);
+						
+						System.out.println("Processing image done, time: " + timer.toc());
+						System.out.println("confusionTables: " + confusionTables);
+					}
+					
+				}));
 			}
 			
-			System.out.println("Processing image done, time: " + timer.toc());
-			System.out.println("confusionTables: " + confusionTables);
+			for (final Future<?> task : tasks) {
+				task.get();
+			}
+		} finally {
+			executor.shutdown();
 		}
 		
 		for (final Map.Entry<String, ConfusionTable[]> entry : allConfusionTables.entrySet()) {
@@ -141,6 +158,23 @@ public final class GenerateClassificationData {
 				System.out.println("Saving confusion tables done, time: " + timer.toc());
 			} finally {
 				oos.close();
+			}
+		}
+	}
+	
+	public static final void synchronizedUpdate(
+			final Map<String, ConfusionTable[]> allConfusionTables,
+			final int testCount, final int testIndex, final Map<String, ConfusionTable> confusionTables) {
+		synchronized (allConfusionTables) {
+			for (final Map.Entry<String, ConfusionTable> entry : confusionTables.entrySet()) {
+				ConfusionTable[] tables = allConfusionTables.get(entry.getKey());
+				
+				if (tables == null) {
+					tables = new ConfusionTable[testCount];
+					allConfusionTables.put(entry.getKey(), tables);
+				}
+				
+				tables[testIndex] = entry.getValue();
 			}
 		}
 	}
