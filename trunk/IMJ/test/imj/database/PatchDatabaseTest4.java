@@ -5,8 +5,10 @@ import static imj.IMJTools.unsigned;
 import static imj.database.IMJDatabaseTools.RGB;
 import static imj.database.IMJDatabaseTools.checkDatabase;
 import static imj.database.IMJDatabaseTools.getPreferredMetric;
+import static imj.database.IMJDatabaseTools.groupSamples;
 import static imj.database.IMJDatabaseTools.newBKDatabase;
 import static imj.database.IMJDatabaseTools.newRGBSampler;
+import static imj.database.IMJDatabaseTools.simplifyArbitrarily;
 import static imj.database.IMJDatabaseTools.updateDatabase;
 import static imj.database.IMJDatabaseTools.updateNegativeGroups;
 import static java.util.Arrays.fill;
@@ -26,6 +28,7 @@ import imj.database.Sample.SampleMetric;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -63,9 +66,9 @@ public final class PatchDatabaseTest4 {
 		};
 		final int nonTrainingIndex = 3;
 		final Quantizer[] quantizers = new Quantizer[imageIds.length];
-		final int quantizationLevel = 4;
+		final int quantizationLevel = 2;
 		final int lod = 4;
-		final int tileRowCount = 16;
+		final int tileRowCount = 32;
 		final int tileColumnCount = tileRowCount;
 		
 		final int trainingVerticalTileStride = tileRowCount;
@@ -119,6 +122,10 @@ public final class PatchDatabaseTest4 {
 			updateNegativeGroups(patchDatabase);
 			
 			checkDatabase(patchDatabase);
+		}
+		
+		if (true) {
+			simplifyArbitrarily(patchDatabase, 10000);
 		}
 		
 		if (false) {
@@ -199,11 +206,7 @@ public final class PatchDatabaseTest4 {
 	
 	public static final void printIntragroupDistanceStatistics(final PatchDatabase<Sample> tileDatabase) {
 		final TicToc timer = new TicToc();
-		final Map<Collection<String>, List<byte[]>> groups = new HashMap<Collection<String>, List<byte[]>>();
-		
-		for (final Map.Entry<byte[], Sample> entry : tileDatabase) {
-			put(groups, entry.getValue().getClasses(), entry.getKey());
-		}
+		final Map<Collection<String>, List<byte[]>> groups = groupSamples(tileDatabase);
 		
 		debugPrint("groupCount:", groups.size());
 		
@@ -323,17 +326,6 @@ public final class PatchDatabaseTest4 {
 		}
 		
 		return result;
-	}
-	
-	public static final <K, V> void put(final Map<K, List<V>> map, final K key, final V value) {
-		List<V> values = map.get(key);
-		
-		if (values == null) {
-			values = new ArrayList<V>();
-			map.put(key, values);
-		}
-		
-		values.add(value);
 	}
 	
 	public static final int generateColor(final Sample sample) {

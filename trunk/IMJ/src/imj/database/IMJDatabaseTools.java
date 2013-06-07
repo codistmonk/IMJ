@@ -8,7 +8,6 @@ import static imj.apps.modules.ViewFilter.Channel.Primitive.RED;
 import static imj.apps.modules.ViewFilter.Channel.Synthetic.BRIGHTNESS;
 import static imj.apps.modules.ViewFilter.Channel.Synthetic.HUE;
 import static imj.apps.modules.ViewFilter.Channel.Synthetic.SATURATION;
-import static imj.database.IMJDatabaseTools.RGB;
 import static java.lang.Math.abs;
 import static java.lang.Math.ceil;
 import static java.lang.Math.max;
@@ -45,9 +44,11 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -88,6 +89,54 @@ public final class IMJDatabaseTools {
 				group.add(EDGES_ARTIFACTS_TO_BE_EXCLUDED);
 			}
 		}
+	}
+	
+	public static final <K, V> void put(final Map<K, List<V>> map, final K key, final V value) {
+		List<V> values = map.get(key);
+		
+		if (values == null) {
+			values = new ArrayList<V>();
+			map.put(key, values);
+		}
+		
+		values.add(value);
+	}
+	
+	public static final Map<Collection<String>, List<byte[]>> groupSamples(final PatchDatabase<Sample> tileDatabase) {
+		final Map<Collection<String>, List<byte[]>> result = new HashMap<Collection<String>, List<byte[]>>();
+		
+		for (final Map.Entry<byte[], Sample> entry : tileDatabase) {
+			put(result, entry.getValue().getClasses(), entry.getKey());
+		}
+		
+		return result;
+	}
+	
+	public static final void simplifyArbitrarily(final PatchDatabase<Sample> tileDatabase, final int maximumGroupSize) {
+		final TicToc timer = new TicToc();
+		
+		debugPrint("Simplifying...", new Date(timer.tic()));
+		
+		final Map<Collection<String>, List<byte[]>> groups = groupSamples(tileDatabase);
+		
+		debugPrint("groupCount:", groups.size());
+		
+		for (final Map.Entry<Collection<String>, List<byte[]>> entry : groups.entrySet()) {
+			final List<byte[]> samples = entry.getValue();
+			final int excess = samples.size() - maximumGroupSize;
+			
+			if (0 < excess) {
+				debugPrint("Removing", excess, "elements from group", entry.getKey());
+				
+				Collections.shuffle(samples);
+				
+				for (int i = 0; i < excess; ++i) {
+					tileDatabase.remove(samples.get(i));
+				}
+			}
+		}
+		
+		debugPrint("Simplifying done", "time:", timer.toc());
 	}
 	
 	public static final Sampler newRGBSampler(final Class<? extends Sampler> samplerFactory,
