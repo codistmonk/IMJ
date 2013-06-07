@@ -111,22 +111,19 @@ public final class PatchDatabaseTest4 {
 			updateDatabase(imageId, lod, trainingSegmenter, samplerFactory, channels, quantizers[i], classes, patchDatabase);
 			gc();
 			
-//			diffuseClasses(tileDatabase, 10);
-//			gc();
-			
 			checkDatabase(patchDatabase);
 			gc();
 		}
 		
 		if (true) {
 			updateNegativeGroups(patchDatabase);
-			
-			checkDatabase(patchDatabase);
 		}
 		
 		if (true) {
 			simplifyArbitrarily(patchDatabase, 10000);
 		}
+		
+		checkDatabase(patchDatabase);
 		
 		if (false) {
 			printIntragroupDistanceStatistics(patchDatabase);
