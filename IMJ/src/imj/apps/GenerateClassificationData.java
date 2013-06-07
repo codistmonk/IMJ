@@ -8,6 +8,7 @@ import static imj.database.IMJDatabaseTools.getPreferredMetric;
 import static imj.database.IMJDatabaseTools.loadRegions;
 import static imj.database.IMJDatabaseTools.newBKDatabase;
 import static imj.database.IMJDatabaseTools.newRGBSampler;
+import static imj.database.IMJDatabaseTools.simplifyArbitrarily;
 import static imj.database.IMJDatabaseTools.updateNegativeGroups;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -64,6 +65,7 @@ public final class GenerateClassificationData {
 		final Configuration configuration = new Configuration(commandLineArguments);
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final int threadCount = arguments.get("threads", 3)[0];
+		final int maximumGroupSize = arguments.get("maximumGroupSize", 0)[0];
 		final TicToc timer = new TicToc();
 		final String[] trainingSet0 = arguments.get("using", "").split(",");
 		final String testImageId0 = arguments.get("on", "");
@@ -109,6 +111,10 @@ public final class GenerateClassificationData {
 						loadTrainingSet(configuration, trainingSet, sampleDatabase);
 						
 						System.out.println("Loading training set done, time: " + timer.toc());
+						
+						if (0 < maximumGroupSize) {
+							simplifyArbitrarily(sampleDatabase, maximumGroupSize);
+						}
 						
 						checkDatabase(sampleDatabase);
 						

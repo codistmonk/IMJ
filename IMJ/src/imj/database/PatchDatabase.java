@@ -1,16 +1,12 @@
 package imj.database;
 
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
-
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-04-19)
@@ -57,6 +53,10 @@ public final class PatchDatabase<V extends PatchDatabase.Value> implements Seria
 		assert null != result.getKey() && key != result.getKey();
 		
 		return result;
+	}
+	
+	public final V remove(final byte[] key) {
+		return this.data.remove(key);
 	}
 	
 	public final int getEntryCount() {
