@@ -156,7 +156,8 @@ public final class GenerateClassificationData {
 		{
 			System.out.println("Saving confusion tables... " + new Date(timer.tic()));
 			
-			final ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("confusion" + configuration.getSuffix()));
+			final ObjectOutputStream oos = new ObjectOutputStream(
+					new FileOutputStream("confusion" + configuration.getConfusionSuffix()));
 			
 			try {
 				oos.writeObject(allConfusionTables);
@@ -230,7 +231,7 @@ public final class GenerateClassificationData {
 			result.put(key, new ConfusionTable());
 		}
 		
-		configuration.getSegmenter().process(image, new Sampler(image, quantizer, channels, collector) {
+		configuration.newSegmenter().process(image, new Sampler(image, quantizer, channels, collector) {
 			
 			private final IntList pixels = new IntList();
 			
@@ -298,7 +299,7 @@ public final class GenerateClassificationData {
 		try {
 			for (final String trainingImageId : trainingSet) {
 				final ObjectInputStream ois = new ObjectInputStream(new FileInputStream(
-						baseName(trainingImageId) + configuration.getSuffix()));
+						baseName(trainingImageId) + configuration.getDatabaseSuffix()));
 				
 				try {
 					@SuppressWarnings("unchecked")

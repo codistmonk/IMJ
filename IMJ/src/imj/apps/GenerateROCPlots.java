@@ -1,7 +1,9 @@
 package imj.apps;
 
 import static java.lang.Math.sqrt;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj.apps.GenerateClassificationData.ConfusionTable;
 
 import java.io.FileNotFoundException;
@@ -14,6 +16,7 @@ import java.util.Map;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-06-07)
@@ -33,6 +36,7 @@ public final class GenerateROCPlots {
 		final String filePath = arguments.get("file", "confusions.jo");
 		final Map<String, Map<String, ConfusionTable[]>> confusions = CollectConfusionTables.readObject(filePath);
 		final Map<String, List<DataPointXY>> data = new HashMap<String, List<DataPointXY>>();
+		final String[] moreFields = arguments.get("moreFields", "").split(",");
 		
 		for (final Map.Entry<String, Map<String, ConfusionTable[]>> configurationEntry : confusions.entrySet()) {
 			for (final Map.Entry<String, ConfusionTable[]> annotationEntry : configurationEntry.getValue().entrySet()) {
@@ -47,7 +51,7 @@ public final class GenerateROCPlots {
 				
 				try {
 					for (final DataPointXY dataPoint : entry.getValue()) {
-						out.println(dataPoint);
+						out.println(dataPoint.toString(moreFields));
 					}
 				} finally {
 					out.close();
@@ -131,9 +135,55 @@ public final class GenerateROCPlots {
 			return this.errorY;
 		}
 		
+		public final String toString(final String[] fieldsFromLabel) {
+			final StringBuilder resultBuilder = new StringBuilder();
+			
+			resultBuilder
+			.append(this.getLabel()).append(SEPARATOR);
+			
+			if (fieldsFromLabel != null) {
+				final Map<String, String> values = new HashMap<String, String>();
+				
+				for (final String nameValue : this.getLabel().split("\\b+")) {
+					final String[] value = nameValue.split("\\D+");
+					
+					if (2 == value.length) {
+						values.put(nameValue.split("\\d+")[0], value[1]);
+					}
+				}
+				
+				for (final String field : fieldsFromLabel) {
+					resultBuilder.append(values.get(field)).append(SEPARATOR);
+				}
+			}
+			
+			resultBuilder
+			.append(this.getX()).append(SEPARATOR)
+			.append(this.getY()).append(SEPARATOR)
+			.append(this.getErrorX()).append(SEPARATOR)
+			.append(this.getErrorY());
+			
+			return resultBuilder.toString();
+		}
+		
 		@Override
 		public final String toString() {
-			return this.getLabel() + "	" + this.getX() + "	" + this.getY() + "	" + this.getErrorX() + "	" + this.getErrorY();
+			return this.toString(null);
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		public static final String SEPARATOR = "\t";
+		
+		public static final <T> int indexOf(final T element, final T[] array) {
+			int result = array.length - 1;
+			
+			while (0 <= result && !Tools.equals(element, array[result])) {
+				--result;
+			}
+			
+			return result;
 		}
 		
 	}
