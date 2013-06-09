@@ -1,8 +1,6 @@
 package imj.apps;
 
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj.apps.GenerateClassificationData.ConfusionTable;
 
 import java.io.File;
@@ -16,7 +14,6 @@ import java.util.Map;
 
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-06-06)
@@ -42,8 +39,6 @@ public final class CollectConfusionTables {
 		
 		for (final File file : directory.listFiles()) {
 			final String fileName = file.getName();
-			
-			debugPrint(fileName, file.isFile(), file.canRead(), fileName.startsWith(prefix), fileName.endsWith(suffix));
 			
 			if (file.isFile() && file.canRead() && fileName.startsWith(prefix) && fileName.endsWith(suffix)) {
 				final Map<String, ConfusionTable[]> confusionTables = readObject(file.getPath());
