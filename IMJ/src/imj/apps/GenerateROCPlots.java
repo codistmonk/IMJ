@@ -1,9 +1,8 @@
 package imj.apps;
 
+import static imj.IMJTools.readObject;
 import static java.lang.Math.sqrt;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj.apps.GenerateClassificationData.ConfusionTable;
 
 import java.io.FileNotFoundException;
@@ -34,7 +33,7 @@ public final class GenerateROCPlots {
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String filePath = arguments.get("file", "confusions.jo");
-		final Map<String, Map<String, ConfusionTable[]>> confusions = CollectConfusionTables.readObject(filePath);
+		final Map<String, Map<String, ConfusionTable[]>> confusions = readObject(filePath);
 		final Map<String, List<DataPointXY>> data = new HashMap<String, List<DataPointXY>>();
 		final String[] moreFields = arguments.get("moreFields", "").split(",");
 		

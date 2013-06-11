@@ -1,6 +1,8 @@
 package imj.apps;
 
 import static imj.IMJTools.loadAndTryToCache;
+import static imj.IMJTools.readObject;
+import static imj.IMJTools.writeObject;
 import static imj.apps.modules.ShowActions.baseName;
 import static imj.database.IMJDatabaseTools.RGB;
 import static imj.database.IMJDatabaseTools.checkDatabase;
@@ -27,11 +29,8 @@ import imj.database.Quantizer;
 import imj.database.Sample;
 import imj.database.Sampler;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.lang.ref.SoftReference;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -56,6 +55,8 @@ public final class GenerateClassificationData {
 		throw new IllegalInstantiationException();
 	}
 	
+	private static final Map<String, SynchronizedWeakLoader> cache = new HashMap<String, SynchronizedWeakLoader>();
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
@@ -71,6 +72,8 @@ public final class GenerateClassificationData {
 		final String testImageId0 = arguments.get("on", "");
 		final String[][] trainingSets;
 		final String[] testImageIds;
+		final boolean checkDatabase = arguments.get("checkDatabase", 1)[0] != 0;
+		final boolean processImages = arguments.get("processImages", 1)[0] != 0;
 		
 		if ("".equals(testImageId0)) {
 			final int n = trainingSet0.length;
@@ -116,17 +119,22 @@ public final class GenerateClassificationData {
 							simplifyArbitrarily(sampleDatabase, maximumGroupSize);
 						}
 						
-						checkDatabase(sampleDatabase);
+						if (checkDatabase) {
+							 writeObject(checkDatabase(sampleDatabase),
+									 testImageId + ".dbinfo" + configuration.getConfusionSuffix());
+						}
 						
-						System.out.println("Processing image... " + new Date(timer.tic()));
-						
-						final Map<String, ConfusionTable> confusionTables = computeConfusionTables(
-								configuration, testImageId, sampleDatabase);
-						
-						synchronizedUpdate(allConfusionTables, n, i, confusionTables);
-						
-						System.out.println("Processing image done, time: " + timer.toc());
-						System.out.println("confusionTables: " + confusionTables);
+						if (processImages) {
+							System.out.println("Processing image... " + new Date(timer.tic()));
+							
+							final Map<String, ConfusionTable> confusionTables = computeConfusionTables(
+									configuration, testImageId, sampleDatabase);
+							
+							synchronizedUpdate(allConfusionTables, n, i, confusionTables);
+							
+							System.out.println("Processing image done, time: " + timer.toc());
+							System.out.println("confusionTables: " + confusionTables);
+						}
 					}
 					
 				}));
@@ -137,6 +145,10 @@ public final class GenerateClassificationData {
 			}
 		} finally {
 			executor.shutdown();
+		}
+		
+		if (!processImages) {
+			return;
 		}
 		
 		for (final Map.Entry<String, ConfusionTable[]> entry : allConfusionTables.entrySet()) {
@@ -156,16 +168,9 @@ public final class GenerateClassificationData {
 		{
 			System.out.println("Saving confusion tables... " + new Date(timer.tic()));
 			
-			final ObjectOutputStream oos = new ObjectOutputStream(
-					new FileOutputStream("confusion" + configuration.getConfusionSuffix()));
+			writeObject((Serializable) allConfusionTables, "confusion" + configuration.getConfusionSuffix());
 			
-			try {
-				oos.writeObject(allConfusionTables);
-				
-				System.out.println("Saving confusion tables done, time: " + timer.toc());
-			} finally {
-				oos.close();
-			}
+			System.out.println("Saving confusion tables done, time: " + timer.toc());
 		}
 	}
 	
@@ -296,33 +301,35 @@ public final class GenerateClassificationData {
 	
 	public static final void loadTrainingSet(final Configuration configuration,
 			final String[] trainingSet, final PatchDatabase<Sample> sampleDatabase) {
-		try {
-			for (final String trainingImageId : trainingSet) {
-				final ObjectInputStream ois = new ObjectInputStream(new FileInputStream(
-						baseName(trainingImageId) + configuration.getDatabaseSuffix()));
+		final TicToc timer = new TicToc();
+		
+		for (final String trainingImageId : trainingSet) {
+			final String filePath = baseName(trainingImageId) + configuration.getDatabaseSuffix();
+			
+			System.out.println("Retrieving samples from " + filePath + "... " + new Date(timer.tic()));
+			
+//			final Map<Object, Object> database = readObject(filePath);
+			final Map<Object, Object> database = SynchronizedWeakLoader.getObject(cache, filePath);
+			
+			System.out.println("Retrieving samples from " + filePath + " done, time: " + timer.toc());
+			
+			System.out.println("Including samples from " + filePath + "... " + new Date(timer.tic()));
+			
+			@SuppressWarnings("unchecked")
+			final PatchDatabase<Sample> samples = (PatchDatabase<Sample>) database.get("samples");
+			
+			for (final Map.Entry<byte[], Sample> entry : samples) {
+				final Sample sample = entry.getValue();
+				final Sample newSample = sampleDatabase.add(entry.getKey());
 				
-				try {
-					@SuppressWarnings("unchecked")
-					final Map<Object, Object> database = (Map<Object, Object>) ois.readObject();
-					@SuppressWarnings("unchecked")
-					final PatchDatabase<Sample> samples = (PatchDatabase<Sample>) database.get("samples");
-					
-					for (final Map.Entry<byte[], Sample> entry : samples) {
-						final Sample sample = entry.getValue();
-						final Sample newSample = sampleDatabase.add(entry.getKey());
-						
-						newSample.getClasses().addAll(sample.getClasses());
-						newSample.incrementCount(sample.getCount());
-					}
-				} finally {
-					ois.close();
-				}
+				newSample.getClasses().addAll(sample.getClasses());
+				newSample.incrementCount(sample.getCount());
 			}
 			
-			updateNegativeGroups(sampleDatabase);
-		} catch (final Exception exception) {
-			throw unchecked(exception);
+			System.out.println("Including samples from " + filePath + " done, time: " + timer.toc());
 		}
+		
+		updateNegativeGroups(sampleDatabase);
 	}
 	
 	/**
@@ -404,6 +411,54 @@ public final class GenerateClassificationData {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -2815956297294457592L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-06-10)
+	 */
+	public static final class SynchronizedWeakLoader {
+		
+		private final String filePath;
+		
+//		private WeakReference<Object> reference;
+		private SoftReference<Object> reference;
+
+		public SynchronizedWeakLoader(final String filePath) {
+			this.filePath = filePath;
+			this.setNewReference(null);
+		}
+		
+		public final synchronized <T> T getObject() {
+			T result = (T) this.reference.get();
+			
+			if (result == null) {
+				result = readObject(this.filePath);
+				this.setNewReference(result);
+			}
+			
+			return result;
+		}
+		
+		private final void setNewReference(final Object referent) {
+//			this.reference = new WeakReference<Object>(referent);
+			this.reference = new SoftReference<Object>(referent);
+		}
+		
+		public static final <T> T getObject(final Map<String, SynchronizedWeakLoader> cache, final String filePath) {
+			SynchronizedWeakLoader loader = null;
+			
+			synchronized (cache) {
+				loader = cache.get(filePath);
+				
+				if (loader == null) {
+					loader = new SynchronizedWeakLoader(filePath);
+					cache.put(filePath, loader);
+				}
+			}
+			
+			return loader.getObject();
+		}
 		
 	}
 	

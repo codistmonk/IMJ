@@ -42,6 +42,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -350,7 +351,7 @@ public final class IMJDatabaseTools {
 		return (long) x * x;
 	}
 	
-	public static final int checkDatabase(final PatchDatabase<?> database) {
+	public static final DBInfo checkDatabase(final PatchDatabase<?> database) {
 		boolean junitAvailable = false;
 		
 		try {
@@ -361,51 +362,47 @@ public final class IMJDatabaseTools {
 		}
 		
 		final TicToc timer = new TicToc();
+		final DBInfo result = new DBInfo();
 		
 		debugPrint("Checking database...", new Date(timer.tic()));
 		
-		int databaseEntryCount = 0;
-		int databaseSampleCount = 0;
-		final Map<String, AtomicInteger> classCounts = new HashMap<String, AtomicInteger>();
-		final Map<Collection<String>, AtomicInteger> groups = new HashMap<Collection<String>, AtomicInteger>();
-		
 		for (final Map.Entry<byte[], ? extends Value> entry : database) {
-			if (databaseEntryCount % 100000 == 0) {
-				System.out.print(databaseEntryCount + "/" + database.getEntryCount() + "\r");
+			if (result.getDatabaseEntryCount() % 100000 == 0) {
+				System.out.print(result.getDatabaseEntryCount() + "/" + database.getEntryCount() + "\r");
 			}
 			
 			if (junitAvailable) {
 				assertNotNull(entry.getValue());
 			}
 			
-			++databaseEntryCount;
-			databaseSampleCount += entry.getValue().getCount();
+			result.incrementDatabaseEntryCount(1);
+			result.incrementDatabaseSampleCount(entry.getValue().getCount());
 			
 			final Sample tileData = (Sample) entry.getValue();
 			
-			count(groups, tileData.getClasses());
+			count(result.getGroups(), tileData.getClasses());
 			
 			for (final String classId : tileData.getClasses()) {
-				count(classCounts, classId);
+				count(result.getClassCounts(), classId);
 			}
 		}
 		
 		debugPrint("Checking database done", "time:", timer.toc());
 		
-		debugPrint("classCounts", classCounts);
-		debugPrint("groupCount:", groups.size());
+		debugPrint("classCounts", result.getClassCounts());
+		debugPrint("groupCount:", result.getGroups().size());
 		debugPrint("entryCount:", database.getEntryCount());
-		debugPrint("sampleCount:", databaseSampleCount);
+		debugPrint("sampleCount:", result.getDatabaseSampleCount());
 		
-		for (final Map.Entry<Collection<String>, AtomicInteger> entry : groups.entrySet()) {
-			debugPrint(entry);
+		for (final Map.Entry<Collection<String>, AtomicInteger> entry : result.getGroups().entrySet()) {
+			debugPrint("group:", entry);
 		}
 		
 		if (junitAvailable) {
-			assertEquals(database.getEntryCount(), databaseEntryCount);
+			assertEquals(database.getEntryCount(), result.getDatabaseEntryCount());
 		}
 		
-		return databaseSampleCount;
+		return result;
 	}
 	
 	public static final <K> void count(final Map<K, AtomicInteger> map, final K key) {
@@ -517,6 +514,50 @@ public final class IMJDatabaseTools {
 			
 			return result == 0L ? Long.MAX_VALUE : result;
 		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-06-10)
+	 */
+	public static final class DBInfo implements Serializable {
+		
+		private int databaseEntryCount = 0;
+		
+		private int databaseSampleCount = 0;
+		
+		private final Map<String, AtomicInteger> classCounts = new HashMap<String, AtomicInteger>();
+		
+		private final Map<Collection<String>, AtomicInteger> groups = new HashMap<Collection<String>, AtomicInteger>();
+		
+		public final int getDatabaseEntryCount() {
+			return this.databaseEntryCount;
+		}
+		
+		public final void incrementDatabaseEntryCount(final int delta) {
+			this.databaseEntryCount += delta;
+		}
+		
+		public final int getDatabaseSampleCount() {
+			return this.databaseSampleCount;
+		}
+		
+		public final void incrementDatabaseSampleCount(final int delta) {
+			this.databaseSampleCount += delta;
+		}
+		
+		public final Map<String, AtomicInteger> getClassCounts() {
+			return this.classCounts;
+		}
+		
+		public final Map<Collection<String>, AtomicInteger> getGroups() {
+			return this.groups;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -8503746046488694996L;
 		
 	}
 	

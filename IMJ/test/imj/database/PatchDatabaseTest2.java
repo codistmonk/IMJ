@@ -46,7 +46,7 @@ public class PatchDatabaseTest2 {
 		
 		updateDatabase(imageId, lod, segmenter, LinearSampler.class, RGB, quantizer, classes, database);
 		
-		final int databaseSampleCount = checkDatabase(database);
+		final int databaseSampleCount = checkDatabase(database).getDatabaseSampleCount();
 		
 		// k * verticalTileStride + tileRowCount <= imageRowCount
 		// k * verticalTileStride <= imageRowCount - tileRowCount
