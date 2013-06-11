@@ -1,13 +1,10 @@
 package imj.apps;
 
-import static net.sourceforge.aprog.tools.Tools.unchecked;
+import static imj.IMJTools.readObject;
+import static imj.IMJTools.writeObject;
 import imj.apps.GenerateClassificationData.ConfusionTable;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -48,35 +45,6 @@ public final class CollectConfusionTables {
 		}
 		
 		writeObject((Serializable) confusions, outPath);
-	}
-	
-	public static final void writeObject(final Serializable object, final String filePath) {
-		try {
-			final ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filePath));
-			
-			try {
-				oos.writeObject(object);
-			} finally {
-				oos.close();
-			}
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
-	}
-	
-	@SuppressWarnings("unchecked")
-	public static final <T> T readObject(final String filePath) {
-		try {
-			final ObjectInputStream ois = new ObjectInputStream(new FileInputStream(filePath));
-			
-			try {
-				return (T) ois.readObject();
-			} finally {
-				ois.close();
-			}
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
 	}
 	
 }

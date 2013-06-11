@@ -15,8 +15,13 @@ import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.ViewFilter.Channel;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
 import java.util.Date;
@@ -747,6 +752,22 @@ public final class IMJTools {
 		return result;
 	}
 	
+	public static final <K, V> V getOrCreate(final Map<K, V> map, final K key, final Class<V> valueFactory) {
+		V result = map.get(key);
+		
+		if (result == null) {
+			try {
+				result = valueFactory.newInstance();
+			} catch (final Exception exception) {
+				throw unchecked(exception);
+			}
+			
+			map.put(key, result);
+		}
+		
+		return result;
+	}
+	
 	public static final Statistics getOrCreate(final Statistics[] statistics, final int index) {
 		final Statistics maybeResult = statistics[index];
 		
@@ -764,6 +785,35 @@ public final class IMJTools {
 		}
 		
 		return result;
+	}
+	
+	public static final void writeObject(final Serializable object, final String filePath) {
+		try {
+			final ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filePath));
+			
+			try {
+				oos.writeObject(object);
+			} finally {
+				oos.close();
+			}
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final <T> T readObject(final String filePath) {
+		try {
+			final ObjectInputStream ois = new ObjectInputStream(new FileInputStream(filePath));
+			
+			try {
+				return (T) ois.readObject();
+			} finally {
+				ois.close();
+			}
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
 	}
 	
 	/**
