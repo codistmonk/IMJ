@@ -28,7 +28,6 @@ import imj.database.Sample.SampleMetric;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -66,7 +65,7 @@ public final class PatchDatabaseTest4 {
 		};
 		final int nonTrainingIndex = 3;
 		final Quantizer[] quantizers = new Quantizer[imageIds.length];
-		final int quantizationLevel = 2;
+		final int quantizationLevel = 4;
 		final int lod = 4;
 		final int tileRowCount = 32;
 		final int tileColumnCount = tileRowCount;

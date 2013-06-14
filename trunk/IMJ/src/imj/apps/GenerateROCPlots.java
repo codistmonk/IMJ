@@ -1,11 +1,11 @@
 package imj.apps;
 
+import static imj.IMJTools.getOrCreate;
 import static imj.IMJTools.readObject;
+import static java.lang.Double.isNaN;
 import static java.lang.Math.sqrt;
-import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj.apps.GenerateClassificationData.ConfusionTable;
 
-import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,52 +29,77 @@ public final class GenerateROCPlots {
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
+	 * @throws Exception 
 	 */
-	public static final void main(final String[] commandLineArguments) {
+	public static final void main(final String[] commandLineArguments) throws Exception {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String filePath = arguments.get("file", "confusions.jo");
 		final Map<String, Map<String, ConfusionTable[]>> confusions = readObject(filePath);
 		final Map<String, List<DataPointXY>> data = new HashMap<String, List<DataPointXY>>();
 		final String[] moreFields = arguments.get("moreFields", "").split(",");
+		final Map<String, Statistics> configurationFPRs = new HashMap<String, Statistics>();
+		final Map<String, Statistics> configurationTPRs = new HashMap<String, Statistics>();
 		
 		for (final Map.Entry<String, Map<String, ConfusionTable[]>> configurationEntry : confusions.entrySet()) {
+			ConfusionTable[] configurationConfusionTables = null;
+			
 			for (final Map.Entry<String, ConfusionTable[]> annotationEntry : configurationEntry.getValue().entrySet()) {
 				getOrCreate(data, annotationEntry.getKey(), (Class<List<DataPointXY>>) (Object) ArrayList.class).add(
 						newDataPoint(configurationEntry.getKey(), annotationEntry.getValue()));
+				
+				final int n = annotationEntry.getValue().length;
+				
+				if (configurationConfusionTables == null) {
+					configurationConfusionTables = new ConfusionTable[n];
+				}
+				
+				for (int i = 0; i < n; ++i) {
+					final ConfusionTable configurationConfusionTable = getOrCreate(
+							configurationConfusionTables, i, ConfusionTable.class);
+					final ConfusionTable annotationConfusionTable = annotationEntry.getValue()[i];
+					
+					configurationConfusionTable.incrementTruePositive("", annotationConfusionTable.getTruePositive());
+					configurationConfusionTable.incrementFalsePositive("", annotationConfusionTable.getFalsePositive());
+					configurationConfusionTable.incrementTrueNegative("", annotationConfusionTable.getTrueNegative());
+					configurationConfusionTable.incrementFalseNegative("", annotationConfusionTable.getFalseNegative());
+				}
+			}
+			
+			final Statistics configurationFPR = getOrCreate(configurationFPRs, configurationEntry.getKey(), Statistics.class);
+			final Statistics configurationTPR = getOrCreate(configurationTPRs, configurationEntry.getKey(), Statistics.class);
+			
+			for (final ConfusionTable confusionTable : configurationConfusionTables) {
+				configurationFPR.addValue(confusionTable.getFalsePositiveRate());
+				configurationTPR.addValue(confusionTable.getTruePositiveRate());
+			}
+		}
+		
+		{
+			final PrintStream out = new PrintStream("all.csv");
+			
+			try {
+				for (final String configurationKey : configurationFPRs.keySet()) {
+					final Statistics fpr = configurationFPRs.get(configurationKey);
+					final Statistics tpr = configurationTPRs.get(configurationKey);
+					
+					out.println(new DataPointXY(configurationKey, fpr.getMean(), tpr.getMean(), sqrt(fpr.getVariance()), sqrt(tpr.getVariance())));
+				}
+			} finally {
+				out.close();
 			}
 		}
 		
 		for (final Map.Entry<String, List<DataPointXY>> entry : data.entrySet()) {
-			try {
-				final PrintStream out = new PrintStream(entry.getKey() + ".csv");
-				
-				try {
-					for (final DataPointXY dataPoint : entry.getValue()) {
-						out.println(dataPoint.toString(moreFields));
-					}
-				} finally {
-					out.close();
-				}
-			} catch (final FileNotFoundException exception) {
-				throw unchecked(exception);
-			}
-		}
-	}
-	
-	public static final <K, V> V getOrCreate(final Map<K, V> map, final K key, final Class<? extends V> valueFactory) {
-		V result = map.get(key);
-		
-		if (result == null) {
-			try {
-				result = valueFactory.newInstance();
-			} catch (final Exception exception) {
-				throw unchecked(exception);
-			}
+			final PrintStream out = new PrintStream(entry.getKey() + ".csv");
 			
-			map.put(key, result);
+			try {
+				for (final DataPointXY dataPoint : entry.getValue()) {
+					out.println(dataPoint.toString(moreFields));
+				}
+			} finally {
+				out.close();
+			}
 		}
-		
-		return result;
 	}
 	
 	public static final DataPointXY newDataPoint(final String label, final ConfusionTable[] tables) {
@@ -112,6 +137,10 @@ public final class GenerateROCPlots {
 			this.y = y;
 			this.errorX = errorX;
 			this.errorY = errorY;
+		}
+		
+		public final boolean isValid() {
+			return !isNaN(this.getX()) && !isNaN(this.getY());
 		}
 		
 		public final String getLabel() {

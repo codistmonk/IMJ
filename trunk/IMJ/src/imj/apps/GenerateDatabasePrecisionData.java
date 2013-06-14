@@ -3,9 +3,11 @@ package imj.apps;
 import static imj.IMJTools.getOrCreate;
 import static imj.IMJTools.readObject;
 import static java.lang.Math.sqrt;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj.database.IMJDatabaseTools.DBInfo;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.util.Collection;
 import java.util.Collections;
@@ -58,6 +60,7 @@ public final class GenerateDatabasePrecisionData {
 			System.out.println("groups: " + dbInfo.getGroups());
 		} else if (split) {
 			final Map<String, Map<String, Statistics>> data = new HashMap<String, Map<String, Statistics>>();
+			final Map<String, Statistics> mergedPrecisions = new HashMap<String, Statistics>();
 			
 			for (final File file : new File(directoryPath).listFiles()) {
 				final String fileName = file.getName();
@@ -69,33 +72,32 @@ public final class GenerateDatabasePrecisionData {
 				
 				final String parameters = fileName.substring(imageNameLength + DBINFO.length(), fileName.length() - JO.length());
 				final DBInfo dbInfo = readObject(file.getPath());
+				long mergedGroupSize = 0L;
+				long mergedClassSize = 0L;
 				
 				for (final Map.Entry<String, AtomicInteger> entry : dbInfo.getClassCounts().entrySet()) {
 					final Collection<String> group = Collections.singleton(entry.getKey());
-					final AtomicInteger classCount = dbInfo.getGroups().get(group);
+					final AtomicInteger groupSizeHolder = dbInfo.getGroups().get(group);
 					@SuppressWarnings("unchecked")
 					final Map<String, Statistics> precisions = getOrCreate(data, entry.getKey(), (Class) TreeMap.class);
 					
 					getOrCreate(precisions, parameters, Statistics.class).addValue(
-							classCount == null ? 0.0 : (double) classCount.get() / entry.getValue().get());
+							groupSizeHolder == null ? 0.0 : (double) groupSizeHolder.get() / entry.getValue().get());
+					
+					if (groupSizeHolder != null) {
+						mergedGroupSize += groupSizeHolder.get();
+					}
+					mergedClassSize += entry.getValue().get();
 				}
+				
+				getOrCreate(mergedPrecisions, parameters, Statistics.class).addValue(
+						mergedGroupSize == 0L ? 0.0 : (double) mergedGroupSize / mergedClassSize);
 			}
 			
+			print(mergedPrecisions, "all.dbinfo.csv");
+			
 			for (final Map.Entry<String, Map<String, Statistics>> classEntry : data.entrySet()) {
-				final PrintStream out = new PrintStream(classEntry.getKey() + ".dbinfo.csv");
-				
-				try {
-					for (final Map.Entry<String, Statistics> precisionEntry : classEntry.getValue().entrySet()) {
-						out.print(precisionEntry.getKey());
-						out.print(" ");
-						out.print(precisionEntry.getValue().getMean());
-						out.print(" ");
-						out.print(sqrt(precisionEntry.getValue().getVariance()));
-						out.println();
-					}
-				} finally {
-					out.close();
-				}
+				print(classEntry.getValue(), classEntry.getKey() + ".dbinfo.csv");
 			}
 		} else {
 			final int[] lods = arguments.get("lod", 6);
@@ -144,6 +146,31 @@ public final class GenerateDatabasePrecisionData {
 				
 				System.out.println(entry.getKey().replaceAll("\\s+", "_") + "	" + precision.getMean() + "	" + sqrt(precision.getVariance()));
 			}
+		}
+	}
+	
+	public static final void print(final Map<String, Statistics> mergedPrecisions, final String fileName) {
+		try {
+			final PrintStream out = new PrintStream(fileName);
+			
+			try {
+				print(mergedPrecisions, out);
+			} finally {
+				out.close();
+			}
+		} catch (final FileNotFoundException exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	public static final void print(final Map<String, Statistics> precisions, final PrintStream out) {
+		for (final Map.Entry<String, Statistics> precisionEntry : precisions.entrySet()) {
+			out.print(precisionEntry.getKey());
+			out.print(" ");
+			out.print(precisionEntry.getValue().getMean());
+			out.print(" ");
+			out.print(sqrt(precisionEntry.getValue().getVariance()));
+			out.println();
 		}
 	}
 	

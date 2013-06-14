@@ -38,9 +38,9 @@ public final class CollectConfusionTables {
 			final String fileName = file.getName();
 			
 			if (file.isFile() && file.canRead() && fileName.startsWith(prefix) && fileName.endsWith(suffix)) {
-				final Map<String, ConfusionTable[]> confusionTables = readObject(file.getPath());
+				final Map<String, ConfusionTable[]> confusionMatrices = readObject(file.getPath());
 				
-				confusions.put(fileName.substring(prefix.length(), fileName.length() - suffix.length()), confusionTables);
+				confusions.put(fileName.substring(prefix.length(), fileName.length() - suffix.length()), confusionMatrices);
 			}
 		}
 		

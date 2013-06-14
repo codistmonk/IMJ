@@ -752,6 +752,22 @@ public final class IMJTools {
 		return result;
 	}
 	
+	public static final <T> T getOrCreate(final T[] array, final int index, final Class<? extends T> elementFactory) {
+		T result = array[index];
+		
+		if (result == null) {
+			try {
+				result = elementFactory.newInstance();
+			} catch (final Exception exception) {
+				throw unchecked(exception);
+			}
+			
+			array[index] = result;
+		}
+		
+		return result;
+	}
+	
 	public static final <K, V> V getOrCreate(final Map<K, V> map, final K key, final Class<V> valueFactory) {
 		V result = map.get(key);
 		
