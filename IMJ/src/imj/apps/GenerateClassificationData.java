@@ -40,6 +40,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicLong;
 
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -253,12 +254,18 @@ public final class GenerateClassificationData {
 				
 				final Sample sample = bkDatabase.findClosest(collector.getSample());
 				
+				if (1 != sample.getClasses().size()) {
+					throw new IllegalArgumentException("Invalid group: " + sample.getClasses());
+				}
+				
+				final String predicted = sample.getClasses().iterator().next();
+				
 				for (final Map.Entry<String, RegionOfInterest> entry : classes.entrySet()) {
-					final String key = entry.getKey();
-					final RegionOfInterest groundTruth = classes.get(key);
-					final ConfusionTable confusionTable = result.get(key);
+					final String actual = entry.getKey();
+					final RegionOfInterest groundTruth = classes.get(actual);
+					final ConfusionTable actualRow = result.get(actual);
 					
-					if (sample.getClasses().contains(key)) {
+					if (actual.equals(predicted)) {
 						// sample is positive
 						
 						this.pixels.forEach(new IntList.Processor() {
@@ -266,9 +273,9 @@ public final class GenerateClassificationData {
 							@Override
 							public final void process(final int pixel) {
 								if (groundTruth.get(pixel)) {
-									confusionTable.incrementTruePositive(1L);
+									actualRow.incrementTruePositive(predicted, 1L);
 								} else {
-									confusionTable.incrementFalsePositive(1L);
+									actualRow.incrementFalsePositive(predicted, 1L);
 								}
 							}
 							
@@ -281,9 +288,9 @@ public final class GenerateClassificationData {
 							@Override
 							public final void process(final int pixel) {
 								if (groundTruth.get(pixel)) {
-									confusionTable.incrementFalseNegative(1L);
+									actualRow.incrementFalseNegative(predicted, 1L);
 								} else {
-									confusionTable.incrementTrueNegative(1L);
+									actualRow.incrementTrueNegative(predicted, 1L);
 								}
 							}
 							
@@ -337,6 +344,8 @@ public final class GenerateClassificationData {
 	 */
 	public static final class ConfusionTable implements Serializable {
 		
+//		private final Map<String, AtomicLong> counts = new HashMap<String, AtomicLong>();
+		
 		private long truePositive;
 		
 		private long falsePositive;
@@ -344,6 +353,39 @@ public final class GenerateClassificationData {
 		private long trueNegative;
 		
 		private long falseNegative;
+		
+		public final Map<String, AtomicLong> getCounts() {
+//			return this.counts;
+			return null;
+		}
+		
+		public final long getCount(final String key) {
+			final AtomicLong count;
+			
+			synchronized (this.getCounts()) {
+				count = this.getCounts().get(key);
+			}
+			
+			return count == null ? 0L : count.get();
+		}
+		
+		public final void count(final String key, final long delta) {
+			if (true) return;
+			
+			final AtomicLong count;
+			
+			synchronized (this.getCounts()) {
+				count = this.getCounts().get(key);
+				
+				if (count == null) {
+					this.getCounts().put(key, new AtomicLong(delta));
+					
+					return;
+				}
+			}
+			
+			count.addAndGet(delta);
+		}
 		
 		public final long getActualPositive() {
 			return this.getTruePositive() + this.getFalseNegative();
@@ -385,19 +427,23 @@ public final class GenerateClassificationData {
 			return this.falseNegative;
 		}
 		
-		public final void incrementTruePositive(final long delta) {
+		public final void incrementTruePositive(final String key, final long delta) {
+			this.count(key, delta);
 			this.truePositive += delta;
 		}
 		
-		public final void incrementFalsePositive(final long delta) {
+		public final void incrementFalsePositive(final String key, final long delta) {
+			this.count(key, delta);
 			this.falsePositive += delta;
 		}
 		
-		public final void incrementTrueNegative(final long delta) {
+		public final void incrementTrueNegative(final String key, final long delta) {
+			this.count(key, delta);
 			this.trueNegative += delta;
 		}
 		
-		public final void incrementFalseNegative(final long delta) {
+		public final void incrementFalseNegative(final String key, final long delta) {
+			this.count(key, delta);
 			this.falseNegative += delta;
 		}
 		
