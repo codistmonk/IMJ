@@ -525,6 +525,10 @@ public final class IMJTools {
 		return channelValue(argb, 0);
 	}
 	
+	public static final int gray(final int value) {
+		return argb(255, value, value, value);
+	}
+	
 	public static final int hue(final int argb) {
 		final int red = red(argb);
 		final int green = green(argb);

@@ -10,7 +10,7 @@ import static imj.database.IMJDatabaseTools.getPreferredMetric;
 import static imj.database.IMJDatabaseTools.loadRegions;
 import static imj.database.IMJDatabaseTools.newBKDatabase;
 import static imj.database.IMJDatabaseTools.newRGBSampler;
-import static imj.database.IMJDatabaseTools.simplifyArbitrarily;
+import static imj.database.IMJDatabaseTools.reduceArbitrarily;
 import static imj.database.IMJDatabaseTools.updateNegativeGroups;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -117,7 +117,7 @@ public final class GenerateClassificationData {
 						System.out.println("Loading training set done, time: " + timer.toc());
 						
 						if (0 < maximumGroupSize) {
-							simplifyArbitrarily(sampleDatabase, maximumGroupSize);
+							reduceArbitrarily(sampleDatabase, maximumGroupSize);
 						}
 						
 						if (checkDatabase) {
@@ -315,7 +315,6 @@ public final class GenerateClassificationData {
 			
 			System.out.println("Retrieving samples from " + filePath + "... " + new Date(timer.tic()));
 			
-//			final Map<Object, Object> database = readObject(filePath);
 			final Map<Object, Object> database = SynchronizedWeakLoader.getObject(cache, filePath);
 			
 			System.out.println("Retrieving samples from " + filePath + " done, time: " + timer.toc());
@@ -344,7 +343,7 @@ public final class GenerateClassificationData {
 	 */
 	public static final class ConfusionTable implements Serializable {
 		
-//		private final Map<String, AtomicLong> counts = new HashMap<String, AtomicLong>();
+		private final Map<String, AtomicLong> counts = new HashMap<String, AtomicLong>();
 		
 		private long truePositive;
 		
@@ -355,8 +354,7 @@ public final class GenerateClassificationData {
 		private long falseNegative;
 		
 		public final Map<String, AtomicLong> getCounts() {
-//			return this.counts;
-			return null;
+			return this.counts;
 		}
 		
 		public final long getCount(final String key) {
@@ -467,9 +465,8 @@ public final class GenerateClassificationData {
 		
 		private final String filePath;
 		
-//		private WeakReference<Object> reference;
 		private SoftReference<Object> reference;
-
+		
 		public SynchronizedWeakLoader(final String filePath) {
 			this.filePath = filePath;
 			this.setNewReference(null);
@@ -487,7 +484,6 @@ public final class GenerateClassificationData {
 		}
 		
 		private final void setNewReference(final Object referent) {
-//			this.reference = new WeakReference<Object>(referent);
 			this.reference = new SoftReference<Object>(referent);
 		}
 		

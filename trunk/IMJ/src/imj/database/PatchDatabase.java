@@ -26,6 +26,14 @@ public final class PatchDatabase<V extends PatchDatabase.Value> implements Seria
 		this.valueFactory = valueFactory;
 	}
 	
+	public final void clear() {
+		this.data.clear();
+	}
+	
+	public final V put(final byte[] key, final V value) {
+		return this.data.put(key, value);
+	}
+	
 	@Override
 	public final Iterator<Entry<byte[], V>> iterator() {
 		return this.data.entrySet().iterator();
@@ -42,7 +50,7 @@ public final class PatchDatabase<V extends PatchDatabase.Value> implements Seria
 			try {
 				result = (V) this.valueFactory.newInstance();
 				result.setKey(key.clone());
-				this.data.put(result.getKey(), result);
+				this.put(result.getKey(), result);
 			} catch (final Exception exception) {
 				throw unchecked(exception);
 			}

@@ -11,13 +11,16 @@ import static imj.apps.modules.ViewFilter.Channel.Synthetic.SATURATION;
 import static java.lang.Math.abs;
 import static java.lang.Math.ceil;
 import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static java.util.Arrays.copyOf;
+import static java.util.Collections.shuffle;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static junit.framework.Assert.assertNotNull;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.ignore;
+import static net.sourceforge.aprog.tools.Tools.list;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static org.junit.Assert.assertEquals;
 import imj.Image;
@@ -45,12 +48,13 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -113,29 +117,46 @@ public final class IMJDatabaseTools {
 		return result;
 	}
 	
-	public static final void simplifyArbitrarily(final PatchDatabase<Sample> tileDatabase, final int maximumGroupSize) {
+	public static final void reduceArbitrarily(final PatchDatabase<Sample> tileDatabase, final int maximumSize) {
+		if (maximumSize <= 0) {
+			return;
+		}
+		
 		final TicToc timer = new TicToc();
 		
-		debugPrint("Simplifying...", new Date(timer.tic()));
+		debugPrint("Reducing " + tileDatabase.getEntryCount() + " to " + maximumSize, new Date(timer.tic()));
 		
-		final Map<Collection<String>, List<byte[]>> groups = groupSamples(tileDatabase);
+		final List<Map.Entry<byte[], Sample>> entries = list(tileDatabase);
+		final int n = min(maximumSize, entries.size());
 		
-		debugPrint("groupCount:", groups.size());
+		shuffle(entries, new Random(entries.size()));
 		
-		for (final Map.Entry<Collection<String>, List<byte[]>> entry : groups.entrySet()) {
-			final List<byte[]> samples = entry.getValue();
-			final int excess = samples.size() - maximumGroupSize;
+		tileDatabase.clear();
+		
+		for (int i = 0; i < n; ++i) {
+			final Entry<byte[], Sample> entry = entries.get(i);
 			
-			if (0 < excess) {
-				debugPrint("Removing", excess, "elements from group", entry.getKey());
-				
-				Collections.shuffle(samples);
-				
-				for (int i = 0; i < excess; ++i) {
-					tileDatabase.remove(samples.get(i));
-				}
-			}
+			tileDatabase.put(entry.getKey(), entry.getValue());
 		}
+		
+//		final Map<Collection<String>, List<byte[]>> groups = groupSamples(tileDatabase);
+//		
+//		debugPrint("groupCount:", groups.size());
+//		
+//		for (final Map.Entry<Collection<String>, List<byte[]>> entry : groups.entrySet()) {
+//			final List<byte[]> samples = entry.getValue();
+//			final int excess = samples.size() - maximumGroupSize;
+//			
+//			if (0 < excess) {
+//				debugPrint("Removing", excess, "elements from group", entry.getKey());
+//				
+//				Collections.shuffle(samples);
+//				
+//				for (int i = 0; i < excess; ++i) {
+//					tileDatabase.remove(samples.get(i));
+//				}
+//			}
+//		}
 		
 		debugPrint("Simplifying done", "time:", timer.toc());
 	}
