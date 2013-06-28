@@ -12,17 +12,28 @@ import imj.apps.modules.ViewFilter.Channel;
  */
 public final class SeamGridSegmenter implements Segmenter {
 	
-	private final int cellSize;
+	private final int cellRowCount;
+	
+	private final int cellColumnCount;
+	
+	public SeamGridSegmenter(final int cellRowCount, final int cellColumnCount) {
+		this.cellRowCount = cellRowCount;
+		this.cellColumnCount = cellColumnCount;
+	}
 	
 	public SeamGridSegmenter(final int cellSize) {
-		this.cellSize = cellSize;
+		this(cellSize, cellSize);
+	}
+	
+	public final void setSeams(final Image image, final RegionOfInterest segmentation) {
+		SeamGridSegmentationSieve.setSeams(image, Channel.Primitive.RGB, this.cellRowCount, this.cellColumnCount, segmentation);
 	}
 	
 	@Override
 	public final void process(final Image image, final PixelProcessor processor) {
 		final RegionOfInterest segmentation = new RegionOfInterest.UsingBitSet(image.getRowCount(), image.getColumnCount());
 		
-		SeamGridSegmentationSieve.setSeams(image, Channel.Primitive.RGB, this.cellSize, segmentation);
+		this.setSeams(image, segmentation);
 		
 		forEachPixelInEachComponent4(segmentation, true, processor);
 	}

@@ -24,12 +24,10 @@ public final class MathOperations {
 		final int channelCount = left.getChannelCount();
 		
 		if (1 < channelCount) {
-			final int alpha = channelCount < 4 ? 0xFF000000 : 0;
-			
 			for (int pixel = 0; pixel < pixelCount; ++pixel) {
 				int resultPixelValue = 0;
 				
-				for (int channel = 0; channel < channelCount; ++channel) {
+				for (int channel = channelCount - 1; 0 <= channel; --channel) {
 					final int leftChannelValue = channelValue(left.getValue(pixel), channel);
 					final int rightChannelValue = channelValue(right.getValue(pixel), channel);
 					
@@ -37,7 +35,7 @@ public final class MathOperations {
 							min(255, operator.evaluate(pixel, leftChannelValue, rightChannelValue));
 				}
 				
-				result.setValue(pixel, resultPixelValue | alpha);
+				result.setValue(pixel, resultPixelValue);
 			}
 		} else {
 			for (int pixel = 0; pixel < pixelCount; ++pixel) {
@@ -96,13 +94,20 @@ public final class MathOperations {
 		 */
 		public static enum Predefined implements UnaryOperator {
 			
-			NEGATE {
+			IDENTITY {
 				
 				@Override
 				public final int evaluate(final int pixel, final int value) {
-					return -value;
+					return value;
 				}
 				
+			}, NEGATE {
+					
+					@Override
+					public final int evaluate(final int pixel, final int value) {
+						return -value;
+					}
+					
 			}, COMPLEMENT {
 				
 				@Override
@@ -329,6 +334,14 @@ public final class MathOperations {
 				@Override
 				public final int evaluate(final int pixel, final int left, final int right) {
 					return left >>> right;
+				}
+				
+				
+			}, MASKED_BY {
+				
+				@Override
+				public final int evaluate(final int pixel, final int left, final int right) {
+					return right != 0 ? left : 0;
 				}
 				
 			};

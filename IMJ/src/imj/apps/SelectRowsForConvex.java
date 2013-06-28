@@ -1,13 +1,18 @@
 package imj.apps;
 
+import static imj.apps.modules.ShowActions.baseName;
 import static java.lang.Double.parseDouble;
+import static java.lang.Math.max;
+import static java.util.Arrays.fill;
 import static java.util.Collections.sort;
 
 import imj.apps.GenerateROCPlots.DataPointXY;
+import imj.apps.modules.ShowActions;
 
 import java.io.File;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -25,6 +30,27 @@ public final class SelectRowsForConvex {
 		throw new IllegalInstantiationException();
 	}
 	
+	public static final <T> void swap(final T[] array, final int i, final int j) {
+		final T tmp = array[i];
+		array[i] = array[j];
+		array[j] = tmp;
+	}
+	
+	public static final <T> String join(final T[] array, final String separator) {
+		final StringBuilder resultBuilder = new StringBuilder();
+		final int n = array.length;
+		
+		if (0 < n) {
+			resultBuilder.append(array[0]);
+			
+			for (int i = 1; i < n; ++i) {
+				resultBuilder.append(separator).append(array[i]);
+			}
+		}
+		
+		return resultBuilder.toString();
+	}
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
@@ -34,11 +60,14 @@ public final class SelectRowsForConvex {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String filePath = arguments.get("file", "");
 		final int xField = arguments.get("x", 1)[0];
-		final int yField = arguments.get("y", 2)[0];
-		final String outPath = arguments.get("out", "convex.csv");
+		final int yField = arguments.get("y", xField + 1)[0];
+		final int xErrorField = arguments.get("xError", -1)[0];
+		final int yErrorField = arguments.get("yError", -1)[0];
+		final String outPath = arguments.get("out", baseName(filePath) + ".convex.csv");
 		final boolean fixBadPoints = arguments.get("fixBadPoints", 0)[0] != 0;
 		final Scanner scanner = new Scanner(new File(filePath));
 		final List<DataPointXY> points = new ArrayList<DataPointXY>();
+		int fieldCount = 0;
 		
 		scanner.useLocale(Locale.ENGLISH);
 		
@@ -47,20 +76,30 @@ public final class SelectRowsForConvex {
 			final String[] fields = line.split("\\s+");
 			final double x = parseDouble(fields[xField]);
 			final double y = parseDouble(fields[yField]);
+			fieldCount = max(fieldCount, fields.length);
 			
 			if (fixBadPoints) {
 				if (x <= y) {
 					points.add(new DataPointXY(line, x, y, 0.0, 0.0));
 				} else {
-					points.add(new DataPointXY(line, 1.0 - x, 1.0 - y, 0.0, 0.0));
+					fields[xField] = "" + (1.0 - x);
+					fields[yField] = "" + (1.0 - y);
+					
+					points.add(new DataPointXY(join(fields, "	"), 1.0 - x, 1.0 - y, 0.0, 0.0));
 				}
 			} else {
 				points.add(new DataPointXY(line, x, y, 0.0, 0.0));
 			}
 		}
 		
-		points.add(new DataPointXY("BOTTOM_LEFT", 0.0, 0.0, 0.0, 0.0));
-		points.add(new DataPointXY("TOP_RIGHT", 1.0, 1.0, 0.0, 0.0));
+		{
+			final String[] dummyFields = new String[fieldCount];
+			
+			fill(dummyFields, "0");
+			points.add(new DataPointXY(join(dummyFields, "	"), 0.0, 0.0, 0.0, 0.0));
+			dummyFields[xField] = dummyFields[yField] = "1";
+			points.add(new DataPointXY(join(dummyFields, "	"), 1.0, 1.0, 0.0, 0.0));
+		}
 		
 		sort(points, new Comparator<DataPointXY>() {
 			

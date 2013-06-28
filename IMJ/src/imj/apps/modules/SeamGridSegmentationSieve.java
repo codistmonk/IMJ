@@ -48,21 +48,26 @@ public final class SeamGridSegmentationSieve extends Sieve {
 		
 		this.segmentation.reset(true);
 		
-		setSeams(image, channel, cellSize, this.segmentation);
+		setSeams(image, channel, cellSize, cellSize, this.segmentation);
 		
 		debugPrint("segmentCount:", countSegments4(this.segmentation));
 	}
 	
-	public static final void setSeams(final Image image, final Channel channel, final int cellSize, final RegionOfInterest segmentation) {
+	public static final void setSeams(final Image image, final Channel channel,
+			final int cellRowCount, final int cellColumnCount, final RegionOfInterest segmentation) {
 		final TicToc timer = new TicToc();
 		
-		debugPrint("Setting horizontal band seams...", new Date(timer.tic()));
-		setHorizontalBandSeams(image, channel, cellSize, segmentation);
-		debugPrint("Setting horizontal band seams done", "time:", timer.toc());
+		if (0 < cellRowCount) {
+			debugPrint("Setting horizontal band seams...", new Date(timer.tic()));
+			setHorizontalBandSeams(image, channel, cellRowCount, segmentation);
+			debugPrint("Setting horizontal band seams done", "time:", timer.toc());
+		}
 		
-		debugPrint("Setting vertical band seams...", new Date(timer.tic()));
-		setHorizontalBandSeams(new Transpose(image), channel, cellSize, new Transpose(segmentation));
-		debugPrint("Setting vertical band seams done", "time:", timer.toc());
+		if (0 < cellColumnCount) {
+			debugPrint("Setting vertical band seams...", new Date(timer.tic()));
+			setHorizontalBandSeams(new Transpose(image), channel, cellColumnCount, new Transpose(segmentation));
+			debugPrint("Setting vertical band seams done", "time:", timer.toc());
+		}
 	}
 	
 	public static final void copyHorizontalBand(final Image source, final int rowIndex0, final Image destination) {
@@ -88,14 +93,13 @@ public final class SeamGridSegmentationSieve extends Sieve {
 		final int columnCount = image.getColumnCount();
 		final Image band = new ImageOfInts(cellSize, columnCount, 1);
 		
-		for (int y0 = cellSize; y0 < rowCount; y0 += cellSize) {
+		for (int y0 = 0; y0 < rowCount; y0 += cellSize) {
 			System.out.print(y0 + "/" + rowCount + "\r");
 			
 			copyHorizontalBand(image, y0, band);
 			
-			int y = y0;
+			int y = y0 + cellSize / 2;
 			
-//			for (int x = 0; x < columnCount; ++x) {
 			for (int x = 0; x < columnCount;) {
 				segmentation.setValue(y, x, 0);
 				
