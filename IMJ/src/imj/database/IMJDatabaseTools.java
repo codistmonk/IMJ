@@ -118,7 +118,7 @@ public final class IMJDatabaseTools {
 	}
 	
 	public static final void reduceArbitrarily(final PatchDatabase<Sample> tileDatabase, final int maximumSize) {
-		if (maximumSize <= 0) {
+		if (maximumSize <= 0 || tileDatabase.getEntryCount() <= maximumSize) {
 			return;
 		}
 		

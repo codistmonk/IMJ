@@ -52,27 +52,28 @@ public final class AdaptiveQuantizationViewFilter extends ViewFilter {
 		return this.quantizer.getNewValue(channel, channelValue);
 	}
 	
-	public static final int sum(final int[] histogram) {
-		int result = 0;
+	public static final long sum(final long[] histogram) {
+		long result = 0L;
 		
-		for (final int count : histogram) {
+		for (final long count : histogram) {
 			result += count;
 		}
 		
 		return result;
 	}
 	
-	public static final void updateAccumulators(final int bitCount, final Channel[] channels, final int[][] histograms, final int[][] accumulators) {
-		final int pixelCount = sum(histograms[channels[0].getChannelIndex()]);
+	public static final void updateAccumulators(final int bitCount, final Channel[] channels,
+			final long[][] histograms, final long[][] accumulators) {
+		final long pixelCount = sum(histograms[channels[0].getChannelIndex()]);
 		
-		if (pixelCount == 0) {
+		if (pixelCount == 0L) {
 			debugPrint();
 			return;
 		}
 		
 		for (final Channel channel : channels) {
-			final int[] h = histograms[channel.getChannelIndex()];
-			final int[] a = accumulators[channel.getChannelIndex()];
+			final long[] h = histograms[channel.getChannelIndex()];
+			final long[] a = accumulators[channel.getChannelIndex()];
 			int accumulator = 0;
 			
 			for (int j = 0; j < 256; ++j) {
@@ -87,9 +88,9 @@ public final class AdaptiveQuantizationViewFilter extends ViewFilter {
 				clusterSize = 1;
 				
 				for (int channelValue = clusterStart + 1; channelValue < 256 && a[clusterStart] == a[channelValue]; ++channelValue) {
-					final int channelValueCount = h[channelValue];
+					final long channelValueCount = h[channelValue];
 					
-					if (0 < channelValueCount) {
+					if (0L < channelValueCount) {
 						clusterValue += channelValue * channelValueCount;
 						clusterValueCount += channelValueCount;
 					}

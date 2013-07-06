@@ -16,9 +16,9 @@ import java.util.Arrays;
  */
 public final class AdaptiveQuantizer extends Quantizer {
 	
-	private int[][] histograms;
+	private long[][] histograms;
 	
-	private int[][] accumulators;
+	private long[][] accumulators;
 	
 	@Override
 	public final void initialize(final Image image, final RegionOfInterest roi, final Channel[] channels, final int quantumBitCount) {
@@ -34,8 +34,8 @@ public final class AdaptiveQuantizer extends Quantizer {
 				n = max(n, channel.getChannelIndex() + 1);
 			}
 			
-			this.histograms = new int[n][256];
-			this.accumulators = new int[n][256];
+			this.histograms = new long[n][256];
+			this.accumulators = new long[n][256];
 			
 			if (image != null) {
 				this.updateHistograms(image, roi);
@@ -47,7 +47,7 @@ public final class AdaptiveQuantizer extends Quantizer {
 	
 	@Override
 	public final int getNewValue(final Channel channel, final int channelValue) {
-		return this.accumulators[channel.getChannelIndex()][channelValue];
+		return (int) this.accumulators[channel.getChannelIndex()][channelValue];
 	}
 	
 	public final void updateHistograms(final Image image, final RegionOfInterest roi) {
@@ -57,8 +57,8 @@ public final class AdaptiveQuantizer extends Quantizer {
 	}
 	
 	private final void clearHistograms() {
-		for (final int[] histogram : this.histograms) {
-			fill(histogram, 0);
+		for (final long[] histogram : this.histograms) {
+			fill(histogram, 0L);
 		}
 	}
 	

@@ -1,16 +1,17 @@
 package imj.apps;
 
 import static imj.IMJTools.getOrCreate;
-import static imj.IMJTools.readObject;
 import static java.lang.Double.isNaN;
 import static java.lang.Math.sqrt;
-import imj.apps.GenerateClassificationData.ConfusionTable;
+import static net.sourceforge.aprog.tools.Tools.readObject;
+import imj.apps.GenerateClassificationData.ExtendedConfusionTable;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -34,29 +35,29 @@ public final class GenerateROCPlots {
 	public static final void main(final String[] commandLineArguments) throws Exception {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String filePath = arguments.get("file", "confusions.jo");
-		final Map<String, Map<String, ConfusionTable[]>> confusions = readObject(filePath);
-		final Map<String, List<DataPointXY>> data = new HashMap<String, List<DataPointXY>>();
+		final Map<String, Map<String, ExtendedConfusionTable[]>> confusions = readObject(filePath);
+		final Map<String, List<DataPointXY>> data = new TreeMap<String, List<DataPointXY>>();
 		final String[] moreFields = arguments.get("moreFields", "").split(",");
-		final Map<String, Statistics> configurationFPRs = new HashMap<String, Statistics>();
-		final Map<String, Statistics> configurationTPRs = new HashMap<String, Statistics>();
+		final Map<String, Statistics> configurationFPRs = new TreeMap<String, Statistics>();
+		final Map<String, Statistics> configurationTPRs = new TreeMap<String, Statistics>();
 		
-		for (final Map.Entry<String, Map<String, ConfusionTable[]>> configurationEntry : confusions.entrySet()) {
-			ConfusionTable[] configurationConfusionTables = null;
+		for (final Map.Entry<String, Map<String, ExtendedConfusionTable[]>> configurationEntry : confusions.entrySet()) {
+			ExtendedConfusionTable[] configurationConfusionTables = null;
 			
-			for (final Map.Entry<String, ConfusionTable[]> annotationEntry : configurationEntry.getValue().entrySet()) {
+			for (final Map.Entry<String, ExtendedConfusionTable[]> annotationEntry : configurationEntry.getValue().entrySet()) {
 				getOrCreate(data, annotationEntry.getKey(), (Class<List<DataPointXY>>) (Object) ArrayList.class).add(
 						newDataPoint(configurationEntry.getKey(), annotationEntry.getValue()));
 				
 				final int n = annotationEntry.getValue().length;
 				
 				if (configurationConfusionTables == null) {
-					configurationConfusionTables = new ConfusionTable[n];
+					configurationConfusionTables = new ExtendedConfusionTable[n];
 				}
 				
 				for (int i = 0; i < n; ++i) {
-					final ConfusionTable configurationConfusionTable = getOrCreate(
-							configurationConfusionTables, i, ConfusionTable.class);
-					final ConfusionTable annotationConfusionTable = annotationEntry.getValue()[i];
+					final ExtendedConfusionTable configurationConfusionTable = getOrCreate(
+							configurationConfusionTables, i, ExtendedConfusionTable.class);
+					final ExtendedConfusionTable annotationConfusionTable = annotationEntry.getValue()[i];
 					
 					configurationConfusionTable.incrementTruePositive("", annotationConfusionTable.getTruePositive());
 					configurationConfusionTable.incrementFalsePositive("", annotationConfusionTable.getFalsePositive());
@@ -68,7 +69,7 @@ public final class GenerateROCPlots {
 			final Statistics configurationFPR = getOrCreate(configurationFPRs, configurationEntry.getKey(), Statistics.class);
 			final Statistics configurationTPR = getOrCreate(configurationTPRs, configurationEntry.getKey(), Statistics.class);
 			
-			for (final ConfusionTable confusionTable : configurationConfusionTables) {
+			for (final ExtendedConfusionTable confusionTable : configurationConfusionTables) {
 				configurationFPR.addValue(confusionTable.getFalsePositiveRate());
 				configurationTPR.addValue(confusionTable.getTruePositiveRate());
 			}
@@ -102,11 +103,11 @@ public final class GenerateROCPlots {
 		}
 	}
 	
-	public static final DataPointXY newDataPoint(final String label, final ConfusionTable[] tables) {
+	public static final DataPointXY newDataPoint(final String label, final ExtendedConfusionTable[] tables) {
 		final Statistics fpr = new Statistics();
 		final Statistics tpr = new Statistics();
 		
-		for (final ConfusionTable table : tables) {
+		for (final ExtendedConfusionTable table : tables) {
 			if (0L < table.getActualNegative() && 0L < table.getActualPositive()) {
 				fpr.addValue(table.getFalsePositiveRate());
 				tpr.addValue(table.getTruePositiveRate());
@@ -181,7 +182,9 @@ public final class GenerateROCPlots {
 				}
 				
 				for (final String field : fieldsFromLabel) {
-					resultBuilder.append(values.get(field)).append(SEPARATOR);
+					if (!"".equals(field)) {
+						resultBuilder.append(values.get(field)).append(SEPARATOR);
+					}
 				}
 			}
 			
