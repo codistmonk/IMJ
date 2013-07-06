@@ -144,6 +144,27 @@ public final class IMJTools {
 		});
 	}
 	
+	public static final void updateHistograms(final Image image, final RegionOfInterest roi, final Channel[] channels,
+			final long[][] histograms) {
+		forEachPixel(image, roi, new PixelProcessor() {
+			
+			@Override
+			public final void process(final int pixel) {
+				if (roi == null || roi.get(pixel)) {
+					for (final Channel channel : channels) {
+						++histograms[channel.getChannelIndex()][channel.getValue(image.getValue(pixel))];
+					}
+				}
+			}
+			
+			@Override
+			public final void finishPatch() {
+				// NOP
+			}
+			
+		});
+	}
+	
 	public static final void forEachPixelInEachComponent4(final Image roi, final boolean processBarriers, final PixelProcessor processor) {
 		final boolean debug = false;
 		final int imageRowCount = roi.getRowCount();
@@ -805,35 +826,6 @@ public final class IMJTools {
 		}
 		
 		return result;
-	}
-	
-	public static final void writeObject(final Serializable object, final String filePath) {
-		try {
-			final ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filePath));
-			
-			try {
-				oos.writeObject(object);
-			} finally {
-				oos.close();
-			}
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
-	}
-	
-	@SuppressWarnings("unchecked")
-	public static final <T> T readObject(final String filePath) {
-		try {
-			final ObjectInputStream ois = new ObjectInputStream(new FileInputStream(filePath));
-			
-			try {
-				return (T) ois.readObject();
-			} finally {
-				ois.close();
-			}
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
 	}
 	
 	/**

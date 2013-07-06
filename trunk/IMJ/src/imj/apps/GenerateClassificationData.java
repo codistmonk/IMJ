@@ -1,8 +1,6 @@
 package imj.apps;
 
 import static imj.IMJTools.loadAndTryToCache;
-import static imj.IMJTools.readObject;
-import static imj.IMJTools.writeObject;
 import static imj.apps.modules.ShowActions.baseName;
 import static imj.database.IMJDatabaseTools.RGB;
 import static imj.database.IMJDatabaseTools.checkDatabase;
@@ -15,7 +13,10 @@ import static imj.database.IMJDatabaseTools.updateNegativeGroups;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
+import static net.sourceforge.aprog.tools.Tools.readObject;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+import static net.sourceforge.aprog.tools.Tools.writeObject;
+
 import imj.Image;
 import imj.IntList;
 import imj.apps.GenerateSampleDatabase.Configuration;
@@ -56,6 +57,11 @@ public final class GenerateClassificationData {
 		throw new IllegalInstantiationException();
 	}
 	
+	/**
+	 * {@value}.
+	 */
+	public static final String EXCLUDED = "Edges & Artifacts to be excluded";
+	
 	private static final Map<String, SynchronizedWeakLoader> cache = new HashMap<String, SynchronizedWeakLoader>();
 	
 	/**
@@ -90,7 +96,7 @@ public final class GenerateClassificationData {
 			testImageIds = new String[] { testImageId0 };
 		}
 		
-		final Map<String, ConfusionTable[]> allConfusionTables = new HashMap<String, ConfusionTable[]>();
+		final Map<String, ExtendedConfusionTable[]> allConfusionTables = new HashMap<String, ExtendedConfusionTable[]>();
 		final int n = trainingSets.length;
 		final Collection<Future<?>> tasks = new ArrayList<Future<?>>();
 		final ExecutorService executor = newFixedThreadPool(threadCount);
@@ -112,13 +118,9 @@ public final class GenerateClassificationData {
 						
 						System.out.println("Loading training set... " + new Date(timer.tic()));
 						
-						loadTrainingSet(configuration, trainingSet, sampleDatabase);
+						loadTrainingSet(configuration, trainingSet, sampleDatabase, maximumGroupSize);
 						
 						System.out.println("Loading training set done, time: " + timer.toc());
-						
-						if (0 < maximumGroupSize) {
-							reduceArbitrarily(sampleDatabase, maximumGroupSize);
-						}
 						
 						if (checkDatabase) {
 							 writeObject(checkDatabase(sampleDatabase),
@@ -128,7 +130,7 @@ public final class GenerateClassificationData {
 						if (processImages) {
 							System.out.println("Processing image... " + new Date(timer.tic()));
 							
-							final Map<String, ConfusionTable> confusionTables = computeConfusionTables(
+							final Map<String, ExtendedConfusionTable> confusionTables = computeConfusionTables(
 									configuration, testImageId, sampleDatabase);
 							
 							synchronizedUpdate(allConfusionTables, n, i, confusionTables);
@@ -152,11 +154,11 @@ public final class GenerateClassificationData {
 			return;
 		}
 		
-		for (final Map.Entry<String, ConfusionTable[]> entry : allConfusionTables.entrySet()) {
+		for (final Map.Entry<String, ExtendedConfusionTable[]> entry : allConfusionTables.entrySet()) {
 			final Statistics fpr = new Statistics();
 			final Statistics tpr = new Statistics();
 			
-			for (final ConfusionTable table : entry.getValue()) {
+			for (final ExtendedConfusionTable table : entry.getValue()) {
 				if (0L < table.getActualNegative() && 0L < table.getActualPositive()) {
 					fpr.addValue(table.getFalsePositiveRate());
 					tpr.addValue(table.getTruePositiveRate());
@@ -176,14 +178,14 @@ public final class GenerateClassificationData {
 	}
 	
 	public static final void synchronizedUpdate(
-			final Map<String, ConfusionTable[]> allConfusionTables,
-			final int testCount, final int testIndex, final Map<String, ConfusionTable> confusionTables) {
+			final Map<String, ExtendedConfusionTable[]> allConfusionTables,
+			final int testCount, final int testIndex, final Map<String, ExtendedConfusionTable> confusionTables) {
 		synchronized (allConfusionTables) {
-			for (final Map.Entry<String, ConfusionTable> entry : confusionTables.entrySet()) {
-				ConfusionTable[] tables = allConfusionTables.get(entry.getKey());
+			for (final Map.Entry<String, ExtendedConfusionTable> entry : confusionTables.entrySet()) {
+				ExtendedConfusionTable[] tables = allConfusionTables.get(entry.getKey());
 				
 				if (tables == null) {
-					tables = new ConfusionTable[testCount];
+					tables = new ExtendedConfusionTable[testCount];
 					allConfusionTables.put(entry.getKey(), tables);
 				}
 				
@@ -209,7 +211,7 @@ public final class GenerateClassificationData {
 		}
 	}
 	
-	public static final Map<String, ConfusionTable> computeConfusionTables(
+	public static final Map<String, ExtendedConfusionTable> computeConfusionTables(
 			final Configuration configuration, final String testImageId,
 			final PatchDatabase<Sample> sampleDatabase) {
 		final Image image = loadAndTryToCache(testImageId, configuration.getLod());
@@ -229,12 +231,39 @@ public final class GenerateClassificationData {
 		final int imageColumnCount = image.getColumnCount();
 		final Annotations annotations = Annotations.fromXML(baseName(testImageId) + ".xml");
 		final Map<String, RegionOfInterest> classes = new HashMap<String, RegionOfInterest>();
-		final Map<String, ConfusionTable> result = new HashMap<String, ConfusionTable>();
+		final Map<String, ExtendedConfusionTable> result = new HashMap<String, ExtendedConfusionTable>();
 		
 		loadRegions(testImageId, configuration.getLod(), imageRowCount, imageColumnCount, annotations, classes);
 		
+		{
+			final TicToc timer = new TicToc();
+			
+			debugPrint("Resetting excluded regions mask...", new Date(timer.tic()));
+			
+			final RegionOfInterest excluded = classes.get(EXCLUDED);
+			final int pixelCount = excluded.getPixelCount();
+			
+			excluded.reset(true);
+			
+			for (final Map.Entry<String, RegionOfInterest> entry : classes.entrySet()) {
+				if (EXCLUDED.equals(entry.getKey())) {
+					continue;
+				}
+				
+				final RegionOfInterest roi = entry.getValue();
+				
+				for (int pixel = 0; pixel < pixelCount; ++pixel) {
+					if (roi.get(pixel)) {
+						excluded.set(pixel, false);
+					}
+				}
+			}
+			
+			debugPrint("Resetting excluded regions mask done, time:", timer.toc());
+		}
+		
 		for (final String key : classes.keySet()) {
-			result.put(key, new ConfusionTable());
+			result.put(key, new ExtendedConfusionTable());
 		}
 		
 		configuration.newSegmenter().process(image, new Sampler(image, quantizer, channels, collector) {
@@ -263,7 +292,7 @@ public final class GenerateClassificationData {
 				for (final Map.Entry<String, RegionOfInterest> entry : classes.entrySet()) {
 					final String actual = entry.getKey();
 					final RegionOfInterest groundTruth = classes.get(actual);
-					final ConfusionTable actualRow = result.get(actual);
+					final ExtendedConfusionTable actualRow = result.get(actual);
 					
 					if (actual.equals(predicted)) {
 						// sample is positive
@@ -275,7 +304,7 @@ public final class GenerateClassificationData {
 								if (groundTruth.get(pixel)) {
 									actualRow.incrementTruePositive(predicted, 1L);
 								} else {
-									actualRow.incrementFalsePositive(predicted, 1L);
+									actualRow.incrementFalsePositive(null, 1L);
 								}
 							}
 							
@@ -290,7 +319,7 @@ public final class GenerateClassificationData {
 								if (groundTruth.get(pixel)) {
 									actualRow.incrementFalseNegative(predicted, 1L);
 								} else {
-									actualRow.incrementTrueNegative(predicted, 1L);
+									actualRow.incrementTrueNegative(null, 1L);
 								}
 							}
 							
@@ -307,7 +336,7 @@ public final class GenerateClassificationData {
 	}
 	
 	public static final void loadTrainingSet(final Configuration configuration,
-			final String[] trainingSet, final PatchDatabase<Sample> sampleDatabase) {
+			final String[] trainingSet, final PatchDatabase<Sample> sampleDatabase, final int maximumGroupSize) {
 		final TicToc timer = new TicToc();
 		
 		for (final String trainingImageId : trainingSet) {
@@ -324,6 +353,12 @@ public final class GenerateClassificationData {
 			@SuppressWarnings("unchecked")
 			final PatchDatabase<Sample> samples = (PatchDatabase<Sample>) database.get("samples");
 			
+			if (0 < maximumGroupSize) {
+				synchronized (samples) {
+					reduceArbitrarily(samples, maximumGroupSize);
+				}
+			}
+			
 			for (final Map.Entry<byte[], Sample> entry : samples) {
 				final Sample sample = entry.getValue();
 				final Sample newSample = sampleDatabase.add(entry.getKey());
@@ -336,12 +371,16 @@ public final class GenerateClassificationData {
 		}
 		
 		updateNegativeGroups(sampleDatabase);
+		
+		if (0 < maximumGroupSize) {
+			reduceArbitrarily(sampleDatabase, maximumGroupSize);
+		}
 	}
 	
 	/**
 	 * @author codistmonk (creation 2013-06-04)
 	 */
-	public static final class ConfusionTable implements Serializable {
+	public static final class ExtendedConfusionTable implements Serializable {
 		
 		private final Map<String, AtomicLong> counts = new HashMap<String, AtomicLong>();
 		
@@ -368,7 +407,9 @@ public final class GenerateClassificationData {
 		}
 		
 		public final void count(final String key, final long delta) {
-			if (true) return;
+			if (key == null) {
+				return;
+			}
 			
 			final AtomicLong count;
 			
@@ -448,7 +489,8 @@ public final class GenerateClassificationData {
 		@Override
 		public final String toString() {
 			return "{TP: " + this.getTruePositive() + ", FP: " + this.getFalsePositive() +
-					", TN: " + this.getTrueNegative() + ", FN: " + this.getFalseNegative() + "}";
+					", TN: " + this.getTrueNegative() + ", FN: " + this.getFalseNegative() +
+					", counts: " + this.getCounts() + "}";
 		}
 		
 		/**

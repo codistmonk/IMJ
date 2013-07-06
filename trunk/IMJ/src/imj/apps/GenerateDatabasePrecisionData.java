@@ -1,9 +1,10 @@
 package imj.apps;
 
 import static imj.IMJTools.getOrCreate;
-import static imj.IMJTools.readObject;
 import static java.lang.Math.sqrt;
+import static net.sourceforge.aprog.tools.Tools.readObject;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj.database.IMJDatabaseTools.DBInfo;
 
 import java.io.File;
