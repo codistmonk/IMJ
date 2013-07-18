@@ -11,6 +11,8 @@ import java.nio.IntBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel.MapMode;
 
+import net.sourceforge.aprog.tools.Tools;
+
 /**
  * @author codistmonk (creation 2013-01-31)
  */
@@ -63,15 +65,16 @@ public final class LinearStorage extends Image.Abstract {
 			}
 			
 			this.data = new RandomAccessFile(this.file, "rw");
+			
+			this.data.writeInt(rowCount);
+			this.data.writeInt(columnCount);
+			this.data.writeInt(channelCount);
+			
 			this.absoluteBufferStartIndex = HEADER_DATUM_COUNT;
 			this.absoluteBufferEndIndex = HEADER_DATUM_COUNT + min(MAXIMUM_BUFFER_SIZE, rowCount * columnCount);
 			this.chunkBytes = this.data.getChannel().map(MapMode.READ_WRITE, this.absoluteBufferStartIndex * DATUM_SIZE,
 					(this.absoluteBufferEndIndex - this.absoluteBufferStartIndex) * DATUM_SIZE);
 			this.chunkInts = this.chunkBytes.asIntBuffer();
-			
-			this.data.writeInt(rowCount);
-			this.data.writeInt(columnCount);
-			this.data.writeInt(channelCount);
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
