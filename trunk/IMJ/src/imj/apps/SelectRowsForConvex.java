@@ -5,14 +5,11 @@ import static java.lang.Double.parseDouble;
 import static java.lang.Math.max;
 import static java.util.Arrays.fill;
 import static java.util.Collections.sort;
-
 import imj.apps.GenerateROCPlots.DataPointXY;
-import imj.apps.modules.ShowActions;
 
 import java.io.File;
 import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -61,8 +58,6 @@ public final class SelectRowsForConvex {
 		final String filePath = arguments.get("file", "");
 		final int xField = arguments.get("x", 1)[0];
 		final int yField = arguments.get("y", xField + 1)[0];
-		final int xErrorField = arguments.get("xError", -1)[0];
-		final int yErrorField = arguments.get("yError", -1)[0];
 		final String outPath = arguments.get("out", baseName(filePath) + ".convex.csv");
 		final boolean fixBadPoints = arguments.get("fixBadPoints", 0)[0] != 0;
 		final Scanner scanner = new Scanner(new File(filePath));
