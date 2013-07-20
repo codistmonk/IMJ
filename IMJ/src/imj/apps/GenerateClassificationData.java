@@ -1,6 +1,7 @@
 package imj.apps;
 
 import static imj.IMJTools.loadAndTryToCache;
+import static imj.apps.Constants.EXCLUDED;
 import static imj.apps.modules.ShowActions.baseName;
 import static imj.database.IMJDatabaseTools.RGB;
 import static imj.database.IMJDatabaseTools.checkDatabase;
@@ -16,7 +17,6 @@ import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.readObject;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
-
 import imj.Image;
 import imj.IntList;
 import imj.apps.GenerateSampleDatabase.Configuration;
@@ -56,11 +56,6 @@ public final class GenerateClassificationData {
 	private GenerateClassificationData() {
 		throw new IllegalInstantiationException();
 	}
-	
-	/**
-	 * {@value}.
-	 */
-	public static final String EXCLUDED = "Edges & Artifacts to be excluded";
 	
 	private static final Map<String, SynchronizedWeakLoader> cache = new HashMap<String, SynchronizedWeakLoader>();
 	

@@ -4,7 +4,6 @@ import static imj.IMJTools.getOrCreate;
 import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.Tools.readObject;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj.database.IMJDatabaseTools.DBInfo;
 
 import java.io.File;
@@ -67,7 +66,7 @@ public final class GenerateDatabasePrecisionData {
 				final String fileName = file.getName();
 				final int imageNameLength = fileName.indexOf(DBINFO);
 				
-				if (imageNameLength < 0 && fileName.endsWith(JO)) {
+				if (imageNameLength < 0 || !fileName.endsWith(JO)) {
 					continue;
 				}
 				
