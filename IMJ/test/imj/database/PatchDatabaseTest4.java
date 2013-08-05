@@ -62,22 +62,22 @@ public final class PatchDatabaseTest4 {
 	@Test
 	public final void test() throws IOException {
 		final String[] imageIds = {
-				"../Libraries/images/45656.svs",
-				"../Libraries/images/45657.svs",
-				"../Libraries/images/45659.svs",
-				"../Libraries/images/45660.svs",
-				"../Libraries/images/45662.svs",
-				"../Libraries/images/45668.svs",
-				"../Libraries/images/45683.svs"
+				"../Libraries/images/svs/45656.svs",
+				"../Libraries/images/svs/45657.svs",
+				"../Libraries/images/svs/45659.svs",
+				"../Libraries/images/svs/45660.svs",
+				"../Libraries/images/svs/45662.svs",
+				"../Libraries/images/svs/45668.svs",
+				"../Libraries/images/svs/45683.svs"
 		};
 		
 		for (final int nonTrainingIndex : new int[] {0, 1, 2, 3, 4, 5, 6}) {
 			final Quantizer[] quantizers = new Quantizer[imageIds.length];
-			final int quantizationLevel = 3;
-			final int lod = 3;
+			final int quantizationLevel = 6;
+			final int lod = 6;
 			final int tileRowCount = 32;
 			final int tileColumnCount = tileRowCount;
-			final int maximumGroupSize = 10000;
+			final int maximumGroupSize = 0;
 			
 			final int trainingVerticalTileStride = tileRowCount;
 			final int trainingHorizontalTileStride = trainingVerticalTileStride;

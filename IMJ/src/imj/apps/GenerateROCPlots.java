@@ -69,9 +69,11 @@ public final class GenerateROCPlots {
 			final Statistics configurationFPR = getOrCreate(configurationFPRs, configurationEntry.getKey(), Statistics.class);
 			final Statistics configurationTPR = getOrCreate(configurationTPRs, configurationEntry.getKey(), Statistics.class);
 			
-			for (final ExtendedConfusionTable confusionTable : configurationConfusionTables) {
-				configurationFPR.addValue(confusionTable.getFalsePositiveRate());
-				configurationTPR.addValue(confusionTable.getTruePositiveRate());
+			if (configurationConfusionTables != null) {
+				for (final ExtendedConfusionTable confusionTable : configurationConfusionTables) {
+					configurationFPR.addValue(confusionTable.getFalsePositiveRate());
+					configurationTPR.addValue(confusionTable.getTruePositiveRate());
+				}
 			}
 		}
 		
