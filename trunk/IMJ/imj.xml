@@ -8,7 +8,9 @@
             </manifest>
             <fileset file="imj_license.txt"/>
             <fileset file="readme.txt"/>
-            <fileset dir="bin"/>
+            <fileset dir="bin" excludes="**/*Test*.*">
+            	<present present="srconly" targetdir="test"/>
+        	</fileset>
             <fileset dir="src"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/aprog.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/loci_tools.jar"/>
@@ -20,7 +22,9 @@
             </manifest>
             <fileset file="imj_license.txt"/>
             <fileset file="readme.txt"/>
-            <fileset dir="bin"/>
+            <fileset dir="bin" excludes="**/*Test*.*">
+            	<present present="srconly" targetdir="test"/>
+        	</fileset>
             <fileset dir="src"/>
         </jar>
     </target>
