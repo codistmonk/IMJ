@@ -31,7 +31,7 @@ public final class LinearBooleanImage implements Image {
 	
 	@Override
 	public final Channels getChannels() {
-		return PredefinedChannels.C1;
+		return PredefinedChannels.C1_U1;
 	}
 	
 	@Override
