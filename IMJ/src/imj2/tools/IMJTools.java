@@ -3,6 +3,13 @@ package imj2.tools;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
+import imj2.core.ConcreteImage2D;
+import imj2.core.Image;
+import imj2.core.Image.PredefinedChannels;
+import imj2.core.Image2D;
+import imj2.core.LinearBooleanImage;
+import imj2.core.LinearIntImage;
+
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
@@ -10,12 +17,6 @@ import java.awt.image.BufferedImage;
 
 import javax.swing.JComponent;
 
-import imj2.core.ConcreteImage2D;
-import imj2.core.Image;
-import imj2.core.Image.PredefinedChannels;
-import imj2.core.Image2D;
-import imj2.core.LinearBooleanImage;
-import imj2.core.LinearIntImage;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
@@ -29,6 +30,44 @@ public final class IMJTools {
 		throw new IllegalInstantiationException();
 	}
 	
+	public static final BufferedImage awtImage(final Image2D image) {
+		final int width = image.getWidth();
+		final int height = image.getHeight();
+		final BufferedImage result = new BufferedImage(width, height, awtImageType(image));
+		
+		for (int y = 0; y < height; ++y) {
+			for (int x = 0; x < width; ++x) {
+				result.setRGB(x, y, image.getPixelValue(x, y));
+			}
+		}
+		
+		return result;
+	}
+	
+	public static final int awtImageType(final Image2D image) {
+		switch (image.getChannels().getChannelCount()) {
+		case 1:
+			switch (image.getChannels().getChannelBitCount()) {
+			case 1:
+				return BufferedImage.TYPE_BYTE_BINARY;
+			case 8:
+				return BufferedImage.TYPE_BYTE_GRAY;
+			case 16:
+				return BufferedImage.TYPE_USHORT_GRAY;
+			default:
+				throw new IllegalArgumentException();
+			}
+		case 2:
+			throw new IllegalArgumentException();
+		case 3:
+			return BufferedImage.TYPE_3BYTE_BGR;
+		case 4:
+			return BufferedImage.TYPE_INT_ARGB;
+		default:
+			throw new IllegalArgumentException();
+		}
+	}
+	
 	public static final ConcreteImage2D newImage(final String imageId, final BufferedImage awtImage) {
 		final int width = awtImage.getWidth();
 		final int height = awtImage.getHeight();
@@ -37,14 +76,18 @@ public final class IMJTools {
 		
 		switch (awtImage.getType()) {
 		case BufferedImage.TYPE_BYTE_BINARY:
-			source = new LinearBooleanImage(imageId, pixelCount);
+			source = 1 == awtImage.getColorModel().getPixelSize() ?
+					new LinearBooleanImage(imageId, pixelCount) :
+					new LinearIntImage(imageId, pixelCount, PredefinedChannels.C3_U8);
 			break;
 		case BufferedImage.TYPE_USHORT_GRAY:
+			source = new LinearIntImage(imageId, pixelCount, PredefinedChannels.C1_U16);
+			break;
 		case BufferedImage.TYPE_BYTE_GRAY:
-			source = new LinearIntImage(imageId, pixelCount, PredefinedChannels.C1);
+			source = new LinearIntImage(imageId, pixelCount, PredefinedChannels.C1_U8);
 			break;
 		default:
-			source = new LinearIntImage(imageId, pixelCount, PredefinedChannels.C4);
+			source = new LinearIntImage(imageId, pixelCount, PredefinedChannels.C4_U8);
 			break;
 		}
 		

@@ -24,6 +24,8 @@ public abstract interface Image extends Serializable {
 		
 		public abstract int getChannelCount();
 		
+		public abstract int getChannelBitCount();
+		
 		public abstract int getChannelValue(int pixelValue, int channelIndex);
 		
 	}
@@ -33,10 +35,15 @@ public abstract interface Image extends Serializable {
 	 */
 	public static enum PredefinedChannels implements Channels {
 		
-		C1 {
+		C1_U1 {
 			
 			@Override
 			public final int getChannelCount() {
+				return 1;
+			}
+			
+			@Override
+			public final int getChannelBitCount() {
 				return 1;
 			}
 			
@@ -45,7 +52,58 @@ public abstract interface Image extends Serializable {
 				return channelIndex == 0 ? pixelValue : 0;
 			}
 			
-		}, C2 {
+		}, C1_U8 {
+			
+			@Override
+			public final int getChannelCount() {
+				return 1;
+			}
+			
+			@Override
+			public final int getChannelBitCount() {
+				return 8;
+			}
+			
+			@Override
+			public final int getChannelValue(final int pixelValue, final int channelIndex) {
+				return C1_U1.getChannelValue(pixelValue, channelIndex);
+			}
+			
+		}, C1_U16 {
+			
+			@Override
+			public final int getChannelCount() {
+				return 1;
+			}
+			
+			@Override
+			public final int getChannelBitCount() {
+				return 16;
+			}
+			
+			@Override
+			public final int getChannelValue(final int pixelValue, final int channelIndex) {
+				return C1_U1.getChannelValue(pixelValue, channelIndex);
+			}
+			
+		}, C1_S32 {
+			
+			@Override
+			public final int getChannelCount() {
+				return 1;
+			}
+			
+			@Override
+			public final int getChannelBitCount() {
+				return 32;
+			}
+			
+			@Override
+			public final int getChannelValue(final int pixelValue, final int channelIndex) {
+				return C1_U1.getChannelValue(pixelValue, channelIndex);
+			}
+			
+		}, C2_U16 {
 			
 			@Override
 			public final int getChannelCount() {
@@ -53,11 +111,33 @@ public abstract interface Image extends Serializable {
 			}
 			
 			@Override
+			public final int getChannelBitCount() {
+				return 16;
+			}
+			
+			@Override
 			public final int getChannelValue(final int pixelValue, final int channelIndex) {
 				return (channelIndex == 0 ? pixelValue : (pixelValue >> 16)) & 0x0000FFFF;
 			}
 			
-		}, C4 {
+		}, C3_U8 {
+			
+			@Override
+			public final int getChannelCount() {
+				return 3;
+			}
+			
+			@Override
+			public final int getChannelBitCount() {
+				return 8;
+			}
+			
+			@Override
+			public final int getChannelValue(final int pixelValue, final int channelIndex) {
+				return (pixelValue >> (channelIndex * 8)) & 0x000000FF;
+			}
+			
+		}, C4_U8 {
 			
 			@Override
 			public final int getChannelCount() {
@@ -65,8 +145,13 @@ public abstract interface Image extends Serializable {
 			}
 			
 			@Override
+			public final int getChannelBitCount() {
+				return 8;
+			}
+			
+			@Override
 			public final int getChannelValue(final int pixelValue, final int channelIndex) {
-				return (pixelValue >> (channelIndex * 8)) & 0x000000FF;
+				return C3_U8.getChannelValue(pixelValue, channelIndex);
 			}
 			
 		};
