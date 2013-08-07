@@ -38,15 +38,16 @@ public final class IMJToolsTest {
 		}
 	}
 	
-//	@Test
+	@Test
 	public final void test() throws Exception {
 		final String imageId = "test/imj/12003.jpg";
 		final BufferedImage awtImage = ImageIO.read(new File(imageId));
 		final ConcreteImage2D image = IMJTools.newImage(imageId, awtImage);
 		
 		Tools.debugPrint(image.getWidth(), image.getHeight(), image.getChannels());
-		IMJTools.show(image);
-		IMJTools.show(new AwtBackedImage(imageId, awtImage));
+//		IMJTools.show(image);
+//		IMJTools.show(new AwtBackedImage(imageId, awtImage));
+		IMJTools.show(new LociBackedImage(imageId));
 	}
 	
 }
