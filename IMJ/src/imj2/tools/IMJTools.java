@@ -2,7 +2,6 @@ package imj2.tools;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-
 import imj2.core.ConcreteImage2D;
 import imj2.core.Image;
 import imj2.core.Image.Channels;
@@ -18,6 +17,8 @@ import java.awt.image.BufferedImage;
 
 import javax.swing.JComponent;
 
+import loci.formats.FormatTools;
+import loci.formats.IFormatReader;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
@@ -108,6 +109,29 @@ public final class IMJTools {
 			return PredefinedChannels.C3_U8;
 		default:
 			return PredefinedChannels.C4_U8;
+		}
+	}
+	
+	public static final Channels predefinedChannelsFor(final IFormatReader lociImage) {
+		switch (lociImage.getRGBChannelCount()) {
+		case 1:
+			switch (FormatTools.getBytesPerPixel(lociImage.getPixelType()) * lociImage.getSizeC()) {
+			case 1:
+				return 1 == lociImage.getBitsPerPixel() ?
+						PredefinedChannels.C1_U1 : PredefinedChannels.C1_U8;
+			case 2:
+				return PredefinedChannels.C1_U16;
+			default:
+				return PredefinedChannels.C1_S32;
+			}
+		case 2:
+			return PredefinedChannels.C2_U16;
+		case 3:
+			return PredefinedChannels.C3_U8;
+		case 4:
+			return PredefinedChannels.C4_U8;
+		default:
+			throw new IllegalArgumentException();
 		}
 	}
 	

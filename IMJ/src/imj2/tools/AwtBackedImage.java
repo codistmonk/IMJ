@@ -32,7 +32,7 @@ public final class AwtBackedImage implements Image2D {
 	
 	@Override
 	public final long getPixelCount() {
-		return this.getAwtImage().getWidth() * this.getAwtImage().getHeight();
+		return (long) this.getWidth() * this.getHeight();
 	}
 	
 	@Override
