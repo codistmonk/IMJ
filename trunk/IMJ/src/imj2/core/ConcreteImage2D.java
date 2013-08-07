@@ -62,21 +62,29 @@ public final class ConcreteImage2D implements Image2D {
 	
 	@Override
 	public final int getPixelValue(final int x, final int y) {
-		return this.getPixelValue(this.getPixelIndex(x, y));
+		return this.getPixelValue(getPixelIndex(this, x, y));
 	}
 	
 	@Override
 	public final void setPixelValue(final int x, final int y, final int value) {
-		this.setPixelValue(this.getPixelIndex(x, y), value);
-	}
-	
-	public final long getPixelIndex(final int x, final int y) {
-		return (long) y * this.getWidth() + x;
+		this.setPixelValue(getPixelIndex(this, x, y), value);
 	}
 	
 	/**
 	 * {@value}.
 	 */
 	private static final long serialVersionUID = -7130245486896515156L;
+	
+	public static final long getPixelIndex(final Image2D image, final int x, final int y) {
+		return (long) y * image.getWidth() + x;
+	}
+	
+	public static final int getX(final Image2D image, final long pixelIndex) {
+		return (int) (pixelIndex % image.getWidth());
+	}
+	
+	public static final int getY(final Image2D image, final long pixelIndex) {
+		return (int) (pixelIndex / image.getWidth());
+	}
 	
 }

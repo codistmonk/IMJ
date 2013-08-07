@@ -46,6 +46,7 @@ public final class IMJToolsTest {
 		
 		Tools.debugPrint(image.getWidth(), image.getHeight(), image.getChannels());
 		IMJTools.show(image);
+		IMJTools.show(new AwtBackedImage(imageId, awtImage));
 	}
 	
 }

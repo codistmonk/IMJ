@@ -13,4 +13,38 @@ public abstract interface Image2D extends Image {
 	
 	public abstract void setPixelValue(int x, int y, int value);
 	
+	/**
+	 * @author codistmonk (creation 2013-08-07)
+	 */
+	public static abstract interface Process extends Image.Process {
+		
+		public abstract void pixel(int x, int y);
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-08-07)
+	 */
+	public static enum Traversing implements Image.Traversal<Image2D, Process> {
+		
+		ALL {
+			
+			@Override
+			public final void forEachPixelIn(final Image2D image, final Process process) {
+				final int width = image.getWidth();
+				final int height = image.getHeight();
+				
+				for (int y = 0; y < height; ++y) {
+					for (int x = 0; x < width; ++x) {
+						process.pixel(x, y);
+					}
+				}
+				
+				process.endOfPatch();
+			}
+			
+		};
+		
+	}
+	
 }

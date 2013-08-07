@@ -31,6 +31,24 @@ public abstract interface Image extends Serializable {
 	}
 	
 	/**
+	 * @author codistmonk (creation 2013-08-07)
+	 */
+	public static abstract interface Process extends Serializable {
+		
+		public abstract void endOfPatch();
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-08-07)
+	 */
+	public static interface Traversal<I extends Image, P extends Process> extends Serializable {
+		
+		public abstract void forEachPixelIn(I image, P process);
+		
+	}
+	
+	/**
 	 * @author codistmonk (creation 2013-08-04)
 	 */
 	public static enum PredefinedChannels implements Channels {
