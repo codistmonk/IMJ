@@ -5,6 +5,7 @@ import static java.lang.Math.min;
 
 import imj2.core.ConcreteImage2D;
 import imj2.core.Image;
+import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
 import imj2.core.Image2D;
 import imj2.core.LinearBooleanImage;
@@ -33,7 +34,7 @@ public final class IMJTools {
 	public static final BufferedImage awtImage(final Image2D image) {
 		final int width = image.getWidth();
 		final int height = image.getHeight();
-		final BufferedImage result = new BufferedImage(width, height, awtImageType(image));
+		final BufferedImage result = new BufferedImage(width, height, awtImageTypeFor(image));
 		
 		for (int y = 0; y < height; ++y) {
 			for (int x = 0; x < width; ++x) {
@@ -44,7 +45,7 @@ public final class IMJTools {
 		return result;
 	}
 	
-	public static final int awtImageType(final Image2D image) {
+	public static final int awtImageTypeFor(final Image2D image) {
 		switch (image.getChannels().getChannelCount()) {
 		case 1:
 			switch (image.getChannels().getChannelBitCount()) {
@@ -72,36 +73,42 @@ public final class IMJTools {
 		final int width = awtImage.getWidth();
 		final int height = awtImage.getHeight();
 		final long pixelCount = (long) width * height;
-		final Image source;
+		final Channels channels = predefinedChannelsFor(awtImage);
+		final Image source = channels == PredefinedChannels.C1_U1 ?
+				new LinearBooleanImage(imageId, pixelCount) : new LinearIntImage(imageId, pixelCount, channels);
+		final ConcreteImage2D result = new ConcreteImage2D(source, width, height);
 		
+		Image2D.Traversing.ALL.forEachPixelIn(result, new Image2D.Process() {
+			
+			@Override
+			public final void pixel(final int x, final int y) {
+				result.setPixelValue(x, y, awtImage.getRGB(x, y));
+			}
+			
+			@Override
+			public final void endOfPatch() {
+				// NOP
+			}
+			
+		});
+		
+		return result;
+	}
+	
+	public static final Channels predefinedChannelsFor(final BufferedImage awtImage) {
 		switch (awtImage.getType()) {
 		case BufferedImage.TYPE_BYTE_BINARY:
-			source = 1 == awtImage.getColorModel().getPixelSize() ?
-					new LinearBooleanImage(imageId, pixelCount) :
-					new LinearIntImage(imageId, pixelCount, PredefinedChannels.C3_U8);
-			break;
+			return 1 == awtImage.getColorModel().getPixelSize() ?
+					PredefinedChannels.C1_U1 : PredefinedChannels.C3_U8;
 		case BufferedImage.TYPE_USHORT_GRAY:
-			source = new LinearIntImage(imageId, pixelCount, PredefinedChannels.C1_U16);
-			break;
+			return PredefinedChannels.C1_U16;
 		case BufferedImage.TYPE_BYTE_GRAY:
-			source = new LinearIntImage(imageId, pixelCount, PredefinedChannels.C1_U8);
-			break;
+			return PredefinedChannels.C1_U8;
+		case BufferedImage.TYPE_3BYTE_BGR:
+			return PredefinedChannels.C3_U8;
 		default:
-			source = new LinearIntImage(imageId, pixelCount, PredefinedChannels.C4_U8);
-			break;
+			return PredefinedChannels.C4_U8;
 		}
-		
-		{
-			long pixelIndex = 0L;
-			
-			for (int y = 0; y < height; ++y) {
-				for (int x = 0; x < width; ++x, ++pixelIndex) {
-					source.setPixelValue(pixelIndex, awtImage.getRGB(x, y));
-				}
-			}
-		}
-		
-		return new ConcreteImage2D(source, width, height);
 	}
 	
 	public static final void show(final Image2D image) {
