@@ -135,7 +135,7 @@ public abstract interface Image extends Serializable {
 			
 			@Override
 			public final int getChannelValue(final int pixelValue, final int channelIndex) {
-				return (channelIndex == 0 ? pixelValue : (pixelValue >> 16)) & 0x0000FFFF;
+				return this.defaultGetChannelValue(pixelValue, channelIndex);
 			}
 			
 		}, C3_U8 {
@@ -152,7 +152,7 @@ public abstract interface Image extends Serializable {
 			
 			@Override
 			public final int getChannelValue(final int pixelValue, final int channelIndex) {
-				return (pixelValue >> (channelIndex * 8)) & 0x000000FF;
+				return this.defaultGetChannelValue(pixelValue, channelIndex);
 			}
 			
 		}, C4_U8 {
@@ -169,10 +169,22 @@ public abstract interface Image extends Serializable {
 			
 			@Override
 			public final int getChannelValue(final int pixelValue, final int channelIndex) {
-				return C3_U8.getChannelValue(pixelValue, channelIndex);
+				return this.defaultGetChannelValue(pixelValue, channelIndex);
 			}
 			
 		};
+		
+		public final boolean isIndexValid(final int index) {
+			return 0 <= index && index < this.getChannelCount();
+		}
+		
+		protected final int defaultGetChannelValue(final int pixelValue, final int channelIndex) {
+			return this.isIndexValid(channelIndex) ? (pixelValue >> (this.getChannelBitCount() * channelIndex)) & bitmask(this.getChannelBitCount()) : 0;
+		}
+		
+		public static final int bitmask(final int lowBitCount) {
+			return ~((~0) << lowBitCount);
+		}
 		
 	}
 	

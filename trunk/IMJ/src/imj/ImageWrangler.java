@@ -186,7 +186,7 @@ public final class ImageWrangler {
 								final int green;
 								final int blue;
 								
-								if (isPGM) {
+								if (reader.isInterleaved()) {
 									red = unsigned(buffer[i * channelCount + 0]);
 									green = unsigned(buffer[i * channelCount + 1]);
 									blue = unsigned(buffer[i * channelCount + 2]);

@@ -2,9 +2,13 @@ package imj2.tools;
 
 import static imj2.core.ConcreteImage2D.getX;
 import static imj2.core.ConcreteImage2D.getY;
+import static imj2.tools.IMJTools.quantize;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-import net.sourceforge.aprog.tools.Tools;
+
 import imj2.core.Image2D;
+
+import java.util.Locale;
+
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
@@ -40,10 +44,15 @@ public final class LociBackedImage implements Image2D {
 			throw unchecked(exception);
 		}
 		
-		this.bytesPerPixel = FormatTools.getBytesPerPixel(this.lociImage.getPixelType()) * this.lociImage.getSizeC();
+		this.bytesPerPixel = FormatTools.getBytesPerPixel(this.lociImage.getPixelType()) * this.lociImage.getRGBChannelCount();
 		
 		if (4 < this.bytesPerPixel) {
 			throw new IllegalArgumentException();
+		}
+		
+		if ("portable gray map".equals(this.lociImage.getFormat().toLowerCase(Locale.ENGLISH))) {
+			// XXX This fixes a defect in Bio-Formats PPM loading, but is it always OK?
+			this.lociImage.getCoreMetadata()[0].interleaved = true;
 		}
 	}
 	
@@ -86,20 +95,71 @@ public final class LociBackedImage implements Image2D {
 		return this.getLociImage().getSizeY();
 	}
 	
-	@Override
-	public final int getPixelValue(final int x, final int y) {
-		this.openTileContaining(x, y);
-		final int channelCount = this.getChannels().getChannelCount();
-		final int bytesPerChannel = FormatTools.getBytesPerPixel(this.lociImage.getPixelType());
-		final int tileChannelByteCount = this.tileWidth * this.tileHeight * bytesPerChannel;
-		final int pixelFirstByteIndex = (y * this.tileWidth + x) * bytesPerChannel;
+	public static final int packPixelValue(final byte[][] channelTables, final int colorIndex) {
 		int result = 0;
 		
-		for (int i = 0; i < channelCount; ++i) {
-			result = (result << 8) | (this.tile[pixelFirstByteIndex + i * tileChannelByteCount] & 0x000000FF);
+		for (final byte[] channelTable : channelTables) {
+			result = (result << 8) | (channelTable[colorIndex] & 0x000000FF);
 		}
 		
 		return result;
+	}
+	
+	public static final int packPixelValue(final short[][] channelTables, final int colorIndex) {
+		int result = 0;
+		
+		for (final short[] channelTable : channelTables) {
+			result = (result << 16) | (channelTable[colorIndex] & 0x0000FFFF);
+		}
+		
+		return result;
+	}
+	
+	@Override
+	public final synchronized int getPixelValue(final int x, final int y) {
+		this.openTileContaining(x, y);
+		final int channelCount = this.getChannels().getChannelCount();
+		final int bytesPerChannel = FormatTools.getBytesPerPixel(this.lociImage.getPixelType());
+		int result = 0;
+		
+		if (this.getLociImage().isIndexed()) {
+			if (!this.getLociImage().isInterleaved()) {
+				throw new IllegalArgumentException();
+			}
+			
+			final int pixelFirstByteIndex = (y * this.tileWidth + x) * bytesPerChannel;
+			
+			try {
+				switch (bytesPerChannel) {
+				case 1:
+					return packPixelValue(this.getLociImage().get8BitLookupTable(),
+							this.tile[pixelFirstByteIndex] & 0x000000FF);
+				case 2:
+					return packPixelValue(this.getLociImage().get16BitLookupTable(),
+							((this.tile[pixelFirstByteIndex] & 0x000000FF) << 8) | (this.tile[pixelFirstByteIndex + 1] & 0x000000FF));
+				default:
+					throw new IllegalArgumentException();
+				}
+			} catch (final Exception exception) {
+				throw unchecked(exception);
+			}
+		} else if (this.getLociImage().isInterleaved()) {
+			final int pixelFirstByteIndex = (y * this.tileWidth + x) * bytesPerChannel * channelCount;
+			
+			for (int i = 0; i < channelCount; ++i) {
+				result = (result << 8) | (this.tile[pixelFirstByteIndex + i] & 0x000000FF);
+			}
+		} else {
+			final int tileChannelByteCount = this.tileWidth * this.tileHeight * bytesPerChannel;
+			final int pixelFirstByteIndex = (y * this.tileWidth + x) * bytesPerChannel;
+			
+			for (int i = 0; i < channelCount; ++i) {
+				result = (result << 8) | (this.tile[pixelFirstByteIndex + i * tileChannelByteCount] & 0x000000FF);
+			}
+		}
+		
+		// XXX Is it always ok to assume RGBA and convert to ARGB if channelCount == 4?
+		return channelCount == 4 ? (result >> 8) | (result << 24) : result;
 	}
 	
 	@Override
@@ -123,8 +183,6 @@ public final class LociBackedImage implements Image2D {
 			this.tileX = tileX;
 			this.tileY = tileY;
 			
-			Tools.debugPrint(tileX, tileY, this.tileWidth, this.tileHeight, this.getLociImage().getPixelType(), this.bytesPerPixel);
-			
 			try {
 				this.getLociImage().openBytes(0, this.tile, tileX, tileY, this.tileWidth, this.tileHeight);
 			} catch (final Exception exception) {
@@ -138,9 +196,5 @@ public final class LociBackedImage implements Image2D {
 	 * {@value}.
 	 */
 	private static final long serialVersionUID = -2042409652657782660L;
-	
-	public static final int quantize(final int value, final int quantum) {
-		return (value / quantum) * quantum;
-	}
 	
 }
