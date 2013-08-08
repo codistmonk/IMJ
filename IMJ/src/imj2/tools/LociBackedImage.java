@@ -2,15 +2,11 @@ package imj2.tools;
 
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
-import java.util.Date;
 import java.util.Locale;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
-
-import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-08-07)
@@ -126,17 +122,11 @@ public final class LociBackedImage extends TiledImage {
 	
 	@Override
 	protected final void updateTile() {
-		final TicToc timer = new TicToc();
-		
-		Tools.debugPrint("Loading tile", this.getTileX(), this.getTileY(), "...", new Date(timer.tic()));
-		
 		try {
 			this.getLociImage().openBytes(0, this.tile, this.getTileX(), this.getTileY(), this.getTileWidth(), this.getTileHeight());
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
-		
-		Tools.debugPrint("Loading tile done", "time:", timer.toc());
 	}
 	
 	/**

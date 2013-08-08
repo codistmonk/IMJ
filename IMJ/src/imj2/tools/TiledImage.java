@@ -3,7 +3,7 @@ package imj2.tools;
 import static imj2.core.ConcreteImage2D.getX;
 import static imj2.core.ConcreteImage2D.getY;
 import static imj2.tools.IMJTools.quantize;
-
+import static java.lang.Math.min;
 import imj2.core.Image2D;
 
 /**
@@ -55,6 +55,25 @@ public abstract class TiledImage implements Image2D {
 	@Override
 	public final void setPixelValue(final int x, final int y, final int value) {
 		throw new UnsupportedOperationException("TODO"); // TODO
+	}
+	
+	public final void forEachPixelInRectangle(final int left, final int top, final int width, final int height, final Process process) {
+		final int right = min(this.getWidth(), left + width);
+		final int bottom = min(this.getHeight(), top + height);
+		
+		for (int y0 = top, nextTop = min(bottom, quantize(top, this.getTileHeight()) + this.getTileHeight());
+				y0 < bottom; y0 = nextTop, nextTop = min(bottom, nextTop + this.getTileHeight())) {
+			for (int x0 = left, nextLeft = min(right, quantize(left, this.getTileWidth()) + this.getTileWidth());
+					x0 < right; x0 = nextLeft, nextLeft = min(right, nextLeft + this.getTileWidth())) {
+				for (int y = y0; y < nextTop; ++y) {
+					for (int x = x0; x < nextLeft; ++x) {
+						process.pixel(x, y);
+					}
+				}
+				
+				process.endOfPatch();
+			}
+		}
 	}
 	
 	protected final int getTileX() {
