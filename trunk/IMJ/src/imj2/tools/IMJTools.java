@@ -2,13 +2,11 @@ package imj2.tools;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-import imj2.core.ConcreteImage2D;
-import imj2.core.Image;
+
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
 import imj2.core.Image2D;
-import imj2.core.LinearBooleanImage;
-import imj2.core.LinearIntImage;
+import imj2.core.Image2D.MonopatchProcess;
 
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -18,10 +16,10 @@ import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
 
 import javax.swing.JComponent;
-import javax.swing.SwingUtilities;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
@@ -208,14 +206,34 @@ public final class IMJTools {
 				return;
 			}
 			
-			final int xEnd = min(this.image.getWidth(), left + width);
-			final int yEnd = min(this.image.getHeight(), top + height);
-			
-			for (int y = top; y < yEnd; ++y) {
-				for (int x = left; x < xEnd; ++x) {
-					this.buffer.setRGB(x, y, this.image.getPixelValue(x, y));
+			if (this.image instanceof TiledImage) {
+				((TiledImage) this.image).forEachPixelInRectangle(left, top, width, height, new MonopatchProcess() {
+					
+					@Override
+					public final void pixel(final int x, final int y) {
+						Image2DComponent.this.copyImagePixelToBuffer(x, y);
+					}
+					
+					/**
+					 * {@value}.
+					 */
+					private static final long serialVersionUID = 1810623847473680066L;
+					
+				});
+			} else {
+				final int xEnd = min(this.image.getWidth(), left + width);
+				final int yEnd = min(this.image.getHeight(), top + height);
+				
+				for (int y = top; y < yEnd; ++y) {
+					for (int x = left; x < xEnd; ++x) {
+						this.copyImagePixelToBuffer(x, y);
+					}
 				}
 			}
+		}
+		
+		final void copyImagePixelToBuffer(final int x, final int y) {
+			this.buffer.setRGB(x, y, this.image.getPixelValue(x, y));
 		}
 		
 		/**
