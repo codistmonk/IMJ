@@ -95,29 +95,11 @@ public final class LociBackedImage implements Image2D {
 		return this.getLociImage().getSizeY();
 	}
 	
-	public static final int packPixelValue(final byte[][] channelTables, final int colorIndex) {
-		int result = 0;
-		
-		for (final byte[] channelTable : channelTables) {
-			result = (result << 8) | (channelTable[colorIndex] & 0x000000FF);
-		}
-		
-		return result;
-	}
-	
-	public static final int packPixelValue(final short[][] channelTables, final int colorIndex) {
-		int result = 0;
-		
-		for (final short[] channelTable : channelTables) {
-			result = (result << 16) | (channelTable[colorIndex] & 0x0000FFFF);
-		}
-		
-		return result;
-	}
-	
 	@Override
 	public final synchronized int getPixelValue(final int x, final int y) {
 		this.openTileContaining(x, y);
+		final int xInTile = x % this.tileWidth;
+		final int yInTile = y % this.tileHeight;
 		final int channelCount = this.getChannels().getChannelCount();
 		final int bytesPerChannel = FormatTools.getBytesPerPixel(this.lociImage.getPixelType());
 		int result = 0;
@@ -127,7 +109,7 @@ public final class LociBackedImage implements Image2D {
 				throw new IllegalArgumentException();
 			}
 			
-			final int pixelFirstByteIndex = (y * this.tileWidth + x) * bytesPerChannel;
+			final int pixelFirstByteIndex = (yInTile * this.tileWidth + xInTile) * bytesPerChannel;
 			
 			try {
 				switch (bytesPerChannel) {
@@ -144,14 +126,14 @@ public final class LociBackedImage implements Image2D {
 				throw unchecked(exception);
 			}
 		} else if (this.getLociImage().isInterleaved()) {
-			final int pixelFirstByteIndex = (y * this.tileWidth + x) * bytesPerChannel * channelCount;
+			final int pixelFirstByteIndex = (yInTile * this.tileWidth + xInTile) * bytesPerChannel * channelCount;
 			
 			for (int i = 0; i < channelCount; ++i) {
 				result = (result << 8) | (this.tile[pixelFirstByteIndex + i] & 0x000000FF);
 			}
 		} else {
 			final int tileChannelByteCount = this.tileWidth * this.tileHeight * bytesPerChannel;
-			final int pixelFirstByteIndex = (y * this.tileWidth + x) * bytesPerChannel;
+			final int pixelFirstByteIndex = (yInTile * this.tileWidth + xInTile) * bytesPerChannel;
 			
 			for (int i = 0; i < channelCount; ++i) {
 				result = (result << 8) | (this.tile[pixelFirstByteIndex + i * tileChannelByteCount] & 0x000000FF);
@@ -196,5 +178,25 @@ public final class LociBackedImage implements Image2D {
 	 * {@value}.
 	 */
 	private static final long serialVersionUID = -2042409652657782660L;
+	
+	public static final int packPixelValue(final byte[][] channelTables, final int colorIndex) {
+		int result = 0;
+		
+		for (final byte[] channelTable : channelTables) {
+			result = (result << 8) | (channelTable[colorIndex] & 0x000000FF);
+		}
+		
+		return result;
+	}
+	
+	public static final int packPixelValue(final short[][] channelTables, final int colorIndex) {
+		int result = 0;
+		
+		for (final short[] channelTable : channelTables) {
+			result = (result << 16) | (channelTable[colorIndex] & 0x0000FFFF);
+		}
+		
+		return result;
+	}
 	
 }
