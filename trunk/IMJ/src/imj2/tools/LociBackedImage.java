@@ -1,24 +1,21 @@
 package imj2.tools;
 
-import static imj2.core.ConcreteImage2D.getX;
-import static imj2.core.ConcreteImage2D.getY;
-import static imj2.tools.IMJTools.quantize;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
-import imj2.core.Image2D;
-
+import java.util.Date;
 import java.util.Locale;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
 
+import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
+
 /**
  * @author codistmonk (creation 2013-08-07)
  */
-public final class LociBackedImage implements Image2D {
-	
-	private final String id;
+public final class LociBackedImage extends TiledImage {
 	
 	private final IFormatReader lociImage;
 	
@@ -26,16 +23,8 @@ public final class LociBackedImage implements Image2D {
 	
 	private transient byte[] tile;
 	
-	private transient int tileX;
-	
-	private transient int tileY;
-	
-	private transient int tileWidth;
-	
-	private transient int tileHeight;
-	
 	public LociBackedImage(final String id) {
-		this.id = id;
+		super(id);
 		this.lociImage = new ImageReader();
 		
 		try {
@@ -54,6 +43,9 @@ public final class LociBackedImage implements Image2D {
 			// XXX This fixes a defect in Bio-Formats PPM loading, but is it always OK?
 			this.lociImage.getCoreMetadata()[0].interleaved = true;
 		}
+		
+		this.setTileWidth(this.lociImage.getOptimalTileWidth());
+		this.setTileHeight(this.lociImage.getOptimalTileHeight());
 	}
 	
 	public final IFormatReader getLociImage() {
@@ -61,28 +53,8 @@ public final class LociBackedImage implements Image2D {
 	}
 	
 	@Override
-	public final String getId() {
-		return this.id;
-	}
-	
-	@Override
-	public final long getPixelCount() {
-		return (long) this.getWidth() * this.getHeight();
-	}
-	
-	@Override
 	public final Channels getChannels() {
 		return IMJTools.predefinedChannelsFor(this.getLociImage());
-	}
-	
-	@Override
-	public final int getPixelValue(final long pixelIndex) {
-		return this.getPixelValue(getX(this, pixelIndex), getY(this, pixelIndex));
-	}
-	
-	@Override
-	public final void setPixelValue(final long pixelIndex, final int pixelValue) {
-		this.setPixelValue(getX(this, pixelIndex), getY(this, pixelIndex), pixelValue);
 	}
 	
 	@Override
@@ -96,10 +68,7 @@ public final class LociBackedImage implements Image2D {
 	}
 	
 	@Override
-	public final synchronized int getPixelValue(final int x, final int y) {
-		this.openTileContaining(x, y);
-		final int xInTile = x % this.tileWidth;
-		final int yInTile = y % this.tileHeight;
+	protected final int getPixelValueFromTile(int xInTile, int yInTile) {
 		final int channelCount = this.getChannels().getChannelCount();
 		final int bytesPerChannel = FormatTools.getBytesPerPixel(this.lociImage.getPixelType());
 		int result = 0;
@@ -109,7 +78,7 @@ public final class LociBackedImage implements Image2D {
 				throw new IllegalArgumentException();
 			}
 			
-			final int pixelFirstByteIndex = (yInTile * this.tileWidth + xInTile) * bytesPerChannel;
+			final int pixelFirstByteIndex = (yInTile * this.getTileWidth() + xInTile) * bytesPerChannel;
 			
 			try {
 				switch (bytesPerChannel) {
@@ -126,14 +95,14 @@ public final class LociBackedImage implements Image2D {
 				throw unchecked(exception);
 			}
 		} else if (this.getLociImage().isInterleaved()) {
-			final int pixelFirstByteIndex = (yInTile * this.tileWidth + xInTile) * bytesPerChannel * channelCount;
+			final int pixelFirstByteIndex = (yInTile * this.getTileWidth() + xInTile) * bytesPerChannel * channelCount;
 			
 			for (int i = 0; i < channelCount; ++i) {
 				result = (result << 8) | (this.tile[pixelFirstByteIndex + i] & 0x000000FF);
 			}
 		} else {
-			final int tileChannelByteCount = this.tileWidth * this.tileHeight * bytesPerChannel;
-			final int pixelFirstByteIndex = (yInTile * this.tileWidth + xInTile) * bytesPerChannel;
+			final int tileChannelByteCount = this.getTileWidth() * this.getTileHeight() * bytesPerChannel;
+			final int pixelFirstByteIndex = (yInTile * this.getTileWidth() + xInTile) * bytesPerChannel;
 			
 			for (int i = 0; i < channelCount; ++i) {
 				result = (result << 8) | (this.tile[pixelFirstByteIndex + i * tileChannelByteCount] & 0x000000FF);
@@ -145,34 +114,30 @@ public final class LociBackedImage implements Image2D {
 	}
 	
 	@Override
-	public final void setPixelValue(final int x, final int y, final int value) {
-		throw new UnsupportedOperationException("TODO"); // TODO
-	}
-	
-	private final void openTileContaining(final int x, final int y) {
-		this.tileWidth = this.getLociImage().getOptimalTileWidth();
-		this.tileHeight = this.getLociImage().getOptimalTileHeight();
-		final int tileX = quantize(x, this.tileWidth);
-		final int tileY = quantize(y, this.tileHeight);
-		boolean tileIsUpToDate = this.tileX == tileX && this.tileY == tileY;
-		
-		if (this.tile == null) {
-			this.tile = new byte[this.tileWidth * this.tileHeight * this.bytesPerPixel];
-			tileIsUpToDate = false;
+	protected final boolean makeNewTile() {
+		if (this.tile != null) {
+			return false;
 		}
 		
-		if (!tileIsUpToDate) {
-			this.tileX = tileX;
-			this.tileY = tileY;
-			
-			try {
-				this.getLociImage().openBytes(0, this.tile, tileX, tileY, this.tileWidth, this.tileHeight);
-			} catch (final Exception exception) {
-				throw unchecked(exception);
-			}
-		}
+		this.tile = new byte[this.getTileWidth() * this.getTileHeight() * this.bytesPerPixel];
+		
+		return true;
 	}
 	
+	@Override
+	protected final void updateTile() {
+		final TicToc timer = new TicToc();
+		
+		Tools.debugPrint("Loading tile", this.getTileX(), this.getTileY(), "...", new Date(timer.tic()));
+		
+		try {
+			this.getLociImage().openBytes(0, this.tile, this.getTileX(), this.getTileY(), this.getTileWidth(), this.getTileHeight());
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+		
+		Tools.debugPrint("Loading tile done", "time:", timer.toc());
+	}
 	
 	/**
 	 * {@value}.
