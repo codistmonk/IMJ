@@ -66,8 +66,8 @@ public final class IMJToolsTest {
 		}
 	}
 	
-	@Test
-	public final void testShow() throws Exception {
+//	@Test
+	public final void testShow1() throws Exception {
 		final String imageId = "test/imj/12003.jpg";
 		final BufferedImage awtImage = ImageIO.read(new File(imageId));
 		final Image2D image = new AwtBackedImage(imageId, awtImage);
@@ -76,6 +76,15 @@ public final class IMJToolsTest {
 		IMJTools.show(image);
 		IMJTools.show(new AwtBackedImage(imageId, awtImage));
 		IMJTools.show(new LociBackedImage(imageId));
+	}
+	
+	@Test
+	public final void testShow2() throws Exception {
+		final String imageId = "../Libraries/images/svs/16088.svs";
+		final Image2D image = new LociBackedImage(imageId);
+		
+		debugPrint(image.getWidth(), image.getHeight(), image.getChannels());
+		IMJTools.show(image);
 	}
 	
 	public static final void assertRGB(final DefaultColorModel color,
