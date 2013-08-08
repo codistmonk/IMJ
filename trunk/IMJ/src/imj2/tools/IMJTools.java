@@ -2,7 +2,9 @@ package imj2.tools;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
@@ -11,6 +13,7 @@ import imj2.core.Image2D.MonopatchProcess;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -21,9 +24,12 @@ import java.awt.event.AdjustmentListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
+import java.lang.reflect.InvocationTargetException;
 
+import javax.swing.Box;
 import javax.swing.JComponent;
 import javax.swing.JScrollBar;
+import javax.swing.SwingUtilities;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
@@ -127,14 +133,22 @@ public final class IMJTools {
 	}
 	
 	public static final void show(final Image2D image) {
-		final Image2DComponent imageComponent = new Image2DComponent(image);
-		final Dimension preferredSize = new Dimension(Toolkit.getDefaultToolkit().getScreenSize());
+		final Component[] component = { null };
 		
-		preferredSize.width = min(preferredSize.width, image.getWidth());
-		preferredSize.height = min(preferredSize.height, image.getHeight());
-		imageComponent.setPreferredSize(preferredSize);
+		try {
+			SwingUtilities.invokeAndWait(new Runnable() {
+				
+				@Override
+				public final void run() {
+					component[0] = new Image2DComponent(image);
+				}
+				
+			});
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
 		
-		SwingTools.show(imageComponent, image.getId(), true);
+		SwingTools.show(component[0], image.getId(), true);
 	}
 	
 	/**
@@ -161,7 +175,7 @@ public final class IMJTools {
 			this.verticalScrollBar = new JScrollBar(JScrollBar.VERTICAL);
 			this.setDoubleBuffered(false);
 			this.setLayout(new BorderLayout());
-			this.add(this.horizontalScrollBar, BorderLayout.SOUTH);
+			this.add(horizontalBox(this.horizontalScrollBar, Box.createHorizontalStrut(this.verticalScrollBar.getPreferredSize().width)), BorderLayout.SOUTH);
 			this.add(this.verticalScrollBar, BorderLayout.EAST);
 			
 			this.addComponentListener(new ComponentAdapter() {
@@ -194,11 +208,17 @@ public final class IMJTools {
 			this.image = image;
 			this.horizontalScrollBar.setMaximum(image.getWidth());
 			this.verticalScrollBar.setMaximum(image.getHeight());
+			
+			final Dimension preferredSize = new Dimension(Toolkit.getDefaultToolkit().getScreenSize());
+			preferredSize.width = min(preferredSize.width, image.getWidth() + this.verticalScrollBar.getPreferredSize().width);
+			preferredSize.height = min(preferredSize.height, image.getHeight() + this.horizontalScrollBar.getPreferredSize().height);
+			
+			this.setPreferredSize(preferredSize);
 		}
 		
 		public final void setBuffer() {
-			final int width = min(this.image.getWidth(), max(1, this.getWidth() - this.verticalScrollBar.getWidth()));
-			final int height = min(this.image.getHeight(), max(1, this.getHeight() - this.horizontalScrollBar.getHeight()));
+			final int width = min(this.image.getWidth(), max(1, this.getUsableWidth()));
+			final int height = min(this.image.getHeight(), max(1, this.getUsableHeight()));
 			final boolean createBuffer;
 			
 			if (this.buffer == null) {
@@ -338,8 +358,8 @@ public final class IMJTools {
 		}
 		
 		final void setScrollBarVisibleAmounts() {
-			final int usableWidth = max(0, this.getWidth() - this.verticalScrollBar.getWidth());
-			final int usableHeight = max(0, this.getHeight() - this.horizontalScrollBar.getHeight());
+			final int usableWidth = max(0, this.getUsableWidth());
+			final int usableHeight = max(0, this.getUsableHeight());
 			
 			if (this.horizontalScrollBar.getMaximum() <= this.horizontalScrollBar.getValue() + usableWidth) {
 				this.horizontalScrollBar.setValue(max(0, this.horizontalScrollBar.getMaximum() - usableWidth));
@@ -352,6 +372,14 @@ public final class IMJTools {
 			}
 			
 			this.verticalScrollBar.setVisibleAmount(usableHeight);
+		}
+		
+		private final int getUsableHeight() {
+			return this.getHeight() - this.horizontalScrollBar.getHeight();
+		}
+		
+		private final int getUsableWidth() {
+			return this.getWidth() - this.verticalScrollBar.getWidth();
 		}
 		
 		/**
