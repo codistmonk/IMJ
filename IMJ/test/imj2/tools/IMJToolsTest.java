@@ -1,15 +1,15 @@
 package imj2.tools;
 
+import static imj2.tools.IMJTools.quantize;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.assertEquals;
-
-import imj2.core.ConcreteImage2D;
+import imj2.core.Image2D;
+import imj2.core.Image2D.MonopatchProcess;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
 
 import javax.imageio.ImageIO;
-
-import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -26,28 +26,63 @@ public final class IMJToolsTest {
 		for (final String id : ids) {
 			final String imageId = base + id;
 			final BufferedImage expectedAwtImage = ImageIO.read(new File(imageId));
-			final BufferedImage actualAwtImage = IMJTools.awtImage(IMJTools.newImage(imageId, expectedAwtImage));
-			final int width = expectedAwtImage.getWidth();
-			final int height = expectedAwtImage.getHeight();
+			final Image2D image = new AwtBackedImage(imageId, expectedAwtImage);
+			final DefaultColorModel color = new DefaultColorModel(image.getChannels());
+			final BufferedImage actualAwtImage = IMJTools.awtImage(image);
 			
-			for (int y = 0; y < height; ++y) {
-				for (int x = 0; x < width; ++x) {
+			Image2D.Traversing.ALL.forEachPixelIn(image, new MonopatchProcess() {
+				
+				@Override
+				public final void pixel(final int x, final int y) {
 					assertEquals(expectedAwtImage.getRGB(x, y), actualAwtImage.getRGB(x, y));
 				}
-			}
+				
+				/**
+				 * @{value}.
+				 */
+				private static final long serialVersionUID = 6154461314835897640L;
+				
+			});
+			
+			assertRGB(color, 255, 0, 0, image.getPixelValue(0, 0));
+			assertRGB(color, 0, 255, 0, image.getPixelValue(1, 0));
+			assertRGB(color, 0, 0, 255, image.getPixelValue(0, 1));
 		}
 	}
 	
 	@Test
-	public final void test() throws Exception {
+	public final void testLOCI1() throws Exception {
+		final String base = "test/imj2/data/";
+		final String[] ids = { "rgb24.jpg", "rgb24.png", "rgb24.ppm", "rgb24.bmp", "rgb24.gif", "rgb32.png" };
+		
+		for (final String id : ids) {
+			final String imageId = base + id;
+			final Image2D image = new LociBackedImage(imageId);
+			final DefaultColorModel color = new DefaultColorModel(image.getChannels());
+			
+			assertRGB(color, 255, 0, 0, image.getPixelValue(0, 0));
+			assertRGB(color, 0, 255, 0, image.getPixelValue(1, 0));
+			assertRGB(color, 0, 0, 255, image.getPixelValue(0, 1));
+		}
+	}
+	
+	@Test
+	public final void testShow() throws Exception {
 		final String imageId = "test/imj/12003.jpg";
 		final BufferedImage awtImage = ImageIO.read(new File(imageId));
-		final ConcreteImage2D image = IMJTools.newImage(imageId, awtImage);
+		final Image2D image = new AwtBackedImage(imageId, awtImage);
 		
-		Tools.debugPrint(image.getWidth(), image.getHeight(), image.getChannels());
-//		IMJTools.show(image);
-//		IMJTools.show(new AwtBackedImage(imageId, awtImage));
+		debugPrint(image.getWidth(), image.getHeight(), image.getChannels());
+		IMJTools.show(image);
+		IMJTools.show(new AwtBackedImage(imageId, awtImage));
 		IMJTools.show(new LociBackedImage(imageId));
+	}
+	
+	public static final void assertRGB(final DefaultColorModel color,
+			final int expectedRed, final int expectedGreen, final int expectedBlue, final int actualPixelValue) {
+		assertEquals(quantize(expectedRed, 2), quantize(color.red(actualPixelValue), 2));
+		assertEquals(quantize(expectedGreen, 2), quantize(color.green(actualPixelValue), 2));
+		assertEquals(quantize(expectedBlue, 2), quantize(color.blue(actualPixelValue), 2));
 	}
 	
 }

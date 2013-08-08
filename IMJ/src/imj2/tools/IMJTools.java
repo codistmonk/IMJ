@@ -10,12 +10,15 @@ import imj2.core.Image2D;
 import imj2.core.LinearBooleanImage;
 import imj2.core.LinearIntImage;
 
+import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
+import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
 
 import javax.swing.JComponent;
+import javax.swing.SwingUtilities;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
@@ -30,6 +33,10 @@ public final class IMJTools {
 	
 	private IMJTools() {
 		throw new IllegalInstantiationException();
+	}
+	
+	public static final int quantize(final int value, final int quantum) {
+		return (value / quantum) * quantum;
 	}
 	
 	public static final BufferedImage awtImage(final Image2D image) {
@@ -69,33 +76,7 @@ public final class IMJTools {
 			throw new IllegalArgumentException();
 		}
 	}
-	
-	public static final ConcreteImage2D newImage(final String imageId, final BufferedImage awtImage) {
-		final int width = awtImage.getWidth();
-		final int height = awtImage.getHeight();
-		final long pixelCount = (long) width * height;
-		final Channels channels = predefinedChannelsFor(awtImage);
-		final Image source = channels == PredefinedChannels.C1_U1 ?
-				new LinearBooleanImage(imageId, pixelCount) : new LinearIntImage(imageId, pixelCount, channels);
-		final ConcreteImage2D result = new ConcreteImage2D(source, width, height);
 		
-		Image2D.Traversing.ALL.forEachPixelIn(result, new Image2D.Process() {
-			
-			@Override
-			public final void pixel(final int x, final int y) {
-				result.setPixelValue(x, y, awtImage.getRGB(x, y));
-			}
-			
-			@Override
-			public final void endOfPatch() {
-				// NOP
-			}
-			
-		});
-		
-		return result;
-	}
-	
 	public static final Channels predefinedChannelsFor(final BufferedImage awtImage) {
 		switch (awtImage.getType()) {
 		case BufferedImage.TYPE_BYTE_BINARY:
@@ -113,9 +94,13 @@ public final class IMJTools {
 	}
 	
 	public static final Channels predefinedChannelsFor(final IFormatReader lociImage) {
+		if (lociImage.isIndexed()) {
+			return PredefinedChannels.C3_U8;
+		}
+		
 		switch (lociImage.getRGBChannelCount()) {
 		case 1:
-			switch (FormatTools.getBytesPerPixel(lociImage.getPixelType()) * lociImage.getSizeC()) {
+			switch (FormatTools.getBytesPerPixel(lociImage.getPixelType()) * lociImage.getRGBChannelCount()) {
 			case 1:
 				return 1 == lociImage.getBitsPerPixel() ?
 						PredefinedChannels.C1_U1 : PredefinedChannels.C1_U8;
@@ -136,7 +121,14 @@ public final class IMJTools {
 	}
 	
 	public static final void show(final Image2D image) {
-		SwingTools.show(new Image2DComponent(image), image.getId(), true);
+		final Image2DComponent imageComponent = new Image2DComponent(image);
+		final Dimension preferredSize = new Dimension(Toolkit.getDefaultToolkit().getScreenSize());
+		
+		preferredSize.width = min(preferredSize.width, image.getWidth());
+		preferredSize.height = min(preferredSize.height, image.getHeight());
+		imageComponent.setPreferredSize(preferredSize);
+		
+		SwingTools.show(imageComponent, image.getId(), true);
 	}
 	
 	/**

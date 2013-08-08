@@ -23,6 +23,23 @@ public abstract interface Image2D extends Image {
 	}
 	
 	/**
+	 * @author codistmonk (creation 2013-08-08)
+	 */
+	public static abstract class MonopatchProcess implements Process {
+		
+		@Override
+		public final void endOfPatch() {
+			// NOP
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 4975211754834419344L;
+		
+	}
+	
+	/**
 	 * @author codistmonk (creation 2013-08-07)
 	 */
 	public static enum Traversing implements Image.Traversal<Image2D, Process> {
