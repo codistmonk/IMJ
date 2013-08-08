@@ -2,20 +2,28 @@ package imj2.tools;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 
 import javax.swing.JComponent;
+import javax.swing.JScrollBar;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
@@ -140,37 +148,57 @@ public final class IMJTools {
 		
 		private Graphics2D bufferGraphics;
 		
+		private int bufferX;
+		
+		private int bufferY;
+		
+		private final JScrollBar horizontalScrollBar;
+		
+		private final JScrollBar verticalScrollBar;
+		
+		public Image2DComponent() {
+			this.horizontalScrollBar = new JScrollBar(JScrollBar.HORIZONTAL);
+			this.verticalScrollBar = new JScrollBar(JScrollBar.VERTICAL);
+			this.setDoubleBuffered(false);
+			this.setLayout(new BorderLayout());
+			this.add(this.horizontalScrollBar, BorderLayout.SOUTH);
+			this.add(this.verticalScrollBar, BorderLayout.EAST);
+			
+			this.addComponentListener(new ComponentAdapter() {
+				
+				@Override
+				public final void componentResized(final ComponentEvent event) {
+					Image2DComponent.this.setScrollBarVisibleAmounts();
+				}
+				
+			});
+			
+			final AdjustmentListener bufferPositionAdjuster = new AdjustmentListener() {
+				
+				@Override
+				public final void adjustmentValueChanged(final AdjustmentEvent event) {
+					Image2DComponent.this.updateBufferAccordingToScrollBars();
+					Image2DComponent.this.repaint();
+				}
+				
+			};
+			
+			this.horizontalScrollBar.addAdjustmentListener(bufferPositionAdjuster);
+			this.verticalScrollBar.addAdjustmentListener(bufferPositionAdjuster);
+			
+			this.setBackground(Color.BLACK);
+		}
+		
 		public Image2DComponent(final Image2D image) {
 			this();
 			this.image = image;
+			this.horizontalScrollBar.setMaximum(image.getWidth());
+			this.verticalScrollBar.setMaximum(image.getHeight());
 		}
 		
-		public Image2DComponent() {
-			this.setDoubleBuffered(false);
-		}
-		
-		@Override
-		protected final void paintComponent(final Graphics g) {
-			this.setBuffer();
-			
-			g.drawImage(this.buffer, 0, 0, null);
-		}
-		
-		@Override
-		public final void paintImmediately(final int x, final int y, final int w, final int h) {
-			Tools.debugPrint(x, y, w, h);
-			super.paintImmediately(x, y, w, h);
-		}
-
-		@Override
-		public final void paintImmediately(final Rectangle r) {
-			Tools.debugPrint(r);
-			super.paintImmediately(r);
-		}
-
 		public final void setBuffer() {
-			final int width = max(1, this.getWidth());
-			final int height = max(1, this.getHeight());
+			final int width = min(this.image.getWidth(), max(1, this.getWidth() - this.verticalScrollBar.getWidth()));
+			final int height = min(this.image.getHeight(), max(1, this.getHeight() - this.horizontalScrollBar.getHeight()));
 			final boolean createBuffer;
 			
 			if (this.buffer == null) {
@@ -206,6 +234,14 @@ public final class IMJTools {
 				return;
 			}
 			
+			if (this.image.getWidth() < left + width + this.bufferX) {
+				this.bufferX = this.image.getWidth() - left - width;
+			}
+			
+			if (this.image.getHeight() < top + height + this.bufferY) {
+				this.bufferY = this.image.getHeight() - top - height;
+			}
+			
 			if (this.image instanceof TiledImage) {
 				((TiledImage) this.image).forEachPixelInRectangle(left, top, width, height, new MonopatchProcess() {
 					
@@ -232,8 +268,90 @@ public final class IMJTools {
 			}
 		}
 		
+		@Override
+		protected final void paintComponent(final Graphics g) {
+			this.setBuffer();
+			this.updateBufferAccordingToScrollBars();
+			
+			final int dx = max(0, (this.getWidth() - this.verticalScrollBar.getWidth() - this.buffer.getWidth()) / 2);
+			final int dy = max(0, (this.getHeight() - this.horizontalScrollBar.getHeight() - this.buffer.getHeight()) / 2);
+			
+			g.drawImage(this.buffer, dx, dy, null);
+		}
+		
 		final void copyImagePixelToBuffer(final int x, final int y) {
-			this.buffer.setRGB(x, y, this.image.getPixelValue(x, y));
+			this.buffer.setRGB(x, y, this.image.getPixelValue(x + this.bufferX, y + this.bufferY));
+		}
+		
+		final void updateBufferAccordingToScrollBars() {
+			if (this.buffer == null) {
+				return;
+			}
+			
+//			debugPrint(this.horizontalScrollBar.getVisibleAmount(), this.horizontalScrollBar.getMaximum(), this.horizontalScrollBar.getValue(), this.getWidth(), this.image.getWidth(), this.buffer.getWidth());
+			
+			final int dx = this.horizontalScrollBar.getValue() - this.bufferX;
+			final int dy = this.verticalScrollBar.getValue() - this.bufferY;
+			this.bufferX += dx;
+			this.bufferY += dy;
+			final int sourceX, sourceY, targetX, targetY, stepX, stepY;
+			
+			if (0 <= dx) {
+				sourceX = dx;
+				targetX = 0;
+				stepX = 1;
+			} else {
+				sourceX = this.buffer.getWidth() + dx;
+				targetX = this.buffer.getWidth() - 1;
+				stepX = -1;
+			}
+			
+			if (0 <= dy) {
+				sourceY = dy;
+				targetY = 0;
+				stepY = 1;
+			} else {
+				sourceY = this.buffer.getHeight() + dy;
+				targetY = this.buffer.getHeight() - 1;
+				stepY = -1;
+			}
+			
+			for (int y0 = sourceY, y1 = targetY; 0 <= y0 && y0 < this.buffer.getHeight(); y0 += stepY, y1 += stepY) {
+				for (int x0 = sourceX, x1 = targetX; 0 <= x0 && x0 < this.buffer.getWidth(); x0 += stepX, x1 += stepX) {
+					this.buffer.setRGB(x1, y1, this.buffer.getRGB(x0, y0));
+				}
+			}
+			
+			if (0 <= dx) {
+				if (0 <= dy) {
+					this.update(this.buffer.getWidth() - dx, 0, dx, this.buffer.getHeight() - dy);
+				} else {
+					this.update(this.buffer.getWidth() - dx, -dy, dx, this.buffer.getHeight() + dy);
+				}
+			} else {
+				if (0 <= dy) {
+					this.update(0, 0, -dx, this.buffer.getHeight() - dy);
+				} else {
+					this.update(0, -dy, -dx, this.buffer.getHeight() + dy);
+				}
+			}
+		}
+		
+		final void setScrollBarVisibleAmounts() {
+			final int usableWidth = max(0, this.getWidth() - this.verticalScrollBar.getWidth());
+			final int usableHeight = max(0, this.getHeight() - this.horizontalScrollBar.getHeight());
+			
+			if (this.horizontalScrollBar.getMaximum() <= this.horizontalScrollBar.getValue() + usableWidth) {
+				this.horizontalScrollBar.setValue(max(0, this.horizontalScrollBar.getMaximum() - usableWidth));
+			}
+			
+			this.horizontalScrollBar.setVisibleAmount(usableWidth);
+			
+			if (this.verticalScrollBar.getMaximum() <= this.verticalScrollBar.getValue() + usableHeight) {
+				this.verticalScrollBar.setValue(max(0, this.verticalScrollBar.getMaximum() - usableHeight));
+			}
+			
+			this.verticalScrollBar.setVisibleAmount(usableHeight);
 		}
 		
 		/**
