@@ -104,7 +104,7 @@ public final class IMJToolsTest {
 		}
 	}
 	
-//	@Test
+	@Test
 	public final void testShow1() throws Exception {
 		final String imageId = "test/imj/12003.jpg";
 		final BufferedImage awtImage = ImageIO.read(new File(imageId));
@@ -112,8 +112,8 @@ public final class IMJToolsTest {
 		
 		debugPrint(image.getWidth(), image.getHeight(), image.getChannels());
 		IMJTools.show(image);
-		IMJTools.show(new AwtBackedImage(imageId, awtImage));
-		IMJTools.show(new LociBackedImage(imageId));
+//		IMJTools.show(new AwtBackedImage(imageId, awtImage));
+//		IMJTools.show(new LociBackedImage(imageId));
 	}
 	
 //	@Test
