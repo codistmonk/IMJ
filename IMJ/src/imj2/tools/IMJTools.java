@@ -293,10 +293,10 @@ public final class IMJTools {
 			this.setBuffer();
 			this.updateBufferAccordingToScrollBars();
 			
-			final int dx = max(0, (this.getWidth() - this.verticalScrollBar.getWidth() - this.buffer.getWidth()) / 2);
-			final int dy = max(0, (this.getHeight() - this.horizontalScrollBar.getHeight() - this.buffer.getHeight()) / 2);
+			final int centeringOffsetX = max(0, (this.getUsableWidth() - this.buffer.getWidth()) / 2);
+			final int centeringOffsetY = max(0, (this.getUsableHeight() - this.buffer.getHeight()) / 2);
 			
-			g.drawImage(this.buffer, dx, dy, null);
+			g.drawImage(this.buffer, centeringOffsetX, centeringOffsetY, null);
 		}
 		
 		final void copyImagePixelToBuffer(final int x, final int y) {
