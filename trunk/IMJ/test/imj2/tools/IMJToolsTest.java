@@ -3,7 +3,6 @@ package imj2.tools;
 import static imj2.tools.IMJTools.quantize;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.assertEquals;
-
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
 
@@ -11,6 +10,8 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 
 import javax.imageio.ImageIO;
+
+import net.sourceforge.aprog.swing.SwingTools;
 
 import org.junit.Test;
 
@@ -123,6 +124,10 @@ public final class IMJToolsTest {
 		
 		debugPrint(image.getWidth(), image.getHeight(), image.getChannels());
 		IMJTools.show(image);
+	}
+	
+	static {
+		SwingTools.useSystemLookAndFeel();
 	}
 	
 	public static final void assertRGB(final DefaultColorModel color,
