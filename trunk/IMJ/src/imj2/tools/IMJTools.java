@@ -5,12 +5,12 @@ import static java.lang.Math.min;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
 
+import java.awt.Adjustable;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -33,7 +33,6 @@ import javax.swing.SwingUtilities;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
@@ -151,6 +150,24 @@ public final class IMJTools {
 		SwingTools.show(component[0], image.getId(), true);
 	}
 	
+	public static final void forEachPixelInRectangle(final Image2D image,
+			final int left, final int top, final int width, final int height, final Image2D.Process process) {
+		if (image instanceof TiledImage) {
+			((TiledImage) image).forEachPixelInRectangle(left, top, width, height, process);
+		} else {
+			final int xEnd = min(image.getWidth(), left + width);
+			final int yEnd = min(image.getHeight(), top + height);
+			
+			for (int y = top; y < yEnd; ++y) {
+				for (int x = left; x < xEnd; ++x) {
+					process.pixel(x, y);
+				}
+			}
+			
+			process.endOfPatch();
+		}
+	}
+	
 	/**
 	 * @author codistmonk (creation 2013-08-05)
 	 */
@@ -162,17 +179,16 @@ public final class IMJTools {
 		
 		private Graphics2D bufferGraphics;
 		
-		private int bufferX;
-		
-		private int bufferY;
+		private final Rectangle imageVisibleRectangle;
 		
 		private final JScrollBar horizontalScrollBar;
 		
 		private final JScrollBar verticalScrollBar;
 		
 		public Image2DComponent() {
-			this.horizontalScrollBar = new JScrollBar(JScrollBar.HORIZONTAL);
-			this.verticalScrollBar = new JScrollBar(JScrollBar.VERTICAL);
+			this.imageVisibleRectangle = new Rectangle();
+			this.horizontalScrollBar = new JScrollBar(Adjustable.HORIZONTAL);
+			this.verticalScrollBar = new JScrollBar(Adjustable.VERTICAL);
 			this.setDoubleBuffered(false);
 			this.setLayout(new BorderLayout());
 			this.add(horizontalBox(this.horizontalScrollBar, Box.createHorizontalStrut(this.verticalScrollBar.getPreferredSize().width)), BorderLayout.SOUTH);
@@ -182,7 +198,7 @@ public final class IMJTools {
 				
 				@Override
 				public final void componentResized(final ComponentEvent event) {
-					Image2DComponent.this.setScrollBarVisibleAmounts();
+					Image2DComponent.this.setScrollBarsVisibleAmounts();
 				}
 				
 			});
@@ -225,6 +241,7 @@ public final class IMJTools {
 				createBuffer = true;
 			} else if (this.buffer.getWidth() != width || this.buffer.getHeight() != height) {
 				this.bufferGraphics.dispose();
+				this.bufferGraphics = null;
 				createBuffer = true;
 			} else {
 				createBuffer = false;
@@ -235,63 +252,78 @@ public final class IMJTools {
 				this.buffer = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
 				this.bufferGraphics = this.buffer.createGraphics();
 				
-				if (oldBuffer != null) {
-					this.bufferGraphics.drawImage(oldBuffer, 0, 0, null);
-					
-					final int oldWidth = oldBuffer.getWidth();
-					final int oldHeight = oldBuffer.getHeight();
-					
-					this.update(oldWidth, 0, width - oldWidth, min(oldHeight, height));
-					this.update(0, oldHeight, width, height - oldHeight);
-				} else {
-					this.update(0, 0, width, height);
-				}
+				this.setImageVisibleRectangle(new Rectangle(
+						min(this.imageVisibleRectangle.x, this.image.getWidth() - width),
+						min(this.imageVisibleRectangle.y, this.image.getHeight() - height),
+						width, height), oldBuffer);
+//				if (oldBuffer != null) {
+//					this.bufferGraphics.drawImage(oldBuffer, 0, 0, null);
+//					
+//					final int oldWidth = oldBuffer.getWidth();
+//					final int oldHeight = oldBuffer.getHeight();
+//					
+//					this.updateBuffer(oldWidth, 0, width - oldWidth, min(oldHeight, height));
+//					this.updateBuffer(0, oldHeight, width, height - oldHeight);
+//				} else {
+//					this.updateBuffer(0, 0, width, height);
+//				}
 			}
 		}
 		
-		public final void update(final int left, final int top, final int width, final int height) {
-			if (this.image == null || width <= 0 || height <= 0) {
-				return;
+		private final void setImageVisibleRectangle(final Rectangle rectangle, final BufferedImage oldBuffer) {
+			if (this.image.getWidth() < rectangle.x + rectangle.width || this.image.getHeight() < rectangle.y + rectangle.height ||
+					this.buffer.getWidth() < rectangle.width || this.buffer.getHeight() < rectangle.height) {
+				throw new IllegalArgumentException(rectangle + " " + new Rectangle(this.image.getWidth(), this.image.getHeight()) + " " + new Rectangle(this.buffer.getWidth(),  this.buffer.getHeight()));
 			}
 			
-			if (this.image.getWidth() < left + width + this.bufferX) {
-				this.bufferX = this.image.getWidth() - left - width;
-			}
-			
-			if (this.image.getHeight() < top + height + this.bufferY) {
-				this.bufferY = this.image.getHeight() - top - height;
-			}
-			
-			if (this.image instanceof TiledImage) {
-				((TiledImage) this.image).forEachPixelInRectangle(left, top, width, height, new MonopatchProcess() {
-					
-					@Override
-					public final void pixel(final int x, final int y) {
-						Image2DComponent.this.copyImagePixelToBuffer(x, y);
-					}
-					
-					/**
-					 * {@value}.
-					 */
-					private static final long serialVersionUID = 1810623847473680066L;
-					
-				});
+			if (oldBuffer == null) {
+				this.imageVisibleRectangle.setBounds(rectangle);
+				this.updateBuffer(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
 			} else {
-				final int xEnd = min(this.image.getWidth(), left + width);
-				final int yEnd = min(this.image.getHeight(), top + height);
+				final Rectangle intersection = this.imageVisibleRectangle.intersection(rectangle);
 				
-				for (int y = top; y < yEnd; ++y) {
-					for (int x = left; x < xEnd; ++x) {
-						this.copyImagePixelToBuffer(x, y);
-					}
+				this.imageVisibleRectangle.setBounds(rectangle);
+				
+				if (intersection.isEmpty()) {
+					this.updateBuffer(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
+				} else {
+					final int startX, endX, stepX, startY, endY, stepY;
+					
+					// copy intersection - imageVisibleRectangle to intersection - rectangle
+					
+//					try {
+						for (int y = intersection.y; y < intersection.height; ++y) {
+							for (int x = intersection.x; x < intersection.width; ++x) {
+								this.buffer.setRGB(x - rectangle.x, y - rectangle.y,
+										oldBuffer.getRGB(x - this.imageVisibleRectangle.x, y - this.imageVisibleRectangle.y));
+							}
+						}
+//					} catch (final Exception exception) {
+//						debugPrint(this.imageVisibleRectangle, rectangle, intersection);
+//						debugPrint(this.buffer.getWidth(), this.buffer.getHeight(), oldBuffer.getWidth(), oldBuffer.getHeight());
+//						exception.printStackTrace();
+//						System.exit(-1);
+//					}
+//					debugPrint(rectangle);
+//					this.imageVisibleRectangle.setBounds(rectangle);
+//					this.updateBuffer(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
 				}
+			}
+			
+			if (this.buffer.getWidth() < this.imageVisibleRectangle.width || this.buffer.getHeight() < this.imageVisibleRectangle.getHeight()) {
+				throw new IllegalStateException();
+			}
+		}
+		
+		public final void updateBuffer(final int left, final int top, final int width, final int height) {
+			if (this.image != null && 0 < width && 0 < height) {
+				this.copyImagePixelsToBuffer(top, left, width, height);
 			}
 		}
 		
 		@Override
 		protected final void paintComponent(final Graphics g) {
 			this.setBuffer();
-			this.updateBufferAccordingToScrollBars();
 			
 			final int centeringOffsetX = max(0, (this.getUsableWidth() - this.buffer.getWidth()) / 2);
 			final int centeringOffsetY = max(0, (this.getUsableHeight() - this.buffer.getHeight()) / 2);
@@ -299,65 +331,20 @@ public final class IMJTools {
 			g.drawImage(this.buffer, centeringOffsetX, centeringOffsetY, null);
 		}
 		
-		final void copyImagePixelToBuffer(final int x, final int y) {
-			this.buffer.setRGB(x, y, this.image.getPixelValue(x + this.bufferX, y + this.bufferY));
-		}
-		
 		final void updateBufferAccordingToScrollBars() {
 			if (this.buffer == null) {
 				return;
 			}
 			
-//			debugPrint(this.horizontalScrollBar.getVisibleAmount(), this.horizontalScrollBar.getMaximum(), this.horizontalScrollBar.getValue(), this.getWidth(), this.image.getWidth(), this.buffer.getWidth());
+			final int left = this.buffer.getWidth() < this.image.getWidth() ? this.horizontalScrollBar.getValue() : 0;
+			final int top = this.buffer.getHeight() < this.image.getHeight() ? this.verticalScrollBar.getValue() : 0;
+			final int width = min(this.image.getWidth(), this.buffer.getWidth());
+			final int height = min(this.image.getHeight(), this.buffer.getHeight());
 			
-			final int dx = this.horizontalScrollBar.getValue() - this.bufferX;
-			final int dy = this.verticalScrollBar.getValue() - this.bufferY;
-			this.bufferX += dx;
-			this.bufferY += dy;
-			final int sourceX, sourceY, targetX, targetY, stepX, stepY;
-			
-			if (0 <= dx) {
-				sourceX = dx;
-				targetX = 0;
-				stepX = 1;
-			} else {
-				sourceX = this.buffer.getWidth() + dx;
-				targetX = this.buffer.getWidth() - 1;
-				stepX = -1;
-			}
-			
-			if (0 <= dy) {
-				sourceY = dy;
-				targetY = 0;
-				stepY = 1;
-			} else {
-				sourceY = this.buffer.getHeight() + dy;
-				targetY = this.buffer.getHeight() - 1;
-				stepY = -1;
-			}
-			
-			for (int y0 = sourceY, y1 = targetY; 0 <= y0 && y0 < this.buffer.getHeight(); y0 += stepY, y1 += stepY) {
-				for (int x0 = sourceX, x1 = targetX; 0 <= x0 && x0 < this.buffer.getWidth(); x0 += stepX, x1 += stepX) {
-					this.buffer.setRGB(x1, y1, this.buffer.getRGB(x0, y0));
-				}
-			}
-			
-			if (0 <= dx) {
-				if (0 <= dy) {
-					this.update(this.buffer.getWidth() - dx, 0, dx, this.buffer.getHeight() - dy);
-				} else {
-					this.update(this.buffer.getWidth() - dx, -dy, dx, this.buffer.getHeight() + dy);
-				}
-			} else {
-				if (0 <= dy) {
-					this.update(0, 0, -dx, this.buffer.getHeight() - dy);
-				} else {
-					this.update(0, -dy, -dx, this.buffer.getHeight() + dy);
-				}
-			}
+			this.setImageVisibleRectangle(new Rectangle(left, top, width, height), this.buffer);
 		}
 		
-		final void setScrollBarVisibleAmounts() {
+		final void setScrollBarsVisibleAmounts() {
 			final int usableWidth = max(0, this.getUsableWidth());
 			final int usableHeight = max(0, this.getUsableHeight());
 			
@@ -372,6 +359,27 @@ public final class IMJTools {
 			}
 			
 			this.verticalScrollBar.setVisibleAmount(usableHeight);
+		}
+		
+		final void copyImagePixelsToBuffer(final int top, final int left, final int width, final int height) {
+			forEachPixelInRectangle(this.image, left, top, width, height, new MonopatchProcess() {
+				
+				@Override
+				public final void pixel(final int x, final int y) {
+					Image2DComponent.this.copyImagePixelToBuffer(x, y);
+				}
+				
+				/**
+				 * {@value}.
+				 */
+				private static final long serialVersionUID = 1810623847473680066L;
+				
+			});
+		}
+		
+		final void copyImagePixelToBuffer(final int xInImage, final int yInImage) {
+			this.buffer.setRGB(xInImage - this.imageVisibleRectangle.x, yInImage - this.imageVisibleRectangle.y,
+					this.image.getPixelValue(xInImage, yInImage));
 		}
 		
 		private final int getUsableHeight() {
