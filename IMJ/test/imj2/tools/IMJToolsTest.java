@@ -105,7 +105,7 @@ public final class IMJToolsTest {
 		}
 	}
 	
-	@Test
+//	@Test
 	public final void testShow1() throws Exception {
 		final String imageId = "test/imj/12003.jpg";
 		final BufferedImage awtImage = ImageIO.read(new File(imageId));
@@ -117,7 +117,7 @@ public final class IMJToolsTest {
 //		IMJTools.show(new LociBackedImage(imageId));
 	}
 	
-//	@Test
+	@Test
 	public final void testShow2() throws Exception {
 		final String imageId = "../Libraries/images/svs/16088.svs";
 		final Image2D image = new LociBackedImage(imageId);
