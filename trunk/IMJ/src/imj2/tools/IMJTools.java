@@ -1,21 +1,16 @@
 package imj2.tools;
 
 import static java.lang.Math.min;
-import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
 import imj2.core.Image2D;
 
-import java.awt.Component;
 import java.awt.image.BufferedImage;
-
-import javax.swing.SwingUtilities;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
 
-import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**
@@ -110,25 +105,6 @@ public final class IMJTools {
 		default:
 			throw new IllegalArgumentException();
 		}
-	}
-	
-	public static final void show(final Image2D image) {
-		final Component[] component = { null };
-		
-		try {
-			SwingUtilities.invokeAndWait(new Runnable() {
-				
-				@Override
-				public final void run() {
-					component[0] = new Image2DComponent(image);
-				}
-				
-			});
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
-		
-		SwingTools.show(component[0], image.getId(), true);
 	}
 	
 	public static final void forEachPixelInRectangle(final Image2D image,

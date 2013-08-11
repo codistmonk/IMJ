@@ -112,7 +112,7 @@ public final class IMJToolsTest {
 		final Image2D image = new AwtBackedImage(imageId, awtImage);
 		
 		debugPrint(image.getWidth(), image.getHeight(), image.getChannels());
-		IMJTools.show(image);
+		Image2DComponent.show(image);
 //		IMJTools.show(new AwtBackedImage(imageId, awtImage));
 //		IMJTools.show(new LociBackedImage(imageId));
 	}
@@ -123,7 +123,7 @@ public final class IMJToolsTest {
 		final Image2D image = new LociBackedImage(imageId);
 		
 		debugPrint(image.getWidth(), image.getHeight(), image.getChannels());
-		IMJTools.show(image);
+		Image2DComponent.show(image);
 	}
 	
 	static {

@@ -4,6 +4,7 @@ import static imj2.tools.IMJTools.forEachPixelInRectangle;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
@@ -11,6 +12,7 @@ import imj2.core.Image2D.MonopatchProcess;
 import java.awt.Adjustable;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -25,6 +27,9 @@ import java.awt.image.BufferedImage;
 import javax.swing.Box;
 import javax.swing.JComponent;
 import javax.swing.JScrollBar;
+import javax.swing.SwingUtilities;
+
+import net.sourceforge.aprog.swing.SwingTools;
 
 /**
  * @author codistmonk (creation 2013-08-05)
@@ -262,5 +267,24 @@ public final class Image2DComponent extends JComponent {
 	 * {@value}.
 	 */
 	private static final long serialVersionUID = 4189273248039238064L;
+	
+	public static final void show(final Image2D image) {
+		final Component[] component = { null };
+		
+		try {
+			SwingUtilities.invokeAndWait(new Runnable() {
+				
+				@Override
+				public final void run() {
+					component[0] = new Image2DComponent(image);
+				}
+				
+			});
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+		
+		SwingTools.show(component[0], image.getId(), true);
+	}
 	
 }
