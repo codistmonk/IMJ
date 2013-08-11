@@ -1,5 +1,6 @@
 package imj2.tools;
 
+import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.util.Locale;
@@ -123,7 +124,9 @@ public final class LociBackedImage extends TiledImage {
 	@Override
 	protected final void updateTile() {
 		try {
-			this.getLociImage().openBytes(0, this.tile, this.getTileX(), this.getTileY(), this.getTileWidth(), this.getTileHeight());
+			this.getLociImage().openBytes(0, this.tile, this.getTileX(), this.getTileY(),
+					min(this.getWidth() - this.getTileX(), this.getTileWidth()),
+					min(this.getHeight() - this.getTileY(), this.getTileHeight()));
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
