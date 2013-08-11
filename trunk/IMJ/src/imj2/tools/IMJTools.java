@@ -3,8 +3,8 @@ package imj2.tools;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
 import imj2.core.Image2D;
@@ -24,7 +24,6 @@ import java.awt.event.AdjustmentListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
-import java.lang.reflect.InvocationTargetException;
 
 import javax.swing.Box;
 import javax.swing.JComponent;
@@ -33,9 +32,9 @@ import javax.swing.SwingUtilities;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-08-04)
@@ -256,24 +255,14 @@ public final class IMJTools {
 						min(this.imageVisibleRectangle.x, this.image.getWidth() - width),
 						min(this.imageVisibleRectangle.y, this.image.getHeight() - height),
 						width, height), oldBuffer);
-//				if (oldBuffer != null) {
-//					this.bufferGraphics.drawImage(oldBuffer, 0, 0, null);
-//					
-//					final int oldWidth = oldBuffer.getWidth();
-//					final int oldHeight = oldBuffer.getHeight();
-//					
-//					this.updateBuffer(oldWidth, 0, width - oldWidth, min(oldHeight, height));
-//					this.updateBuffer(0, oldHeight, width, height - oldHeight);
-//				} else {
-//					this.updateBuffer(0, 0, width, height);
-//				}
 			}
 		}
 		
 		private final void setImageVisibleRectangle(final Rectangle rectangle, final BufferedImage oldBuffer) {
 			if (this.image.getWidth() < rectangle.x + rectangle.width || this.image.getHeight() < rectangle.y + rectangle.height ||
 					this.buffer.getWidth() < rectangle.width || this.buffer.getHeight() < rectangle.height) {
-				throw new IllegalArgumentException(rectangle + " " + new Rectangle(this.image.getWidth(), this.image.getHeight()) + " " + new Rectangle(this.buffer.getWidth(),  this.buffer.getHeight()));
+				throw new IllegalArgumentException(rectangle + " " + new Rectangle(this.image.getWidth(), this.image.getHeight()) +
+						" " + new Rectangle(this.buffer.getWidth(),  this.buffer.getHeight()));
 			}
 			
 			if (oldBuffer == null) {
@@ -282,31 +271,51 @@ public final class IMJTools {
 			} else {
 				final Rectangle intersection = this.imageVisibleRectangle.intersection(rectangle);
 				
-				this.imageVisibleRectangle.setBounds(rectangle);
-				
 				if (intersection.isEmpty()) {
+					this.imageVisibleRectangle.setBounds(rectangle);
 					this.updateBuffer(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
 				} else {
+					final int intersectionRight = intersection.x + intersection.width;
+					final int intersectionBottom = intersection.y + intersection.height;
 					final int startX, endX, stepX, startY, endY, stepY;
 					
-					// copy intersection - imageVisibleRectangle to intersection - rectangle
+					if (intersection.x - rectangle.x <= intersection.x - this.imageVisibleRectangle.x) {
+						startX = intersection.x;
+						endX = intersectionRight;
+						stepX = 1;
+					} else {
+						startX = intersectionRight - 1;
+						endX = intersection.x - 1;
+						stepX = -1;
+					}
 					
-//					try {
-						for (int y = intersection.y; y < intersection.height; ++y) {
-							for (int x = intersection.x; x < intersection.width; ++x) {
-								this.buffer.setRGB(x - rectangle.x, y - rectangle.y,
-										oldBuffer.getRGB(x - this.imageVisibleRectangle.x, y - this.imageVisibleRectangle.y));
-							}
+					if (intersection.y - rectangle.y <= intersection.y - this.imageVisibleRectangle.y) {
+						startY = intersection.y;
+						endY = intersectionBottom;
+						stepY = 1;
+					} else {
+						startY = intersectionBottom - 1;
+						endY = intersection.y - 1;
+						stepY = -1;
+					}
+					
+					for (int y = startY; y != endY; y += stepY) {
+						for (int x = startX; x != endX; x += stepX) {
+							this.buffer.setRGB(x - rectangle.x, y - rectangle.y,
+									oldBuffer.getRGB(x - this.imageVisibleRectangle.x, y - this.imageVisibleRectangle.y));
 						}
-//					} catch (final Exception exception) {
-//						debugPrint(this.imageVisibleRectangle, rectangle, intersection);
-//						debugPrint(this.buffer.getWidth(), this.buffer.getHeight(), oldBuffer.getWidth(), oldBuffer.getHeight());
-//						exception.printStackTrace();
-//						System.exit(-1);
-//					}
-//					debugPrint(rectangle);
-//					this.imageVisibleRectangle.setBounds(rectangle);
-//					this.updateBuffer(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
+					}
+					
+					this.imageVisibleRectangle.setBounds(rectangle);
+					
+					// Update top
+					this.updateBuffer(rectangle.x, rectangle.y, rectangle.width, intersection.y - rectangle.y);
+					// Update left
+					this.updateBuffer(rectangle.x, intersection.y, intersection.x - rectangle.x, intersection.height);
+					// Update right
+					this.updateBuffer(intersectionRight, intersection.y, rectangle.x + rectangle.width - intersectionRight, intersection.height);
+					// Update bottom
+					this.updateBuffer(rectangle.x, intersectionBottom, rectangle.width, rectangle.y + rectangle.height - intersectionBottom);
 				}
 			}
 			
@@ -336,10 +345,10 @@ public final class IMJTools {
 				return;
 			}
 			
-			final int left = this.buffer.getWidth() < this.image.getWidth() ? this.horizontalScrollBar.getValue() : 0;
-			final int top = this.buffer.getHeight() < this.image.getHeight() ? this.verticalScrollBar.getValue() : 0;
 			final int width = min(this.image.getWidth(), this.buffer.getWidth());
 			final int height = min(this.image.getHeight(), this.buffer.getHeight());
+			final int left = width < this.image.getWidth() ? min(this.image.getWidth() - width, this.horizontalScrollBar.getValue()) : 0;
+			final int top = height < this.image.getHeight() ? min(this.image.getHeight() - height, this.verticalScrollBar.getValue()) : 0;
 			
 			this.setImageVisibleRectangle(new Rectangle(left, top, width, height), this.buffer);
 		}
