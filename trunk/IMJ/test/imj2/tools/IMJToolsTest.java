@@ -119,7 +119,7 @@ public final class IMJToolsTest {
 	
 	@Test
 	public final void testShow2() throws Exception {
-		final String imageId = "../Libraries/images/svs/16088.svs";
+		final String imageId = "../Libraries/images/svs/45657.svs";
 		final Image2D image = new LociBackedImage(imageId);
 		
 		debugPrint(image.getWidth(), image.getHeight(), image.getChannels());
