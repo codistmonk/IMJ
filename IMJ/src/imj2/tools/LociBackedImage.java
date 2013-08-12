@@ -1,6 +1,5 @@
 package imj2.tools;
 
-import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.util.Locale;
@@ -41,8 +40,8 @@ public final class LociBackedImage extends TiledImage {
 			this.lociImage.getCoreMetadata()[0].interleaved = true;
 		}
 		
-		this.setTileWidth(this.lociImage.getOptimalTileWidth());
-		this.setTileHeight(this.lociImage.getOptimalTileHeight());
+		this.setOptimalTileWidth(this.lociImage.getOptimalTileWidth());
+		this.setOptimalTileHeight(this.lociImage.getOptimalTileHeight());
 	}
 	
 	public final IFormatReader getLociImage() {
@@ -65,7 +64,7 @@ public final class LociBackedImage extends TiledImage {
 	}
 	
 	@Override
-	protected final int getPixelValueFromTile(int xInTile, int yInTile) {
+	protected final int getPixelValueFromTile(final int x, final int y, final int xInTile, final int yInTile) {
 		final int channelCount = this.getChannels().getChannelCount();
 		final int bytesPerChannel = FormatTools.getBytesPerPixel(this.lociImage.getPixelType());
 		int result = 0;
@@ -116,7 +115,7 @@ public final class LociBackedImage extends TiledImage {
 			return false;
 		}
 		
-		this.tile = new byte[this.getTileWidth() * this.getTileHeight() * this.bytesPerPixel];
+		this.tile = new byte[this.getOptimalTileWidth() * this.getOptimalTileHeight() * this.bytesPerPixel];
 		
 		return true;
 	}
@@ -125,8 +124,7 @@ public final class LociBackedImage extends TiledImage {
 	protected final void updateTile() {
 		try {
 			this.getLociImage().openBytes(0, this.tile, this.getTileX(), this.getTileY(),
-					min(this.getWidth() - this.getTileX(), this.getTileWidth()),
-					min(this.getHeight() - this.getTileY(), this.getTileHeight()));
+					this.getTileWidth(), this.getTileHeight());
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
