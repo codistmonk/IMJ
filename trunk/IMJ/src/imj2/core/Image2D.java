@@ -13,6 +13,8 @@ public abstract interface Image2D extends Image {
 	
 	public abstract void setPixelValue(int x, int y, int value);
 	
+	public abstract void forEachPixelInBox(int left, int top, int width, int height, Process process);
+	
 	/**
 	 * @author codistmonk (creation 2013-08-07)
 	 */

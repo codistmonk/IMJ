@@ -62,7 +62,8 @@ public abstract class TiledImage implements Image2D {
 		throw new UnsupportedOperationException("TODO"); // TODO
 	}
 	
-	public final void forEachPixelInRectangle(final int left, final int top, final int width, final int height, final Process process) {
+	@Override
+	public final void forEachPixelInBox(final int left, final int top, final int width, final int height, final Process process) {
 		final int right = min(this.getWidth(), left + width);
 		final int bottom = min(this.getHeight(), top + height);
 		

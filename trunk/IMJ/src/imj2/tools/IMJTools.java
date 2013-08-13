@@ -1,7 +1,5 @@
 package imj2.tools;
 
-import static java.lang.Math.min;
-
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
 import imj2.core.Image2D;
@@ -104,24 +102,6 @@ public final class IMJTools {
 			return PredefinedChannels.C4_U8;
 		default:
 			throw new IllegalArgumentException();
-		}
-	}
-	
-	public static final void forEachPixelInRectangle(final Image2D image,
-			final int left, final int top, final int width, final int height, final Image2D.Process process) {
-		if (image instanceof TiledImage) {
-			((TiledImage) image).forEachPixelInRectangle(left, top, width, height, process);
-		} else {
-			final int xEnd = min(image.getWidth(), left + width);
-			final int yEnd = min(image.getHeight(), top + height);
-			
-			for (int y = top; y < yEnd; ++y) {
-				for (int x = left; x < xEnd; ++x) {
-					process.pixel(x, y);
-				}
-			}
-			
-			process.endOfPatch();
 		}
 	}
 	

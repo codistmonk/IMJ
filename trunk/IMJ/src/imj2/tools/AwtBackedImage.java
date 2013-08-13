@@ -3,6 +3,7 @@ package imj2.tools;
 import static imj2.core.ConcreteImage2D.getX;
 import static imj2.core.ConcreteImage2D.getY;
 
+import imj2.core.ConcreteImage2D;
 import imj2.core.Image2D;
 
 import java.awt.image.BufferedImage;
@@ -68,6 +69,11 @@ public final class AwtBackedImage implements Image2D {
 	@Override
 	public final void setPixelValue(final int x, final int y, final int value) {
 		this.getAwtImage().setRGB(x, y, value);
+	}
+	
+	@Override
+	public final void forEachPixelInBox(final int left, final int top, final int width, final int height, final Process process) {
+		ConcreteImage2D.forEachPixelInBox(this, left, top, width, height, process);
 	}
 	
 	/**
