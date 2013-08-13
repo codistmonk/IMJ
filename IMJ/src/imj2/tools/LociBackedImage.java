@@ -140,7 +140,7 @@ public final class LociBackedImage extends TiledImage {
 	}
 	
 	final byte[] newTile() {
-		return new byte[this.getOptimalTileWidth() * this.getOptimalTileHeight() * this.bytesPerPixel];
+		return new byte[this.getTileWidth() * this.getTileHeight() * this.bytesPerPixel];
 	}
 	
 	/**
