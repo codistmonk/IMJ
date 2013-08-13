@@ -2,7 +2,9 @@ package imj2.tools;
 
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
+import java.util.Arrays;
 import java.util.Locale;
+import java.util.concurrent.Callable;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
@@ -111,23 +113,40 @@ public final class LociBackedImage extends TiledImage {
 	
 	@Override
 	protected final boolean makeNewTile() {
-		if (this.tile != null) {
-			return false;
-		}
-		
-		this.tile = new byte[this.getOptimalTileWidth() * this.getOptimalTileHeight() * this.bytesPerPixel];
-		
-		return true;
+		return this.tile == null;
 	}
 	
 	@Override
 	protected final void updateTile() {
 		try {
-			this.getLociImage().openBytes(0, this.tile, this.getTileX(), this.getTileY(),
+			this.tile = IMJTools.cache(Arrays.asList(this.getId(), this.getTileX(), this.getTileY()), new Callable<byte[]>() {
+				
+				@Override
+				public final byte[] call() throws Exception {
+					final byte[] result = LociBackedImage.this.newTile();
+					
+					LociBackedImage.this.updateTile(result);
+					
+					return result;
+				}
+				
+			});
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	final void updateTile(final byte[] tile) {
+		try {
+			this.getLociImage().openBytes(0, tile, this.getTileX(), this.getTileY(),
 					this.getTileWidth(), this.getTileHeight());
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
+	}
+	
+	final byte[] newTile() {
+		return new byte[this.getOptimalTileWidth() * this.getOptimalTileHeight() * this.bytesPerPixel];
 	}
 	
 	/**
