@@ -31,7 +31,7 @@ public final class IMJTools {
 		throw new IllegalInstantiationException();
 	}
 	
-	private static final Map<Object, CachedValue> cache = new HashMap<>();
+	private static final Map<Object, CachedValue> cache = new HashMap<Object, CachedValue>();
 	
 	static {
 		CacheCleaner.setup();
@@ -54,13 +54,13 @@ public final class IMJTools {
 	
 	public static final void removeOldCacheEntries(final double ratio) {
 		synchronized (cache) {
-			final List<Map.Entry<Object, CachedValue>> entries = new ArrayList<>(cache.entrySet());
+			final List<Map.Entry<Object, CachedValue>> entries = new ArrayList<Map.Entry<Object, CachedValue>>(cache.entrySet());
 			
 			sort(entries, new Comparator<Map.Entry<Object, CachedValue>>() {
 				
 				@Override
 				public final int compare(final Entry<Object, CachedValue> entry1, final Entry<Object, CachedValue> entry2) {
-					return Long.compare(entry1.getValue().getLastAccess(), entry2.getValue().getLastAccess());
+					return Long.signum(entry1.getValue().getLastAccess() - entry2.getValue().getLastAccess());
 				}
 				
 			});
@@ -200,7 +200,7 @@ public final class IMJTools {
 	private static final class CacheCleaner {
 		
 		private CacheCleaner() {
-			cleaner = new SoftReference<>(this);
+			cleaner = new SoftReference<CacheCleaner>(this);
 		}
 		
 		@Override
