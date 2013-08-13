@@ -1,6 +1,5 @@
 package imj2.tools;
 
-import static imj2.tools.IMJTools.forEachPixelInRectangle;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
@@ -239,7 +238,7 @@ public final class Image2DComponent extends JComponent {
 	}
 	
 	final void copyImagePixelsToBuffer(final int left, final int top, final int width, final int height) {
-		forEachPixelInRectangle(this.scaledImage, left, top, width, height, new MonopatchProcess() {
+		this.scaledImage.forEachPixelInBox(left, top, width, height, new MonopatchProcess() {
 			
 			@Override
 			public final void pixel(final int x, final int y) {

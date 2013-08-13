@@ -70,6 +70,11 @@ public final class ConcreteImage2D implements Image2D {
 		this.setPixelValue(getPixelIndex(this, x, y), value);
 	}
 	
+	@Override
+	public final void forEachPixelInBox(final int left, final int top, final int width, final int height, final Process process) {
+		forEachPixelInBox(this, left, top, width, height, process);
+	}
+	
 	/**
 	 * {@value}.
 	 */
@@ -85,6 +90,20 @@ public final class ConcreteImage2D implements Image2D {
 	
 	public static final int getY(final Image2D image, final long pixelIndex) {
 		return (int) (pixelIndex / image.getWidth());
+	}
+	
+	public static final void forEachPixelInBox(final Image2D image, final int left, final int top,
+			final int width, final int height, final Process process) {
+		final int right = left + width;
+		final int bottom = top + height;
+		
+		for (int y = top; y < bottom; ++y) {
+			for (int x = left; x < right; ++x) {
+				process.pixel(x, y);
+			}
+		}
+		
+		process.endOfPatch();
 	}
 	
 }
