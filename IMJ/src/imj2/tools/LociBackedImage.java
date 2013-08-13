@@ -122,20 +122,18 @@ public final class LociBackedImage extends TiledImage {
 			
 			@Override
 			public final byte[] call() throws Exception {
-				final byte[] result = LociBackedImage.this.newTile();
-				
-				LociBackedImage.this.updateTile(result);
-				
-				return result;
+				return LociBackedImage.this.updateTile(LociBackedImage.this.newTile());
 			}
 			
 		});
 	}
 	
-	final void updateTile(final byte[] tile) {
+	final byte[] updateTile(final byte[] tile) {
 		try {
 			this.getLociImage().openBytes(0, tile, this.getTileX(), this.getTileY(),
 					this.getTileWidth(), this.getTileHeight());
+			
+			return tile;
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
