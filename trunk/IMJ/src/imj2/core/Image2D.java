@@ -44,7 +44,7 @@ public abstract interface Image2D extends Image {
 	/**
 	 * @author codistmonk (creation 2013-08-07)
 	 */
-	public static enum Traversing implements Image.Traversal<Image2D, Process> {
+	public static enum Traversing implements Image.Traversing<Image2D, Process> {
 		
 		ALL {
 			
