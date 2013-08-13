@@ -5,7 +5,6 @@ import static java.lang.Math.min;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
 
@@ -24,6 +23,8 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 
 import javax.swing.Box;
@@ -116,16 +117,47 @@ public final class Image2DComponent extends JComponent {
 				final int newHM = horizontalScrollBar.getMaximum();
 				final int newVA = verticalScrollBar.getVisibleAmount();
 				final int newVM = verticalScrollBar.getMaximum();
+				
 				// oldC / oldM = newC / newM
-				// newC = oldC * newM / oldM
-				// newV + newA / 2 = (oldV + oldA / 2) * newM / oldM
-				// newV = (oldV + oldA / 2) * newM / oldM - newA / 2
-				// newV = ((2 * oldV + oldA) * newM - newA * oldM) / (2 * oldM)
+				// -> newC = oldC * newM / oldM
+				// -> newV + newA / 2 = (oldV + oldA / 2) * newM / oldM
+				// -> newV = (oldV + oldA / 2) * newM / oldM - newA / 2
+				// -> newV = ((2 * oldV + oldA) * newM - newA * oldM) / (2 * oldM)
 				horizontalScrollBar.setValue((int) (((2L * oldHV + oldHA) * newHM - (long) newHA * oldHM) / (2L * oldHM)));
 				verticalScrollBar.setValue((int) (((2L * oldVV + oldVA) * newVM - (long) newVA * oldVM) / (2L * oldVM)));
 			}
 			
 		});
+		
+		final MouseAdapter mouseHandler = new MouseAdapter() {
+			
+			private int horizontalScrollBarValue;
+			
+			private int verticalScrollBarValue;
+			
+			private int x;
+			
+			private int y;
+			
+			@Override
+			public final void mousePressed(final MouseEvent event) {
+				this.horizontalScrollBarValue = Image2DComponent.this.getHorizontalScrollBar().getValue();
+				this.verticalScrollBarValue = Image2DComponent.this.getVerticalScrollBar().getValue();
+				this.x = event.getX();
+				this.y = event.getY();
+			}
+			
+			@Override
+			public final void mouseDragged(final MouseEvent event) {
+				Image2DComponent.this.getHorizontalScrollBar().setValue(this.horizontalScrollBarValue - (event.getX() - this.x));
+				Image2DComponent.this.getVerticalScrollBar().setValue(this.verticalScrollBarValue - (event.getY() - this.y));
+			}
+			
+		};
+		
+		this.addMouseListener(mouseHandler);
+		this.addMouseMotionListener(mouseHandler);
+		this.addMouseMotionListener(mouseHandler);
 	}
 	
 	public Image2DComponent(final Image2D image) {
