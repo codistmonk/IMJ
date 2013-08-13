@@ -118,22 +118,18 @@ public final class LociBackedImage extends TiledImage {
 	
 	@Override
 	protected final void updateTile() {
-		try {
-			this.tile = IMJTools.cache(Arrays.asList(this.getId(), this.getTileX(), this.getTileY()), new Callable<byte[]>() {
+		this.tile = IMJTools.cache(Arrays.asList(this.getId(), this.getTileX(), this.getTileY()), new Callable<byte[]>() {
+			
+			@Override
+			public final byte[] call() throws Exception {
+				final byte[] result = LociBackedImage.this.newTile();
 				
-				@Override
-				public final byte[] call() throws Exception {
-					final byte[] result = LociBackedImage.this.newTile();
-					
-					LociBackedImage.this.updateTile(result);
-					
-					return result;
-				}
+				LociBackedImage.this.updateTile(result);
 				
-			});
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
+				return result;
+			}
+			
+		});
 	}
 	
 	final void updateTile(final byte[] tile) {
