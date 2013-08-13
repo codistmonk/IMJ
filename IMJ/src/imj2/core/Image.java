@@ -42,7 +42,7 @@ public abstract interface Image extends Serializable {
 	/**
 	 * @author codistmonk (creation 2013-08-07)
 	 */
-	public static interface Traversal<I extends Image, P extends Process> extends Serializable {
+	public static interface Traversing<I extends Image, P extends Process> extends Serializable {
 		
 		public abstract void forEachPixelIn(I image, P process);
 		
