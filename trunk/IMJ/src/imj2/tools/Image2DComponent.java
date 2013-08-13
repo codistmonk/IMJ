@@ -205,7 +205,7 @@ public final class Image2DComponent extends JComponent {
 			this.buffer = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
 			this.bufferGraphics = this.buffer.createGraphics();
 			
-			this.setImageVisibleRectangle(new Rectangle(
+			this.setScaledImageVisibleRectangle(new Rectangle(
 					min(this.scaledImageVisibleRectangle.x, this.getScaledImageWidth() - width),
 					min(this.scaledImageVisibleRectangle.y, this.getScaledImageHeight() - height),
 					width, height), oldBuffer);
@@ -246,7 +246,7 @@ public final class Image2DComponent extends JComponent {
 		final int left = width < this.getScaledImageWidth() ? min(this.getScaledImageWidth() - width, this.horizontalScrollBar.getValue()) : 0;
 		final int top = height < this.getScaledImageHeight() ? min(this.getScaledImageHeight() - height, this.verticalScrollBar.getValue()) : 0;
 		
-		this.setImageVisibleRectangle(new Rectangle(left, top, width, height), forceRepaint ? null : this.buffer);
+		this.setScaledImageVisibleRectangle(new Rectangle(left, top, width, height), forceRepaint ? null : this.buffer);
 	}
 	
 	final void setScrollBarsVisibleAmounts() {
@@ -304,7 +304,7 @@ public final class Image2DComponent extends JComponent {
 		return this.getWidth() - this.verticalScrollBar.getWidth();
 	}
 	
-	private final void setImageVisibleRectangle(final Rectangle rectangle, final BufferedImage oldBuffer) {
+	private final void setScaledImageVisibleRectangle(final Rectangle rectangle, final BufferedImage oldBuffer) {
 		if (this.getScaledImageWidth() < rectangle.x + rectangle.width || this.getScaledImageHeight() < rectangle.y + rectangle.height ||
 				this.buffer.getWidth() < rectangle.width || this.buffer.getHeight() < rectangle.height) {
 			throw new IllegalArgumentException(rectangle + " " + new Rectangle(this.getScaledImageWidth(), this.getScaledImageHeight()) +
@@ -371,11 +371,11 @@ public final class Image2DComponent extends JComponent {
 	}
 	
 	private final int getScaledImageWidth() {
-		return this.scaledImage.getWidth();// * this.getZoom();
+		return this.scaledImage.getWidth();
 	}
 	
 	private final int getScaledImageHeight() {
-		return this.scaledImage.getHeight();// * this.getZoom();
+		return this.scaledImage.getHeight();
 	}
 	
 	/**
