@@ -1,15 +1,26 @@
 package imj2.tools;
 
+import static java.util.Collections.sort;
+
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
 import imj2.core.Image2D;
 
 import java.awt.image.BufferedImage;
+import java.lang.ref.SoftReference;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.Callable;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-08-04)
@@ -18,6 +29,48 @@ public final class IMJTools {
 	
 	private IMJTools() {
 		throw new IllegalInstantiationException();
+	}
+	
+	private static final Map<Object, CachedValue> cache = new HashMap<>();
+	
+	static {
+		CacheCleaner.setup();
+	}
+	
+	public static final <V> V cache(final Object key, final Callable<V> valueFactory) {
+		CachedValue cachedValue;
+		
+		synchronized (cache) {
+			cachedValue = cache.get(key);
+			
+			if (cachedValue == null) {
+				cachedValue = new CachedValue(valueFactory);
+				cache.put(key, cachedValue);
+			}
+		}
+		
+		return cachedValue.getValue();
+	}
+	
+	public static final void removeOldCacheEntries(final double ratio) {
+		synchronized (cache) {
+			final List<Map.Entry<Object, CachedValue>> entries = new ArrayList<>(cache.entrySet());
+			
+			sort(entries, new Comparator<Map.Entry<Object, CachedValue>>() {
+				
+				@Override
+				public final int compare(final Entry<Object, CachedValue> entry1, final Entry<Object, CachedValue> entry2) {
+					return Long.compare(entry1.getValue().getLastAccess(), entry2.getValue().getLastAccess());
+				}
+				
+			});
+			
+			final int n = (int) (ratio * entries.size());
+			
+			for (int i = 0; i < n; ++i) {
+				cache.remove(entries.get(i).getKey());
+			}
+		}
 	}
 	
 	public static final int quantize(final int value, final int quantum) {
@@ -103,6 +156,70 @@ public final class IMJTools {
 		default:
 			throw new IllegalArgumentException();
 		}
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-08-13)
+	 */
+	static final class CachedValue {
+		
+		private long lastAccess;
+		
+		private final Callable<?> valueFactory;
+		
+		private Object value;
+		
+		CachedValue(final Callable<?> valueFActory) {
+			this.valueFactory = valueFActory;
+		}
+		
+		final long getLastAccess() {
+			return this.lastAccess;
+		}
+		
+		@SuppressWarnings("unchecked")
+		final synchronized <T> T getValue() {
+			this.lastAccess = System.nanoTime();
+			
+			if (this.value == null) {
+				try {
+					this.value = this.valueFactory.call();
+				} catch (final Exception exception) {
+					throw Tools.unchecked(exception);
+				}
+			}
+			
+			return (T) this.value;
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-08-13)
+	 */
+	private static final class CacheCleaner {
+		
+		private CacheCleaner() {
+			cleaner = new SoftReference<>(this);
+		}
+		
+		@Override
+		protected final void finalize() throws Throwable {
+			removeOldCacheEntries(0.25);
+			
+			super.finalize();
+			
+			new CacheCleaner();
+		}
+		
+		private static SoftReference<CacheCleaner> cleaner;
+		
+		static final void setup() {
+			if (cleaner == null) {
+				new CacheCleaner();
+			}
+		}
+		
 	}
 	
 }
