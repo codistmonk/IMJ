@@ -73,6 +73,26 @@ public final class IMJTools {
 		}
 	}
 	
+	public static final long sum(final long... values) {
+		long result = 0L;
+		
+		for (final double value : values) {
+			result += value;
+		}
+		
+		return result;
+	}
+	
+	public static final double sum(final double... values) {
+		double result = 0.0;
+		
+		for (final double value : values) {
+			result += value;
+		}
+		
+		return result;
+	}
+	
 	public static final int quantize(final int value, final int quantum) {
 		return (value / quantum) * quantum;
 	}
