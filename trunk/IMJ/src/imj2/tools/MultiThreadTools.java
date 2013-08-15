@@ -1,4 +1,4 @@
-package imj2.core;
+package imj2.tools;
 
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 

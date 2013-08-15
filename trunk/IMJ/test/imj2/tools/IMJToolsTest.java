@@ -1,14 +1,13 @@
 package imj2.tools;
 
-import static imj2.core.MultiThreadTools.WORKER_COUNT;
 import static imj2.tools.IMJTools.quantize;
+import static imj2.tools.MultiThreadTools.WORKER_COUNT;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.list;
 import static org.junit.Assert.assertEquals;
 
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
-import imj2.core.MultiThreadTools;
 
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
