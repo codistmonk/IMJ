@@ -34,6 +34,12 @@ public final class MultiThreadTools {
 		return executor;
 	}
 	
+	public static final synchronized void shutdownExecutor() {
+		if (executor != null) {
+			executor.shutdown();
+		}
+	}
+	
 	public static final void wait(final Iterable<? extends Future<?>> tasks) {
 		try {
 			for (final Future<?> task : tasks) {
