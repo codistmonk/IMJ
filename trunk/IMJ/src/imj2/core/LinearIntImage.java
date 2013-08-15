@@ -42,6 +42,11 @@ public final class LinearIntImage implements Image {
 		this.data[(int) pixelIndex] = pixelValue;
 	}
 	
+	@Override
+	public final LinearIntImage[] newParallelViews(final int n) {
+		return ConcreteImage2D.newParallelViews(this, n);
+	}
+	
 	/**
 	 * {@value}.
 	 */

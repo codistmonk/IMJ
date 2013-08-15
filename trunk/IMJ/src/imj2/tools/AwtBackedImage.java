@@ -76,6 +76,11 @@ public final class AwtBackedImage implements Image2D {
 		ConcreteImage2D.forEachPixelInBox(this, left, top, width, height, process);
 	}
 	
+	@Override
+	public final AwtBackedImage[] newParallelViews(final int n) {
+		return ConcreteImage2D.newParallelViews(this, n);
+	}
+	
 	/**
 	 * {@value}.
 	 */

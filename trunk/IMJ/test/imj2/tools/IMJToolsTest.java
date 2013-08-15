@@ -154,16 +154,11 @@ public final class IMJToolsTest {
 			return;
 		}
 		
-		final TicToc timer = new TicToc();
-		final String imageId = "../Libraries/images/svs/40267.svs";
-		final Image2D[] images = new Image2D[WORKER_COUNT];
-		
 		debugPrint("workerCount:", WORKER_COUNT);
 		
-		for (int i = 0; i < WORKER_COUNT; ++i) {
-			images[i] = new LociBackedImage(imageId);
-		}
-		
+		final TicToc timer = new TicToc();
+		final String imageId = "../Libraries/images/svs/40267.svs";
+		final Image2D[] images = new LociBackedImage(imageId).newParallelViews(WORKER_COUNT);
 		final int imageWidth = images[0].getWidth();
 		final int imageHeight = images[0].getHeight();
 		

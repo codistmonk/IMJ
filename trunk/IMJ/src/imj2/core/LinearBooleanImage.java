@@ -48,6 +48,11 @@ public final class LinearBooleanImage implements Image {
 		}
 	}
 	
+	@Override
+	public final LinearBooleanImage[] newParallelViews(final int n) {
+		return ConcreteImage2D.newParallelViews(this, n);
+	}
+	
 	/**
 	 * {@value}.
 	 */
