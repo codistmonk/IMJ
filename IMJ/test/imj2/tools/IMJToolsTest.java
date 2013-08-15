@@ -23,6 +23,8 @@ import javax.imageio.ImageIO;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.TicToc;
 
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -169,60 +171,55 @@ public final class IMJToolsTest {
 		
 		debugPrint("Allocating histograms...", "date:", new Date(timer.tic()));
 		
-		final int n = 256 * 256 * 256;
-		final double[][] histograms = new double[WORKER_COUNT][n];
+		final int colorCount = 256 * 256 * 256;
+		final double[][] histograms = new double[WORKER_COUNT][colorCount];
 		
 		debugPrint("Allocating histograms done,", "time:", timer.toc());
 		
 		debugPrint("Computing histogram...", "date:", new Date(timer.tic()));
 		
 		final ExecutorService executor = MultiThreadTools.getExecutor();
+		final Collection<Rectangle> tiles = list(IMJTools.parallelTiles(imageWidth, imageHeight, WORKER_COUNT));
 		
-		try {
-			final Collection<Rectangle> tiles = list(IMJTools.parallelTiles(imageWidth, imageHeight, WORKER_COUNT));
-			
-			debugPrint("tileCount:", tiles.size());
-			
-			final Collection<Future<?>> tasks = new ArrayList<Future<?>>(tiles.size());
-			
-			for (final Rectangle tile : tiles) {
-				tasks.add(executor.submit(new Runnable() {
+		debugPrint("tileCount:", tiles.size());
+		
+		final Collection<Future<?>> tasks = new ArrayList<Future<?>>(tiles.size());
+		
+		for (final Rectangle tile : tiles) {
+			tasks.add(executor.submit(new Runnable() {
+				
+				@Override
+				public final void run() {
+					final int workerId = MultiThreadTools.getWorkerId();
 					
-					@Override
-					public final void run() {
-						final int workerId = MultiThreadTools.getWorkerId();
+					images[workerId].forEachPixelInBox(tile.x, tile.y, tile.width, tile.height, new MonopatchProcess() {
 						
-						images[workerId].forEachPixelInBox(tile.x, tile.y, tile.width, tile.height, new MonopatchProcess() {
-							
-							@Override
-							public final void pixel(final int x, final int y) {
-								++histograms[workerId][images[workerId].getPixelValue(x, y) & 0x00FFFFFF];
-							}
-							
-							/**
-							 * {@value}.
-							 */
-							private static final long serialVersionUID = -6167552483623444181L;
-							
-						});
-					}
-					
-				}));
-			}
-			
-			MultiThreadTools.wait(tasks);
-		} finally {
-			executor.shutdown();
+						@Override
+						public final void pixel(final int x, final int y) {
+							++histograms[workerId][images[workerId].getPixelValue(x, y) & 0x00FFFFFF];
+						}
+						
+						/**
+						 * {@value}.
+						 */
+						private static final long serialVersionUID = -6167552483623444181L;
+						
+					});
+				}
+				
+			}));
 		}
+		
+		MultiThreadTools.wait(tasks);
 		
 		debugPrint("Analyzing image done,", "time:", timer.toc());
 		
-		for (int i = 1; i < WORKER_COUNT; ++i) {
-			for (int j = 0; j < n; ++j) {
-				histograms[0][j] += histograms[i][j];
+		for (int workerId = 1; workerId < WORKER_COUNT; ++workerId) {
+			for (int color = 0; color < colorCount; ++color) {
+				histograms[0][color] += histograms[workerId][color];
 			}
 			
-			histograms[i] = null;
+			histograms[workerId] = null;
 		}
 		
 		debugPrint("Computing histogram done", "time:", timer.toc());
@@ -232,8 +229,14 @@ public final class IMJToolsTest {
 	
 	private static final ExpensiveTest EXPENSIVE_TEST = ExpensiveTest.HISTOGRAM1;
 	
-	static {
+	@BeforeClass
+	public static final void beforeClass() {
 		SwingTools.useSystemLookAndFeel();
+	}
+	
+	@AfterClass
+	public static final void afterClass() {
+		MultiThreadTools.shutdownExecutor();
 	}
 	
 	public static final void assertRGB(final DefaultColorModel color,
