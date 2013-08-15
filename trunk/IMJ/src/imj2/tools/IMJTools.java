@@ -1,20 +1,26 @@
 package imj2.tools;
 
+import static java.lang.Math.min;
+import static java.lang.Math.sqrt;
 import static java.util.Collections.sort;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
 import imj2.core.Image2D;
 
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
@@ -176,6 +182,58 @@ public final class IMJTools {
 		default:
 			throw new IllegalArgumentException();
 		}
+	}
+	
+	public static final Iterable<Rectangle> parallelTiles(final int imageWidth, final int imageHeight, final int workerCount) {
+		final int verticalOptimalTileCount = (int) sqrt(workerCount);
+		final int horizontalOptimalTileCount = workerCount / verticalOptimalTileCount;
+		final int optimalTileWidth = imageWidth / horizontalOptimalTileCount;
+		final int optimalTileHeight = imageHeight / verticalOptimalTileCount;
+		
+		return tiles(imageWidth, imageHeight, optimalTileWidth, optimalTileHeight);
+	}
+	
+	public static final Iterable<Rectangle> tiles(final int imageWidth, final int imageHeight, final int optimalTileWidth, final int optimalTileHeight) {
+		return new Iterable<Rectangle>() {
+			
+			@Override
+			public final Iterator<Rectangle> iterator() {
+				return new Iterator<Rectangle>() {
+					
+					private final Rectangle tile = new Rectangle(min(imageWidth, optimalTileWidth), min(imageHeight, optimalTileHeight));
+					
+					@Override
+					public final boolean hasNext() {
+						return this.tile.y < imageHeight;
+					}
+					
+					@Override
+					public final Rectangle next() {
+						final Rectangle result = new Rectangle(this.tile);
+						
+						this.tile.x += optimalTileWidth;
+						
+						if (imageWidth <= this.tile.x) {
+							this.tile.x = 0;
+							
+							this.tile.y += optimalTileHeight;
+							this.tile.height = min(imageHeight - this.tile.y, optimalTileHeight);
+						}
+						
+						this.tile.width = min(imageWidth - this.tile.x, optimalTileWidth);
+						
+						return result;
+					}
+					
+					@Override
+					public final void remove() {
+						throw new UnsupportedOperationException();
+					}
+					
+				};
+			}
+			
+		};
 	}
 	
 	/**
