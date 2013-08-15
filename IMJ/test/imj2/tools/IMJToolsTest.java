@@ -1,13 +1,14 @@
 package imj2.tools;
 
+import static imj2.core.MultiThreadTools.WORKER_COUNT;
 import static imj2.tools.IMJTools.quantize;
-import static java.lang.Math.min;
-import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.list;
 import static org.junit.Assert.assertEquals;
 
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
+import imj2.core.MultiThreadTools;
 
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
@@ -15,18 +16,13 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import javax.imageio.ImageIO;
 
 import net.sourceforge.aprog.swing.SwingTools;
-import net.sourceforge.aprog.tools.SystemProperties;
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -159,12 +155,11 @@ public final class IMJToolsTest {
 		
 		final TicToc timer = new TicToc();
 		final String imageId = "../Libraries/images/svs/40267.svs";
-		final int workerCount = SystemProperties.getAvailableProcessorCount();
-		final Image2D[] images = new Image2D[workerCount];
+		final Image2D[] images = new Image2D[WORKER_COUNT];
 		
-		debugPrint("workerCount:", workerCount);
+		debugPrint("workerCount:", WORKER_COUNT);
 		
-		for (int i = 0; i < workerCount; ++i) {
+		for (int i = 0; i < WORKER_COUNT; ++i) {
 			images[i] = new LociBackedImage(imageId);
 		}
 		
@@ -176,40 +171,27 @@ public final class IMJToolsTest {
 		debugPrint("Allocating histograms...", "date:", new Date(timer.tic()));
 		
 		final int n = 256 * 256 * 256;
-		final double[][] histograms = new double[workerCount][n];
+		final double[][] histograms = new double[WORKER_COUNT][n];
 		
 		debugPrint("Allocating histograms done,", "time:", timer.toc());
 		
 		debugPrint("Computing histogram...", "date:", new Date(timer.tic()));
 		
-		final ExecutorService executor = Executors.newFixedThreadPool(workerCount);
+		final ExecutorService executor = MultiThreadTools.getExecutor();
 		
 		try {
-			final int verticalOptimalTileCount = (int) sqrt(workerCount);
-			final int horizontalOptimalTileCount = workerCount / verticalOptimalTileCount;
-			final Collection<Rectangle> tiles = new ArrayList<Rectangle>();
-			final int optimalTileWidth = imageWidth / horizontalOptimalTileCount;
-			final int optimalTileHeight = imageHeight / verticalOptimalTileCount;
-			
-			for (int tileY = 0, nextTileY = optimalTileHeight; tileY < imageHeight;
-					tileY = nextTileY, nextTileY = min(imageHeight, nextTileY + optimalTileHeight)) {
-				for (int tileX = 0, nextTileX = optimalTileWidth; tileX < imageWidth;
-						tileX = nextTileX, nextTileX = min(imageWidth, nextTileX + optimalTileWidth)) {
-					tiles.add(new Rectangle(tileX, tileY, nextTileX - tileX, nextTileY - tileY));
-				}
-			}
+			final Collection<Rectangle> tiles = list(IMJTools.parallelTiles(imageWidth, imageHeight, WORKER_COUNT));
 			
 			debugPrint("tileCount:", tiles.size());
 			
 			final Collection<Future<?>> tasks = new ArrayList<Future<?>>(tiles.size());
-			final Map<Thread, Integer> workerIds = new HashMap<Thread, Integer>(workerCount);
 			
 			for (final Rectangle tile : tiles) {
 				tasks.add(executor.submit(new Runnable() {
 					
 					@Override
 					public final void run() {
-						final int workerId = getOrCreateId(workerIds, Thread.currentThread());
+						final int workerId = MultiThreadTools.getWorkerId();
 						
 						images[workerId].forEachPixelInBox(tile.x, tile.y, tile.width, tile.height, new MonopatchProcess() {
 							
@@ -218,24 +200,25 @@ public final class IMJToolsTest {
 								++histograms[workerId][images[workerId].getPixelValue(x, y) & 0x00FFFFFF];
 							}
 							
+							/**
+							 * {@value}.
+							 */
+							private static final long serialVersionUID = -6167552483623444181L;
+							
 						});
 					}
 					
 				}));
 			}
 			
-			for (final Future<?> task : tasks) {
-				task.get();
-			}
-		} catch (final Exception exception) {
-			throw Tools.unchecked(exception);
+			MultiThreadTools.wait(tasks);
 		} finally {
 			executor.shutdown();
 		}
 		
 		debugPrint("Analyzing image done,", "time:", timer.toc());
 		
-		for (int i = 1; i < workerCount; ++i) {
+		for (int i = 1; i < WORKER_COUNT; ++i) {
 			for (int j = 0; j < n; ++j) {
 				histograms[0][j] += histograms[i][j];
 			}
@@ -246,26 +229,12 @@ public final class IMJToolsTest {
 		debugPrint("Computing histogram done", "time:", timer.toc());
 		
 		assertEquals(images[0].getPixelCount(), IMJTools.sum(histograms[0]), 0.0);
-		
 	}
 	
 	private static final ExpensiveTest EXPENSIVE_TEST = ExpensiveTest.HISTOGRAM1;
 	
 	static {
 		SwingTools.useSystemLookAndFeel();
-	}
-	
-	public static final <K> int getOrCreateId(final Map<K, Integer> ids, final K key) {
-		synchronized (ids) {
-			Integer result = ids.get(key);
-			
-			if (result == null) {
-				result = ids.size();
-				ids.put(key, result);
-			}
-			
-			return result;
-		}
 	}
 	
 	public static final void assertRGB(final DefaultColorModel color,
