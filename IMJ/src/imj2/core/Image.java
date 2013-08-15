@@ -17,6 +17,8 @@ public abstract interface Image extends Serializable {
 	
 	public abstract void setPixelValue(long pixelIndex, int pixelValue);
 	
+	public abstract Image[] newParallelViews(int n);
+	
 	/**
 	 * @author codistmonk (creation 2013-08-04)
 	 */

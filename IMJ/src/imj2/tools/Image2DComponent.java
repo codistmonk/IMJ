@@ -456,6 +456,23 @@ public final class Image2DComponent extends JComponent {
 		}
 		
 		@Override
+		public final ScaledImage2D[] newParallelViews(final int n) {
+			final ScaledImage2D[] result = new ScaledImage2D[n];
+			
+			result[0] = this;
+			
+			if (1 < n) {
+				final Image2D[] sources = this.getSource().newParallelViews(n);
+				
+				for (int i = 1; i < n; ++i) {
+					result[i] = new ScaledImage2D(sources[i]);
+				}
+			}
+			
+			return result;
+		}
+		
+		@Override
 		protected final int getPixelValueFromTile(final int x, final int y, final int xInTile, final int yInTile) {
 			return this.getSource().getPixelValue(x / this.getZoom(), y / this.getZoom());
 		}

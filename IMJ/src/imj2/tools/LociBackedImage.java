@@ -66,6 +66,19 @@ public final class LociBackedImage extends TiledImage {
 	}
 	
 	@Override
+	public final LociBackedImage[] newParallelViews(final int n) {
+		final LociBackedImage[] result = new LociBackedImage[n];
+		
+		result[0] = this;
+		
+		for (int i = 1; i < n; ++i) {
+			result[i] = new LociBackedImage(this.getId());
+		}
+		
+		return result;
+	}
+	
+	@Override
 	protected final int getPixelValueFromTile(final int x, final int y, final int xInTile, final int yInTile) {
 		final int channelCount = this.getChannels().getChannelCount();
 		final int bytesPerChannel = FormatTools.getBytesPerPixel(this.lociImage.getPixelType());
