@@ -42,4 +42,8 @@ public final class DefaultColorModel {
 		return pixelValue == 0 ? 0 : 1;
 	}
 	
+	public static final int argb(final int red, final int green, final int blue, final int alpha) {
+		return (alpha << 24) | (red << 16) | (green << 8) | (blue << 0);
+	}
+	
 }

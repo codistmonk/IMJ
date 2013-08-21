@@ -4,9 +4,10 @@ import static imj2.tools.IMJTools.quantize;
 import static imj2.tools.MultiThreadTools.WORKER_COUNT;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.assertEquals;
-
+import imj2.core.ConcreteImage2D;
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
+import imj2.core.LinearIntImage;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -195,7 +196,68 @@ public final class IMJToolsTest {
 		assertEquals(image.getPixelCount(), IMJTools.sum(histograms[0]), 0.0);
 	}
 	
-	private static final ExpensiveTest EXPENSIVE_TEST = ExpensiveTest.HISTOGRAM1;
+	@Test
+	public final void testLod1() {
+		if (!ExpensiveTest.LOD1.equals(EXPENSIVE_TEST)) {
+			return;
+		}
+		
+		final TicToc timer = new TicToc();
+		final String imageId = "../Libraries/images/svs/40267.svs";
+		final Image2D image = new LociBackedImage(imageId);
+		final DefaultColorModel color = new DefaultColorModel(image.getChannels());
+		
+		debugPrint("imageWidth:", image.getWidth(), "imageHeight:", image.getHeight(), "channels:", image.getChannels());
+		
+		debugPrint("Allocating LOD 1...", "date:", new Date(timer.tic()));
+		
+		final int imageLod1Width = image.getWidth() / 2;
+		final int imageLod1Height = image.getHeight() / 2;
+		final Image2D imageLod1 = new ConcreteImage2D(new LinearIntImage(imageId,
+				(long) imageLod1Width * imageLod1Height, image.getChannels()), imageLod1Width, imageLod1Height);
+		
+		debugPrint("Allocating LOD 1 done,", "time:", timer.toc());
+		
+		debugPrint("Creating LOD 1...", "date:", new Date(timer.tic()));
+		
+		final Image2D[] imagesLod0 = image.newParallelViews(WORKER_COUNT);
+		
+		new ParallelProcess2D(imageLod1) {
+			
+			private Image2D imageLod0;
+			
+			@Override
+			protected final void beforeProcessing() {
+				this.imageLod0 = imagesLod0[this.getWorkerId()];
+			}
+			
+			@Override
+			public final void pixel(final int x, final int y) {
+				final int rgba00 = this.imageLod0.getPixelValue(x * 2 + 0, y * 2 + 0);
+				final int rgba10 = this.imageLod0.getPixelValue(x * 2 + 1, y * 2 + 0);
+				final int rgba01 = this.imageLod0.getPixelValue(x * 2 + 0, y * 2 + 1);
+				final int rgba11 = this.imageLod0.getPixelValue(x * 2 + 1, y * 2 + 1);
+				final int red = (color.red(rgba00) + color.red(rgba10) + color.red(rgba01) + color.red(rgba11)) / 4;
+				final int green = (color.green(rgba00) + color.green(rgba10) + color.green(rgba01) + color.green(rgba11)) / 4;
+				final int blue = (color.blue(rgba00) + color.blue(rgba10) + color.blue(rgba01) + color.blue(rgba11)) / 4;
+				final int alpha = (color.alpha(rgba00) + color.alpha(rgba10) + color.alpha(rgba01) + color.alpha(rgba11)) / 4;
+				
+				this.getImage().setPixelValue(x, y, DefaultColorModel.argb(red, green, blue, alpha));
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 9059308373967781139L;
+			
+		};
+		
+		debugPrint("Creating LOD 1 done,", "time:", timer.toc());
+		
+		Image2DComponent.show(imageLod1);
+	}
+	
+	private static final ExpensiveTest EXPENSIVE_TEST = ExpensiveTest.LOD1;
 	
 	@BeforeClass
 	public static final void beforeClass() {
@@ -229,7 +291,7 @@ public final class IMJToolsTest {
 	 */
 	private static enum ExpensiveTest {
 		
-		SHOW1, SHOW2, HISTOGRAM1;
+		SHOW1, SHOW2, HISTOGRAM1, LOD1;
 		
 	}
 	
