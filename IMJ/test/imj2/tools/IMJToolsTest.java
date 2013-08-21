@@ -170,8 +170,7 @@ public final class IMJToolsTest {
 			
 			@Override
 			public final void pixel(final int x, final int y) {
-				final int workerId = this.getWorkerId();
-				++histograms[workerId][this.getImages()[workerId].getPixelValue(x, y) & 0x00FFFFFF];
+				++histograms[this.getWorkerId()][this.getImage().getPixelValue(x, y) & 0x00FFFFFF];
 			}
 			
 			/**

@@ -57,10 +57,6 @@ public abstract class ParallelProcess2D extends MonopatchProcess implements Runn
 		return this.workerId;
 	}
 	
-	public final Image2D[] getImages() {
-		return this.images;
-	}
-	
 	public final Image2D getImage() {
 		return this.image;
 	}
@@ -72,7 +68,7 @@ public abstract class ParallelProcess2D extends MonopatchProcess implements Runn
 	@Override
 	public final void run() {
 		this.workerId = MultiThreadTools.getWorkerId();
-		this.image = this.getImages()[this.getWorkerId()];
+		this.image = this.images[this.getWorkerId()];
 		final Rectangle tile = this.getTile();
 		Tools.debugPrint(this.getWorkerId(), this.getTile());
 		this.beforeProcessing();
