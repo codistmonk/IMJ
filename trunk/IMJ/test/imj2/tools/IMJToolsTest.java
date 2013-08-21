@@ -3,20 +3,14 @@ package imj2.tools;
 import static imj2.tools.IMJTools.quantize;
 import static imj2.tools.MultiThreadTools.WORKER_COUNT;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import static net.sourceforge.aprog.tools.Tools.list;
 import static org.junit.Assert.assertEquals;
 
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
 
-import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 
 import javax.imageio.ImageIO;
 
@@ -158,11 +152,9 @@ public final class IMJToolsTest {
 		
 		final TicToc timer = new TicToc();
 		final String imageId = "../Libraries/images/svs/40267.svs";
-		final Image2D[] images = new LociBackedImage(imageId).newParallelViews(WORKER_COUNT);
-		final int imageWidth = images[0].getWidth();
-		final int imageHeight = images[0].getHeight();
+		final Image2D image = new LociBackedImage(imageId);
 		
-		debugPrint("imageWidth:", imageWidth, "imageHeight:", imageHeight, "channels:", images[0].getChannels());
+		debugPrint("imageWidth:", image.getWidth(), "imageHeight:", image.getHeight(), "channels:", image.getChannels());
 		
 		debugPrint("Allocating histograms...", "date:", new Date(timer.tic()));
 		
@@ -173,39 +165,20 @@ public final class IMJToolsTest {
 		
 		debugPrint("Computing histogram...", "date:", new Date(timer.tic()));
 		
-		final ExecutorService executor = MultiThreadTools.getExecutor();
-		final Collection<Rectangle> tiles = list(IMJTools.parallelTiles(imageWidth, imageHeight, WORKER_COUNT));
-		
-		debugPrint("tileCount:", tiles.size());
-		
-		final Collection<Future<?>> tasks = new ArrayList<Future<?>>(tiles.size());
-		
-		for (final Rectangle tile : tiles) {
-			tasks.add(executor.submit(new Runnable() {
-				
-				@Override
-				public final void run() {
-					final int workerId = MultiThreadTools.getWorkerId();
-					
-					images[workerId].forEachPixelInBox(tile.x, tile.y, tile.width, tile.height, new MonopatchProcess() {
-						
-						@Override
-						public final void pixel(final int x, final int y) {
-							++histograms[workerId][images[workerId].getPixelValue(x, y) & 0x00FFFFFF];
-						}
-						
-						/**
-						 * {@value}.
-						 */
-						private static final long serialVersionUID = -6167552483623444181L;
-						
-					});
-				}
-				
-			}));
-		}
-		
-		MultiThreadTools.wait(tasks);
+		new ParallelProcess2D(image) {
+			
+			@Override
+			public final void pixel(final int x, final int y) {
+				final int workerId = this.getWorkerId();
+				++histograms[workerId][this.getImages()[workerId].getPixelValue(x, y) & 0x00FFFFFF];
+			}
+			
+			/**
+			 * {@value].
+			 */
+			private static final long serialVersionUID = -5222028164806038927L;
+			
+		};
 		
 		debugPrint("Analyzing image done,", "time:", timer.toc());
 		
@@ -219,7 +192,7 @@ public final class IMJToolsTest {
 		
 		debugPrint("Computing histogram done", "time:", timer.toc());
 		
-		assertEquals(images[0].getPixelCount(), IMJTools.sum(histograms[0]), 0.0);
+		assertEquals(image.getPixelCount(), IMJTools.sum(histograms[0]), 0.0);
 	}
 	
 	private static final ExpensiveTest EXPENSIVE_TEST = ExpensiveTest.HISTOGRAM1;
