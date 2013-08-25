@@ -4,6 +4,7 @@ import static imj2.tools.IMJTools.quantize;
 import static imj2.tools.MultiThreadTools.WORKER_COUNT;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.assertEquals;
+
 import imj2.core.ConcreteImage2D;
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
@@ -256,7 +257,24 @@ public final class IMJToolsTest {
 		Image2DComponent.show(imageLod1);
 	}
 	
-	private static final ExpensiveTest EXPENSIVE_TEST = ExpensiveTest.LOD1;
+	@Test
+	public final void testLod2() {
+		if (!ExpensiveTest.LOD2.equals(EXPENSIVE_TEST)) {
+			return;
+		}
+		
+		final String imageId = "../Libraries/images/svs/40267.svs";
+		final Image2D imageLod0 = new LociBackedImage(imageId);
+		final Image2D imageLod1 = new SubsampledImage2D(imageLod0);
+		final Image2D imageLod2 = new SubsampledImage2D(imageLod1);
+		
+		debugPrint(imageLod1.getId());
+		debugPrint(imageLod2.getId());
+		
+		Image2DComponent.show(imageLod2);
+	}
+	
+	private static final ExpensiveTest EXPENSIVE_TEST = ExpensiveTest.LOD2;
 	
 	@BeforeClass
 	public static final void beforeClass() {
@@ -290,7 +308,7 @@ public final class IMJToolsTest {
 	 */
 	private static enum ExpensiveTest {
 		
-		SHOW1, SHOW2, HISTOGRAM1, LOD1;
+		SHOW1, SHOW2, HISTOGRAM1, LOD1, LOD2;
 		
 	}
 	

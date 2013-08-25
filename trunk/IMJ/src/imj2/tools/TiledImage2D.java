@@ -10,23 +10,23 @@ import imj2.core.Image2D;
 /**
  * @author codistmonk (creation 2013-08-07)
  */
-public abstract class TiledImage implements Image2D {
+public abstract class TiledImage2D implements Image2D {
 	
 	private final String id;
+	
+	private int optimalTileWidth;
+	
+	private int optimalTileHeight;
 	
 	private transient int tileX;
 	
 	private transient int tileY;
 	
-	private transient int optimalTileWidth;
-	
-	private transient int optimalTileHeight;
-	
 	private transient int tileWidth;
 	
 	private transient int tileHeight;
 	
-	protected TiledImage(final String id) {
+	protected TiledImage2D(final String id) {
 		this.id = id;
 	}
 	
