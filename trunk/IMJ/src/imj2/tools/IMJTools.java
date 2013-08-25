@@ -3,7 +3,6 @@ package imj2.tools;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static java.util.Collections.sort;
-import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
@@ -20,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
@@ -184,43 +182,48 @@ public final class IMJTools {
 		}
 	}
 	
-	public static final Iterable<Rectangle> parallelTiles(final int imageWidth, final int imageHeight, final int workerCount) {
+	public static final Iterable<Rectangle> parallelTiles(final int boxLeft, final int boxTop,
+			final int boxWidth, final int boxHeight, final int workerCount) {
 		final int verticalOptimalTileCount = (int) sqrt(workerCount);
 		final int horizontalOptimalTileCount = workerCount / verticalOptimalTileCount;
-		final int optimalTileWidth = imageWidth / horizontalOptimalTileCount;
-		final int optimalTileHeight = imageHeight / verticalOptimalTileCount;
+		final int optimalTileWidth = boxWidth / horizontalOptimalTileCount;
+		final int optimalTileHeight = boxHeight / verticalOptimalTileCount;
 		
-		return tiles(imageWidth, imageHeight, optimalTileWidth, optimalTileHeight);
+		return tiles(boxLeft, boxTop, boxWidth, boxHeight, optimalTileWidth, optimalTileHeight);
 	}
 	
-	public static final Iterable<Rectangle> tiles(final int imageWidth, final int imageHeight, final int optimalTileWidth, final int optimalTileHeight) {
+	public static final Iterable<Rectangle> tiles(final int boxLeft, final int boxTop, final int boxWidth, final int boxHeight,
+			final int optimalTileWidth, final int optimalTileHeight) {
 		return new Iterable<Rectangle>() {
 			
 			@Override
 			public final Iterator<Rectangle> iterator() {
 				return new Iterator<Rectangle>() {
 					
-					private final Rectangle tile = new Rectangle(min(imageWidth, optimalTileWidth), min(imageHeight, optimalTileHeight));
+					private final Rectangle tile = new Rectangle(min(boxWidth, optimalTileWidth),
+							min(boxHeight, optimalTileHeight));
 					
 					@Override
 					public final boolean hasNext() {
-						return this.tile.y < imageHeight;
+						return this.tile.y < boxHeight;
 					}
 					
 					@Override
 					public final Rectangle next() {
 						final Rectangle result = new Rectangle(this.tile);
 						
+						result.translate(boxLeft, boxTop);
+						
 						this.tile.x += optimalTileWidth;
 						
-						if (imageWidth <= this.tile.x) {
+						if (boxWidth <= this.tile.x) {
 							this.tile.x = 0;
 							
 							this.tile.y += optimalTileHeight;
-							this.tile.height = min(imageHeight - this.tile.y, optimalTileHeight);
+							this.tile.height = min(boxHeight - this.tile.y, optimalTileHeight);
 						}
 						
-						this.tile.width = min(imageWidth - this.tile.x, optimalTileWidth);
+						this.tile.width = min(boxWidth - this.tile.x, optimalTileWidth);
 						
 						return result;
 					}

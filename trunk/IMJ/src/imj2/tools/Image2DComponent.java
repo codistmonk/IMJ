@@ -52,10 +52,13 @@ public final class Image2DComponent extends JComponent {
 	
 	private final JScrollBar verticalScrollBar;
 	
+	private boolean multiThread;
+	
 	public Image2DComponent() {
 		this.scaledImageVisibleRectangle = new Rectangle();
 		this.horizontalScrollBar = new JScrollBar(Adjustable.HORIZONTAL);
 		this.verticalScrollBar = new JScrollBar(Adjustable.VERTICAL);
+		this.multiThread = true;
 		this.setDoubleBuffered(false);
 		this.setLayout(new BorderLayout());
 		this.add(horizontalBox(this.horizontalScrollBar, Box.createHorizontalStrut(this.verticalScrollBar.getPreferredSize().width)), BorderLayout.SOUTH);
@@ -186,6 +189,14 @@ public final class Image2DComponent extends JComponent {
 		}
 	}
 	
+	public final boolean isMultiThread() {
+		return this.multiThread;
+	}
+	
+	public final void setMultiThread(final boolean multiThread) {
+		this.multiThread = multiThread;
+	}
+	
 	public final void setBuffer() {
 		final int width = min(this.getScaledImageWidth(), max(1, this.getUsableWidth()));
 		final int height = min(this.getScaledImageHeight(), max(1, this.getUsableHeight()));
@@ -271,19 +282,35 @@ public final class Image2DComponent extends JComponent {
 	}
 	
 	final void copyImagePixelsToBuffer(final int left, final int top, final int width, final int height) {
-		this.scaledImage.forEachPixelInBox(left, top, width, height, new MonopatchProcess() {
-			
-			@Override
-			public final void pixel(final int x, final int y) {
-				Image2DComponent.this.copyImagePixelToBuffer(x, y);
-			}
-			
-			/**
-			 * {@value}.
-			 */
-			private static final long serialVersionUID = 1810623847473680066L;
-			
-		});
+		if (this.isMultiThread()) {
+			new ParallelProcess2D(this.scaledImage, left, top, width, height) {
+				
+				@Override
+				public final void pixel(final int x, final int y) {
+					Image2DComponent.this.copyImagePixelToBuffer(x, y);
+				}
+				
+				/**
+				 * {@value}.
+				 */
+				private static final long serialVersionUID = 7757156523330629112L;
+				
+			};
+		} else {
+			this.scaledImage.forEachPixelInBox(left, top, width, height, new MonopatchProcess() {
+				
+				@Override
+				public final void pixel(final int x, final int y) {
+					Image2DComponent.this.copyImagePixelToBuffer(x, y);
+				}
+				
+				/**
+				 * {@value}.
+				 */
+				private static final long serialVersionUID = 1810623847473680066L;
+				
+			});
+		}
 	}
 	
 	final void copyImagePixelToBuffer(final int xInScaledImage, final int yInScaledImage) {
@@ -355,6 +382,10 @@ public final class Image2DComponent extends JComponent {
 				
 				this.scaledImageVisibleRectangle.setBounds(rectangle);
 				
+				final boolean multiThread = this.isMultiThread();
+				
+				this.setMultiThread(false);
+				
 				// Update top
 				this.updateBuffer(rectangle.x, rectangle.y, rectangle.width, intersection.y - rectangle.y);
 				// Update left
@@ -363,6 +394,8 @@ public final class Image2DComponent extends JComponent {
 				this.updateBuffer(intersectionRight, intersection.y, rectangle.x + rectangle.width - intersectionRight, intersection.height);
 				// Update bottom
 				this.updateBuffer(rectangle.x, intersectionBottom, rectangle.width, rectangle.y + rectangle.height - intersectionBottom);
+				
+				this.setMultiThread(multiThread);
 			}
 		}
 		

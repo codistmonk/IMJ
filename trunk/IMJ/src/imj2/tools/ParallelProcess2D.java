@@ -1,7 +1,6 @@
 package imj2.tools;
 
 import static imj2.tools.MultiThreadTools.WORKER_COUNT;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.list;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
@@ -13,8 +12,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-08-21)
@@ -30,14 +27,14 @@ public abstract class ParallelProcess2D extends MonopatchProcess implements Runn
 	private Rectangle tile;
 	
 	protected ParallelProcess2D(final Image2D image) {
+		this(image, 0, 0, image.getWidth(), image.getHeight());
+	}
+	
+	protected ParallelProcess2D(final Image2D image, final int boxLeft, final int boxTop, final int boxWidth, final int boxHeight) {
 		this.workerId = -1;
 		this.images = image.newParallelViews(WORKER_COUNT);
-		final int imageWidth = image.getWidth();
-		final int imageHeight = image.getHeight();
 		final ExecutorService executor = MultiThreadTools.getExecutor();
-		final Collection<Rectangle> tiles = list(IMJTools.parallelTiles(imageWidth, imageHeight, WORKER_COUNT));
-		
-		debugPrint("tileCount:", tiles.size());
+		final Collection<Rectangle> tiles = list(IMJTools.parallelTiles(boxLeft, boxTop, boxWidth, boxHeight, WORKER_COUNT));
 		
 		final Collection<Future<?>> tasks = new ArrayList<Future<?>>(tiles.size());
 		
@@ -71,7 +68,6 @@ public abstract class ParallelProcess2D extends MonopatchProcess implements Runn
 		this.workerId = MultiThreadTools.getWorkerId();
 		this.image = this.images[this.getWorkerId()];
 		final Rectangle tile = this.getTile();
-		Tools.debugPrint(this.getWorkerId(), this.getTile());
 		this.beforeProcessing();
 		this.images[this.getWorkerId()].forEachPixelInBox(tile.x, tile.y, tile.width, tile.height, this);
 	}
