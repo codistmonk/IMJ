@@ -13,7 +13,7 @@ import loci.formats.ImageReader;
 /**
  * @author codistmonk (creation 2013-08-07)
  */
-public final class LociBackedImage extends TiledImage {
+public final class LociBackedImage extends TiledImage2D {
 	
 	private final IFormatReader lociImage;
 	

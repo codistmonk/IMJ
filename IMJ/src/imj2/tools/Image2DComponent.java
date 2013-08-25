@@ -406,7 +406,7 @@ public final class Image2DComponent extends JComponent {
 	/**
 	 * @author codistmonk (creation 2013-08-12)
 	 */
-	public static final class ScaledImage2D extends TiledImage {
+	public static final class ScaledImage2D extends TiledImage2D {
 		
 		private final Image2D source;
 		
@@ -426,9 +426,9 @@ public final class Image2DComponent extends JComponent {
 			if (0 < zoom) {
 				this.zoom = zoom;
 				
-				if (this.getSource() instanceof TiledImage) {
-					this.setOptimalTileWidth(((TiledImage) this.getSource()).getOptimalTileWidth() * zoom);
-					this.setOptimalTileHeight(((TiledImage) this.getSource()).getOptimalTileHeight() * zoom);
+				if (this.getSource() instanceof TiledImage2D) {
+					this.setOptimalTileWidth(((TiledImage2D) this.getSource()).getOptimalTileWidth() * zoom);
+					this.setOptimalTileHeight(((TiledImage2D) this.getSource()).getOptimalTileHeight() * zoom);
 				} else {
 					this.setOptimalTileWidth(this.getSource().getWidth() * zoom);
 					this.setOptimalTileHeight(this.getSource().getHeight() * zoom);
