@@ -3,9 +3,9 @@ package imj2.tools;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
+import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
 
@@ -34,6 +34,7 @@ import javax.swing.JScrollBar;
 import javax.swing.SwingUtilities;
 
 import net.sourceforge.aprog.swing.SwingTools;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-08-05)
@@ -98,12 +99,31 @@ public final class Image2DComponent extends JComponent {
 			
 			@Override
 			public final void keyTyped(final KeyEvent event) {
+				final Image2D image = Image2DComponent.this.getImage();
+				final int zoom = Image2DComponent.this.getZoom();
+				
 				switch (event.getKeyChar()) {
 				case '*':
-					Image2DComponent.this.setZoom(Image2DComponent.this.getZoom() * 2);
+					Image2DComponent.this.setZoom(zoom * 2);
 					break;
 				case '/':
-					Image2DComponent.this.setZoom(Image2DComponent.this.getZoom() / 2);
+					Image2DComponent.this.setZoom(zoom / 2);
+					break;
+				case '+':
+					final SubsampledImage2D subsampledImage = cast(SubsampledImage2D.class, image);
+					
+					if (subsampledImage != null) {
+						Image2DComponent.this.setImage(subsampledImage.getSource());
+						Image2DComponent.this.setZoom(zoom / 2);
+					}
+					
+					break;
+				case '-':
+					if (1 < image.getWidth() && 1 < image.getHeight()) {
+						Image2DComponent.this.setImage(new SubsampledImage2D(image));
+						Image2DComponent.this.setZoom(zoom * 2);
+					}
+					
 					break;
 				default:
 					return;
@@ -182,15 +202,23 @@ public final class Image2DComponent extends JComponent {
 	}
 	
 	public final int getZoom() {
-		return this.scaledImage.getZoom();
+		return this.getScaledImage().getZoom();
 	}
 	
 	public final void setZoom(final int zoom) {
 		if (0 < zoom && zoom != this.getZoom()) {
-			this.scaledImage.setZoom(zoom);
+			this.getScaledImage().setZoom(zoom);
 			
 			this.repaint();
 		}
+	}
+	
+	public final Image2D getImage() {
+		return this.getScaledImage() == null ? null : this.getScaledImage().getSource();
+	}
+	
+	public final void setImage(final Image2D image) {
+		this.scaledImage = new ScaledImage2D(image);
 	}
 	
 	public final boolean isMultiThread() {
@@ -233,7 +261,7 @@ public final class Image2DComponent extends JComponent {
 	}
 	
 	public final void updateBuffer(final int left, final int top, final int width, final int height) {
-		if (this.scaledImage != null && 0 < width && 0 < height) {
+		if (this.getScaledImage() != null && 0 < width && 0 < height) {
 			this.copyImagePixelsToBuffer(left, top, width, height);
 		}
 	}
@@ -291,7 +319,7 @@ public final class Image2DComponent extends JComponent {
 	
 	final void copyImagePixelsToBuffer(final int left, final int top, final int width, final int height) {
 		if (this.isMultiThread()) {
-			new ParallelProcess2D(this.scaledImage, left, top, width, height) {
+			new ParallelProcess2D(this.getScaledImage(), left, top, width, height) {
 				
 				@Override
 				public final void pixel(final int x, final int y) {
@@ -305,7 +333,7 @@ public final class Image2DComponent extends JComponent {
 				
 			};
 		} else {
-			this.scaledImage.forEachPixelInBox(left, top, width, height, new MonopatchProcess() {
+			this.getScaledImage().forEachPixelInBox(left, top, width, height, new MonopatchProcess() {
 				
 				@Override
 				public final void pixel(final int x, final int y) {
@@ -324,7 +352,7 @@ public final class Image2DComponent extends JComponent {
 	final void copyImagePixelToBuffer(final int xInScaledImage, final int yInScaledImage) {
 		try {
 			this.frontBuffer.setRGB(xInScaledImage - this.scaledImageVisibleRectangle.x, yInScaledImage - this.scaledImageVisibleRectangle.y,
-					this.scaledImage.getPixelValue(xInScaledImage, yInScaledImage));
+					this.getScaledImage().getPixelValue(xInScaledImage, yInScaledImage));
 		} catch (final Exception exception) {
 			exception.printStackTrace();
 			debugPrint(xInScaledImage, yInScaledImage, xInScaledImage - this.scaledImageVisibleRectangle.x, yInScaledImage - this.scaledImageVisibleRectangle.y);
@@ -332,6 +360,14 @@ public final class Image2DComponent extends JComponent {
 		}
 	}
 	
+	final ScaledImage2D getScaledImage() {
+		return this.scaledImage;
+	}
+	
+	public final void setScaledImage(ScaledImage2D scaledImage) {
+		this.scaledImage = scaledImage;
+	}
+
 	private final int getUsableHeight() {
 		return this.getHeight() - this.horizontalScrollBar.getHeight();
 	}
@@ -402,11 +438,11 @@ public final class Image2DComponent extends JComponent {
 	}
 	
 	private final int getScaledImageWidth() {
-		return this.scaledImage.getWidth();
+		return this.getScaledImage().getWidth();
 	}
 	
 	private final int getScaledImageHeight() {
-		return this.scaledImage.getHeight();
+		return this.getScaledImage().getHeight();
 	}
 	
 	/**
