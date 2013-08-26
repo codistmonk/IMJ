@@ -2,33 +2,19 @@ package imj2.tools;
 
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
-import imj2.core.ConcreteImage2D;
 import imj2.core.Image2D;
-import imj2.core.LinearIntImage;
-
-import java.util.Arrays;
-import java.util.concurrent.Callable;
 
 /**
  * @author codistmonk (creation 2013-08-26)
  */
-public final class LocalBinaryPatternImage extends TiledImage2D {
-	
-	private final Image2D source;
+public final class LocalBinaryPatternImage extends FilteredTiledImage2D {
 	
 	private final LocalBinaryPatternGenerator patternGenerator;
 	
-	private Image2D tile;
-	
 	public LocalBinaryPatternImage(final Image2D source) {
-		super(source.getId() + ".lbp");
-		this.source = source;
+		super(source.getId() + ".lbp", source);
 		this.patternGenerator = new LocalBinaryPatternGenerator(source);
 		this.useOptimalTileDimensionsOf(source, 256, 256);
-	}
-	
-	public final Image2D getSource() {
-		return this.source;
 	}
 	
 	@Override
@@ -63,28 +49,7 @@ public final class LocalBinaryPatternImage extends TiledImage2D {
 	}
 	
 	@Override
-	protected final int getPixelValueFromTile(final int x, final int y, final int xInTile, final int yInTile) {
-		return this.tile.getPixelValue(xInTile, yInTile);
-	}
-	
-	@Override
-	protected final boolean makeNewTile() {
-		return this.tile == null;
-	}
-	
-	@Override
-	protected final void updateTile() {
-		this.tile = IMJTools.cache(Arrays.asList(this.getId(), this.getTileX(), this.getTileY()), new Callable<Image2D>() {
-			
-			@Override
-			public final Image2D call() throws Exception {
-				return LocalBinaryPatternImage.this.updateTile(LocalBinaryPatternImage.this.newTile());
-			}
-			
-		});
-	}
-	
-	final Image2D updateTile(final Image2D tile) {
+	protected final Image2D updateTile(final Image2D tile) {
 		try {
 			final int tileX = this.getTileX();
 			final int tileY = this.getTileY();
@@ -93,7 +58,7 @@ public final class LocalBinaryPatternImage extends TiledImage2D {
 				
 				@Override
 				public final void pixel(final int x, final int y) {
-					tile.setPixelValue(x - tileX, y - tileY, LocalBinaryPatternImage.this.getPattern().getPatternAt(x, y));
+					tile.setPixelValue(x - tileX, y - tileY, LocalBinaryPatternImage.this.getPatternGenerator().getPatternAt(x, y));
 				}
 				
 				/**
@@ -109,15 +74,7 @@ public final class LocalBinaryPatternImage extends TiledImage2D {
 		}
 	}
 	
-	final Image2D newTile() {
-		final int tileWidth = this.getTileWidth();
-		final int tileHeight = this.getTileHeight();
-		
-		return new ConcreteImage2D(
-				new LinearIntImage("", (long) tileWidth * tileHeight, this.getChannels()), tileWidth, tileHeight);
-	}
-	
-	final LocalBinaryPatternGenerator getPattern() {
+	final LocalBinaryPatternGenerator getPatternGenerator() {
 		return this.patternGenerator;
 	}
 	
