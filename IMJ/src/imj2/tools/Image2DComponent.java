@@ -359,33 +359,12 @@ public final class Image2DComponent extends JComponent {
 			} else {
 				final int intersectionRight = intersection.x + intersection.width;
 				final int intersectionBottom = intersection.y + intersection.height;
-				final int startX, endX, stepX, startY, endY, stepY;
 				
-				if (intersection.x - rectangle.x <= intersection.x - this.scaledImageVisibleRectangle.x) {
-					startX = intersection.x;
-					endX = intersectionRight;
-					stepX = 1;
-				} else {
-					startX = intersectionRight - 1;
-					endX = intersection.x - 1;
-					stepX = -1;
-				}
-				
-				if (intersection.y - rectangle.y <= intersection.y - this.scaledImageVisibleRectangle.y) {
-					startY = intersection.y;
-					endY = intersectionBottom;
-					stepY = 1;
-				} else {
-					startY = intersectionBottom - 1;
-					endY = intersection.y - 1;
-					stepY = -1;
-				}
-				
-				this.backBufferGraphics.drawImage(this.frontBuffer,
+				this.backBufferGraphics.drawImage(oldBuffer,
 						intersection.x - rectangle.x, intersection.y - rectangle.y,
-						intersection.x - rectangle.x + intersection.width, intersection.y - rectangle.y + intersection.height,
+						intersectionRight - rectangle.x, intersectionBottom - rectangle.y,
 						intersection.x - this.scaledImageVisibleRectangle.x, intersection.y - this.scaledImageVisibleRectangle.y,
-						intersection.x - this.scaledImageVisibleRectangle.x + intersection.width, intersection.y - this.scaledImageVisibleRectangle.y + intersection.height
+						intersectionRight - this.scaledImageVisibleRectangle.x, intersectionBottom - this.scaledImageVisibleRectangle.y
 						, null);
 				this.swapBuffers();
 				
