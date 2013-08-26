@@ -42,9 +42,13 @@ public final class Image2DComponent extends JComponent {
 	
 	private ScaledImage2D scaledImage;
 	
-	private BufferedImage buffer;
+	private BufferedImage backBuffer;
 	
-	private Graphics2D bufferGraphics;
+	private Graphics2D backBufferGraphics;
+	
+	private BufferedImage frontBuffer;
+	
+	private Graphics2D frontBufferGraphics;
 	
 	private final Rectangle scaledImageVisibleRectangle;
 	
@@ -58,7 +62,7 @@ public final class Image2DComponent extends JComponent {
 		this.scaledImageVisibleRectangle = new Rectangle();
 		this.horizontalScrollBar = new JScrollBar(Adjustable.HORIZONTAL);
 		this.verticalScrollBar = new JScrollBar(Adjustable.VERTICAL);
-		this.multiThread = true;
+		this.multiThread = false;
 		this.setDoubleBuffered(false);
 		this.setLayout(new BorderLayout());
 		this.add(horizontalBox(this.horizontalScrollBar, Box.createHorizontalStrut(this.verticalScrollBar.getPreferredSize().width)), BorderLayout.SOUTH);
@@ -202,20 +206,24 @@ public final class Image2DComponent extends JComponent {
 		final int height = min(this.getScaledImageHeight(), max(1, this.getUsableHeight()));
 		final boolean createBuffer;
 		
-		if (this.buffer == null) {
+		if (this.frontBuffer == null) {
 			createBuffer = true;
-		} else if (this.buffer.getWidth() != width || this.buffer.getHeight() != height) {
-			this.bufferGraphics.dispose();
-			this.bufferGraphics = null;
+		} else if (this.frontBuffer.getWidth() != width || this.frontBuffer.getHeight() != height) {
+			this.frontBufferGraphics.dispose();
+			this.frontBufferGraphics = null;
+			this.backBufferGraphics.dispose();
+			this.backBufferGraphics = null;
 			createBuffer = true;
 		} else {
 			createBuffer = false;
 		}
 		
 		if (createBuffer) {
-			final BufferedImage oldBuffer = this.buffer;
-			this.buffer = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
-			this.bufferGraphics = this.buffer.createGraphics();
+			final BufferedImage oldBuffer = this.frontBuffer;
+			this.frontBuffer = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
+			this.frontBufferGraphics = this.frontBuffer.createGraphics();
+			this.backBuffer = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
+			this.backBufferGraphics = this.backBuffer.createGraphics();
 			
 			this.setScaledImageVisibleRectangle(new Rectangle(
 					min(this.scaledImageVisibleRectangle.x, this.getScaledImageWidth() - width),
@@ -234,10 +242,10 @@ public final class Image2DComponent extends JComponent {
 	protected final void paintComponent(final Graphics g) {
 		this.setBuffer();
 		
-		final int centeringOffsetX = max(0, (this.getUsableWidth() - this.buffer.getWidth()) / 2);
-		final int centeringOffsetY = max(0, (this.getUsableHeight() - this.buffer.getHeight()) / 2);
+		final int centeringOffsetX = max(0, (this.getUsableWidth() - this.frontBuffer.getWidth()) / 2);
+		final int centeringOffsetY = max(0, (this.getUsableHeight() - this.frontBuffer.getHeight()) / 2);
 		
-		g.drawImage(this.buffer, centeringOffsetX, centeringOffsetY, null);
+		g.drawImage(this.frontBuffer, centeringOffsetX, centeringOffsetY, null);
 	}
 	
 	final JScrollBar getHorizontalScrollBar() {
@@ -249,16 +257,16 @@ public final class Image2DComponent extends JComponent {
 	}
 	
 	final void updateBufferAccordingToScrollBars(final boolean forceRepaint) {
-		if (this.buffer == null) {
+		if (this.frontBuffer == null) {
 			return;
 		}
 		
-		final int width = min(this.getScaledImageWidth(), this.buffer.getWidth());
-		final int height = min(this.getScaledImageHeight(), this.buffer.getHeight());
+		final int width = min(this.getScaledImageWidth(), this.frontBuffer.getWidth());
+		final int height = min(this.getScaledImageHeight(), this.frontBuffer.getHeight());
 		final int left = width < this.getScaledImageWidth() ? min(this.getScaledImageWidth() - width, this.horizontalScrollBar.getValue()) : 0;
 		final int top = height < this.getScaledImageHeight() ? min(this.getScaledImageHeight() - height, this.verticalScrollBar.getValue()) : 0;
 		
-		this.setScaledImageVisibleRectangle(new Rectangle(left, top, width, height), forceRepaint ? null : this.buffer);
+		this.setScaledImageVisibleRectangle(new Rectangle(left, top, width, height), forceRepaint ? null : this.frontBuffer);
 	}
 	
 	final void setScrollBarsVisibleAmounts() {
@@ -315,7 +323,7 @@ public final class Image2DComponent extends JComponent {
 	
 	final void copyImagePixelToBuffer(final int xInScaledImage, final int yInScaledImage) {
 		try {
-			this.buffer.setRGB(xInScaledImage - this.scaledImageVisibleRectangle.x, yInScaledImage - this.scaledImageVisibleRectangle.y,
+			this.frontBuffer.setRGB(xInScaledImage - this.scaledImageVisibleRectangle.x, yInScaledImage - this.scaledImageVisibleRectangle.y,
 					this.scaledImage.getPixelValue(xInScaledImage, yInScaledImage));
 		} catch (final Exception exception) {
 			exception.printStackTrace();
@@ -334,9 +342,9 @@ public final class Image2DComponent extends JComponent {
 	
 	private final void setScaledImageVisibleRectangle(final Rectangle rectangle, final BufferedImage oldBuffer) {
 		if (this.getScaledImageWidth() < rectangle.x + rectangle.width || this.getScaledImageHeight() < rectangle.y + rectangle.height ||
-				this.buffer.getWidth() < rectangle.width || this.buffer.getHeight() < rectangle.height) {
+				this.frontBuffer.getWidth() < rectangle.width || this.frontBuffer.getHeight() < rectangle.height) {
 			throw new IllegalArgumentException(rectangle + " " + new Rectangle(this.getScaledImageWidth(), this.getScaledImageHeight()) +
-					" " + new Rectangle(this.buffer.getWidth(),  this.buffer.getHeight()));
+					" " + new Rectangle(this.frontBuffer.getWidth(),  this.frontBuffer.getHeight()));
 		}
 		
 		if (oldBuffer == null) {
@@ -373,12 +381,13 @@ public final class Image2DComponent extends JComponent {
 					stepY = -1;
 				}
 				
-				for (int y = startY; y != endY; y += stepY) {
-					for (int x = startX; x != endX; x += stepX) {
-						this.buffer.setRGB(x - rectangle.x, y - rectangle.y,
-								oldBuffer.getRGB(x - this.scaledImageVisibleRectangle.x, y - this.scaledImageVisibleRectangle.y));
-					}
-				}
+				this.backBufferGraphics.drawImage(this.frontBuffer,
+						intersection.x - rectangle.x, intersection.y - rectangle.y,
+						intersection.x - rectangle.x + intersection.width, intersection.y - rectangle.y + intersection.height,
+						intersection.x - this.scaledImageVisibleRectangle.x, intersection.y - this.scaledImageVisibleRectangle.y,
+						intersection.x - this.scaledImageVisibleRectangle.x + intersection.width, intersection.y - this.scaledImageVisibleRectangle.y + intersection.height
+						, null);
+				this.swapBuffers();
 				
 				this.scaledImageVisibleRectangle.setBounds(rectangle);
 				
@@ -399,9 +408,18 @@ public final class Image2DComponent extends JComponent {
 			}
 		}
 		
-		if (this.buffer.getWidth() < this.scaledImageVisibleRectangle.width || this.buffer.getHeight() < this.scaledImageVisibleRectangle.getHeight()) {
+		if (this.frontBuffer.getWidth() < this.scaledImageVisibleRectangle.width || this.frontBuffer.getHeight() < this.scaledImageVisibleRectangle.getHeight()) {
 			throw new IllegalStateException();
 		}
+	}
+	
+	private final void swapBuffers() {
+		final BufferedImage tmpBuffer = this.frontBuffer;
+		final Graphics2D tmpGraphics = this.frontBufferGraphics;
+		this.frontBuffer = this.backBuffer;
+		this.frontBufferGraphics = this.backBufferGraphics;
+		this.backBuffer = tmpBuffer;
+		this.backBufferGraphics = tmpGraphics;
 	}
 	
 	private final int getScaledImageWidth() {
