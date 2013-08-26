@@ -4,7 +4,7 @@ import static imj2.core.ConcreteImage2D.getX;
 import static imj2.core.ConcreteImage2D.getY;
 import static imj2.tools.IMJTools.quantize;
 import static java.lang.Math.min;
-
+import static net.sourceforge.aprog.tools.Tools.cast;
 import imj2.core.Image2D;
 
 /**
@@ -128,6 +128,22 @@ public abstract class TiledImage2D implements Image2D {
 	
 	protected final void setTileHeight() {
 		this.tileHeight = min(this.getOptimalTileHeight(), this.getHeight() - this.getTileY());
+	}
+	
+	protected final void useOptimalTileDimensionsOf(final Image2D source, final int defaultWidth, final int defaultHeight) {
+		final TiledImage2D tiledSource = cast(TiledImage2D.class, source);
+		
+		if (tiledSource != null &&
+				(long) tiledSource.getOptimalTileWidth() * tiledSource.getOptimalTileHeight() <= Integer.MAX_VALUE) {
+			this.setOptimalTileDimensions(tiledSource.getOptimalTileWidth(), tiledSource.getOptimalTileHeight());
+		} else {
+			this.setOptimalTileDimensions(defaultWidth, defaultHeight);
+		}
+	}
+	
+	protected final void setOptimalTileDimensions(final int width, final int height) {
+		this.setOptimalTileWidth(min(width, this.getWidth()));
+		this.setOptimalTileHeight(min(height, this.getHeight()));
 	}
 	
 	protected abstract int getPixelValueFromTile(int x, int y, int xInTile, int yInTile);

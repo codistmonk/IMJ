@@ -1,8 +1,6 @@
 package imj2.tools;
 
 import static java.lang.Integer.parseInt;
-import static java.lang.Math.min;
-import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import imj2.core.ConcreteImage2D;
@@ -32,15 +30,8 @@ public final class SubsampledImage2D extends TiledImage2D {
 		this.source = source;
 		this.width = source.getWidth() / 2;
 		this.height = source.getHeight() / 2;
-		
-		final TiledImage2D tiledSource = cast(TiledImage2D.class, source);
-		
-		if (tiledSource != null &&
-				(long) tiledSource.getOptimalTileWidth() * tiledSource.getOptimalTileHeight() <= Integer.MAX_VALUE) {
-			this.setOptimalTileDimensions(tiledSource.getOptimalTileWidth(), tiledSource.getOptimalTileHeight());
-		} else {
-			this.setOptimalTileDimensions(256, 256);
-		}
+
+		this.useOptimalTileDimensionsOf(source, 256, 256);
 	}
 	
 	public final Image2D getSource() {
@@ -58,7 +49,7 @@ public final class SubsampledImage2D extends TiledImage2D {
 	}
 	
 	@Override
-	public final Image2D[] newParallelViews(final int n) {
+	public final SubsampledImage2D[] newParallelViews(final int n) {
 		return ConcreteImage2D.newParallelViews(this, n);
 	}
 	
@@ -131,11 +122,6 @@ public final class SubsampledImage2D extends TiledImage2D {
 		
 		return new ConcreteImage2D(
 				new LinearIntImage("", (long) tileWidth * tileHeight, this.getChannels()), tileWidth, tileHeight);
-	}
-	
-	private final void setOptimalTileDimensions(final int width, final int height) {
-		this.setOptimalTileWidth(min(width, this.getWidth()));
-		this.setOptimalTileHeight(min(height, this.getHeight()));
 	}
 	
 	/**

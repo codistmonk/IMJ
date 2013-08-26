@@ -115,6 +115,21 @@ public final class IMJTools {
 		return result;
 	}
 	
+	public static final boolean contains(final Image2D image, final int x, final int y) {
+		return 0 <= x && x < image.getWidth() && 0 <= y && y < image.getHeight();
+	}
+	
+	public static final int[] getChannelValues(final Channels channels, final int pixelValue, final int[] result) {
+		final int channelCount = channels.getChannelCount();
+		final int[] actualResult = result != null ? result : new int[channelCount];
+		
+		for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex) {
+			actualResult[channelIndex] = channels.getChannelValue(pixelValue, channelIndex);
+		}
+		
+		return actualResult;
+	}
+	
 	public static final int awtImageTypeFor(final Image2D image) {
 		switch (image.getChannels().getChannelCount()) {
 		case 1:
