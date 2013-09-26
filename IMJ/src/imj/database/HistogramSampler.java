@@ -80,7 +80,6 @@ public abstract class HistogramSampler extends Sampler {
 	
 	private final void updateSample() {
 		final int m = this.patchPixelCount;
-		final int countQuantizationMask = 0x000000F8;
 		
 		for (int k = 0; k < this.patchPixelCount; ++k) {
 			final int index = this.indices[k];
@@ -96,9 +95,11 @@ public abstract class HistogramSampler extends Sampler {
 				value >>= 8;
 			}
 			
-			this.getSample().add((byte) ((count * 255L / m) & countQuantizationMask));
+			this.getSample().add((byte) ((count * 255L / m) & COUNT_QUANTIZATION_MASK));
 		}
 	}
+	
+	public static final int COUNT_QUANTIZATION_MASK = 0x000000FE;
 	
 	public static final int computeIndex(final int pixelValue, final Channel... channels) {
 		int result = 0;
