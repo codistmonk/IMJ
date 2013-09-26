@@ -230,32 +230,7 @@ public final class GenerateClassificationData {
 		
 		loadRegions(testImageId, configuration.getLod(), imageRowCount, imageColumnCount, annotations, classes);
 		
-		{
-			final TicToc timer = new TicToc();
-			
-			debugPrint("Resetting excluded regions mask...", new Date(timer.tic()));
-			
-			final RegionOfInterest excluded = classes.get(EXCLUDED);
-			final int pixelCount = excluded.getPixelCount();
-			
-			excluded.reset(true);
-			
-			for (final Map.Entry<String, RegionOfInterest> entry : classes.entrySet()) {
-				if (EXCLUDED.equals(entry.getKey())) {
-					continue;
-				}
-				
-				final RegionOfInterest roi = entry.getValue();
-				
-				for (int pixel = 0; pixel < pixelCount; ++pixel) {
-					if (roi.get(pixel)) {
-						excluded.set(pixel, false);
-					}
-				}
-			}
-			
-			debugPrint("Resetting excluded regions mask done, time:", timer.toc());
-		}
+		resetExludedRegions(classes);
 		
 		for (final String key : classes.keySet()) {
 			result.put(key, new ExtendedConfusionTable());
@@ -328,6 +303,33 @@ public final class GenerateClassificationData {
 		});
 		
 		return result;
+	}
+	
+	public static final void resetExludedRegions(final Map<String, RegionOfInterest> classes) {
+		final TicToc timer = new TicToc();
+		
+		debugPrint("Resetting excluded regions...", new Date(timer.tic()));
+		
+		final RegionOfInterest excluded = classes.get(EXCLUDED);
+		final int pixelCount = excluded.getPixelCount();
+		
+		excluded.reset(true);
+		
+		for (final Map.Entry<String, RegionOfInterest> entry : classes.entrySet()) {
+			if (EXCLUDED.equals(entry.getKey())) {
+				continue;
+			}
+			
+			final RegionOfInterest roi = entry.getValue();
+			
+			for (int pixel = 0; pixel < pixelCount; ++pixel) {
+				if (roi.get(pixel)) {
+					excluded.set(pixel, false);
+				}
+			}
+		}
+		
+		debugPrint("Resetting excluded regions done, time:", timer.toc());
 	}
 	
 	public static final void loadTrainingSet(final Configuration configuration,
