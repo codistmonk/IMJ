@@ -230,7 +230,7 @@ public final class GenerateClassificationData {
 		
 		loadRegions(testImageId, configuration.getLod(), imageRowCount, imageColumnCount, annotations, classes);
 		
-		resetExludedRegions(classes);
+		resetExcludedRegions(classes);
 		
 		for (final String key : classes.keySet()) {
 			result.put(key, new ExtendedConfusionTable());
@@ -305,7 +305,7 @@ public final class GenerateClassificationData {
 		return result;
 	}
 	
-	public static final void resetExludedRegions(final Map<String, RegionOfInterest> classes) {
+	public static final void resetExcludedRegions(final Map<String, RegionOfInterest> classes) {
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Resetting excluded regions...", new Date(timer.tic()));
