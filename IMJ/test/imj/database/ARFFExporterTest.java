@@ -2,7 +2,6 @@ package imj.database;
 
 import static imj.IMJTools.argb;
 import static imj.IMJTools.unsigned;
-import static imj.apps.GenerateClassificationData.resetExcludedRegions;
 import static imj.apps.modules.ShowActions.baseName;
 import static imj.database.HistogramSampler.COUNT_QUANTIZATION_MASK;
 import static imj.database.IMJDatabaseTools.RGB;
@@ -11,22 +10,18 @@ import static java.util.Collections.unmodifiableMap;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj.ByteList;
-import imj.IMJTools;
 import imj.Image;
 import imj.ImageWrangler;
-import imj.apps.GenerateClassificationData;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.ViewFilter.Channel;
 import imj.database.Sampler.SampleProcessor;
 
-import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -51,91 +46,91 @@ public final class ARFFExporterTest {
 				"../Libraries/images/svs/45683.svs"
 		};
 		
-		final Quantizer[] quantizers = new Quantizer[imageIds.length];
 		final int quantizationLevel = 4;
 		final int lod = 4;
 		final int tileRowCount = 32;
 		
-		final Class<? extends Sampler> samplerFactory = SparseHistogramSampler.class;
+		for (int i = 0; i < imageIds.length; ++i) {
+			exportARFF(imageIds[i], lod, quantizationLevel, tileRowCount);
+		}
+	}
+	
+	public static final void exportARFF(final String imageId, final int lod,
+			final int quantizationLevel, final int tileRowCount) {
 		final Channel[] channels = RGB;
 		final Segmenter trainingSegmenter = new SeamGridSegmenter(tileRowCount);
 		
-		for (int i = 0; i < imageIds.length; ++i) {
-			final String imageId = imageIds[i];
-			
-			debugPrint("imageId:", imageId);
-			
-			final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
-			gc();
-			
-			debugPrint("imageRowCount:", image.getRowCount(), "imageColumnCount:", image.getColumnCount());
-			
-			quantizers[i] = new BinningQuantizer();
-			quantizers[i].initialize(image, null, channels, quantizationLevel);
-			
-			final Map<String, RegionOfInterest> classes = new HashMap<String, RegionOfInterest>();
-			final int imageRowCount = image.getRowCount();
-			final int imageColumnCount = image.getColumnCount();
-			final Annotations annotations = Annotations.fromXML(baseName(imageId) + ".xml");
-			
-			loadRegions(imageId, lod, imageRowCount, imageColumnCount, annotations, classes);
-			
-			final Sampler sampler;
-			// TODO(codistmonk) write to file
-			// TODO(codistmonk) write ARFF header
-			final PrintStream out = System.out;
-			
-			try {
- 				sampler = samplerFactory.getConstructor(Image.class, Quantizer.class, Channel[].class, SampleProcessor.class)
-						.newInstance(image, quantizers[i], channels, new SampleProcessor() {
+		debugPrint("imageId:", imageId);
+		
+		final Image image = ImageWrangler.INSTANCE.load(imageId, lod);
+		gc();
+		
+		debugPrint("imageRowCount:", image.getRowCount(), "imageColumnCount:", image.getColumnCount());
+		
+		final Quantizer quantizer = new BinningQuantizer();
+		quantizer.initialize(image, null, channels, quantizationLevel);
+		
+		final Map<String, RegionOfInterest> classes = new HashMap<String, RegionOfInterest>();
+		final int imageRowCount = image.getRowCount();
+		final int imageColumnCount = image.getColumnCount();
+		final Annotations annotations = Annotations.fromXML(baseName(imageId) + ".xml");
+		
+		loadRegions(imageId, lod, imageRowCount, imageColumnCount, annotations, classes);
+		
+		final Sampler sampler;
+		// TODO(codistmonk) write to file
+		// TODO(codistmonk) write ARFF header
+		final PrintStream out = System.out;
+		
+		try {
+			sampler = new SparseHistogramSampler(image, quantizer, channels, new SampleProcessor() {
+						
+						private final Collection<String> group = new TreeSet<String>();
+						
+						@Override
+						public final void processSample(final ByteList sample) {
+							final int n = sample.size();
 							
-							private final Collection<String> group = new TreeSet<String>();
+							out.print("{");
 							
-							@Override
-							public final void processSample(final ByteList sample) {
-								final int n = sample.size();
+							for (int i = 0; i < n; i += 4) {
+								final double frequency = unsigned(sample.get(i + 3)) / (double) COUNT_QUANTIZATION_MASK;
 								
-								out.print("{");
-								
-								for (int i = 0; i < n; i += 4) {
-									final double frequency = unsigned(sample.get(i + 3)) / (double) COUNT_QUANTIZATION_MASK;
+								if (0.0 != frequency) {
+									final int color = argb(0, unsigned(sample.get(i + 2)),
+											unsigned(sample.get(i + 1)), unsigned(sample.get(i + 0)));
 									
-									if (0.0 != frequency) {
-										final int color = argb(0, unsigned(sample.get(i + 2)),
-												unsigned(sample.get(i + 1)), unsigned(sample.get(i + 0)));
-										
-										out.print(color);
-										out.print(" ");
-										out.print(frequency);
-										out.print(", ");
-									}
-								}
-								
-								out.print(1 << 24);
-								out.print(" ");
-								out.print(formatGroup(this.group));
-								
-								out.println("}");
-								
-								this.group.clear();
-							}
-							
-							@Override
-							public final void processPixel(final int pixel, final int pixelValue) {
-								for (final Map.Entry<String, RegionOfInterest> entry : classes.entrySet()) {
-									if (entry.getValue().get(pixel)) {
-										this.group.add(CLASS_ALIASES.get(entry.getKey()));
-									}
+									out.print(color);
+									out.print(" ");
+									out.print(frequency);
+									out.print(", ");
 								}
 							}
 							
-						});
-			} catch (final Exception exception) {
-				throw unchecked(exception);
-			}
-			
-			trainingSegmenter.process(image, sampler);
+							out.print(1 << 24);
+							out.print(" ");
+							out.print(formatGroup(this.group));
+							
+							out.println("}");
+							
+							this.group.clear();
+						}
+						
+						@Override
+						public final void processPixel(final int pixel, final int pixelValue) {
+							for (final Map.Entry<String, RegionOfInterest> entry : classes.entrySet()) {
+								if (entry.getValue().get(pixel)) {
+									this.group.add(CLASS_ALIASES.get(entry.getKey()));
+								}
+							}
+						}
+						
+					});
+		} catch (final Exception exception) {
+			throw unchecked(exception);
 		}
+		
+		trainingSegmenter.process(image, sampler);
 	}
 	
 	@SuppressWarnings("unchecked")
