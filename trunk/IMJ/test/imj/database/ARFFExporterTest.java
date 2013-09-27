@@ -10,7 +10,6 @@ import static java.util.Collections.unmodifiableMap;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj.ByteList;
 import imj.Image;
 import imj.ImageWrangler;
@@ -19,6 +18,7 @@ import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.ViewFilter.Channel;
 import imj.database.Sampler.SampleProcessor;
 
+import java.io.File;
 import java.io.PrintStream;
 import java.util.Collection;
 import java.util.HashMap;
@@ -46,12 +46,14 @@ public final class ARFFExporterTest {
 				"../Libraries/images/svs/45683.svs"
 		};
 		
-		final int quantizationLevel = 4;
-		final int lod = 4;
-		final int tileRowCount = 32;
-		
-		for (int i = 0; i < imageIds.length; ++i) {
-			exportARFF(imageIds[i], lod, quantizationLevel, tileRowCount);
+		for (final int lod : new int[] { 4, 2 }) {
+			for (final int q : new int[] { 4, 2 }) {
+				for (final int s : new int[] { 32, 16 }) {
+					for (int i = 0; i < imageIds.length; ++i) {
+						exportARFF(imageIds[i], lod, q, s);
+					}
+				}
+			}
 		}
 	}
 	
@@ -77,12 +79,28 @@ public final class ARFFExporterTest {
 		
 		loadRegions(imageId, lod, imageRowCount, imageColumnCount, annotations, classes);
 		
+		final int significantBits = 8 - quantizationLevel;
+		final int classKey = 1 << (3 * significantBits);
 		final Sampler sampler;
+		final PrintStream[] out = { null };
 		// TODO(codistmonk) write to file
 		// TODO(codistmonk) write ARFF header
-		final PrintStream out = System.out;
-		
 		try {
+			out[0] = new PrintStream(new File(baseName(imageId) +
+					"_lod" + lod + "_q" + quantizationLevel + "_s" + tileRowCount + ".arff"));
+			
+			out[0].println("@RELATION \"" + baseName(imageId) + "\"");
+			out[0].println();
+			
+			for (int i = 0; i < classKey; ++i) {
+				out[0].println("@ATTRIBUTE color" + i + " numeric");
+			}
+			
+			out[0].println("@ATTRIBUTE class string");
+			
+			out[0].println();
+			out[0].println("@DATA");
+			
 			sampler = new SparseHistogramSampler(image, quantizer, channels, new SampleProcessor() {
 						
 						private final Collection<String> group = new TreeSet<String>();
@@ -91,27 +109,30 @@ public final class ARFFExporterTest {
 						public final void processSample(final ByteList sample) {
 							final int n = sample.size();
 							
-							out.print("{");
+							out[0].print("{");
 							
 							for (int i = 0; i < n; i += 4) {
 								final double frequency = unsigned(sample.get(i + 3)) / (double) COUNT_QUANTIZATION_MASK;
 								
 								if (0.0 != frequency) {
-									final int color = argb(0, unsigned(sample.get(i + 2)),
-											unsigned(sample.get(i + 1)), unsigned(sample.get(i + 0)));
+									final int rKey = unsigned(sample.get(i + 2)) >> quantizationLevel;
+									final int gKey = unsigned(sample.get(i + 1)) >> quantizationLevel;
+									final int bKey = unsigned(sample.get(i + 0)) >> quantizationLevel;
+									final int color = (rKey << (2 * significantBits)) | (gKey << significantBits) | bKey;
 									
-									out.print(color);
-									out.print(" ");
-									out.print(frequency);
-									out.print(", ");
+									out[0].print(color);
+									out[0].print(" ");
+									out[0].print(frequency);
+									out[0].print(", ");
 								}
 							}
 							
-							out.print(1 << 24);
-							out.print(" ");
-							out.print(formatGroup(this.group));
+							out[0].print(classKey);
+							out[0].print(" ");
+							out[0].print(formatGroup(this.group));
 							
-							out.println("}");
+							out[0].println("}");
+							out[0].flush();
 							
 							this.group.clear();
 						}
@@ -126,11 +147,15 @@ public final class ARFFExporterTest {
 						}
 						
 					});
+			
+			trainingSegmenter.process(image, sampler);
 		} catch (final Exception exception) {
 			throw unchecked(exception);
+		} finally {
+			if (out[0] != null) {
+				out[0].close();
+			}
 		}
-		
-		trainingSegmenter.process(image, sampler);
 	}
 	
 	@SuppressWarnings("unchecked")
