@@ -3,13 +3,16 @@ package imj2.tools;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static java.util.Collections.sort;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
 import imj2.core.Image2D;
+import imj2.tools.IMJTools.TileProcessor.Info;
 
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
+import java.io.Serializable;
 import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -252,6 +255,99 @@ public final class IMJTools {
 			}
 			
 		};
+	}
+	
+	public static final void forEachTile(final int imageWidth, final int imageHeight,
+			final int tileWidth, final int tileHeight, final TileProcessor process) {
+		try {
+			for (int tileY = 0; tileY < imageHeight; tileY += tileHeight) {
+				final int h = min(tileHeight, imageHeight - tileY);
+				
+				for (int tileX = 0; tileX < imageWidth; tileX += tileWidth) {
+					final int w = min(tileWidth, imageWidth - tileX);
+					
+					for (int y = 0; y < h; ++y) {
+						for (int x = 0; x < w; ++x) {
+							process.pixel(new Info(tileX, tileY, w, h, x, y));
+						}
+					}
+					
+					process.endOfTile();
+				}
+			}
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-10-30)
+	 */
+	public static abstract interface TileProcessor extends Serializable {
+		
+		public abstract void pixel(Info info);
+		
+		public abstract void endOfTile();
+		
+		/**
+		 * @author codistmonk (creation 2013-11-04)
+		 */
+		public static final class Info implements Serializable {
+			
+			private final int tileX;
+			
+			private final int tileY;
+			
+			private final int actualTileWidth;
+			
+			private final int actualTileHeight;
+			
+			private final int pixelXInTile;
+			
+			private final int pixelYInTile;
+			
+			public Info(final int tileX, final int tileY,
+					final int actualTileWidth, final int actualTileHeight,
+					final int pixelXInTile, final int pixelYInTile) {
+				this.tileX = tileX;
+				this.tileY = tileY;
+				this.actualTileWidth = actualTileWidth;
+				this.actualTileHeight = actualTileHeight;
+				this.pixelXInTile = pixelXInTile;
+				this.pixelYInTile = pixelYInTile;
+			}
+			
+			public final int getTileX() {
+				return this.tileX;
+			}
+			
+			public final int getTileY() {
+				return this.tileY;
+			}
+			
+			public final int getActualTileWidth() {
+				return this.actualTileWidth;
+			}
+			
+			public final int getActualTileHeight() {
+				return this.actualTileHeight;
+			}
+			
+			public final int getPixelXInTile() {
+				return this.pixelXInTile;
+			}
+			
+			public final int getPixelYInTile() {
+				return this.pixelYInTile;
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 124947385663986060L;
+			
+		}
+		
 	}
 	
 	/**

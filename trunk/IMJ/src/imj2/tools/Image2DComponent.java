@@ -6,6 +6,7 @@ import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
 
@@ -34,7 +35,6 @@ import javax.swing.JScrollBar;
 import javax.swing.SwingUtilities;
 
 import net.sourceforge.aprog.swing.SwingTools;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-08-05)
@@ -541,6 +541,12 @@ public final class Image2DComponent extends JComponent {
 		@Override
 		protected final int getPixelValueFromTile(final int x, final int y, final int xInTile, final int yInTile) {
 			return this.getSource().getPixelValue(x / this.getZoom(), y / this.getZoom());
+		}
+		
+		@Override
+		protected final void setTilePixelValue(final int x, final int y, final int xInTile, final int yInTile,
+				final int value) {
+			this.getSource().setPixelValue(x / this.getZoom(), y / this.getZoom(), value);
 		}
 		
 		@Override

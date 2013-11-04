@@ -59,7 +59,9 @@ public abstract class TiledImage2D implements Image2D {
 	
 	@Override
 	public final void setPixelValue(final int x, final int y, final int value) {
-		throw new UnsupportedOperationException("TODO"); // TODO
+		this.ensureTileContains(x, y);
+		
+		this.setTilePixelValue(x, y, x % this.getOptimalTileWidth(), y % this.getOptimalTileHeight(), value);
 	}
 	
 	@Override
@@ -90,7 +92,7 @@ public abstract class TiledImage2D implements Image2D {
 		return this.tileY;
 	}
 	
-	protected final int getOptimalTileWidth() {
+	public final int getOptimalTileWidth() {
 		return this.optimalTileWidth;
 	}
 	
@@ -102,7 +104,7 @@ public abstract class TiledImage2D implements Image2D {
 		}
 	}
 	
-	protected final int getOptimalTileHeight() {
+	public final int getOptimalTileHeight() {
 		return this.optimalTileHeight;
 	}
 	
@@ -148,8 +150,10 @@ public abstract class TiledImage2D implements Image2D {
 	
 	protected abstract int getPixelValueFromTile(int x, int y, int xInTile, int yInTile);
 	
+	protected abstract void setTilePixelValue(int x, int y, int xInTile, int yInTile, int value);
+	
 	/**
-	 * @return <code>true</code> if a new tile has been generated and needs to be initialized
+	 * @return <code>true</code> if a new tile has been generated or needs to be initialized
 	 */
 	protected abstract boolean makeNewTile();
 	

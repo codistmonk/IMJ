@@ -125,17 +125,26 @@ public final class LociBackedImage extends TiledImage2D {
 	}
 	
 	@Override
+	protected final void setTilePixelValue(final int x, final int y, final int xInTile, final int yInTile,
+			final int value) {
+		throw new UnsupportedOperationException();
+	}
+	
+	@Override
 	protected final boolean makeNewTile() {
 		return this.tile == null;
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Override
 	protected final void updateTile() {
+		final int tileWidth = this.getTileWidth();
+		final int tileHeight = this.getTileHeight();
 		this.tile = IMJTools.cache(Arrays.asList(this.getId(), this.getTileX(), this.getTileY()), new Callable<byte[]>() {
 			
 			@Override
 			public final byte[] call() throws Exception {
-				return LociBackedImage.this.updateTile(LociBackedImage.this.newTile());
+				return LociBackedImage.this.updateTile(LociBackedImage.this.newTile(tileWidth, tileHeight));
 			}
 			
 		});
@@ -152,8 +161,8 @@ public final class LociBackedImage extends TiledImage2D {
 		}
 	}
 	
-	final byte[] newTile() {
-		return new byte[this.getTileWidth() * this.getTileHeight() * this.bytesPerPixel];
+	final byte[] newTile(final int tileWidth, final int tileHeight) {
+		return new byte[tileWidth * tileHeight * this.bytesPerPixel];
 	}
 	
 	/**
