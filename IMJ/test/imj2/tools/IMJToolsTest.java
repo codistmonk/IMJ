@@ -137,6 +137,9 @@ public final class IMJToolsTest {
 		}
 		
 		final String imageId = "../Libraries/images/svs/45657.svs";
+//		final String imageId = "E:\\SCANS\\AML\\AML_run1.svs";
+//		final String imageId = "E:\\SCANS\\APG Kontrollen\\Kontrollgewebe_Tonsille_run1.svs";
+//		final String imageId = "E:\\SCANS\\hBC_Pilot\\SYS15_A08_0002-001.svs";
 		final Image2D image = new LociBackedImage(imageId);
 		
 		debugPrint("imageWidth:", image.getWidth(), "imageHeight:", image.getHeight(), "channels:", image.getChannels());
@@ -290,7 +293,7 @@ public final class IMJToolsTest {
 		Image2DComponent.show(lbpImage);
 	}
 	
-	private static final ExpensiveTest EXPENSIVE_TEST = ExpensiveTest.LBP1;
+	private static final ExpensiveTest EXPENSIVE_TEST = ExpensiveTest.SHOW2;
 	
 	@BeforeClass
 	public static final void beforeClass() {

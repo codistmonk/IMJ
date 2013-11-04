@@ -31,17 +31,26 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 	}
 	
 	@Override
+	protected void setTilePixelValue(final int x, final int y, final int xInTile, final int yInTile,
+			final int value) {
+		throw new UnsupportedOperationException();
+	}
+	
+	@Override
 	protected final boolean makeNewTile() {
 		return this.tile == null;
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Override
 	protected final void updateTile() {
+		final int tileWidth = this.getTileWidth();
+		final int tileHeight = this.getTileHeight();
 		this.tile = IMJTools.cache(Arrays.asList(this.getId(), this.getTileX(), this.getTileY()), new Callable<Image2D>() {
 			
 			@Override
 			public final Image2D call() throws Exception {
-				return FilteredTiledImage2D.this.updateTile(FilteredTiledImage2D.this.newTile());
+				return FilteredTiledImage2D.this.updateTile(FilteredTiledImage2D.this.newTile(tileWidth, tileHeight));
 			}
 			
 		});
@@ -49,10 +58,7 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 	
 	protected abstract Image2D updateTile(Image2D tile);
 	
-	final Image2D newTile() {
-		final int tileWidth = this.getTileWidth();
-		final int tileHeight = this.getTileHeight();
-		
+	final Image2D newTile(final int tileWidth, final int tileHeight) {
 		return new ConcreteImage2D(
 				new LinearIntImage("", (long) tileWidth * tileHeight, this.getChannels()), tileWidth, tileHeight);
 	}
