@@ -4,7 +4,7 @@ import static imj2.tools.IMJTools.forEachTile;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-import imj2.core.Image2D;
+
 import imj2.tools.IMJTools.TileProcessor;
 
 import java.awt.Color;
@@ -18,7 +18,6 @@ import javax.imageio.ImageIO;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-11-04)
@@ -104,7 +103,6 @@ public final class SplitImage {
 				
 				@Override
 				public final void endOfTile() {
-					Tools.debugPrint(lod, this.tileX, this.tileY);
 					try {
 						ImageIO.write(this.tile, "jpg",
 								new File(outputBasePath + "_lod" + lod + "_" + this.tileY + "_" + this.tileX + ".jpg"));

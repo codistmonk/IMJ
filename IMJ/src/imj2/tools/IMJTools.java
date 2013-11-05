@@ -4,6 +4,7 @@ import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static java.util.Collections.sort;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
 import imj2.core.Image2D;
@@ -15,7 +16,6 @@ import java.io.Serializable;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
+
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -76,8 +77,6 @@ public final class IMJTools {
 			
 			final int n = (int) (ratio * entries.size());
 			
-			debugPrintLODCounts();
-			
 			for (int i = 0; i < n; ++i) {
 				final Entry<Object, CachedValue> entry = entries.get(i);
 				
@@ -85,30 +84,7 @@ public final class IMJTools {
 					cache.remove(entry.getKey());
 				}
 			}
-			
-			debugPrintLODCounts();
 		}
-	}
-	
-	private static final void debugPrintLODCounts() {
-		final int[] lodCounts = new int[8];
-		
-		for (final Object key : cache.keySet()) {
-			final int i = key.toString().indexOf(".lod");
-			
-			if (i < 0) {
-				++lodCounts[0];
-			} else {
-				final int lod = Integer.parseInt(key.toString().substring(i + 4, i + 5));
-				++lodCounts[lod];
-				
-				if (lod == 7) {
-					Tools.debugPrint(key);
-				}
-			}
-		}
-		
-		Tools.debugPrint(Arrays.toString(lodCounts));
 	}
 	
 	public static final long sum(final long... values) {
@@ -443,7 +419,6 @@ public final class IMJTools {
 			final Runtime runtime = Runtime.getRuntime();
 			
 			if (Tools.usedMemory() > runtime.maxMemory() / 2L) {
-				Tools.debugPrint(cache.size(), runtime.freeMemory(), runtime.totalMemory(), runtime.maxMemory() / 2L);
 				removeOldCacheEntries(1.0 / 8.0);
 			}
 			
