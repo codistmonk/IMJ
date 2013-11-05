@@ -166,7 +166,7 @@ public final class IMJToolsTest {
 //				debugPrint(matcher.group(0), matcher.group(1), matcher.group(2));
 //			}
 //		}
-		final TiledImage2D image = new MultifileImage(imageDirectory + imageSimpleName);
+		final Image2D image = new MultifileImage(imageDirectory + imageSimpleName).getLODImage(2);
 		
 		debugPrint("imageWidth:", image.getWidth(), "imageHeight:", image.getHeight(), "channels:", image.getChannels());
 		

@@ -7,6 +7,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.Callable;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 
@@ -18,6 +20,10 @@ import imj2.core.Image2D;
  */
 public final class MultifileImage extends TiledImage2D {
 	
+	private final String idWithoutLOD;
+	
+	private final int lod;
+	
 	private final int width;
 	
 	private final int height;
@@ -28,6 +34,16 @@ public final class MultifileImage extends TiledImage2D {
 	
 	public MultifileImage(final String id) {
 		super(id);
+		final Matcher matcher = Pattern.compile("(.*)_lod([0-9]+)").matcher(id);
+		
+		if (matcher.matches()) {
+			this.idWithoutLOD = matcher.group(1);
+			this.lod = Integer.parseInt(matcher.group(2));
+		} else {
+			this.idWithoutLOD = id;
+			this.lod = 0;
+		}
+		
 		try {
 			final BufferedImage tile00 = ImageIO.read(new File(id + "_0_0.jpg"));
 			this.channels = IMJTools.predefinedChannelsFor(tile00);
@@ -51,6 +67,26 @@ public final class MultifileImage extends TiledImage2D {
 			
 			this.setOptimalTileDimensions(tile00.getWidth(), tile00.getHeight());
 		} catch (final IOException exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	public final int getLOD() {
+		return this.lod;
+	}
+	
+	public final Image2D getLODImage(final int lod) {
+		if (lod == this.getLOD()) {
+			return this;
+		}
+		
+		try {
+			return new MultifileImage(this.idWithoutLOD + "_lod" + lod);
+		} catch (final Exception exception) {
+			if (lod == 0) {
+				return new MultifileImage(this.idWithoutLOD);
+			}
+			
 			throw unchecked(exception);
 		}
 	}
