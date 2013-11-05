@@ -156,16 +156,6 @@ public final class IMJToolsTest {
 		
 		final String imageDirectory = "images/";
 		final String imageSimpleName = "SYS15_A08_0002-006_lod0";
-//		final File directory = new File(imageDirectory);
-//		final Pattern pattern = Pattern.compile(Pattern.quote(imageNumber) + "_lod0_([0-9]+)_([0-9]+)\\..+");
-//		
-//		for (final File f : directory.listFiles()) {
-//			final Matcher matcher = pattern.matcher(f.getName());
-//			
-//			if (matcher.matches()) {
-//				debugPrint(matcher.group(0), matcher.group(1), matcher.group(2));
-//			}
-//		}
 		final Image2D image = new MultifileImage(imageDirectory + imageSimpleName).getLODImage(2);
 		
 		debugPrint("imageWidth:", image.getWidth(), "imageHeight:", image.getHeight(), "channels:", image.getChannels());
