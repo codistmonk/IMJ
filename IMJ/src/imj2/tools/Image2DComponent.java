@@ -100,6 +100,7 @@ public final class Image2DComponent extends JComponent {
 			@Override
 			public final void keyTyped(final KeyEvent event) {
 				final Image2D image = Image2DComponent.this.getImage();
+				final MultifileImage multifileImage = cast(MultifileImage.class, image);
 				final int zoom = Image2DComponent.this.getZoom();
 				
 				switch (event.getKeyChar()) {
@@ -110,18 +111,32 @@ public final class Image2DComponent extends JComponent {
 					Image2DComponent.this.setZoom(zoom / 2);
 					break;
 				case '+':
+					if (multifileImage != null && 0 < multifileImage.getLOD()) {
+						Image2DComponent.this.setImage(multifileImage.getLODImage(multifileImage.getLOD() - 1));
+						
+						break;
+					}
+					
 					final SubsampledImage2D subsampledImage = cast(SubsampledImage2D.class, image);
 					
 					if (subsampledImage != null) {
 						Image2DComponent.this.setImage(subsampledImage.getSource());
-						Image2DComponent.this.setZoom(zoom / 2);
 					}
 					
 					break;
 				case '-':
+					if (multifileImage != null) {
+						try {
+							Image2DComponent.this.setImage(multifileImage.getLODImage(multifileImage.getLOD() + 1));
+							
+							break;
+						} catch (final Exception exception) {
+							System.err.println(exception);
+						}
+					}
+					
 					if (1 < image.getWidth() && 1 < image.getHeight()) {
 						Image2DComponent.this.setImage(new SubsampledImage2D(image));
-						Image2DComponent.this.setZoom(zoom * 2);
 					}
 					
 					break;
@@ -364,7 +379,7 @@ public final class Image2DComponent extends JComponent {
 		return this.scaledImage;
 	}
 	
-	public final void setScaledImage(ScaledImage2D scaledImage) {
+	public final void setScaledImage(final ScaledImage2D scaledImage) {
 		this.scaledImage = scaledImage;
 	}
 
