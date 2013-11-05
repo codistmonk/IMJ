@@ -178,7 +178,7 @@ public abstract class TiledImage2D implements Image2D {
 	protected abstract void updateTile();
 	
 	private final void ensureTileContains(final int x, final int y) {
-		final int tileX = quantize(x, this.getOptimalTileHeight());
+		final int tileX = quantize(x, this.getOptimalTileWidth());
 		final int tileY = quantize(y, this.getOptimalTileHeight());
 		final boolean tileIsUpToDate = this.getTileX() == tileX && this.getTileY() == tileY && !this.makeNewTile();
 		
