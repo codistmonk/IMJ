@@ -4,7 +4,6 @@ import static imj2.tools.IMJTools.quantize;
 import static imj2.tools.MultiThreadTools.WORKER_COUNT;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.assertEquals;
-
 import imj2.core.ConcreteImage2D;
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
@@ -13,6 +12,8 @@ import imj2.core.LinearIntImage;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.Date;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 
@@ -145,6 +146,30 @@ public final class IMJToolsTest {
 		debugPrint("imageWidth:", image.getWidth(), "imageHeight:", image.getHeight(), "channels:", image.getChannels());
 		
 		Image2DComponent.show(image);
+	}
+	
+	@Test
+	public final void testShow3() throws Exception {
+		if (!ExpensiveTest.SHOW3.equals(EXPENSIVE_TEST)) {
+			return;
+		}
+		
+		final String imageDirectory = "images/";
+		final String imageNumber = "16088";
+		final File directory = new File(imageDirectory);
+		final Pattern pattern = Pattern.compile(Pattern.quote(imageNumber) + "_lod0_([0-9]+)_([0-9]+)\\..+");
+		
+		for (final File f : directory.listFiles()) {
+			final Matcher matcher = pattern.matcher(f.getName());
+			
+			if (matcher.matches()) {
+				debugPrint(matcher.group(0), matcher.group(1), matcher.group(2));
+			}
+		}
+		
+//		debugPrint("imageWidth:", image.getWidth(), "imageHeight:", image.getHeight(), "channels:", image.getChannels());
+//		
+//		Image2DComponent.show(image);
 	}
 	
 	@Test
@@ -293,7 +318,7 @@ public final class IMJToolsTest {
 		Image2DComponent.show(lbpImage);
 	}
 	
-	private static final ExpensiveTest EXPENSIVE_TEST = ExpensiveTest.SHOW2;
+	private static final ExpensiveTest EXPENSIVE_TEST = ExpensiveTest.SHOW3;
 	
 	@BeforeClass
 	public static final void beforeClass() {
@@ -327,7 +352,7 @@ public final class IMJToolsTest {
 	 */
 	private static enum ExpensiveTest {
 		
-		SHOW1, SHOW2, HISTOGRAM1, LOD1, LOD2, LBP1;
+		SHOW1, SHOW2, SHOW3, HISTOGRAM1, LOD1, LOD2, LBP1;
 		
 	}
 	

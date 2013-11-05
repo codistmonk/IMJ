@@ -4,9 +4,9 @@ import static imj2.tools.IMJTools.forEachTile;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.core.Image2D;
 import imj2.tools.IMJTools.TileProcessor;
+
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -18,6 +18,7 @@ import javax.imageio.ImageIO;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-11-04)
@@ -43,20 +44,31 @@ public final class SplitImage {
 		final int maximumTileHeight = arguments.get("maximumTileWidth", maximumTileWidth)[0];
 		final int forcedTileWidth = arguments.get("tileWidth", 0)[0];
 		final int forcedTileHeight = arguments.get("tileHeight", forcedTileWidth)[0];
-		final int lods = arguments.get("lods", 7)[0];
+		final int[] lods = arguments.get("lods", 0, 1, 2, 3, 4, 5, 6, 7);
 		
 		System.out.println("input: " + imageId);
 		
-		final Image2D image[] = { new LociBackedImage(imageId) };
-		final int optimalTileWidth = 0 < forcedTileWidth ? forcedTileWidth : min(maximumTileWidth, ((TiledImage2D) image[0]).getOptimalTileWidth());
-		final int optimalTileHeight = 0 < forcedTileHeight ? forcedTileHeight : min(maximumTileHeight, ((TiledImage2D) image[0]).getOptimalTileHeight());
+		final TiledImage2D[] image = { new LociBackedImage(imageId) };
+		int currentLOD = 0;
+		final int optimalTileWidth = 0 < forcedTileWidth ? forcedTileWidth : min(maximumTileWidth, image[0].getOptimalTileWidth());
+		final int optimalTileHeight = 0 < forcedTileHeight ? forcedTileHeight : min(maximumTileHeight, image[0].getOptimalTileHeight());
 		final DefaultColorModel color = new DefaultColorModel(image[0].getChannels());
 		
 		System.out.println("outputBase: " + outputBasePath);
 		System.out.println("Splitting... " + new Date(timer.tic()));
 		
-		for (int lod0 = 0; lod0 < lods; ++lod0, image[0] = new SubsampledImage2D(image[0])) {
-			final int lod = lod0;
+		for (final int lod : lods) {
+			for (; currentLOD < lod; ++currentLOD) {
+				System.out.println("Subsampling for LOD " + (currentLOD + 1) + "... " + new Date());
+				
+				image[0] = new SubsampledImage2D(image[0], optimalTileWidth, optimalTileHeight);
+				image[0].loadAllTiles();
+			}
+			
+			if (currentLOD != lod) {
+				throw new IllegalArgumentException();
+			}
+			
 			final int imageWidth = image[0].getWidth();
 			final int imageHeight = image[0].getHeight();
 			final int preferredTileWidth = min(imageWidth, optimalTileWidth);
@@ -92,6 +104,7 @@ public final class SplitImage {
 				
 				@Override
 				public final void endOfTile() {
+					Tools.debugPrint(lod, this.tileX, this.tileY);
 					try {
 						ImageIO.write(this.tile, "jpg",
 								new File(outputBasePath + "_lod" + lod + "_" + this.tileY + "_" + this.tileX + ".jpg"));

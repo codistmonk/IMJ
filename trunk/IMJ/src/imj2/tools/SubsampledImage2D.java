@@ -25,6 +25,14 @@ public final class SubsampledImage2D extends FilteredTiledImage2D {
 		this.useOptimalTileDimensionsOf(source, 256, 256);
 	}
 	
+	public SubsampledImage2D(final Image2D source, final int tileWidth, final int tileHeight) {
+		super(subId(source.getId()), source);
+		this.width = source.getWidth() / 2;
+		this.height = source.getHeight() / 2;
+		
+		this.setOptimalTileDimensions(tileWidth, tileHeight);
+	}
+	
 	@Override
 	public final int getWidth() {
 		return this.width;

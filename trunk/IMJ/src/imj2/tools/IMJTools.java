@@ -4,7 +4,6 @@ import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static java.util.Collections.sort;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
 import imj2.core.Image2D;
@@ -13,8 +12,10 @@ import imj2.tools.IMJTools.TileProcessor.Info;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
-import java.lang.ref.SoftReference;
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -22,10 +23,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
-
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -74,10 +76,39 @@ public final class IMJTools {
 			
 			final int n = (int) (ratio * entries.size());
 			
+			debugPrintLODCounts();
+			
 			for (int i = 0; i < n; ++i) {
-				cache.remove(entries.get(i).getKey());
+				final Entry<Object, CachedValue> entry = entries.get(i);
+				
+				if (!entry.getValue().isBusy()) {
+					cache.remove(entry.getKey());
+				}
+			}
+			
+			debugPrintLODCounts();
+		}
+	}
+	
+	private static final void debugPrintLODCounts() {
+		final int[] lodCounts = new int[8];
+		
+		for (final Object key : cache.keySet()) {
+			final int i = key.toString().indexOf(".lod");
+			
+			if (i < 0) {
+				++lodCounts[0];
+			} else {
+				final int lod = Integer.parseInt(key.toString().substring(i + 4, i + 5));
+				++lodCounts[lod];
+				
+				if (lod == 7) {
+					Tools.debugPrint(key);
+				}
 			}
 		}
+		
+		Tools.debugPrint(Arrays.toString(lodCounts));
 	}
 	
 	public static final long sum(final long... values) {
@@ -361,8 +392,15 @@ public final class IMJTools {
 		
 		private Object value;
 		
+		private final AtomicBoolean busy;
+		
 		CachedValue(final Callable<?> valueFActory) {
 			this.valueFactory = valueFActory;
+			this.busy = new AtomicBoolean();
+		}
+		
+		final boolean isBusy() {
+			return this.busy.get();
 		}
 		
 		final long getLastAccess() {
@@ -371,18 +409,23 @@ public final class IMJTools {
 		
 		@SuppressWarnings("unchecked")
 		final synchronized <T> T getValue() {
-			this.lastAccess = System.nanoTime();
-			
 			if (this.value == null) {
 				try {
+					this.busy.set(true);
 					this.value = this.valueFactory.call();
 				} catch (final Exception exception) {
 					throw Tools.unchecked(exception);
+				} finally {
+					this.busy.set(false);
 				}
 			}
 			
+			this.lastAccess = timestamp.addAndGet(1L);
+			
 			return (T) this.value;
 		}
+		
+		private static final AtomicLong timestamp = new AtomicLong(Long.MIN_VALUE);
 		
 	}
 	
@@ -392,19 +435,24 @@ public final class IMJTools {
 	private static final class CacheCleaner {
 		
 		private CacheCleaner() {
-			cleaner = new SoftReference<CacheCleaner>(this);
+			cleaner = new WeakReference<CacheCleaner>(this);
 		}
 		
 		@Override
 		protected final void finalize() throws Throwable {
-			removeOldCacheEntries(0.25);
+			final Runtime runtime = Runtime.getRuntime();
+			
+			if (Tools.usedMemory() > runtime.maxMemory() / 2L) {
+				Tools.debugPrint(cache.size(), runtime.freeMemory(), runtime.totalMemory(), runtime.maxMemory() / 2L);
+				removeOldCacheEntries(1.0 / 8.0);
+			}
 			
 			super.finalize();
 			
 			new CacheCleaner();
 		}
 		
-		private static SoftReference<CacheCleaner> cleaner;
+		private static Reference<CacheCleaner> cleaner;
 		
 		static final void setup() {
 			if (cleaner == null) {

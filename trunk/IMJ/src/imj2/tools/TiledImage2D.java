@@ -5,6 +5,7 @@ import static imj2.core.ConcreteImage2D.getY;
 import static imj2.tools.IMJTools.quantize;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.cast;
+import imj.IntList;
 import imj2.core.Image2D;
 
 /**
@@ -84,6 +85,29 @@ public abstract class TiledImage2D implements Image2D {
 		}
 	}
 	
+	public final int getOptimalTileWidth() {
+		return this.optimalTileWidth;
+	}
+	
+	public final int getOptimalTileHeight() {
+		return this.optimalTileHeight;
+	}
+	
+	public final void loadAllTiles() {
+		final IntList xys = new IntList();
+		
+		for (int y = 0; y < this.getHeight(); y += this.getOptimalTileHeight()) {
+			for (int x = 0; x < this.getWidth(); x += this.getOptimalTileWidth()) {
+				xys.add(x);
+				xys.add(y);
+				
+				for (int i = 0; i < xys.size(); i += 2) {
+					this.ensureTileContains(xys.get(i), xys.get(i + 1));
+				}
+			}
+		}
+	}
+	
 	protected final int getTileX() {
 		return this.tileX;
 	}
@@ -92,26 +116,20 @@ public abstract class TiledImage2D implements Image2D {
 		return this.tileY;
 	}
 	
-	public final int getOptimalTileWidth() {
-		return this.optimalTileWidth;
-	}
-	
 	protected final void setOptimalTileWidth(final int optimalTileWidth) {
+		this.tileX = 0;
+		
 		if (0 < optimalTileWidth && optimalTileWidth != this.getOptimalTileWidth()) {
 			this.optimalTileWidth = optimalTileWidth;
-			this.tileX = 0;
 			this.setTileWidth();
 		}
 	}
 	
-	public final int getOptimalTileHeight() {
-		return this.optimalTileHeight;
-	}
-	
 	protected final void setOptimalTileHeight(final int optimalTileHeight) {
+		this.tileY = 0;
+		
 		if (0 < optimalTileHeight && optimalTileHeight != this.getOptimalTileHeight()) {
 			this.optimalTileHeight = optimalTileHeight;
-			this.tileY = 0;
 			this.setTileHeight();
 		}
 	}
