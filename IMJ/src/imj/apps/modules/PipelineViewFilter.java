@@ -16,6 +16,7 @@ import static javax.swing.SwingUtilities.isRightMouseButton;
 import static net.sourceforge.aprog.af.AFTools.item;
 import static net.sourceforge.aprog.i18n.Messages.translate;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
+import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
@@ -43,6 +44,7 @@ import javax.swing.event.ListSelectionListener;
 
 import net.sourceforge.aprog.af.AbstractAFAction;
 import net.sourceforge.aprog.context.Context;
+import net.sourceforge.aprog.swing.SwingTools;
 
 /**
  * @author codistmonk (creation 2013-02-18)
@@ -189,12 +191,12 @@ public final class PipelineViewFilter extends ViewFilter {
 	protected final Component newInputPanel(final ActionListener previewAction, final Map<String, JTextField> textFields) {
 		final ViewFilter[] viewFilters = this.getContext().get("viewFilters");
 		final JTabbedPane tabs = new JTabbedPane();
-		final JSplitPane split = horizontalSplit(this.filters, tabs);
+		final JSplitPane split = horizontalSplit(scrollable(this.filters), tabs);
 		final JPanel result = new JPanel(new BorderLayout());
 		final JList filterSelector = new JList(viewFilters);
 		
-		tabs.add("Filters", filterSelector);
-		tabs.add("Parameters", this.cards);
+		tabs.add("Filters", scrollable(filterSelector));
+		tabs.add("Parameters", scrollable(this.cards));
 		
 		result.add(split, BorderLayout.CENTER);
 		
