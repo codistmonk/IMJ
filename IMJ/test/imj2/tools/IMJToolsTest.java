@@ -4,16 +4,18 @@ import static imj2.tools.IMJTools.quantize;
 import static imj2.tools.MultiThreadTools.WORKER_COUNT;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.assertEquals;
+
 import imj2.core.ConcreteImage2D;
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
 import imj2.core.LinearIntImage;
+import imj2.tools.MultifileImage.AuthenticationForHost;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.net.URL;
 import java.util.Date;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Scanner;
 
 import javax.imageio.ImageIO;
 
@@ -154,9 +156,29 @@ public final class IMJToolsTest {
 			return;
 		}
 		
-		final String imageDirectory = "images/";
+		final String imageDirectory = "../Libraries/images/jpg/";
+//		final String imageSimpleName = "SYS15_A08_0002-006_lod0";
+		final String imageSimpleName = "16088_lod0";
+		final Image2D image = new MultifileImage(imageDirectory + imageSimpleName);
+		
+		debugPrint("imageWidth:", image.getWidth(), "imageHeight:", image.getHeight(), "channels:", image.getChannels());
+		
+		Image2DComponent.show(image);
+	}
+	
+	@Test
+	public final void testShow4() throws Exception {
+		if (!ExpensiveTest.SHOW4.equals(EXPENSIVE_TEST)) {
+			return;
+		}
+		
+		final URL imageDirectory = new URL(new Scanner(new File("../Libraries/images/wsi_url.txt")).nextLine());
 		final String imageSimpleName = "SYS15_A08_0002-006_lod0";
-		final Image2D image = new MultifileImage(imageDirectory + imageSimpleName).getLODImage(2);
+		
+		System.setProperty("javax.net.ssl.trustStore", new File("../Libraries/cert/cacerts").getCanonicalPath());
+		
+		final Image2D image = new MultifileImage(imageDirectory + imageSimpleName,
+				new AuthenticationForHost(imageDirectory.getHost()));
 		
 		debugPrint("imageWidth:", image.getWidth(), "imageHeight:", image.getHeight(), "channels:", image.getChannels());
 		
@@ -309,7 +331,7 @@ public final class IMJToolsTest {
 		Image2DComponent.show(lbpImage);
 	}
 	
-	private static final ExpensiveTest EXPENSIVE_TEST = ExpensiveTest.SHOW3;
+	private static final ExpensiveTest EXPENSIVE_TEST = ExpensiveTest.SHOW4;
 	
 	@BeforeClass
 	public static final void beforeClass() {
@@ -343,7 +365,7 @@ public final class IMJToolsTest {
 	 */
 	private static enum ExpensiveTest {
 		
-		SHOW1, SHOW2, SHOW3, HISTOGRAM1, LOD1, LOD2, LBP1;
+		SHOW1, SHOW2, SHOW3, SHOW4, HISTOGRAM1, LOD1, LOD2, LBP1;
 		
 	}
 	
