@@ -17,6 +17,8 @@ import java.net.URLConnection;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,6 +34,7 @@ import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
+import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Tools;
 
 import imj2.core.ConcreteImage2D;
@@ -312,30 +315,20 @@ public final class MultifileImage extends TiledImage2D {
 			String authorization = authorizations.get(connection.getURL().getHost());
 			
 			if (authorization == null) {
+				SwingTools.setCheckAWT(false);
+				
 				final JTextField loginField = new JTextField();
 				final JPasswordField passwordField = new JPasswordField();
-				final JComponent[] credentialsComponent = { null };
-				
-				try {
-					SwingUtilities.invokeAndWait(new Runnable() {
-						
-						@Override
-						public final void run() {
-							credentialsComponent[0] = verticalBox(
-									horizontalBox(new JLabel("Login:"), loginField),
-									horizontalBox(new JLabel("Password:"), passwordField)
-									);
-						}
-						
-					});
-				} catch (final Exception exception) {
-					throw unchecked(exception);
-				}
-				
+				final JComponent credentialsComponent = verticalBox(
+						horizontalBox(new JLabel("Login:"), loginField),
+						horizontalBox(new JLabel("Password:"), passwordField)
+				);
 				final int option = JOptionPane.showOptionDialog(null, credentialsComponent, connection.getURL().toString(),
 						JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE, null, null, null);
 				
-				if(option == JOptionPane.OK_OPTION) {
+				SwingTools.setCheckAWT(true);
+				
+				if (option == JOptionPane.OK_OPTION) {
 					final byte[] login = loginField.getText().getBytes();
 					final byte[] separator = ":".getBytes();
 					final byte[] password = getPassword(passwordField);
@@ -346,7 +339,6 @@ public final class MultifileImage extends TiledImage2D {
 					arraycopy(password, 0, credentials, login.length + separator.length, password.length);
 					
 					authorization = "Basic " + javax.xml.bind.DatatypeConverter.printBase64Binary(credentials);
-					
 					authorizations.put(connection.getURL().getHost(), authorization);
 				}
 			}
