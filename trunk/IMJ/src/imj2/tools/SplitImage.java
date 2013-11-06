@@ -4,20 +4,25 @@ import static imj2.tools.IMJTools.forEachTile;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.tools.IMJTools.TileProcessor;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Date;
 
 import javax.imageio.ImageIO;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.xml.XMLTools;
 
 /**
  * @author codistmonk (creation 2013-11-04)
@@ -52,6 +57,19 @@ public final class SplitImage {
 		final int optimalTileWidth = 0 < forcedTileWidth ? forcedTileWidth : min(maximumTileWidth, image[0].getOptimalTileWidth());
 		final int optimalTileHeight = 0 < forcedTileHeight ? forcedTileHeight : min(maximumTileHeight, image[0].getOptimalTileHeight());
 		final DefaultColorModel color = new DefaultColorModel(image[0].getChannels());
+		final File outputDirectory = new File(outputBasePath).getParentFile();
+		final File dbFile = new File(outputDirectory, "imj_database.xml");
+		final Document dbXML;
+		
+		if (dbFile.canRead()) {
+			dbXML = XMLTools.parse(new FileInputStream(dbFile));
+			
+			for (final Node node : XMLTools.getNodes(dbXML, "//image")) {
+				((Element) node).setIdAttribute("id", true);
+			}
+		} else {
+			dbXML = XMLTools.parse("<images/>");
+		}
 		
 		System.out.println("outputBase: " + outputBasePath);
 		System.out.println("Splitting... " + new Date(timer.tic()));
@@ -72,6 +90,7 @@ public final class SplitImage {
 			final int imageHeight = image[0].getHeight();
 			final int preferredTileWidth = min(imageWidth, optimalTileWidth);
 			final int preferredTileHeight = min(imageHeight, optimalTileHeight);
+			final long[] histogram = new long[64];
 			
 			System.out.println("LOD: " + lod + " " + new Date());
 			System.out.println("width: " + imageWidth + " height: " + imageHeight +
@@ -80,6 +99,7 @@ public final class SplitImage {
 			forEachTile(imageWidth, imageHeight, preferredTileWidth, preferredTileHeight, new TileProcessor() {
 				
 				private BufferedImage tile = null;
+				
 				
 				private int tileX;
 				
@@ -96,9 +116,13 @@ public final class SplitImage {
 					
 					final int pixelValue = image[0].getPixelValue(info.getTileX() + info.getPixelXInTile(),
 							info.getTileY() + info.getPixelYInTile());
+					final int red = color.red(pixelValue);
+					final int green = color.green(pixelValue);
+					final int blue = color.blue(pixelValue);
 					
 					this.tile.setRGB(info.getPixelXInTile(), info.getPixelYInTile(),
-							new Color(color.red(pixelValue), color.green(pixelValue), color.blue(pixelValue)).getRGB());
+							new Color(red, green, blue).getRGB());
+					++histogram[((red & 0xC0) >> 2) | ((green & 0xC0) >> 4) | ((blue & 0xC0) >> 6)];
 				}
 				
 				@Override
@@ -117,9 +141,53 @@ public final class SplitImage {
 				private static final long serialVersionUID = 6955996121004415003L;
 				
 			});
+			
+			{
+				final String id = new File(outputBasePath).getName() + "_lod" + lod;
+				Element imageElement = dbXML.getElementById(id);
+				
+				if (imageElement == null) {
+					imageElement = dbXML.createElement("image");
+//				} else {
+//					imageElement.setTextContent("");
+				}
+				
+				imageElement.setAttribute("id", id);
+				imageElement.setIdAttribute("id", true);
+				imageElement.setAttribute("width", "" + imageWidth);
+				imageElement.setAttribute("height", "" + imageHeight);
+				imageElement.setAttribute("tileWidth", "" + optimalTileWidth);
+				imageElement.setAttribute("tileHeight", "" + optimalTileHeight);
+				
+				{
+					final Element histogramElement = dbXML.createElement("histogram");
+					final long pixelCount = (long) imageWidth * imageHeight;
+					final StringBuilder histogramStringBuilder = new StringBuilder();
+					final int n = histogram.length;
+					
+					if (0 < n) {
+						histogramStringBuilder.append(255L * histogram[0] / pixelCount);
+						
+						for (int i = 1; i < n; ++i) {
+							histogramStringBuilder.append(' ').append(255L * histogram[i] / pixelCount);
+						}
+					}
+					
+					for (final Node oldHistogramElement : XMLTools.getNodes(imageElement, "histogram")) {
+						imageElement.removeChild(oldHistogramElement);
+					}
+					
+					histogramElement.setTextContent(histogramStringBuilder.toString());
+					imageElement.appendChild(histogramElement);
+				}
+				
+				dbXML.getDocumentElement().appendChild(imageElement);
+			}
 		}
 		
 		System.out.println("Splitting done time: " + timer.toc());
+		
+		XMLTools.write(dbXML, dbFile, 0);
 	}
 	
 	public static final String removeExtension(final String path) {
