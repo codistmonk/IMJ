@@ -14,6 +14,7 @@ import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.invoke;
 
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -226,13 +227,17 @@ public abstract class Plugin {
 	 * <br>Must not be null
 	 */
 	protected Component newInputPanel(final ActionListener previewAction, final Map<String, JTextField> textFields) {
-		final JPanel result = new JPanel(new GridLayout(0, 1));
+		final Box result = Box.createVerticalBox();
 		
 		for (final Map.Entry<String, String> entry : this.getParameters().entrySet()) {
 			final JTextField textField = newSpinnerTextField(entry.getValue(), previewAction);
 			
 			textFields.put(entry.getKey(), textField);
-			result.add(horizontalBox(new JLabel(entry.getKey()), textField));
+			
+			final Box horizontalBox = horizontalBox(new JLabel(entry.getKey()), textField);
+			
+			horizontalBox.setMaximumSize(new Dimension(Integer.MAX_VALUE, horizontalBox.getPreferredSize().height));
+			result.add(horizontalBox);
 		}
 		
 		return result;
