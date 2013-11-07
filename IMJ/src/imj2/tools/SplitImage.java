@@ -2,10 +2,10 @@ package imj2.tools;
 
 import static imj2.tools.IMJTools.forEachTile;
 import static imj2.tools.MultifileImage.setIdAttributes;
-import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
+
 import imj2.tools.IMJTools.TileProcessor;
 
 import java.awt.Color;
@@ -195,7 +195,7 @@ public final class SplitImage {
 	}
 	
 	public static final String removeExtension(final String path) {
-		final int i = path.lastIndexOf('.', max(0, max(path.lastIndexOf('/'), path.lastIndexOf('\\'))));
+		final int i = new File(path).getName().lastIndexOf('.');
 		
 		return i < 0 ? path : path.substring(0, i);
 	}
