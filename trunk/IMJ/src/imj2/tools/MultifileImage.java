@@ -86,7 +86,7 @@ public final class MultifileImage extends TiledImage2D {
 			
 			@Override
 			public final Document call() throws Exception {
-				return setIdAttributes(parse(MultifileImage.this.open(databaseId)));
+				return setIdAttributes(parse(open(databaseId, connectionConfigurator)));
 			}
 			
 		});
@@ -112,33 +112,7 @@ public final class MultifileImage extends TiledImage2D {
 	
 	public final BufferedImage loadImage(final String id) {
 		try {
-			return ImageIO.read(this.open(this.getRoot()+ "/" + id));
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
-	}
-	
-	public final InputStream open(final String id) {
-		final Matcher protocolMatcher = PROTOCOL_PATTERN.matcher(id);
-		
-		try {
-			if (protocolMatcher.matches()) {
-				Tools.debugPrint("url:", id);
-				
-				final URLConnection connection = new URI(id).toURL().openConnection();
-				
-				if (this.getConnectionConfigurator() != null) {
-					this.getConnectionConfigurator().configureConnection(connection);
-				}
-				
-				connection.connect();
-				
-				return connection.getInputStream();
-			}
-			
-			Tools.debugPrint(id);
-			
-			return new FileInputStream(id);
+			return ImageIO.read(open(this.getRoot()+ "/" + id, this.getConnectionConfigurator()));
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
@@ -236,6 +210,30 @@ public final class MultifileImage extends TiledImage2D {
 		}
 		
 		return database;
+	}
+	
+	public static final InputStream open(final String id, final ConnectionConfigurator connectionConfigurator) {
+		final Matcher protocolMatcher = PROTOCOL_PATTERN.matcher(id);
+		
+		try {
+			if (protocolMatcher.matches()) {
+				Tools.debugPrint("url:", id);
+				
+				final URLConnection connection = new URI(id).toURL().openConnection();
+				
+				if (connectionConfigurator != null) {
+					connectionConfigurator.configureConnection(connection);
+				}
+				
+				connection.connect();
+				
+				return connection.getInputStream();
+			}
+			
+			return new FileInputStream(id);
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
 	}
 	
 	/**
