@@ -1,5 +1,6 @@
 package imj2.tools;
 
+import static imj2.tools.IMJTools.cache;
 import static imj2.tools.IMJTools.predefinedChannelsFor;
 import static java.lang.Integer.parseInt;
 import static java.lang.System.arraycopy;
@@ -80,7 +81,15 @@ public final class MultifileImage extends TiledImage2D {
 		this.idWithoutLOD = matcher.group(1);
 		this.lod = parseInt(matcher.group(2));
 		
-		final Document database = setIdAttributes(parse(this.open(root + "/imj_database.xml")));
+		final String databaseId = root + "/imj_database.xml";
+		final Document database = cache(databaseId, new Callable<Document>() {
+			
+			@Override
+			public final Document call() throws Exception {
+				return setIdAttributes(parse(MultifileImage.this.open(databaseId)));
+			}
+			
+		});
 		final Element imageElement = database.getElementById(id);
 		
 		this.width = parseInt(imageElement.getAttribute("width"));
