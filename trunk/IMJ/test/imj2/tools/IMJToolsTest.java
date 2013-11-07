@@ -156,10 +156,10 @@ public final class IMJToolsTest {
 			return;
 		}
 		
-		final String imageDirectory = "../Libraries/images/jpg/";
 //		final String imageSimpleName = "SYS15_A08_0002-006_lod0";
 		final String imageSimpleName = "16088_lod0";
-		final Image2D image = new MultifileImage(imageDirectory + imageSimpleName);
+		final Image2D image = new MultifileImage("../Libraries/images/jpg/", imageSimpleName, null);
+		
 		
 		debugPrint("imageWidth:", image.getWidth(), "imageHeight:", image.getHeight(), "channels:", image.getChannels());
 		
@@ -172,12 +172,16 @@ public final class IMJToolsTest {
 			return;
 		}
 		
-		final URL imageDirectory = new URL(new Scanner(new File("../Libraries/images/wsi_url.txt")).nextLine());
+		final Scanner scanner = new Scanner(new File("../Libraries/images/wsi_url.txt"));
+		final URL imageDirectory = new URL(scanner.nextLine());
+		
+		scanner.close();
+		
 		final String imageSimpleName = "SYS15_A08_0002-006_lod0";
 		
 		System.setProperty("javax.net.ssl.trustStore", new File("../Libraries/cert/cacerts").getCanonicalPath());
 		
-		final Image2D image = new MultifileImage(imageDirectory + imageSimpleName,
+		final Image2D image = new MultifileImage(imageDirectory.toString(), imageSimpleName,
 				new AuthenticationForHost(imageDirectory.getHost()));
 		
 		debugPrint("imageWidth:", image.getWidth(), "imageHeight:", image.getHeight(), "channels:", image.getChannels());
