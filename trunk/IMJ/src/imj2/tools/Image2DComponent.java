@@ -184,6 +184,10 @@ public final class Image2DComponent extends JComponent {
 			
 			@Override
 			public final void mousePressed(final MouseEvent event) {
+				if (!Image2DComponent.this.requestFocusInWindow()) {
+					Image2DComponent.this.requestFocus();
+				}
+				
 				this.horizontalScrollBarValue = Image2DComponent.this.getHorizontalScrollBar().getValue();
 				this.verticalScrollBarValue = Image2DComponent.this.getVerticalScrollBar().getValue();
 				this.x = event.getX();
