@@ -1,9 +1,11 @@
 package imj2.tools;
 
 import static imj2.tools.IMJTools.forEachTile;
+import static imj2.tools.MultifileImage.setIdAttributes;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+import static net.sourceforge.aprog.xml.XMLTools.parse;
 import imj2.tools.IMJTools.TileProcessor;
 
 import java.awt.Color;
@@ -49,6 +51,7 @@ public final class SplitImage {
 		final int forcedTileWidth = arguments.get("tileWidth", 0)[0];
 		final int forcedTileHeight = arguments.get("tileHeight", forcedTileWidth)[0];
 		final int[] lods = arguments.get("lods", 0, 1, 2, 3, 4, 5, 6, 7);
+		final boolean generateTiles = arguments.get("generateTiles", 1)[0] != 0;
 		
 		System.out.println("input: " + imageId);
 		
@@ -62,13 +65,9 @@ public final class SplitImage {
 		final Document dbXML;
 		
 		if (dbFile.canRead()) {
-			dbXML = XMLTools.parse(new FileInputStream(dbFile));
-			
-			for (final Node node : XMLTools.getNodes(dbXML, "//image")) {
-				((Element) node).setIdAttribute("id", true);
-			}
+			dbXML = setIdAttributes(parse(new FileInputStream(dbFile)));
 		} else {
-			dbXML = XMLTools.parse("<images/>");
+			dbXML = parse("<images/>");
 		}
 		
 		System.out.println("outputBase: " + outputBasePath);
@@ -100,7 +99,6 @@ public final class SplitImage {
 				
 				private BufferedImage tile = null;
 				
-				
 				private int tileX;
 				
 				private int tileY;
@@ -110,8 +108,11 @@ public final class SplitImage {
 					this.tileX = info.getTileX();
 					this.tileY = info.getTileY();
 					
-					if (this.tile == null || this.tile.getWidth() != info.getActualTileWidth() || this.tile.getHeight() != info.getActualTileHeight()) {
-						this.tile = new BufferedImage(info.getActualTileWidth(), info.getActualTileHeight(), BufferedImage.TYPE_3BYTE_BGR);
+					if (generateTiles && (this.tile == null ||
+							this.tile.getWidth() != info.getActualTileWidth() ||
+							this.tile.getHeight() != info.getActualTileHeight())) {
+						this.tile = new BufferedImage(info.getActualTileWidth(), info.getActualTileHeight(),
+								BufferedImage.TYPE_3BYTE_BGR);
 					}
 					
 					final int pixelValue = image[0].getPixelValue(info.getTileX() + info.getPixelXInTile(),
@@ -120,18 +121,23 @@ public final class SplitImage {
 					final int green = color.green(pixelValue);
 					final int blue = color.blue(pixelValue);
 					
-					this.tile.setRGB(info.getPixelXInTile(), info.getPixelYInTile(),
-							new Color(red, green, blue).getRGB());
+					if (generateTiles) {
+						this.tile.setRGB(info.getPixelXInTile(), info.getPixelYInTile(),
+								new Color(red, green, blue).getRGB());
+					}
+					
 					++histogram[((red & 0xC0) >> 2) | ((green & 0xC0) >> 4) | ((blue & 0xC0) >> 6)];
 				}
 				
 				@Override
 				public final void endOfTile() {
-					try {
-						ImageIO.write(this.tile, "jpg",
-								new File(outputBasePath + "_lod" + lod + "_" + this.tileY + "_" + this.tileX + ".jpg"));
-					} catch (final IOException exception) {
-						throw unchecked(exception);
+					if (generateTiles) {
+						try {
+							ImageIO.write(this.tile, "jpg",
+									new File(outputBasePath + "_lod" + lod + "_" + this.tileY + "_" + this.tileX + ".jpg"));
+						} catch (final IOException exception) {
+							throw unchecked(exception);
+						}
 					}
 				}
 				
@@ -148,8 +154,6 @@ public final class SplitImage {
 				
 				if (imageElement == null) {
 					imageElement = dbXML.createElement("image");
-//				} else {
-//					imageElement.setTextContent("");
 				}
 				
 				imageElement.setAttribute("id", id);

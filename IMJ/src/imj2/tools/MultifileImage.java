@@ -1,15 +1,18 @@
 package imj2.tools;
 
+import static imj2.tools.IMJTools.predefinedChannelsFor;
+import static java.lang.Integer.parseInt;
 import static java.lang.System.arraycopy;
 import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
 import static net.sourceforge.aprog.tools.Tools.cast;
+import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+import static net.sourceforge.aprog.xml.XMLTools.parse;
 
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URI;
@@ -17,8 +20,6 @@ import java.net.URLConnection;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,11 +33,14 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Tools;
-
+import net.sourceforge.aprog.xml.XMLTools;
 import imj2.core.ConcreteImage2D;
 import imj2.core.Image2D;
 
@@ -45,7 +49,9 @@ import imj2.core.Image2D;
  */
 public final class MultifileImage extends TiledImage2D {
 	
-	private final Options options;
+	private final String root;
+	
+	private final ConnectionConfigurator connectionConfigurator;
 	
 	private final String idWithoutLOD;
 	
@@ -59,104 +65,51 @@ public final class MultifileImage extends TiledImage2D {
 	
 	private transient Image2D tile;
 	
-	/**
-	 * Equivalent to <code>MultifileImage(id, null)</code>.
-	 * 
-	 * @param id
-	 * <br>Must not be null
-	 */
-	public MultifileImage(final String id) {
-		this(id, null);
-	}
-	
-	/**
-	 * @param id
-	 * <br>Must not be null
-	 * @param options
-	 * <br>Maybe null
-	 */
-	public MultifileImage(final String id, final Options options) {
+	public MultifileImage(final String root, final String id,
+			final ConnectionConfigurator connectionConfigurator) {
 		super(id);
-		this.options = options;
 		
-		final Matcher matcher = Pattern.compile("(.*)_lod([0-9]+)").matcher(id);
+		final Matcher matcher = ID_PATTERN.matcher(id);
 		
-		if (matcher.matches()) {
-			this.idWithoutLOD = matcher.group(1);
-			this.lod = Integer.parseInt(matcher.group(2));
-		} else {
-			this.idWithoutLOD = id;
-			this.lod = 0;
+		if (!matcher.matches()) {
+			throw new IllegalArgumentException();
 		}
 		
-		try {
-			final BufferedImage tile00 = this.loadImage(id + "_0_0.jpg");
-			this.channels = IMJTools.predefinedChannelsFor(tile00);
-			
-			int tileY = 0;
-			
-			while (this.canRead(id + "_" + (tileY + tile00.getHeight()) + "_0.jpg")) {
-				tileY += tile00.getHeight();
-			}
-			
-			int tileX = 0;
-			
-			while (this.canRead(id + "_0_" + (tileX + tile00.getWidth()) + ".jpg")) {
-				tileX += tile00.getWidth();
-			}
-			
-			final BufferedImage tileMN = this.loadImage(id + "_" + tileY + "_" + tileX + ".jpg");
-			
-			this.width = tileX + tileMN.getWidth();
-			this.height = tileY + tileMN.getHeight();
-			
-			this.setOptimalTileDimensions(tile00.getWidth(), tile00.getHeight());
-			
-			Tools.gc();
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
+		this.root = root;
+		this.connectionConfigurator = connectionConfigurator;
+		this.idWithoutLOD = matcher.group(1);
+		this.lod = parseInt(matcher.group(2));
+		
+		final Document database = setIdAttributes(parse(this.open(root + "/imj_database.xml")));
+		final Element imageElement = database.getElementById(id);
+		
+		this.width = parseInt(imageElement.getAttribute("width"));
+		this.height = parseInt(imageElement.getAttribute("height"));
+		this.channels = predefinedChannelsFor(this.loadImage(id + "_0_0.jpg"));
+		
+		this.setOptimalTileDimensions(
+				parseInt(imageElement.getAttribute("tileWidth")), parseInt(imageElement.getAttribute("tileHeight")));
+		
+		gc();
 	}
 	
-	public final Options getOptions() {
-		return this.options;
+	public final String getRoot() {
+		return this.root;
 	}
 	
-	public final boolean canRead(final String id) {
-		final Matcher protocolMatcher = PROTOCOL_PATTERN.matcher(id);
-		
-		try {
-			if (protocolMatcher.matches()) {
-				final URLConnection connection = new URI(id).toURL().openConnection();
-				
-				if (this.getOptions() != null) {
-					this.getOptions().configureConnection(connection);
-				}
-				
-				connection.connect();
-				
-				InputStream input = null;
-				
-				try {
-					input = connection.getInputStream();
-					
-					return input != null;
-				} catch (final IOException exception) {
-					return false;
-				} finally {
-					if (input != null) {
-						input.close();
-					}
-				}
-			} else {
-				return new File(id).canRead();
-			}
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
+	public final ConnectionConfigurator getConnectionConfigurator() {
+		return this.connectionConfigurator;
 	}
 	
 	public final BufferedImage loadImage(final String id) {
+		try {
+			return ImageIO.read(this.open(this.getRoot()+ "/" + id));
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	public final InputStream open(final String id) {
 		final Matcher protocolMatcher = PROTOCOL_PATTERN.matcher(id);
 		
 		try {
@@ -165,16 +118,18 @@ public final class MultifileImage extends TiledImage2D {
 				
 				final URLConnection connection = new URI(id).toURL().openConnection();
 				
-				if (this.getOptions() != null) {
-					this.getOptions().configureConnection(connection);
+				if (this.getConnectionConfigurator() != null) {
+					this.getConnectionConfigurator().configureConnection(connection);
 				}
 				
 				connection.connect();
 				
-				return ImageIO.read(connection.getInputStream());
-			} else {
-				return ImageIO.read(new File(id));
+				return connection.getInputStream();
 			}
+			
+			Tools.debugPrint(id);
+			
+			return new FileInputStream(id);
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
@@ -189,15 +144,19 @@ public final class MultifileImage extends TiledImage2D {
 			return this;
 		}
 		
-		try {
-			return new MultifileImage(this.idWithoutLOD + "_lod" + lod, this.getOptions());
-		} catch (final Exception exception) {
-			if (lod == 0) {
-				return new MultifileImage(this.idWithoutLOD, this.getOptions());
+		final String newRoot = this.getRoot();
+		final String newId = this.idWithoutLOD + "_lod" + lod;
+		final ConnectionConfigurator newConnectionConfigurator = this.getConnectionConfigurator();
+		final String key = newRoot + "/" + newId;
+		
+		return IMJTools.cache(key, new Callable<Image2D>() {
+			
+			@Override
+			public final Image2D call() throws Exception {
+				return new MultifileImage(newRoot, newId, newConnectionConfigurator);
 			}
 			
-			throw unchecked(exception);
-		}
+		});
 	}
 	
 	@Override
@@ -258,12 +217,22 @@ public final class MultifileImage extends TiledImage2D {
 	 */
 	private static final long serialVersionUID = 1577111610648812112L;
 	
+	public static final Pattern ID_PATTERN = Pattern.compile("(.*)_lod([0-9]+)");
+	
 	public static final Pattern PROTOCOL_PATTERN = Pattern.compile("((https?)|(s?ftp))://.+");
+	
+	public static final Document setIdAttributes(final Document database) {
+		for (final Node node : XMLTools.getNodes(database, "//image")) {
+			((Element) node).setIdAttribute("id", true);
+		}
+		
+		return database;
+	}
 	
 	/**
 	 * @author codistmonk (creation 2013-11-06)
 	 */
-	public static abstract interface Options extends Serializable {
+	public static abstract interface ConnectionConfigurator extends Serializable {
 		
 		public abstract void configureConnection(URLConnection connection);
 		
@@ -272,7 +241,7 @@ public final class MultifileImage extends TiledImage2D {
 	/**
 	 * @author codistmonk (creation 2013-11-06)
 	 */
-	public static final class AuthenticationForHost implements Options {
+	public static final class AuthenticationForHost implements ConnectionConfigurator {
 		
 		private final String expectedHostname;
 		
