@@ -6,7 +6,6 @@ import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
 
@@ -28,10 +27,13 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.Box;
 import javax.swing.JComponent;
 import javax.swing.JScrollBar;
+import javax.swing.Painter;
 import javax.swing.SwingUtilities;
 
 import net.sourceforge.aprog.swing.SwingTools;
@@ -57,13 +59,16 @@ public final class Image2DComponent extends JComponent {
 	
 	private final JScrollBar verticalScrollBar;
 	
+	private final List<Painter<Image2DComponent>> painters; 
+	
 	private boolean multiThread;
 	
 	public Image2DComponent() {
 		this.scaledImageVisibleRectangle = new Rectangle();
 		this.horizontalScrollBar = new JScrollBar(Adjustable.HORIZONTAL);
 		this.verticalScrollBar = new JScrollBar(Adjustable.VERTICAL);
-		this.multiThread = false;
+		this.painters = new ArrayList<Painter<Image2DComponent>>();
+		this.multiThread = true;
 		this.setDoubleBuffered(false);
 		this.setLayout(new BorderLayout());
 		this.add(horizontalBox(this.horizontalScrollBar, Box.createHorizontalStrut(this.verticalScrollBar.getPreferredSize().width)), BorderLayout.SOUTH);
@@ -220,6 +225,10 @@ public final class Image2DComponent extends JComponent {
 		this.setPreferredSize(preferredSize);
 	}
 	
+	public final List<Painter<Image2DComponent>> getPainters() {
+		return this.painters;
+	}
+	
 	public final int getZoom() {
 		return this.getScaledImage().getZoom();
 	}
@@ -293,6 +302,10 @@ public final class Image2DComponent extends JComponent {
 		final int centeringOffsetY = max(0, (this.getUsableHeight() - this.frontBuffer.getHeight()) / 2);
 		
 		g.drawImage(this.frontBuffer, centeringOffsetX, centeringOffsetY, null);
+		
+		for (final Painter<Image2DComponent> painter : this.getPainters()) {
+			painter.paint((Graphics2D) g, this, this.getWidth(), this.getHeight());
+		}
 	}
 	
 	final JScrollBar getHorizontalScrollBar() {
