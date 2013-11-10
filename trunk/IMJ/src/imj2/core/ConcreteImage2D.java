@@ -1,10 +1,5 @@
 package imj2.core;
 
-import java.lang.reflect.Array;
-import java.util.Arrays;
-
-import net.sourceforge.aprog.tools.Tools;
-
 /**
  * @author codistmonk (creation 2013-08-04)
  */
@@ -82,7 +77,7 @@ public final class ConcreteImage2D implements Image2D {
 	
 	@Override
 	public final ConcreteImage2D[] newParallelViews(final int n) {
-		return newParallelViews(this, n);
+		return IMJCoreTools.newParallelViews(this, n);
 	}
 	
 	/**
@@ -114,18 +109,6 @@ public final class ConcreteImage2D implements Image2D {
 		}
 		
 		process.endOfPatch();
-	}
-	
-	public static final <I extends Image> I[] newParallelViews(final I image, final int n) {
-		try {
-			final I[] result = (I[]) Array.newInstance(image.getClass(), n);
-			
-			Arrays.fill(result, image);
-			
-			return result;
-		} catch (final NegativeArraySizeException exception) {
-			throw Tools.unchecked(exception);
-		}
 	}
 	
 }
