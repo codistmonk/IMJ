@@ -6,7 +6,6 @@ import static java.util.Arrays.asList;
 import java.io.Serializable;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author codistmonk (creation 2013-08-26)
@@ -17,20 +16,13 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 	
 	private Image2D tile;
 	
-	private final AtomicLong timestamp;
-	
 	protected FilteredTiledImage2D(final String id, final Image2D source) {
 		super(id);
 		this.source = source;
-		this.timestamp = new AtomicLong(Long.MIN_VALUE);
 	}
 	
 	public final Image2D getSource() {
 		return this.source;
-	}
-	
-	public final AtomicLong getTimestamp() {
-		return this.timestamp;
 	}
 	
 	@Override
@@ -46,7 +38,7 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 	
 	@Override
 	protected final boolean makeNewTile() {
-		return this.tile == null;
+		return this.tile == null || this.getTimestamp().get() != this.getTileTimestamp();
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -65,14 +57,10 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 			}
 			
 		};
-		final TimestampedValue<Image2D> timestampedValue = cache(key, valueFactory);
 		
-		if (timestampedValue.getTimestamp() < this.getTimestamp().get()) {
-			// XXX Use while loop ?
-			this.tile = cache(key, valueFactory, true).getValue();
-		} else {
-			this.tile = timestampedValue.getValue();
-		}
+		// XXX Use while loop ?
+		this.tile = cache(key, valueFactory, this.getTileTimestamp() < this.getTimestamp().get()).getValue();
+		this.setTileTimestamp(this.getTimestamp().get());
 	}
 	
 	protected abstract Image2D updateTile(Image2D tile);

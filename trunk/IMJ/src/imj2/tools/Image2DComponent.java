@@ -240,7 +240,7 @@ public final class Image2DComponent extends JComponent {
 		this.scaledImage = new ScaledImage2D(image);
 	}
 	
-	public final void setBuffer() {
+	public final boolean setBuffer() {
 		final int width = min(this.getScaledImageWidth(), max(1, this.getUsableWidth()));
 		final int height = min(this.getScaledImageHeight(), max(1, this.getUsableHeight()));
 		final boolean createBuffer;
@@ -269,22 +269,46 @@ public final class Image2DComponent extends JComponent {
 					min(this.scaledImageVisibleRectangle.y, this.getScaledImageHeight() - height),
 					width, height), oldBuffer);
 		}
+		
+		return createBuffer;
 	}
 	
-	public final void updateBuffer(final int left, final int top, final int width, final int height) {
-		if (this.getScaledImage() != null && 0 < width && 0 < height) {
-			this.copyImagePixelsToBuffer(left, top, width, height);
+	public final void updateBuffer() {
+		if (!this.setBuffer()) {
+			this.updateBuffer(this.scaledImageVisibleRectangle.x, this.scaledImageVisibleRectangle.y,
+					this.scaledImageVisibleRectangle.width, this.scaledImageVisibleRectangle.height);
 		}
+	}
+	
+	public final int getXInImage(final int xInComponent) {
+		return this.getXInScaledImage(xInComponent) / this.getZoom();
+	}
+	
+	public final int getYInImage(final int yInComponent) {
+		return this.getYInScaledImage(yInComponent) / this.getZoom();
+	}
+	
+	public final int getXInScaledImage(final int xInComponent) {
+		return xInComponent - this.getCenteringOffsetX() + this.scaledImageVisibleRectangle.x;
+	}
+	
+	public final int getYInScaledImage(final int yInComponent) {
+		return yInComponent - this.getCenteringOffsetY() + this.scaledImageVisibleRectangle.y;
+	}
+	
+	public final int getCenteringOffsetX() {
+		return max(0, (this.getUsableWidth() - this.frontBuffer.getWidth()) / 2);
+	}
+	
+	public final int getCenteringOffsetY() {
+		return max(0, (this.getUsableHeight() - this.frontBuffer.getHeight()) / 2);
 	}
 	
 	@Override
 	protected final void paintComponent(final Graphics g) {
 		this.setBuffer();
 		
-		final int centeringOffsetX = max(0, (this.getUsableWidth() - this.frontBuffer.getWidth()) / 2);
-		final int centeringOffsetY = max(0, (this.getUsableHeight() - this.frontBuffer.getHeight()) / 2);
-		
-		g.drawImage(this.frontBuffer, centeringOffsetX, centeringOffsetY, null);
+		g.drawImage(this.frontBuffer, this.getCenteringOffsetX(), this.getCenteringOffsetY(), null);
 		
 		for (final Painter<Image2DComponent> painter : this.getPainters()) {
 			painter.paint((Graphics2D) g, this, this.getWidth(), this.getHeight());
@@ -363,10 +387,16 @@ public final class Image2DComponent extends JComponent {
 		return this.scaledImage;
 	}
 	
-	public final void setScaledImage(final ScaledImage2D scaledImage) {
+	final void setScaledImage(final ScaledImage2D scaledImage) {
 		this.scaledImage = scaledImage;
 	}
-
+	
+	private final void updateBuffer(final int left, final int top, final int width, final int height) {
+		if (this.getScaledImage() != null && 0 < width && 0 < height) {
+			this.copyImagePixelsToBuffer(left, top, width, height);
+		}
+	}
+	
 	private final int getUsableHeight() {
 		return this.getHeight() - this.horizontalScrollBar.getHeight();
 	}
