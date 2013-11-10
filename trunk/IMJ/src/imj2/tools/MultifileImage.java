@@ -9,12 +9,13 @@ import static java.util.Collections.synchronizedMap;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
 import static net.sourceforge.aprog.tools.Tools.cast;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
-
 import imj2.core.IMJCoreTools;
 import imj2.core.Image2D;
+import imj2.core.SubsampledImage2D;
 import imj2.core.TiledImage2D;
 
 import java.awt.image.BufferedImage;
@@ -128,7 +129,9 @@ public final class MultifileImage extends TiledImage2D {
 	
 	@Override
 	public final Image2D getLODImage(final int lod) {
-		if (lod == this.getLOD()) {
+		final int thisLOD = this.getLOD();
+		
+		if (lod == thisLOD) {
 			return this;
 		}
 		
@@ -137,14 +140,24 @@ public final class MultifileImage extends TiledImage2D {
 		final ConnectionConfigurator newConnectionConfigurator = this.getConnectionConfigurator();
 		final String key = newRoot + "/" + newId;
 		
-		return cache(key, new Callable<Image2D>() {
-			
-			@Override
-			public final Image2D call() throws Exception {
-				return new MultifileImage(newRoot, newId, newConnectionConfigurator);
+		try {
+			return cache(key, new Callable<Image2D>() {
+				
+				@Override
+				public final Image2D call() throws Exception {
+					return new MultifileImage(newRoot, newId, newConnectionConfigurator);
+				}
+				
+			});
+		} catch (final Exception exception) {
+			if (lod < thisLOD) {
+				debugPrint(exception);
+				
+				return new SubsampledImage2D(this).getLODImage(lod);
 			}
 			
-		});
+			throw unchecked(exception);
+		}
 	}
 	
 	@Override

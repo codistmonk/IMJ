@@ -115,16 +115,8 @@ public final class Image2DComponent extends JComponent {
 					Image2DComponent.this.setZoom(zoom / 2);
 					break;
 				case '+':
-					if (multifileImage != null && 0 < multifileImage.getLOD()) {
-						Image2DComponent.this.setImage(multifileImage.getLODImage(multifileImage.getLOD() - 1));
-						
-						break;
-					}
-					
-					final SubsampledImage2D subsampledImage = cast(SubsampledImage2D.class, image);
-					
-					if (subsampledImage != null) {
-						Image2DComponent.this.setImage(subsampledImage.getSource());
+					if (0 < image.getLOD()) {
+						Image2DComponent.this.setImage(image.getLODImage(image.getLOD() - 1));
 					}
 					
 					break;
@@ -135,7 +127,7 @@ public final class Image2DComponent extends JComponent {
 							
 							break;
 						} catch (final Exception exception) {
-							System.err.println(exception);
+							debugPrint(exception);
 						}
 					}
 					
