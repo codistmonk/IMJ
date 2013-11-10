@@ -5,6 +5,7 @@ import static imj2.tools.IMJTools.predefinedChannelsFor;
 import static java.lang.Integer.parseInt;
 import static java.lang.System.arraycopy;
 import static java.util.Arrays.fill;
+import static java.util.Collections.synchronizedMap;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
 import static net.sourceforge.aprog.tools.Tools.cast;
@@ -42,6 +43,7 @@ import org.w3c.dom.Node;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
+
 import imj2.core.ConcreteImage2D;
 import imj2.core.Image2D;
 
@@ -214,27 +216,47 @@ public final class MultifileImage extends TiledImage2D {
 	
 	public static final InputStream open(final String id, final ConnectionConfigurator connectionConfigurator) {
 		final Matcher protocolMatcher = PROTOCOL_PATTERN.matcher(id);
+		URLConnection connection = null;
 		
 		try {
 			if (protocolMatcher.matches()) {
 				Tools.debugPrint("url:", id);
 				
-				final URLConnection connection = new URI(id).toURL().openConnection();
+				connection = new URI(id).toURL().openConnection();
 				
-				if (connectionConfigurator != null) {
-					connectionConfigurator.configureConnection(connection);
-				}
-				
-				connection.connect();
+				connectionConfigurator.configureConnection(connection);
 				
 				return connection.getInputStream();
 			}
 			
 			return new FileInputStream(id);
 		} catch (final Exception exception) {
+			if (connection != null) {
+				connectionConfigurator.connectionFailed(connection, exception);
+			}
+			
 			throw unchecked(exception);
 		}
 	}
+	
+	public static final ConnectionConfigurator DEFAULT_CONNECTION_CONFIGURATOR = new ConnectionConfigurator() {
+		
+		@Override
+		public final void configureConnection(final URLConnection connection) {
+			// NOP
+		}
+		
+		@Override
+		public final void connectionFailed(final URLConnection connection, final Exception exception) {
+			// NOP
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -46596027912129212L;
+		
+	};
 	
 	/**
 	 * @author codistmonk (creation 2013-11-06)
@@ -242,6 +264,8 @@ public final class MultifileImage extends TiledImage2D {
 	public static abstract interface ConnectionConfigurator extends Serializable {
 		
 		public abstract void configureConnection(URLConnection connection);
+		
+		public abstract void connectionFailed(URLConnection connection, Exception exception);
 		
 	}
 	
@@ -280,12 +304,18 @@ public final class MultifileImage extends TiledImage2D {
 			configureCredentials(connection);
 		}
 		
+		@Override
+		public final void connectionFailed(final URLConnection connection, final Exception exception) {
+			authorizations.remove(connection.getURL().getHost());
+			
+		}
+		
 		/**
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -1406984364320366938L;
 		
-		private static final Map<String, String> authorizations = new HashMap<String, String>();
+		private static final Map<String, String> authorizations = synchronizedMap(new HashMap<String, String>());
 		
 		public static final void configureCredentials(final URLConnection connection) {
 			String authorization = authorizations.get(connection.getURL().getHost());
