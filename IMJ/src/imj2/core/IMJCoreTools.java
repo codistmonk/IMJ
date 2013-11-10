@@ -35,6 +35,10 @@ public abstract class IMJCoreTools {
 	}
 	
 	public static final <V> V cache(final Object key, final Callable<V> valueFactory) {
+		return cache(key, valueFactory, false);
+	}
+	
+	public static final <V> V cache(final Object key, final Callable<V> valueFactory, final boolean refresh) {
 		CachedValue cachedValue;
 		
 		synchronized (cache) {
@@ -46,7 +50,7 @@ public abstract class IMJCoreTools {
 			}
 		}
 		
-		return cachedValue.getValue();
+		return cachedValue.getValue(refresh);
 	}
 	
 	public static final void removeOldCacheEntries(final double ratio) {
@@ -117,8 +121,8 @@ public abstract class IMJCoreTools {
 		}
 		
 		@SuppressWarnings("unchecked")
-		final synchronized <T> T getValue() {
-			if (this.value == null) {
+		final synchronized <T> T getValue(final boolean refresh) {
+			if (this.value == null || refresh) {
 				try {
 					this.busy.set(true);
 					this.value = this.valueFactory.call();

@@ -1,9 +1,12 @@
 package imj2.core;
 
 import static imj2.core.IMJCoreTools.cache;
+import static java.util.Arrays.asList;
 
-import java.util.Arrays;
+import java.io.Serializable;
+import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author codistmonk (creation 2013-08-26)
@@ -14,13 +17,20 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 	
 	private Image2D tile;
 	
+	private final AtomicLong timestamp;
+	
 	protected FilteredTiledImage2D(final String id, final Image2D source) {
 		super(id);
 		this.source = source;
+		this.timestamp = new AtomicLong(Long.MIN_VALUE);
 	}
 	
 	public final Image2D getSource() {
 		return this.source;
+	}
+	
+	public final AtomicLong getTimestamp() {
+		return this.timestamp;
 	}
 	
 	@Override
@@ -44,15 +54,25 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 	protected final void updateTile() {
 		final int tileWidth = this.getTileWidth();
 		final int tileHeight = this.getTileHeight();
-		
-		this.tile = cache(Arrays.asList(this.getId(), this.getTileX(), this.getTileY()), new Callable<Image2D>() {
+		final List<? extends Object> key = asList(this.getId(), this.getTileX(), this.getTileY());
+		final Callable<TimestampedValue<Image2D>> valueFactory = new Callable<TimestampedValue<Image2D>>() {
 			
 			@Override
-			public final Image2D call() throws Exception {
-				return FilteredTiledImage2D.this.updateTile(FilteredTiledImage2D.this.newTile(tileWidth, tileHeight));
+			public final TimestampedValue<Image2D> call() throws Exception {
+				return new TimestampedValue<Image2D>(
+						FilteredTiledImage2D.this.getTimestamp().get(),
+						FilteredTiledImage2D.this.updateTile(FilteredTiledImage2D.this.newTile(tileWidth, tileHeight)));
 			}
 			
-		});
+		};
+		final TimestampedValue<Image2D> timestampedValue = cache(key, valueFactory);
+		
+		if (timestampedValue.getTimestamp() < this.getTimestamp().get()) {
+			// XXX Use while loop ?
+			this.tile = cache(key, valueFactory, true).getValue();
+		} else {
+			this.tile = timestampedValue.getValue();
+		}
 	}
 	
 	protected abstract Image2D updateTile(Image2D tile);
@@ -66,5 +86,34 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 	 * {@value}.
 	 */
 	private static final long serialVersionUID = -8955541468755019991L;
+	
+	/**
+	 * @author codistmonk (creation 2013-11-10)
+	 */
+	public static final class TimestampedValue<V> implements Serializable {
+		
+		private final long timestamp;
+		
+		private final V value;
+		
+		public TimestampedValue(final long timestamp, final V value) {
+			this.timestamp = timestamp;
+			this.value = value;
+		}
+		
+		public final long getTimestamp() {
+			return this.timestamp;
+		}
+		
+		public final V getValue() {
+			return this.value;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 7822086437658548820L;
+		
+	}
 	
 }
