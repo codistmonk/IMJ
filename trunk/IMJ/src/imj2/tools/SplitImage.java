@@ -5,7 +5,7 @@ import static imj2.tools.MultifileImage.setIdAttributes;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
-
+import imj2.core.TiledImage2D;
 import imj2.tools.IMJTools.TileProcessor;
 
 import java.awt.Color;

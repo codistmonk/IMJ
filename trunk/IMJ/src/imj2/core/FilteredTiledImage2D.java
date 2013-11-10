@@ -1,8 +1,6 @@
-package imj2.tools;
+package imj2.core;
 
-import imj2.core.ConcreteImage2D;
-import imj2.core.Image2D;
-import imj2.core.LinearIntImage;
+import static imj2.core.IMJCoreTools.cache;
 
 import java.util.Arrays;
 import java.util.concurrent.Callable;
@@ -46,7 +44,8 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 	protected final void updateTile() {
 		final int tileWidth = this.getTileWidth();
 		final int tileHeight = this.getTileHeight();
-		this.tile = IMJTools.cache(Arrays.asList(this.getId(), this.getTileX(), this.getTileY()), new Callable<Image2D>() {
+		
+		this.tile = cache(Arrays.asList(this.getId(), this.getTileX(), this.getTileY()), new Callable<Image2D>() {
 			
 			@Override
 			public final Image2D call() throws Exception {

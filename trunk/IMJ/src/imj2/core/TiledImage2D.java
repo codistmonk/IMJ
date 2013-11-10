@@ -1,12 +1,12 @@
-package imj2.tools;
+package imj2.core;
 
 import static imj2.core.ConcreteImage2D.getX;
 import static imj2.core.ConcreteImage2D.getY;
-import static imj2.tools.IMJTools.quantize;
+import static imj2.core.IMJCoreTools.quantize;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.cast;
+
 import imj.IntList;
-import imj2.core.Image2D;
 
 /**
  * @author codistmonk (creation 2013-08-07)
