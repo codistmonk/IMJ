@@ -61,14 +61,11 @@ public final class Image2DComponent extends JComponent {
 	
 	private final List<Painter<Image2DComponent>> painters; 
 	
-	private boolean multiThread;
-	
 	public Image2DComponent() {
 		this.scaledImageVisibleRectangle = new Rectangle();
 		this.horizontalScrollBar = new JScrollBar(Adjustable.HORIZONTAL);
 		this.verticalScrollBar = new JScrollBar(Adjustable.VERTICAL);
 		this.painters = new ArrayList<Painter<Image2DComponent>>();
-		this.multiThread = true;
 		this.setDoubleBuffered(false);
 		this.setLayout(new BorderLayout());
 		this.add(horizontalBox(this.horizontalScrollBar, Box.createHorizontalStrut(this.verticalScrollBar.getPreferredSize().width)), BorderLayout.SOUTH);
@@ -249,14 +246,6 @@ public final class Image2DComponent extends JComponent {
 		this.scaledImage = new ScaledImage2D(image);
 	}
 	
-	public final boolean isMultiThread() {
-		return this.multiThread;
-	}
-	
-	public final void setMultiThread(final boolean multiThread) {
-		this.multiThread = multiThread;
-	}
-	
 	public final void setBuffer() {
 		final int width = min(this.getScaledImageWidth(), max(1, this.getUsableWidth()));
 		final int height = min(this.getScaledImageHeight(), max(1, this.getUsableHeight()));
@@ -350,35 +339,19 @@ public final class Image2DComponent extends JComponent {
 	}
 	
 	final void copyImagePixelsToBuffer(final int left, final int top, final int width, final int height) {
-		if (this.isMultiThread()) {
-			new ParallelProcess2D(this.getScaledImage(), left, top, width, height) {
-				
-				@Override
-				public final void pixel(final int x, final int y) {
-					Image2DComponent.this.copyImagePixelToBuffer(x, y);
-				}
-				
-				/**
-				 * {@value}.
-				 */
-				private static final long serialVersionUID = 7757156523330629112L;
-				
-			};
-		} else {
-			this.getScaledImage().forEachPixelInBox(left, top, width, height, new MonopatchProcess() {
-				
-				@Override
-				public final void pixel(final int x, final int y) {
-					Image2DComponent.this.copyImagePixelToBuffer(x, y);
-				}
-				
-				/**
-				 * {@value}.
-				 */
-				private static final long serialVersionUID = 1810623847473680066L;
-				
-			});
-		}
+		this.getScaledImage().forEachPixelInBox(left, top, width, height, new MonopatchProcess() {
+			
+			@Override
+			public final void pixel(final int x, final int y) {
+				Image2DComponent.this.copyImagePixelToBuffer(x, y);
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 1810623847473680066L;
+			
+		});
 	}
 	
 	final void copyImagePixelToBuffer(final int xInScaledImage, final int yInScaledImage) {
@@ -438,10 +411,6 @@ public final class Image2DComponent extends JComponent {
 				
 				this.scaledImageVisibleRectangle.setBounds(rectangle);
 				
-				final boolean multiThread = this.isMultiThread();
-				
-				this.setMultiThread(false);
-				
 				// Update top
 				this.updateBuffer(rectangle.x, rectangle.y, rectangle.width, intersection.y - rectangle.y);
 				// Update left
@@ -450,8 +419,6 @@ public final class Image2DComponent extends JComponent {
 				this.updateBuffer(intersectionRight, intersection.y, rectangle.x + rectangle.width - intersectionRight, intersection.height);
 				// Update bottom
 				this.updateBuffer(rectangle.x, intersectionBottom, rectangle.width, rectangle.y + rectangle.height - intersectionBottom);
-				
-				this.setMultiThread(multiThread);
 			}
 		}
 		
@@ -499,103 +466,6 @@ public final class Image2DComponent extends JComponent {
 		}
 		
 		SwingTools.show(component[0], image.getId(), true);
-	}
-	
-	/**
-	 * @author codistmonk (creation 2013-08-12)
-	 */
-	public static final class ScaledImage2D extends TiledImage2D {
-		
-		private final Image2D source;
-		
-		private int zoom;
-		
-		public ScaledImage2D(final Image2D source) {
-			super(source.getId());
-			this.source = source;
-			this.setZoom(1);
-		}
-		
-		public final int getZoom() {
-			return this.zoom;
-		}
-		
-		public final void setZoom(final int zoom) {
-			if (0 < zoom) {
-				this.zoom = zoom;
-				
-				if (this.getSource() instanceof TiledImage2D) {
-					this.setOptimalTileWidth(((TiledImage2D) this.getSource()).getOptimalTileWidth() * zoom);
-					this.setOptimalTileHeight(((TiledImage2D) this.getSource()).getOptimalTileHeight() * zoom);
-				} else {
-					this.setOptimalTileWidth(this.getSource().getWidth() * zoom);
-					this.setOptimalTileHeight(this.getSource().getHeight() * zoom);
-				}
-			}
-		}
-		
-		public final Image2D getSource() {
-			return this.source;
-		}
-		
-		@Override
-		public final int getWidth() {
-			return this.getSource().getWidth() * this.getZoom();
-		}
-		
-		@Override
-		public final int getHeight() {
-			return this.getSource().getHeight() * this.getZoom();
-		}
-		
-		@Override
-		public final Channels getChannels() {
-			return this.getSource().getChannels();
-		}
-		
-		@Override
-		public final ScaledImage2D[] newParallelViews(final int n) {
-			final ScaledImage2D[] result = new ScaledImage2D[n];
-			
-			result[0] = this;
-			
-			if (1 < n) {
-				final Image2D[] sources = this.getSource().newParallelViews(n);
-				
-				for (int i = 1; i < n; ++i) {
-					result[i] = new ScaledImage2D(sources[i]);
-				}
-			}
-			
-			return result;
-		}
-		
-		@Override
-		protected final int getPixelValueFromTile(final int x, final int y, final int xInTile, final int yInTile) {
-			return this.getSource().getPixelValue(x / this.getZoom(), y / this.getZoom());
-		}
-		
-		@Override
-		protected final void setTilePixelValue(final int x, final int y, final int xInTile, final int yInTile,
-				final int value) {
-			this.getSource().setPixelValue(x / this.getZoom(), y / this.getZoom(), value);
-		}
-		
-		@Override
-		protected final boolean makeNewTile() {
-			return false;
-		}
-		
-		@Override
-		protected final void updateTile() {
-			// NOP
-		}
-		
-		/**
-		 * {@value}.
-		 */
-		private static final long serialVersionUID = -7082323074031564968L;
-		
 	}
 	
 }
