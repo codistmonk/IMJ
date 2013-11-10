@@ -6,10 +6,11 @@ import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj2.core.Image2D;
+import imj2.core.Image2D.MonopatchProcess;
 import imj2.core.ScaledImage2D;
 import imj2.core.SubsampledImage2D;
-import imj2.core.Image2D.MonopatchProcess;
 
 import java.awt.Adjustable;
 import java.awt.BorderLayout;
@@ -29,13 +30,13 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.Box;
 import javax.swing.JComponent;
 import javax.swing.JScrollBar;
-import javax.swing.Painter;
 import javax.swing.SwingUtilities;
 
 import net.sourceforge.aprog.swing.SwingTools;
@@ -490,6 +491,18 @@ public final class Image2DComponent extends JComponent {
 		}
 		
 		SwingTools.show(component[0], image.getId(), true);
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-11-10)
+	 *
+	 * @param <T>
+	 */
+	public static abstract interface Painter<T> extends Serializable {
+
+		public abstract void paint(Graphics2D g, T object,
+				int width, int height);
+		
 	}
 	
 }
