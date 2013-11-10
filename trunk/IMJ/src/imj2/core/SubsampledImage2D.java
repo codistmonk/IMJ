@@ -1,10 +1,7 @@
-package imj2.tools;
+package imj2.core;
 
 import static java.lang.Integer.parseInt;
-
-import imj2.core.FilteredTiledImage2D;
-import imj2.core.IMJCoreTools;
-import imj2.core.Image2D;
+import imj2.tools.DefaultColorModel;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,6 +29,26 @@ public final class SubsampledImage2D extends FilteredTiledImage2D {
 		this.height = source.getHeight() / 2;
 		
 		this.setOptimalTileDimensions(tileWidth, tileHeight);
+	}
+	
+	@Override
+	public final int getLOD() {
+		return this.getSource().getLOD() + 1;
+	}
+	
+	@Override
+	public final Image2D getLODImage(final int lod) {
+		final int thisLOD = this.getLOD();
+		
+		if (lod == thisLOD) {
+			return this;
+		}
+		
+		if (lod < thisLOD) {
+			return this.getSource().getLODImage(lod);
+		}
+		
+		return new SubsampledImage2D(this).getLODImage(lod);
 	}
 	
 	@Override

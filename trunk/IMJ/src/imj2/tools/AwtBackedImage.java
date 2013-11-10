@@ -5,6 +5,7 @@ import static imj2.core.ConcreteImage2D.getY;
 import imj2.core.ConcreteImage2D;
 import imj2.core.IMJCoreTools;
 import imj2.core.Image2D;
+import imj2.core.SubsampledImage2D;
 
 import java.awt.image.BufferedImage;
 
@@ -24,6 +25,20 @@ public final class AwtBackedImage implements Image2D {
 	
 	public final BufferedImage getAwtImage() {
 		return this.awtImage;
+	}
+	
+	@Override
+	public final int getLOD() {
+		return 0;
+	}
+	
+	@Override
+	public final Image2D getLODImage(final int lod) {
+		if (lod <= 0) {
+			return this;
+		}
+		
+		return new SubsampledImage2D(this).getLODImage(lod);
 	}
 	
 	@Override

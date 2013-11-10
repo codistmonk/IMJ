@@ -9,6 +9,10 @@ public abstract interface Image2D extends Image {
 	
 	public abstract int getHeight();
 	
+	public abstract int getLOD();
+	
+	public abstract Image2D getLODImage(int lod);
+	
 	public abstract int getPixelValue(int x, int y);
 	
 	public abstract void setPixelValue(int x, int y, int value);

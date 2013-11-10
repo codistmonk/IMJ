@@ -7,6 +7,8 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj2.core.Image2D;
+import imj2.core.ScaledImage2D;
+import imj2.core.SubsampledImage2D;
 import imj2.core.Image2D.MonopatchProcess;
 
 import java.awt.Adjustable;

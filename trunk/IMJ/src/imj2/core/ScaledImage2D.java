@@ -1,7 +1,5 @@
-package imj2.tools;
+package imj2.core;
 
-import imj2.core.Image2D;
-import imj2.core.TiledImage2D;
 
 /**
  * @author codistmonk (creation 2013-08-12)
@@ -38,6 +36,26 @@ public final class ScaledImage2D extends TiledImage2D {
 	
 	public final Image2D getSource() {
 		return this.source;
+	}
+	
+	@Override
+	public final int getLOD() {
+		return this.getSource().getLOD();
+	}
+	
+	@Override
+	public final Image2D getLODImage(final int lod) {
+		final int thisLOD = this.getLOD();
+		
+		if (lod == thisLOD) {
+			return this;
+		}
+		
+		final ScaledImage2D result = new ScaledImage2D(this.getSource().getLODImage(lod));
+		
+		result.setZoom(this.getZoom());
+		
+		return result;
 	}
 	
 	@Override

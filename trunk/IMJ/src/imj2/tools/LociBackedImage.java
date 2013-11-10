@@ -2,7 +2,8 @@ package imj2.tools;
 
 import static imj2.core.IMJCoreTools.cache;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
+import imj2.core.Image2D;
+import imj2.core.SubsampledImage2D;
 import imj2.core.TiledImage2D;
 
 import java.util.Arrays;
@@ -51,6 +52,20 @@ public final class LociBackedImage extends TiledImage2D {
 	
 	public final IFormatReader getLociImage() {
 		return this.lociImage;
+	}
+	
+	@Override
+	public final int getLOD() {
+		return 0;
+	}
+	
+	@Override
+	public final Image2D getLODImage(final int lod) {
+		if (lod <= 0) {
+			return this;
+		}
+		
+		return new SubsampledImage2D(this).getLODImage(lod);
 	}
 	
 	@Override
