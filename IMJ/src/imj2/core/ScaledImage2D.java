@@ -1,6 +1,5 @@
 package imj2.core;
 
-
 /**
  * @author codistmonk (creation 2013-08-12)
  */
