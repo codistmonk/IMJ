@@ -1,6 +1,9 @@
 package imj2.tools;
 
+import static imj2.core.IMJCoreTools.cache;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
+import imj2.core.TiledImage2D;
 
 import java.util.Arrays;
 import java.util.Locale;
@@ -140,7 +143,8 @@ public final class LociBackedImage extends TiledImage2D {
 	protected final void updateTile() {
 		final int tileWidth = this.getTileWidth();
 		final int tileHeight = this.getTileHeight();
-		this.tile = IMJTools.cache(Arrays.asList(this.getId(), this.getTileX(), this.getTileY()), new Callable<byte[]>() {
+		
+		this.tile = cache(Arrays.asList(this.getId(), this.getTileX(), this.getTileY()), new Callable<byte[]>() {
 			
 			@Override
 			public final byte[] call() throws Exception {

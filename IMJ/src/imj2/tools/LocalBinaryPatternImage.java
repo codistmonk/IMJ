@@ -1,7 +1,7 @@
 package imj2.tools;
 
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
+import imj2.core.FilteredTiledImage2D;
 import imj2.core.Image2D;
 
 /**

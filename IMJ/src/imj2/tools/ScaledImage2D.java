@@ -1,6 +1,7 @@
 package imj2.tools;
 
 import imj2.core.Image2D;
+import imj2.core.TiledImage2D;
 
 /**
  * @author codistmonk (creation 2013-08-12)

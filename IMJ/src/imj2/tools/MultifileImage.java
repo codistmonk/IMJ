@@ -1,6 +1,6 @@
 package imj2.tools;
 
-import static imj2.tools.IMJTools.cache;
+import static imj2.core.IMJCoreTools.cache;
 import static imj2.tools.IMJTools.predefinedChannelsFor;
 import static java.lang.Integer.parseInt;
 import static java.lang.System.arraycopy;
@@ -12,6 +12,10 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
+
+import imj2.core.ConcreteImage2D;
+import imj2.core.Image2D;
+import imj2.core.TiledImage2D;
 
 import java.awt.image.BufferedImage;
 import java.io.FileInputStream;
@@ -43,9 +47,6 @@ import org.w3c.dom.Node;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
-
-import imj2.core.ConcreteImage2D;
-import imj2.core.Image2D;
 
 /**
  * @author codistmonk (creation 2013-11-05)
@@ -134,7 +135,7 @@ public final class MultifileImage extends TiledImage2D {
 		final ConnectionConfigurator newConnectionConfigurator = this.getConnectionConfigurator();
 		final String key = newRoot + "/" + newId;
 		
-		return IMJTools.cache(key, new Callable<Image2D>() {
+		return cache(key, new Callable<Image2D>() {
 			
 			@Override
 			public final Image2D call() throws Exception {
@@ -185,7 +186,8 @@ public final class MultifileImage extends TiledImage2D {
 	protected void updateTile() {
 		final int tileX = this.getTileX();
 		final int tileY = this.getTileY();
-		this.tile = IMJTools.cache(Arrays.asList(this.getId(), this.getTileX(), this.getTileY()), new Callable<Image2D>() {
+		
+		this.tile = cache(Arrays.asList(this.getId(), this.getTileX(), this.getTileY()), new Callable<Image2D>() {
 			
 			@Override
 			public final Image2D call() throws Exception {
