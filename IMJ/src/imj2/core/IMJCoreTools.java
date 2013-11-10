@@ -4,7 +4,9 @@ import static java.util.Collections.sort;
 
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -74,6 +76,18 @@ public abstract class IMJCoreTools {
 	
 	public static final int quantize(final int value, final int quantum) {
 		return (value / quantum) * quantum;
+	}
+	
+	public static final <I extends Image> I[] newParallelViews(final I image, final int n) {
+		try {
+			final I[] result = (I[]) Array.newInstance(image.getClass(), n);
+			
+			Arrays.fill(result, image);
+			
+			return result;
+		} catch (final NegativeArraySizeException exception) {
+			throw Tools.unchecked(exception);
+		}
 	}
 	
 	/**

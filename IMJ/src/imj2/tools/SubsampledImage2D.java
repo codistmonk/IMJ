@@ -1,8 +1,9 @@
 package imj2.tools;
 
 import static java.lang.Integer.parseInt;
-import imj2.core.ConcreteImage2D;
+
 import imj2.core.FilteredTiledImage2D;
+import imj2.core.IMJCoreTools;
 import imj2.core.Image2D;
 
 import java.util.regex.Matcher;
@@ -45,7 +46,7 @@ public final class SubsampledImage2D extends FilteredTiledImage2D {
 	
 	@Override
 	public final SubsampledImage2D[] newParallelViews(final int n) {
-		return ConcreteImage2D.newParallelViews(this, n);
+		return IMJCoreTools.newParallelViews(this, n);
 	}
 	
 	@Override

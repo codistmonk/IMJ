@@ -13,7 +13,7 @@ import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
 
-import imj2.core.ConcreteImage2D;
+import imj2.core.IMJCoreTools;
 import imj2.core.Image2D;
 import imj2.core.TiledImage2D;
 
@@ -40,13 +40,13 @@ import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 /**
  * @author codistmonk (creation 2013-11-05)
@@ -157,7 +157,7 @@ public final class MultifileImage extends TiledImage2D {
 	
 	@Override
 	public final Image2D[] newParallelViews(final int n) {
-		return ConcreteImage2D.newParallelViews(this, n);
+		return IMJCoreTools.newParallelViews(this, n);
 	}
 	
 	@Override

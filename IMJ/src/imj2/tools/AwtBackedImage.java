@@ -2,8 +2,8 @@ package imj2.tools;
 
 import static imj2.core.ConcreteImage2D.getX;
 import static imj2.core.ConcreteImage2D.getY;
-
 import imj2.core.ConcreteImage2D;
+import imj2.core.IMJCoreTools;
 import imj2.core.Image2D;
 
 import java.awt.image.BufferedImage;
@@ -78,7 +78,7 @@ public final class AwtBackedImage implements Image2D {
 	
 	@Override
 	public final AwtBackedImage[] newParallelViews(final int n) {
-		return ConcreteImage2D.newParallelViews(this, n);
+		return IMJCoreTools.newParallelViews(this, n);
 	}
 	
 	/**

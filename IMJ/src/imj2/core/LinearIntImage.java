@@ -44,7 +44,7 @@ public final class LinearIntImage implements Image {
 	
 	@Override
 	public final LinearIntImage[] newParallelViews(final int n) {
-		return ConcreteImage2D.newParallelViews(this, n);
+		return IMJCoreTools.newParallelViews(this, n);
 	}
 	
 	/**
