@@ -121,10 +121,12 @@ public final class MultifileImage extends TiledImage2D {
 		}
 	}
 	
+	@Override
 	public final int getLOD() {
 		return this.lod;
 	}
 	
+	@Override
 	public final Image2D getLODImage(final int lod) {
 		if (lod == this.getLOD()) {
 			return this;

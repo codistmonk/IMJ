@@ -4,9 +4,9 @@ import static imj2.tools.IMJTools.quantize;
 import static imj2.tools.MultiThreadTools.WORKER_COUNT;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.assertEquals;
-
 import imj2.core.ConcreteImage2D;
 import imj2.core.Image2D;
+import imj2.core.SubsampledImage2D;
 import imj2.core.Image2D.MonopatchProcess;
 import imj2.core.LinearIntImage;
 import imj2.tools.MultifileImage.AuthenticationForHost;

@@ -26,6 +26,20 @@ public final class ConcreteImage2D implements Image2D {
 	}
 	
 	@Override
+	public final int getLOD() {
+		return 0;
+	}
+	
+	@Override
+	public final Image2D getLODImage(final int lod) {
+		if (lod <= 0) {
+			return this;
+		}
+		
+		return new SubsampledImage2D(this);
+	}
+	
+	@Override
 	public final String getId() {
 		return this.getSource().getId();
 	}
@@ -71,7 +85,8 @@ public final class ConcreteImage2D implements Image2D {
 	}
 	
 	@Override
-	public final void forEachPixelInBox(final int left, final int top, final int width, final int height, final Process process) {
+	public final void forEachPixelInBox(final int left, final int top,
+			final int width, final int height, final Process process) {
 		forEachPixelInBox(this, left, top, width, height, process);
 	}
 	

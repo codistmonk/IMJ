@@ -1,6 +1,7 @@
 package imj2.tools;
 
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj2.core.FilteredTiledImage2D;
 import imj2.core.Image2D;
 
@@ -15,6 +16,22 @@ public final class LocalBinaryPatternImage extends FilteredTiledImage2D {
 		super(source.getId() + ".lbp", source);
 		this.patternGenerator = new LocalBinaryPatternGenerator(source);
 		this.useOptimalTileDimensionsOf(source, 256, 256);
+	}
+	
+	@Override
+	public final int getLOD() {
+		return this.getSource().getLOD();
+	}
+	
+	@Override
+	public final Image2D getLODImage(final int lod) {
+		final int thisLOD = this.getLOD();
+		
+		if (lod == thisLOD) {
+			return this;
+		}
+		
+		return new LocalBinaryPatternImage(this.getSource().getLODImage(lod));
 	}
 	
 	@Override
