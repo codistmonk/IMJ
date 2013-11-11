@@ -59,7 +59,8 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 		};
 		
 		// XXX Use while loop ?
-		this.tile = cache(key, valueFactory, this.getTileTimestamp() < this.getTimestamp().get()).getValue();
+		this.tile = cache(key, valueFactory,
+				cache(key, valueFactory).getTimestamp() != this.getTimestamp().get()).getValue();
 		this.setTileTimestamp(this.getTimestamp().get());
 	}
 	
