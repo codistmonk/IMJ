@@ -96,6 +96,18 @@ public abstract class TiledImage2D implements Image2D {
 		}
 	}
 	
+	@Override
+	public final void copyPixelValues(final int left, final int top, final int width, final int height,
+			final int[] result) {
+		this.ensureTileContains(left, top);
+		
+		if (left == this.getTileX() && top == this.getTileY() && width == this.getTileWidth() && height == this.getTileHeight()) {
+			this.copyTilePixelValues(result);
+		} else {
+			ConcreteImage2D.copyEachPixelValue(this, left, top, width, height, result);
+		}
+	}
+	
 	public final int getOptimalTileWidth() {
 		return this.optimalTileWidth;
 	}
@@ -183,6 +195,11 @@ public abstract class TiledImage2D implements Image2D {
 	
 	protected final void setTileTimestamp(final long tileTimestamp) {
 		this.tileTimestamp = tileTimestamp;
+	}
+	
+	protected void copyTilePixelValues(final int[] result) {
+		ConcreteImage2D.copyEachPixelValue(this, this.getTileX(), this.getTileY(),
+				this.getTileWidth(), this.getTileHeight(), result);
 	}
 	
 	protected abstract int getPixelValueFromTile(int x, int y, int xInTile, int yInTile);

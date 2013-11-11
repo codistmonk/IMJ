@@ -92,6 +92,12 @@ public final class AwtBackedImage implements Image2D {
 	}
 	
 	@Override
+	public final void copyPixelValues(final int left, final int top, final int width, final int height,
+			final int[] result) {
+		ConcreteImage2D.copyEachPixelValue(this, left, top, width, height, result);
+	}
+	
+	@Override
 	public final AwtBackedImage[] newParallelViews(final int n) {
 		return IMJCoreTools.newParallelViews(this, n);
 	}

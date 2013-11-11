@@ -19,6 +19,8 @@ public abstract interface Image2D extends Image {
 	
 	public abstract void forEachPixelInBox(int left, int top, int width, int height, Process process);
 	
+	public abstract void copyPixelValues(int left, int top, int width, int height, int[] result);
+	
 	@Override
 	public abstract Image2D[] newParallelViews(int n);
 	
