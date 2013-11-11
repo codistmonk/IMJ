@@ -1,7 +1,5 @@
 package imj2.core;
 
-import static net.sourceforge.aprog.tools.Tools.cast;
-
 /**
  * @author codistmonk (creation 2013-08-12)
  */
@@ -105,22 +103,12 @@ public final class ScaledImage2D extends TiledImage2D {
 	
 	@Override
 	protected final boolean makeNewTile() {
-		final TiledImage2D tiledSource = cast(TiledImage2D.class, this.getSource());
-		
-		if (tiledSource != null) {
-			final long sourceTimestamp = tiledSource.getTimestamp().get();
-			
-			this.getTimestamp().set(sourceTimestamp);
-			
-			return sourceTimestamp != tiledSource.getTileTimestamp();
-		}
-		
 		return false;
 	}
 	
 	@Override
 	protected final void updateTile() {
-		this.setTileTimestamp(this.getTimestamp().get());
+		// NOP
 	}
 	
 	/**
