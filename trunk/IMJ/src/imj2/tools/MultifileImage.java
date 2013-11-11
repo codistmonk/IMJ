@@ -152,7 +152,7 @@ public final class MultifileImage extends TiledImage2D {
 				
 			});
 		} catch (final Exception exception) {
-			if (lod < thisLOD) {
+			if (thisLOD < lod) {
 				debugPrint(exception);
 				
 				return new SubsampledImage2D(this).getLODImage(lod);
