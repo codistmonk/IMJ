@@ -17,6 +17,10 @@ public final class LinearIntImage implements Image {
 		this.channels = channels;
 	}
 	
+	public final int[] getData() {
+		return this.data;
+	}
+	
 	@Override
 	public final String getId() {
 		return this.id;
@@ -24,7 +28,7 @@ public final class LinearIntImage implements Image {
 	
 	@Override
 	public final long getPixelCount() {
-		return this.data.length;
+		return this.getData().length;
 	}
 	
 	@Override
@@ -34,12 +38,12 @@ public final class LinearIntImage implements Image {
 	
 	@Override
 	public final int getPixelValue(final long pixelIndex) {
-		return this.data[(int) pixelIndex];
+		return this.getData()[(int) pixelIndex];
 	}
 	
 	@Override
 	public final void setPixelValue(final long pixelIndex, final int pixelValue) {
-		this.data[(int) pixelIndex] = pixelValue;
+		this.getData()[(int) pixelIndex] = pixelValue;
 	}
 	
 	@Override
