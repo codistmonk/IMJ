@@ -10,7 +10,6 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
 import imj2.core.ScaledImage2D;
-import imj2.core.SubsampledImage2D;
 
 import java.awt.Adjustable;
 import java.awt.BorderLayout;
@@ -117,23 +116,15 @@ public final class Image2DComponent extends JComponent {
 					break;
 				case '+':
 					if (0 < image.getLOD()) {
-						Image2DComponent.this.setImage(image.getLODImage(image.getLOD() - 1));
+						Image2DComponent.this.setScaledImage(
+								Image2DComponent.this.getScaledImage().getLODImage(image.getLOD() - 1));
 					}
 					
 					break;
 				case '-':
-					if (multifileImage != null) {
-						try {
-							Image2DComponent.this.setImage(multifileImage.getLODImage(multifileImage.getLOD() + 1));
-							
-							break;
-						} catch (final Exception exception) {
-							debugPrint(exception);
-						}
-					}
-					
 					if (1 < image.getWidth() && 1 < image.getHeight()) {
-						Image2DComponent.this.setImage(new SubsampledImage2D(image));
+						Image2DComponent.this.setScaledImage(
+								Image2DComponent.this.getScaledImage().getLODImage(image.getLOD() + 1));
 					}
 					
 					break;
@@ -238,7 +229,7 @@ public final class Image2DComponent extends JComponent {
 	}
 	
 	public final void setImage(final Image2D image) {
-		this.scaledImage = new ScaledImage2D(image);
+		this.setScaledImage(new ScaledImage2D(image));
 	}
 	
 	public final boolean setBuffer() {
@@ -379,8 +370,9 @@ public final class Image2DComponent extends JComponent {
 					this.getScaledImage().getPixelValue(xInScaledImage, yInScaledImage));
 		} catch (final Exception exception) {
 			exception.printStackTrace();
-			debugPrint(xInScaledImage, yInScaledImage, xInScaledImage - this.scaledImageVisibleRectangle.x, yInScaledImage - this.scaledImageVisibleRectangle.y);
-			System.exit(-1);
+			debugPrint(this.frontBuffer.getWidth(), this.frontBuffer.getHeight());
+			debugPrint(xInScaledImage, yInScaledImage, xInScaledImage - this.scaledImageVisibleRectangle.x,
+					yInScaledImage - this.scaledImageVisibleRectangle.y);
 		}
 	}
 	
