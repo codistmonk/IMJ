@@ -45,7 +45,7 @@ public final class ScaledImage2D extends TiledImage2D {
 	}
 	
 	@Override
-	public final Image2D getLODImage(final int lod) {
+	public final ScaledImage2D getLODImage(final int lod) {
 		final int thisLOD = this.getLOD();
 		
 		if (lod == thisLOD) {
@@ -107,16 +107,20 @@ public final class ScaledImage2D extends TiledImage2D {
 	protected final boolean makeNewTile() {
 		final TiledImage2D tiledSource = cast(TiledImage2D.class, this.getSource());
 		
-		return tiledSource != null && this.getTimestamp().get() != tiledSource.getTimestamp().get();
+		if (tiledSource != null) {
+			final long sourceTimestamp = tiledSource.getTimestamp().get();
+			
+			this.getTimestamp().set(sourceTimestamp);
+			
+			return sourceTimestamp != tiledSource.getTileTimestamp();
+		}
+		
+		return false;
 	}
 	
 	@Override
 	protected final void updateTile() {
-		final TiledImage2D tiledSource = cast(TiledImage2D.class, this.getSource());
-		
-		if (tiledSource != null) {
-			this.getTimestamp().set(tiledSource.getTimestamp().get());
-		}
+		this.setTileTimestamp(this.getTimestamp().get());
 	}
 	
 	/**
