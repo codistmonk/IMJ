@@ -3,7 +3,6 @@ package imj2.tools;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
-import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
@@ -104,7 +103,6 @@ public final class Image2DComponent extends JComponent {
 			@Override
 			public final void keyTyped(final KeyEvent event) {
 				final Image2D image = Image2DComponent.this.getImage();
-				final MultifileImage multifileImage = cast(MultifileImage.class, image);
 				final int zoom = Image2DComponent.this.getZoom();
 				
 				switch (event.getKeyChar()) {
