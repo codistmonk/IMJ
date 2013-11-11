@@ -13,8 +13,10 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
+import imj2.core.ConcreteImage2D;
 import imj2.core.IMJCoreTools;
 import imj2.core.Image2D;
+import imj2.core.LinearIntImage;
 import imj2.core.SubsampledImage2D;
 import imj2.core.TiledImage2D;
 
@@ -207,8 +209,14 @@ public final class MultifileImage extends TiledImage2D {
 			@Override
 			public final Image2D call() throws Exception {
 				final String tileId = MultifileImage.this.getId() + "_" + tileY + "_" + tileX + ".jpg";
+				final AwtBackedImage awtTile = new AwtBackedImage(tileId, MultifileImage.this.loadImage(tileId));
+				final LinearIntImage data = new LinearIntImage(tileId, awtTile.getPixelCount(), awtTile.getChannels());
+				final int tileWidth = awtTile.getWidth();
+				final int tileHeight = awtTile.getHeight();
 				
-				return new AwtBackedImage(tileId, MultifileImage.this.loadImage(tileId));
+				awtTile.copyPixelValues(0, 0, tileWidth, tileHeight, data.getData());
+				
+				return new ConcreteImage2D(data, tileWidth, tileHeight);
 			}
 			
 		});
