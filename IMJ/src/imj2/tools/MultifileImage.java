@@ -198,7 +198,7 @@ public final class MultifileImage extends TiledImage2D {
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	protected void updateTile() {
+	protected final void updateTile() {
 		final int tileX = this.getTileX();
 		final int tileY = this.getTileY();
 		
@@ -212,6 +212,11 @@ public final class MultifileImage extends TiledImage2D {
 			}
 			
 		});
+	}
+	
+	@Override
+	protected final void copyTilePixelValues(final int[] result) {
+		this.tile.copyPixelValues(0, 0, this.getTileWidth(), this.getTileHeight(), result);
 	}
 	
 	/**

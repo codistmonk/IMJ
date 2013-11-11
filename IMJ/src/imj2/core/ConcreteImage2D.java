@@ -1,5 +1,7 @@
 package imj2.core;
 
+import static net.sourceforge.aprog.tools.Tools.cast;
+
 /**
  * @author codistmonk (creation 2013-08-04)
  */
@@ -21,7 +23,7 @@ public final class ConcreteImage2D implements Image2D {
 		this.height = height;
 	}
 	
-	public Image getSource() {
+	public final Image getSource() {
 		return this.source;
 	}
 	
@@ -91,6 +93,27 @@ public final class ConcreteImage2D implements Image2D {
 	}
 	
 	@Override
+	public final void copyPixelValues(final int left, final int top, final int width, final int height,
+			final int[] result) {
+		final LinearIntImage ints = cast(LinearIntImage.class, this.getSource());
+		
+		if (ints != null) {
+			if (left == 0 && top == 0 && width == this.getWidth() && height == this.getHeight()) {
+				System.arraycopy(ints.getData(), 0, result, 0, result.length);
+			} else {
+				final int endY = top + height;
+				
+				for (int y = top, inIndex = y * this.getWidth() + left, outIndex = 0;
+						y < endY; ++y, inIndex += this.getWidth(), outIndex += width) {
+					System.arraycopy(ints.getData(), inIndex, result, outIndex, width);
+				}
+			}
+		} else {
+			copyEachPixelValue(this, left, top, width, height, result);
+		}
+	}
+	
+	@Override
 	public final ConcreteImage2D[] newParallelViews(final int n) {
 		return IMJCoreTools.newParallelViews(this, n);
 	}
@@ -124,6 +147,25 @@ public final class ConcreteImage2D implements Image2D {
 		}
 		
 		process.endOfPatch();
+	}
+	
+	public static final void copyEachPixelValue(final Image2D image, final int left, final int top,
+			final int width, final int height, final int[] result) {
+		image.forEachPixelInBox(left, top, width, height, new MonopatchProcess() {
+			
+			private int i = 0;
+			
+			@Override
+			public final void pixel(final int x, final int y) {
+				result[this.i++] = image.getPixelValue(x, y);
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 3812041133305798530L;
+			
+		});
 	}
 	
 }
