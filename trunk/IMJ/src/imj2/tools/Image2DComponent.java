@@ -3,12 +3,14 @@ package imj2.tools;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
+import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
 import imj2.core.ScaledImage2D;
+import imj2.core.TiledImage2D;
 
 import java.awt.Adjustable;
 import java.awt.BorderLayout;
@@ -107,23 +109,37 @@ public final class Image2DComponent extends JComponent {
 				
 				switch (event.getKeyChar()) {
 				case '*':
+					if (256 <= Image2DComponent.this.getZoom()) {
+						return;
+					}
+					
 					Image2DComponent.this.setZoom(zoom * 2);
+					
 					break;
 				case '/':
+					if (Image2DComponent.this.getZoom() <= 1) {
+						return;
+					}
+					
 					Image2DComponent.this.setZoom(zoom / 2);
+					
 					break;
 				case '+':
-					if (0 < image.getLOD()) {
-						Image2DComponent.this.setScaledImage(
-								Image2DComponent.this.getScaledImage().getLODImage(image.getLOD() - 1));
+					if (image.getLOD() <= 0) {
+						return;
 					}
+					
+					Image2DComponent.this.setScaledImage(
+							Image2DComponent.this.getScaledImage().getLODImage(image.getLOD() - 1));
 					
 					break;
 				case '-':
-					if (1 < image.getWidth() && 1 < image.getHeight()) {
-						Image2DComponent.this.setScaledImage(
-								Image2DComponent.this.getScaledImage().getLODImage(image.getLOD() + 1));
+					if (image.getWidth() <= 1 || image.getHeight() <= 1) {
+						return;
 					}
+					
+					Image2DComponent.this.setScaledImage(
+							Image2DComponent.this.getScaledImage().getLODImage(image.getLOD() + 1));
 					
 					break;
 				default:
@@ -154,6 +170,15 @@ public final class Image2DComponent extends JComponent {
 				// -> newV = ((2 * oldV + oldA) * newM - newA * oldM) / (2 * oldM)
 				horizontalScrollBar.setValue((int) (((2L * oldHV + oldHA) * newHM - (long) newHA * oldHM) / (2L * oldHM)));
 				verticalScrollBar.setValue((int) (((2L * oldVV + oldVA) * newVM - (long) newVA * oldVM) / (2L * oldVM)));
+				
+				SwingUtilities.invokeLater(new Runnable() {
+					
+					@Override
+					public final void run() {
+						Image2DComponent.this.updateBuffer();
+					}
+					
+				});
 			}
 			
 		});
@@ -264,10 +289,18 @@ public final class Image2DComponent extends JComponent {
 	}
 	
 	public final void updateBuffer() {
+		final TiledImage2D filter = cast(TiledImage2D.class, this.getImage());
+		
+		if (filter != null) {
+			filter.getTimestamp().incrementAndGet();
+		}
+		
 		if (!this.setBuffer()) {
 			this.updateBuffer(this.scaledImageVisibleRectangle.x, this.scaledImageVisibleRectangle.y,
 					this.scaledImageVisibleRectangle.width, this.scaledImageVisibleRectangle.height);
 		}
+		
+		this.repaint();
 	}
 	
 	public final int getXInImage(final int xInComponent) {
