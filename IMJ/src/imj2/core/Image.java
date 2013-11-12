@@ -1,6 +1,7 @@
 package imj2.core;
 
 import java.io.Serializable;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author codistmonk (creation 2013-08-04)
@@ -18,6 +19,10 @@ public abstract interface Image extends Serializable {
 	public abstract void setPixelValue(long pixelIndex, int pixelValue);
 	
 	public abstract Image[] newParallelViews(int n);
+	
+	public abstract Image getSource();
+	
+	public abstract AtomicLong getTimestamp();
 	
 	/**
 	 * @author codistmonk (creation 2013-08-04)
@@ -187,6 +192,29 @@ public abstract interface Image extends Serializable {
 		public static final int bitmask(final int lowBitCount) {
 			return ~((~0) << lowBitCount);
 		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-11-12)
+	 */
+	public static abstract class Abstract implements Image {
+		
+		private final AtomicLong timestamp;
+		
+		public Abstract() {
+			this.timestamp = new AtomicLong(Long.MIN_VALUE);
+		}
+		
+		@Override
+		public final AtomicLong getTimestamp() {
+			return this.timestamp;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -1522957828451615762L;
 		
 	}
 	

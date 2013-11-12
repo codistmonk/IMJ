@@ -5,7 +5,7 @@ import java.util.BitSet;
 /**
  * @author codistmonk (creation 2013-08-04)
  */
-public final class LinearBooleanImage implements Image {
+public final class LinearBooleanImage extends Image.Abstract {
 	
 	private final String id;
 	
@@ -17,6 +17,11 @@ public final class LinearBooleanImage implements Image {
 		this.id = id;
 		this.data = new BitSet();
 		this.pixelCount = pixelCount;
+	}
+	
+	@Override
+	public final Image getSource() {
+		return null;
 	}
 	
 	@Override

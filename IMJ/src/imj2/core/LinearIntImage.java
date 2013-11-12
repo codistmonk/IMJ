@@ -3,7 +3,7 @@ package imj2.core;
 /**
  * @author codistmonk (creation 2013-08-04)
  */
-public final class LinearIntImage implements Image {
+public final class LinearIntImage extends Image.Abstract {
 	
 	private final String id;
 	
@@ -15,6 +15,11 @@ public final class LinearIntImage implements Image {
 		this.id = id;
 		this.data = new int[(int) pixelCount];
 		this.channels = channels;
+	}
+	
+	@Override
+	public final Image getSource() {
+		return null;
 	}
 	
 	public final int[] getData() {

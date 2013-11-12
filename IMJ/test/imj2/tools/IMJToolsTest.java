@@ -335,7 +335,7 @@ public final class IMJToolsTest {
 		Image2DComponent.show(lbpImage);
 	}
 	
-	private static final ExpensiveTest EXPENSIVE_TEST = ExpensiveTest.SHOW4;
+	private static final ExpensiveTest EXPENSIVE_TEST = ExpensiveTest.SHOW3;
 	
 	@BeforeClass
 	public static final void beforeClass() {

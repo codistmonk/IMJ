@@ -15,6 +15,7 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
 import imj2.core.ConcreteImage2D;
 import imj2.core.IMJCoreTools;
+import imj2.core.Image;
 import imj2.core.Image2D;
 import imj2.core.LinearIntImage;
 import imj2.core.SubsampledImage2D;
@@ -125,6 +126,11 @@ public final class MultifileImage extends TiledImage2D {
 	}
 	
 	@Override
+	public final Image getSource() {
+		return null;
+	}
+	
+	@Override
 	public final int getLOD() {
 		return this.lod;
 	}
@@ -204,7 +210,7 @@ public final class MultifileImage extends TiledImage2D {
 		final int tileX = this.getTileX();
 		final int tileY = this.getTileY();
 		
-		this.tile = cache(Arrays.asList(this.getId(), this.getTileX(), this.getTileY()), new Callable<Image2D>() {
+		this.tile = cache(Arrays.asList(this.getId(), tileX, tileY), new Callable<Image2D>() {
 			
 			@Override
 			public final Image2D call() throws Exception {

@@ -2,8 +2,10 @@ package imj2.tools;
 
 import static imj2.core.ConcreteImage2D.getX;
 import static imj2.core.ConcreteImage2D.getY;
+
 import imj2.core.ConcreteImage2D;
 import imj2.core.IMJCoreTools;
+import imj2.core.Image;
 import imj2.core.Image2D;
 import imj2.core.SubsampledImage2D;
 
@@ -12,7 +14,7 @@ import java.awt.image.BufferedImage;
 /**
  * @author codistmonk (creation 2013-08-07)
  */
-public final class AwtBackedImage implements Image2D {
+public final class AwtBackedImage extends Image.Abstract implements Image2D {
 	
 	private final String id;
 	
@@ -25,6 +27,11 @@ public final class AwtBackedImage implements Image2D {
 	
 	public final BufferedImage getAwtImage() {
 		return this.awtImage;
+	}
+	
+	@Override
+	public final Image getSource() {
+		return null;
 	}
 	
 	@Override
@@ -87,7 +94,8 @@ public final class AwtBackedImage implements Image2D {
 	}
 	
 	@Override
-	public final void forEachPixelInBox(final int left, final int top, final int width, final int height, final Process process) {
+	public final void forEachPixelInBox(final int left, final int top, final int width, final int height,
+			final Image2D.Process process) {
 		ConcreteImage2D.forEachPixelInBox(this, left, top, width, height, process);
 	}
 	
