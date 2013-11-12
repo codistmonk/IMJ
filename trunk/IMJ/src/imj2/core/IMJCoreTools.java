@@ -94,6 +94,16 @@ public abstract class IMJCoreTools {
 		}
 	}
 	
+	public static final void incrementRootTimestamp(final Image image) {
+		Image root = image;
+		
+		while (root.getSource() != null) {
+			root = root.getSource();
+		}
+		
+		root.getTimestamp().incrementAndGet();
+	}
+	
 	/**
 	 * @author codistmonk (creation 2013-08-13)
 	 */

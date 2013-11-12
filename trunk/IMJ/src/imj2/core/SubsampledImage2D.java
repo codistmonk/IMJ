@@ -72,11 +72,9 @@ public final class SubsampledImage2D extends FilteredTiledImage2D {
 	}
 	
 	@Override
-	protected final Image2D updateTile(final Image2D tile) {
+	protected final Image2D updateTile(final int tileX, final int tileY, final Image2D tile) {
 		final Image2D source = this.getSource();
 		final DefaultColorModel color = new DefaultColorModel(source.getChannels());
-		final int tileX = this.getTileX();
-		final int tileY = this.getTileY();
 		
 		tile.forEachPixelInBox(tileX, tileY, tile.getWidth(), tile.getHeight(), new MonopatchProcess() {
 			

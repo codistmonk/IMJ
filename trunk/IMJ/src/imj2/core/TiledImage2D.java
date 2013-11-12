@@ -6,18 +6,14 @@ import static imj2.core.IMJCoreTools.quantize;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.cast;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 import imj.IntList;
 
 /**
  * @author codistmonk (creation 2013-08-07)
  */
-public abstract class TiledImage2D implements Image2D {
+public abstract class TiledImage2D extends Image.Abstract implements Image2D {
 	
 	private final String id;
-	
-	private final AtomicLong timestamp;
 	
 	private int optimalTileWidth;
 	
@@ -35,11 +31,6 @@ public abstract class TiledImage2D implements Image2D {
 	
 	protected TiledImage2D(final String id) {
 		this.id = id;
-		this.timestamp = new AtomicLong(Long.MIN_VALUE);
-	}
-	
-	public final AtomicLong getTimestamp() {
-		return this.timestamp;
 	}
 	
 	@Override
@@ -77,7 +68,8 @@ public abstract class TiledImage2D implements Image2D {
 	}
 	
 	@Override
-	public final void forEachPixelInBox(final int left, final int top, final int width, final int height, final Process process) {
+	public final void forEachPixelInBox(final int left, final int top, final int width, final int height,
+			final Image2D.Process process) {
 		final int right = min(this.getWidth(), left + width);
 		final int bottom = min(this.getHeight(), top + height);
 		

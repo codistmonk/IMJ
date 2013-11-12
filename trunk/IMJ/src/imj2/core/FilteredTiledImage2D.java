@@ -21,6 +21,7 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 		this.source = source;
 	}
 	
+	@Override
 	public final Image2D getSource() {
 		return this.source;
 	}
@@ -44,16 +45,19 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 	@SuppressWarnings("unchecked")
 	@Override
 	protected final void updateTile() {
+		final int tileX = this.getTileX();
+		final int tileY = this.getTileY();
 		final int tileWidth = this.getTileWidth();
 		final int tileHeight = this.getTileHeight();
-		final List<? extends Object> key = asList(this.getId(), this.getTileX(), this.getTileY());
+		final List<? extends Object> key = asList(this.getId(), tileX, tileY);
 		final Callable<TimestampedValue<Image2D>> valueFactory = new Callable<TimestampedValue<Image2D>>() {
 			
 			@Override
 			public final TimestampedValue<Image2D> call() throws Exception {
 				return new TimestampedValue<Image2D>(
 						FilteredTiledImage2D.this.getTimestamp().get(),
-						FilteredTiledImage2D.this.updateTile(FilteredTiledImage2D.this.newTile(tileWidth, tileHeight)));
+						FilteredTiledImage2D.this.updateTile(tileX, tileY,
+								FilteredTiledImage2D.this.newTile(tileWidth, tileHeight)));
 			}
 			
 		};
@@ -64,7 +68,7 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 		this.setTileTimestamp(this.getTimestamp().get());
 	}
 	
-	protected abstract Image2D updateTile(Image2D tile);
+	protected abstract Image2D updateTile(int tileX, int tileY, Image2D tile);
 	
 	final Image2D newTile(final int tileWidth, final int tileHeight) {
 		return new ConcreteImage2D(

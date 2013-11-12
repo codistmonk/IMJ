@@ -5,7 +5,7 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 /**
  * @author codistmonk (creation 2013-08-04)
  */
-public final class ConcreteImage2D implements Image2D {
+public final class ConcreteImage2D extends Image.Abstract implements Image2D {
 	
 	private final Image source;
 	
@@ -23,6 +23,7 @@ public final class ConcreteImage2D implements Image2D {
 		this.height = height;
 	}
 	
+	@Override
 	public final Image getSource() {
 		return this.source;
 	}
@@ -88,7 +89,7 @@ public final class ConcreteImage2D implements Image2D {
 	
 	@Override
 	public final void forEachPixelInBox(final int left, final int top,
-			final int width, final int height, final Process process) {
+			final int width, final int height, final Image2D.Process process) {
 		forEachPixelInBox(this, left, top, width, height, process);
 	}
 	
@@ -136,7 +137,7 @@ public final class ConcreteImage2D implements Image2D {
 	}
 	
 	public static final void forEachPixelInBox(final Image2D image, final int left, final int top,
-			final int width, final int height, final Process process) {
+			final int width, final int height, final Image2D.Process process) {
 		final int right = left + width;
 		final int bottom = top + height;
 		

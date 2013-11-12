@@ -2,6 +2,7 @@ package imj2.tools;
 
 import static imj2.core.IMJCoreTools.cache;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+import imj2.core.Image;
 import imj2.core.Image2D;
 import imj2.core.SubsampledImage2D;
 import imj2.core.TiledImage2D;
@@ -52,6 +53,11 @@ public final class LociBackedImage extends TiledImage2D {
 	
 	public final IFormatReader getLociImage() {
 		return this.lociImage;
+	}
+	
+	@Override
+	public final Image getSource() {
+		return null;
 	}
 	
 	@Override

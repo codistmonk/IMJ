@@ -3,14 +3,12 @@ package imj2.tools;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
-import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
 import imj2.core.ScaledImage2D;
-import imj2.core.TiledImage2D;
 
 import java.awt.Adjustable;
 import java.awt.BorderLayout;
@@ -171,14 +169,7 @@ public final class Image2DComponent extends JComponent {
 				horizontalScrollBar.setValue((int) (((2L * oldHV + oldHA) * newHM - (long) newHA * oldHM) / (2L * oldHM)));
 				verticalScrollBar.setValue((int) (((2L * oldVV + oldVA) * newVM - (long) newVA * oldVM) / (2L * oldVM)));
 				
-				SwingUtilities.invokeLater(new Runnable() {
-					
-					@Override
-					public final void run() {
-						Image2DComponent.this.updateBuffer();
-					}
-					
-				});
+				Image2DComponent.this.updateBuffer();
 			}
 			
 		});
@@ -215,7 +206,7 @@ public final class Image2DComponent extends JComponent {
 		
 		this.addMouseListener(mouseHandler);
 		this.addMouseMotionListener(mouseHandler);
-		this.addMouseMotionListener(mouseHandler);
+		this.addMouseWheelListener(mouseHandler);
 	}
 	
 	public Image2DComponent(final Image2D image) {
@@ -289,12 +280,6 @@ public final class Image2DComponent extends JComponent {
 	}
 	
 	public final void updateBuffer() {
-		final TiledImage2D filter = cast(TiledImage2D.class, this.getImage());
-		
-		if (filter != null) {
-			filter.getTimestamp().incrementAndGet();
-		}
-		
 		if (!this.setBuffer()) {
 			this.updateBuffer(this.scaledImageVisibleRectangle.x, this.scaledImageVisibleRectangle.y,
 					this.scaledImageVisibleRectangle.width, this.scaledImageVisibleRectangle.height);

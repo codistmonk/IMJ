@@ -33,6 +33,7 @@ public final class ScaledImage2D extends TiledImage2D {
 		}
 	}
 	
+	@Override
 	public final Image2D getSource() {
 		return this.source;
 	}
