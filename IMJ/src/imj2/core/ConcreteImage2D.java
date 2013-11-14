@@ -100,7 +100,7 @@ public final class ConcreteImage2D extends Image.Abstract implements Image2D {
 		
 		if (ints != null) {
 			if (left == 0 && top == 0 && width == this.getWidth() && height == this.getHeight()) {
-				System.arraycopy(ints.getData(), 0, result, 0, result.length);
+				System.arraycopy(ints.getData(), 0, result, 0, width * height);
 			} else {
 				final int endY = top + height;
 				
