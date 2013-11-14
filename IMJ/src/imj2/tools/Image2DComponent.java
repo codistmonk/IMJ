@@ -288,6 +288,15 @@ public final class Image2DComponent extends JComponent {
 		this.repaint();
 	}
 	
+	public final Rectangle getVisibleBoxInImage() {
+		final int x = this.getXInImage(this.getCenteringOffsetX());
+		final int y = this.getYInImage(this.getCenteringOffsetY());
+		final int endX = this.getXInImage(this.getCenteringOffsetX() + this.frontBuffer.getWidth());
+		final int endY = this.getYInImage(this.getCenteringOffsetY() + this.frontBuffer.getHeight());
+		
+		return new Rectangle(x, y, endX - x, endY - y);
+	}
+	
 	public final int getXInImage(final int xInComponent) {
 		return this.getXInScaledImage(xInComponent) / this.getZoom();
 	}
