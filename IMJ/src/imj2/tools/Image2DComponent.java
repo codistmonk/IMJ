@@ -102,9 +102,6 @@ public final class Image2DComponent extends JComponent {
 			
 			@Override
 			public final void keyTyped(final KeyEvent event) {
-				final Image2D image = Image2DComponent.this.getImage();
-				final int zoom = Image2DComponent.this.getZoom();
-				
 				switch (event.getKeyChar()) {
 				case '*':
 					Image2DComponent.this.increaseZoom();
@@ -173,6 +170,39 @@ public final class Image2DComponent extends JComponent {
 		this.setPreferredSize(preferredSize);
 	}
 	
+	public void decreaseLOD() {
+		final Image2D image = this.getImage();
+		
+		if (image.getWidth() <= 1 || image.getHeight() <= 1) {
+			return;
+		}
+		
+		this.setScaledImage(this.getScaledImage().getLODImage(image.getLOD() + 1));
+		this.updateView();
+	}
+
+	public void increaseLOD() {
+		final Image2D image = this.getImage();
+		
+		if (image.getLOD() <= 0) {
+			return;
+		}
+		
+		this.setScaledImage(this.getScaledImage().getLODImage(image.getLOD() - 1));
+		this.updateView();
+	}
+
+	public final void decreaseZoom() {
+		final int zoom = this.getZoom();
+		
+		if (zoom <= 1) {
+			return;
+		}
+		
+		this.setZoom(zoom / 2);
+		this.updateView();
+	}
+
 	public final void increaseZoom() {
 		final int zoom = this.getZoom();
 		
@@ -181,47 +211,7 @@ public final class Image2DComponent extends JComponent {
 		}
 		
 		this.setZoom(zoom * 2);
-		
-		this.updateBuffer();
-	}
-	
-	public final void decreaseZoom() {
-		final int zoom = this.getZoom();
-		if (zoom <= 1) {
-			return;
-		}
-		
-		this.setZoom(zoom / 2);
-		
-		this.updateBuffer();
-	}
-	
-	public final void increaseLOD() {
-		final Image2D image = this.getImage();
-		
-		if (image.getLOD() <= 0) {
-			return;
-		}
-		
-		this.setScaledImage(this.getScaledImage().getLODImage(image.getLOD() - 1));
-		
-		this.updateBuffer();
-	}
-	
-	public final void decreaseLOD() {
-		final Image2D image = this.getImage();
-		
-		if (image.getWidth() <= 1 || image.getHeight() <= 1) {
-			return;
-		}
-		
-		this.setScaledImage(this.getScaledImage().getLODImage(image.getLOD() + 1));
-		
-		this.updateBuffer();
-	}
-	
-	public final BufferedImage getFrontBuffer() {
-		return this.frontBuffer;
+		this.updateView();
 	}
 	
 	public final void updateView() {
