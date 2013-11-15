@@ -144,32 +144,7 @@ public final class Image2DComponent extends JComponent {
 					return;
 				}
 				
-				final JScrollBar horizontalScrollBar = Image2DComponent.this.getHorizontalScrollBar();
-				final JScrollBar verticalScrollBar = Image2DComponent.this.getVerticalScrollBar();
-				final int oldHV = horizontalScrollBar.getValue();
-				final int oldHA = horizontalScrollBar.getVisibleAmount();
-				final int oldHM = horizontalScrollBar.getMaximum();
-				final int oldVV = verticalScrollBar.getValue();
-				final int oldVA = verticalScrollBar.getVisibleAmount();
-				final int oldVM = verticalScrollBar.getMaximum();
-				
-				Image2DComponent.this.setScrollBarsVisibleAmounts();
-				Image2DComponent.this.updateBufferAccordingToScrollBars(true);
-				
-				final int newHA = horizontalScrollBar.getVisibleAmount();
-				final int newHM = horizontalScrollBar.getMaximum();
-				final int newVA = verticalScrollBar.getVisibleAmount();
-				final int newVM = verticalScrollBar.getMaximum();
-				
-				// oldC / oldM = newC / newM
-				// -> newC = oldC * newM / oldM
-				// -> newV + newA / 2 = (oldV + oldA / 2) * newM / oldM
-				// -> newV = (oldV + oldA / 2) * newM / oldM - newA / 2
-				// -> newV = ((2 * oldV + oldA) * newM - newA * oldM) / (2 * oldM)
-				horizontalScrollBar.setValue((int) (((2L * oldHV + oldHA) * newHM - (long) newHA * oldHM) / (2L * oldHM)));
-				verticalScrollBar.setValue((int) (((2L * oldVV + oldVA) * newVM - (long) newVA * oldVM) / (2L * oldVM)));
-				
-				Image2DComponent.this.updateBuffer();
+				Image2DComponent.this.updateView();
 			}
 			
 		});
@@ -220,6 +195,35 @@ public final class Image2DComponent extends JComponent {
 		preferredSize.height = min(preferredSize.height / 2, image.getHeight() + this.horizontalScrollBar.getPreferredSize().height);
 		
 		this.setPreferredSize(preferredSize);
+	}
+	
+	public final void updateView() {
+		final JScrollBar horizontalScrollBar = this.getHorizontalScrollBar();
+		final JScrollBar verticalScrollBar = this.getVerticalScrollBar();
+		final int oldHV = horizontalScrollBar.getValue();
+		final int oldHA = horizontalScrollBar.getVisibleAmount();
+		final int oldHM = horizontalScrollBar.getMaximum();
+		final int oldVV = verticalScrollBar.getValue();
+		final int oldVA = verticalScrollBar.getVisibleAmount();
+		final int oldVM = verticalScrollBar.getMaximum();
+		
+		this.setScrollBarsVisibleAmounts();
+		this.updateBufferAccordingToScrollBars(true);
+		
+		final int newHA = horizontalScrollBar.getVisibleAmount();
+		final int newHM = horizontalScrollBar.getMaximum();
+		final int newVA = verticalScrollBar.getVisibleAmount();
+		final int newVM = verticalScrollBar.getMaximum();
+		
+		// oldC / oldM = newC / newM
+		// -> newC = oldC * newM / oldM
+		// -> newV + newA / 2 = (oldV + oldA / 2) * newM / oldM
+		// -> newV = (oldV + oldA / 2) * newM / oldM - newA / 2
+		// -> newV = ((2 * oldV + oldA) * newM - newA * oldM) / (2 * oldM)
+		horizontalScrollBar.setValue((int) (((2L * oldHV + oldHA) * newHM - (long) newHA * oldHM) / (2L * oldHM)));
+		verticalScrollBar.setValue((int) (((2L * oldVV + oldVA) * newVM - (long) newVA * oldVM) / (2L * oldVM)));
+		
+		this.updateBuffer();
 	}
 	
 	public final List<Painter<Image2DComponent>> getPainters() {
