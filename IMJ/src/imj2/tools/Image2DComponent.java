@@ -170,6 +170,10 @@ public final class Image2DComponent extends JComponent {
 		this.setPreferredSize(preferredSize);
 	}
 	
+	public final BufferedImage getFrontBuffer() {
+		return this.frontBuffer;
+	}
+	
 	public void decreaseLOD() {
 		final Image2D image = this.getImage();
 		

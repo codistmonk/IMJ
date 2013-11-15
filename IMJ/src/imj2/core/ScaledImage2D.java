@@ -55,10 +55,9 @@ public final class ScaledImage2D extends TiledImage2D {
 		}
 		
 		final ScaledImage2D result = new ScaledImage2D(this.getSource().getLODImage(lod));
-//		final int deltaLOD = lod - thisLOD;
-//		
-//		result.setZoom((int) (this.getZoom() * pow(2.0, min(0, deltaLOD))));
-		result.setZoom(this.getZoom());
+		final int deltaLOD = lod - thisLOD;
+		
+		result.setZoom((int) (this.getZoom() * pow(2.0, min(0, deltaLOD))));
 		
 		return result;
 	}

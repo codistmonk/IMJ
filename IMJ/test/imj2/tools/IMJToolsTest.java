@@ -157,7 +157,7 @@ public final class IMJToolsTest {
 		}
 		
 //		final String imageSimpleName = "SYS15_A08_0002-006_lod0";
-		final String imageSimpleName = "16088_lod0";
+		final String imageSimpleName = "16088_lod5";
 		final Image2D image = new MultifileImage("../Libraries/images/jpg/", imageSimpleName,
 				MultifileImage.DEFAULT_CONNECTION_CONFIGURATOR);
 		
