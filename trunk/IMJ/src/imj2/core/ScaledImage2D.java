@@ -1,5 +1,8 @@
 package imj2.core;
 
+import static java.lang.Math.min;
+import static java.lang.Math.pow;
+
 /**
  * @author codistmonk (creation 2013-08-12)
  */
@@ -52,8 +55,9 @@ public final class ScaledImage2D extends TiledImage2D {
 		}
 		
 		final ScaledImage2D result = new ScaledImage2D(this.getSource().getLODImage(lod));
+		final int deltaLOD = lod - thisLOD;
 		
-		result.setZoom(this.getZoom());
+		result.setZoom((int) (this.getZoom() * pow(2.0, min(0, deltaLOD))));
 		
 		return result;
 	}

@@ -107,44 +107,20 @@ public final class Image2DComponent extends JComponent {
 				
 				switch (event.getKeyChar()) {
 				case '*':
-					if (256 <= Image2DComponent.this.getZoom()) {
-						return;
-					}
-					
-					Image2DComponent.this.setZoom(zoom * 2);
-					
+					Image2DComponent.this.increaseZoom();
 					break;
 				case '/':
-					if (Image2DComponent.this.getZoom() <= 1) {
-						return;
-					}
-					
-					Image2DComponent.this.setZoom(zoom / 2);
-					
+					Image2DComponent.this.decreaseZoom();
 					break;
 				case '+':
-					if (image.getLOD() <= 0) {
-						return;
-					}
-					
-					Image2DComponent.this.setScaledImage(
-							Image2DComponent.this.getScaledImage().getLODImage(image.getLOD() - 1));
-					
+					Image2DComponent.this.increaseLOD();
 					break;
 				case '-':
-					if (image.getWidth() <= 1 || image.getHeight() <= 1) {
-						return;
-					}
-					
-					Image2DComponent.this.setScaledImage(
-							Image2DComponent.this.getScaledImage().getLODImage(image.getLOD() + 1));
-					
+					Image2DComponent.this.decreaseLOD();
 					break;
 				default:
 					return;
 				}
-				
-				Image2DComponent.this.updateView();
 			}
 			
 		});
@@ -195,6 +171,57 @@ public final class Image2DComponent extends JComponent {
 		preferredSize.height = min(preferredSize.height / 2, image.getHeight() + this.horizontalScrollBar.getPreferredSize().height);
 		
 		this.setPreferredSize(preferredSize);
+	}
+	
+	public final void increaseZoom() {
+		final int zoom = this.getZoom();
+		
+		if (256 <= zoom) {
+			return;
+		}
+		
+		this.setZoom(zoom * 2);
+		
+		this.updateBuffer();
+	}
+	
+	public final void decreaseZoom() {
+		final int zoom = this.getZoom();
+		if (zoom <= 1) {
+			return;
+		}
+		
+		this.setZoom(zoom / 2);
+		
+		this.updateBuffer();
+	}
+	
+	public final void increaseLOD() {
+		final Image2D image = this.getImage();
+		
+		if (image.getLOD() <= 0) {
+			return;
+		}
+		
+		this.setScaledImage(this.getScaledImage().getLODImage(image.getLOD() - 1));
+		
+		this.updateBuffer();
+	}
+	
+	public final void decreaseLOD() {
+		final Image2D image = this.getImage();
+		
+		if (image.getWidth() <= 1 || image.getHeight() <= 1) {
+			return;
+		}
+		
+		this.setScaledImage(this.getScaledImage().getLODImage(image.getLOD() + 1));
+		
+		this.updateBuffer();
+	}
+	
+	public final BufferedImage getFrontBuffer() {
+		return this.frontBuffer;
 	}
 	
 	public final void updateView() {
