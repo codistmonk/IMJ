@@ -1,9 +1,10 @@
 package imj2.tools;
 
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
+import imj2.core.ConcreteImage2D;
 import imj2.core.FilteredTiledImage2D;
 import imj2.core.Image2D;
+import imj2.core.LinearIntImage;
 
 /**
  * @author codistmonk (creation 2013-08-26)
@@ -66,7 +67,7 @@ public final class LocalBinaryPatternImage extends FilteredTiledImage2D {
 	}
 	
 	@Override
-	protected final Image2D updateTile(final int tileX, final int tileY, final Image2D tile) {
+	protected final ConcreteImage2D<LinearIntImage> updateTile(final int tileX, final int tileY, final ConcreteImage2D<LinearIntImage> tile) {
 		try {
 			tile.forEachPixelInBox(tileX, tileY, tile.getWidth(), tile.getHeight(), new MonopatchProcess() {
 				

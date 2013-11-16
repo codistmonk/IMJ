@@ -84,10 +84,10 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 		this.setTileTimestamp(this.getTimestamp().get());
 	}
 	
-	protected abstract Image2D updateTile(int tileX, int tileY, Image2D tile);
+	protected abstract ConcreteImage2D<LinearIntImage> updateTile(int tileX, int tileY, ConcreteImage2D<LinearIntImage> tile);
 	
-	final Image2D newTile(final int tileWidth, final int tileHeight) {
-		return new ConcreteImage2D(
+	final ConcreteImage2D<LinearIntImage> newTile(final int tileWidth, final int tileHeight) {
+		return new ConcreteImage2D<LinearIntImage>(
 				new LinearIntImage("", (long) tileWidth * tileHeight, this.getChannels()), tileWidth, tileHeight);
 	}
 	
