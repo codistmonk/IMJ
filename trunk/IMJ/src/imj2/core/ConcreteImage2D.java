@@ -5,15 +5,15 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 /**
  * @author codistmonk (creation 2013-08-04)
  */
-public final class ConcreteImage2D extends Image.Abstract implements Image2D {
+public final class ConcreteImage2D<Source extends Image> extends Image.Abstract implements Image2D {
 	
-	private final Image source;
+	private final Source source;
 	
 	private final int width;
 	
 	private final int height;
 	
-	public ConcreteImage2D(final Image source, final int width, final int height) {
+	public ConcreteImage2D(final Source source, final int width, final int height) {
 		if (source.getPixelCount() != (long) width * height) {
 			throw new IllegalArgumentException();
 		}
@@ -24,7 +24,7 @@ public final class ConcreteImage2D extends Image.Abstract implements Image2D {
 	}
 	
 	@Override
-	public final Image getSource() {
+	public final Source getSource() {
 		return this.source;
 	}
 	
@@ -115,7 +115,7 @@ public final class ConcreteImage2D extends Image.Abstract implements Image2D {
 	}
 	
 	@Override
-	public final ConcreteImage2D[] newParallelViews(final int n) {
+	public final ConcreteImage2D<Source>[] newParallelViews(final int n) {
 		return IMJCoreTools.newParallelViews(this, n);
 	}
 	

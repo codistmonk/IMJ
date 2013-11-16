@@ -222,7 +222,7 @@ public final class MultifileImage extends TiledImage2D {
 				
 				awtTile.copyPixelValues(0, 0, tileWidth, tileHeight, data.getData());
 				
-				return new ConcreteImage2D(data, tileWidth, tileHeight);
+				return new ConcreteImage2D<LinearIntImage>(data, tileWidth, tileHeight);
 			}
 			
 		});
