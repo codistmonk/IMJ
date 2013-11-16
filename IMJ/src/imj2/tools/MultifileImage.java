@@ -71,7 +71,7 @@ public final class MultifileImage extends TiledImage2D {
 	
 	private final Channels channels;
 	
-	private transient Image2D tile;
+	private transient ConcreteImage2D<LinearIntImage> tile;
 	
 	public MultifileImage(final String root, final String id,
 			final ConnectionConfigurator connectionConfigurator) {
@@ -188,6 +188,32 @@ public final class MultifileImage extends TiledImage2D {
 		return this.channels;
 	}
 	
+	@SuppressWarnings("unchecked")
+	@Override
+	public final ConcreteImage2D<LinearIntImage> updateTile() {
+		final int tileX = this.getTileX();
+		final int tileY = this.getTileY();
+		
+		this.tile = cache(Arrays.asList(this.getId(), tileX, tileY), new Callable<ConcreteImage2D<LinearIntImage>>() {
+			
+			@Override
+			public final ConcreteImage2D<LinearIntImage> call() throws Exception {
+				final String tileId = MultifileImage.this.getId() + "_" + tileY + "_" + tileX + ".jpg";
+				final AwtBackedImage awtTile = new AwtBackedImage(tileId, MultifileImage.this.loadImage(tileId));
+				final LinearIntImage data = new LinearIntImage(tileId, awtTile.getPixelCount(), awtTile.getChannels());
+				final int tileWidth = awtTile.getWidth();
+				final int tileHeight = awtTile.getHeight();
+				
+				awtTile.copyPixelValues(0, 0, tileWidth, tileHeight, data.getData());
+				
+				return new ConcreteImage2D<LinearIntImage>(data, tileWidth, tileHeight);
+			}
+			
+		});
+		
+		return this.tile;
+	}
+	
 	@Override
 	protected final int getPixelValueFromTile(final int x, final int y, final int xInTile, final int yInTile) {
 		return this.tile.getPixelValue(xInTile, yInTile);
@@ -202,30 +228,6 @@ public final class MultifileImage extends TiledImage2D {
 	@Override
 	protected final boolean makeNewTile() {
 		return this.tile == null;
-	}
-	
-	@SuppressWarnings("unchecked")
-	@Override
-	protected final void updateTile() {
-		final int tileX = this.getTileX();
-		final int tileY = this.getTileY();
-		
-		this.tile = cache(Arrays.asList(this.getId(), tileX, tileY), new Callable<Image2D>() {
-			
-			@Override
-			public final Image2D call() throws Exception {
-				final String tileId = MultifileImage.this.getId() + "_" + tileY + "_" + tileX + ".jpg";
-				final AwtBackedImage awtTile = new AwtBackedImage(tileId, MultifileImage.this.loadImage(tileId));
-				final LinearIntImage data = new LinearIntImage(tileId, awtTile.getPixelCount(), awtTile.getChannels());
-				final int tileWidth = awtTile.getWidth();
-				final int tileHeight = awtTile.getHeight();
-				
-				awtTile.copyPixelValues(0, 0, tileWidth, tileHeight, data.getData());
-				
-				return new ConcreteImage2D<LinearIntImage>(data, tileWidth, tileHeight);
-			}
-			
-		});
 	}
 	
 	@Override

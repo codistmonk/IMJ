@@ -14,7 +14,7 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 	
 	private final Image2D source;
 	
-	private Image2D tile;
+	private ConcreteImage2D<LinearIntImage> tile;
 	
 	protected FilteredTiledImage2D(final String id, final Image2D source) {
 		super(id);
@@ -39,6 +39,43 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 		return this.source;
 	}
 	
+	@SuppressWarnings("unchecked")
+	@Override
+	public final ConcreteImage2D<LinearIntImage> updateTile() {
+		final int tileX = this.getTileX();
+		final int tileY = this.getTileY();
+		final int tileWidth = this.getTileWidth();
+		final int tileHeight = this.getTileHeight();
+		final List<? extends Object> key = asList(this.getId(), tileX, tileY);
+		final Callable<TimestampedValue<ConcreteImage2D<LinearIntImage>>> valueFactory = new Callable<TimestampedValue<ConcreteImage2D<LinearIntImage>>>() {
+			
+			@Override
+			public final TimestampedValue<ConcreteImage2D<LinearIntImage>> call() throws Exception {
+				// FIXME Potential issue: each factory retains its own enclosing instance;
+				//       as a result, tiles of the same imageId may behave inconsistently;
+				//       possible fix: refactor as static class to update image reference
+				final FilteredTiledImage2D image = FilteredTiledImage2D.this.getFromCache(false);
+				
+				return new TimestampedValue<ConcreteImage2D<LinearIntImage>>(image.getTimestamp().get(),
+						image.updateTile(tileX, tileY, image.newTile(tileWidth, tileHeight)));
+			}
+			
+		};
+		
+		// XXX Use while loop ?
+		this.tile = cache(key, valueFactory,
+				cache(key, valueFactory).getTimestamp() != this.getTimestamp().get()).getValue();
+		this.setTileTimestamp(this.getTimestamp().get());
+		
+		return this.tile;
+	}
+	
+	public final int[] getTileData(final int x, final int y) {
+		this.ensureTileContains(x, y);
+		
+		return this.updateTile().getSource().getData();
+	}
+	
 	@Override
 	protected final int getPixelValueFromTile(final int x, final int y, final int xInTile, final int yInTile) {
 		return this.tile.getPixelValue(xInTile, yInTile);
@@ -53,35 +90,6 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 	@Override
 	protected final boolean makeNewTile() {
 		return this.tile == null || this.getTimestamp().get() != this.getTileTimestamp();
-	}
-	
-	@SuppressWarnings("unchecked")
-	@Override
-	protected final void updateTile() {
-		final int tileX = this.getTileX();
-		final int tileY = this.getTileY();
-		final int tileWidth = this.getTileWidth();
-		final int tileHeight = this.getTileHeight();
-		final List<? extends Object> key = asList(this.getId(), tileX, tileY);
-		final Callable<TimestampedValue<Image2D>> valueFactory = new Callable<TimestampedValue<Image2D>>() {
-			
-			@Override
-			public final TimestampedValue<Image2D> call() throws Exception {
-				// FIXME Potential issue: each factory retains its own enclosing instance;
-				//       as a result, tiles of the same imageId may behave inconsistently;
-				//       possible fix: refactor as static class to update image reference
-				final FilteredTiledImage2D image = FilteredTiledImage2D.this.getFromCache(false);
-				
-				return new TimestampedValue<Image2D>(image.getTimestamp().get(),
-						image.updateTile(tileX, tileY, image.newTile(tileWidth, tileHeight)));
-			}
-			
-		};
-		
-		// XXX Use while loop ?
-		this.tile = cache(key, valueFactory,
-				cache(key, valueFactory).getTimestamp() != this.getTimestamp().get()).getValue();
-		this.setTileTimestamp(this.getTimestamp().get());
 	}
 	
 	protected abstract ConcreteImage2D<LinearIntImage> updateTile(int tileX, int tileY, ConcreteImage2D<LinearIntImage> tile);

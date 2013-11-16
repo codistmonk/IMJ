@@ -96,6 +96,11 @@ public final class ScaledImage2D extends TiledImage2D {
 	}
 	
 	@Override
+	public final Object updateTile() {
+		return null;
+	}
+	
+	@Override
 	protected final int getPixelValueFromTile(final int x, final int y, final int xInTile, final int yInTile) {
 		return this.getSource().getPixelValue(x / this.getZoom(), y / this.getZoom());
 	}
@@ -109,11 +114,6 @@ public final class ScaledImage2D extends TiledImage2D {
 	@Override
 	protected final boolean makeNewTile() {
 		return false;
-	}
-	
-	@Override
-	protected final void updateTile() {
-		// NOP
 	}
 	
 	/**
