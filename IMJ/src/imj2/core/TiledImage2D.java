@@ -195,8 +195,8 @@ public abstract class TiledImage2D extends Image.Abstract implements Image2D {
 	}
 	
 	protected final void setOptimalTileDimensions(final int width, final int height) {
-		this.setOptimalTileWidth(min(width, this.getWidth()));
-		this.setOptimalTileHeight(min(height, this.getHeight()));
+		this.setOptimalTileWidth(width);
+		this.setOptimalTileHeight(height);
 	}
 	
 	protected final long getTileTimestamp() {
