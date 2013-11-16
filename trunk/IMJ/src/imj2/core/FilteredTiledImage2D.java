@@ -19,6 +19,19 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 	protected FilteredTiledImage2D(final String id, final Image2D source) {
 		super(id);
 		this.source = source;
+		
+		this.getFromCache(true);
+	}
+	
+	final FilteredTiledImage2D getFromCache(final boolean refresh) {
+		return cache(this.getId(), new Callable<FilteredTiledImage2D>() {
+			
+			@Override
+			public final FilteredTiledImage2D call() throws Exception {
+				return FilteredTiledImage2D.this;
+			}
+			
+		}, refresh);
 	}
 	
 	@Override
@@ -54,10 +67,13 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 			
 			@Override
 			public final TimestampedValue<Image2D> call() throws Exception {
-				return new TimestampedValue<Image2D>(
-						FilteredTiledImage2D.this.getTimestamp().get(),
-						FilteredTiledImage2D.this.updateTile(tileX, tileY,
-								FilteredTiledImage2D.this.newTile(tileWidth, tileHeight)));
+				// FIXME Potential issue: each factory retains its own enclosing instance;
+				//       as a result, tiles of the same imageId may behave inconsistently;
+				//       possible fix: refactor as static class to update image reference
+				final FilteredTiledImage2D image = FilteredTiledImage2D.this.getFromCache(false);
+				
+				return new TimestampedValue<Image2D>(image.getTimestamp().get(),
+						image.updateTile(tileX, tileY, image.newTile(tileWidth, tileHeight)));
 			}
 			
 		};
