@@ -123,6 +123,24 @@ public abstract class TiledImage2D extends Image.Abstract implements Image2D {
 		}
 	}
 	
+	public final TiledImage2D ensureTileContains(final int x, final int y) {
+		final int tileX = quantize(x, this.getOptimalTileWidth());
+		final int tileY = quantize(y, this.getOptimalTileHeight());
+		final boolean tileIsUpToDate = this.getTileX() == tileX && this.getTileY() == tileY && !this.makeNewTile();
+		
+		if (!tileIsUpToDate) {
+			this.tileX = tileX;
+			this.tileY = tileY;
+			this.setTileWidth();
+			this.setTileHeight();
+			this.updateTile();
+		}
+		
+		return this;
+	}
+	
+	public abstract Object updateTile();
+	
 	protected final int getTileX() {
 		return this.tileX;
 	}
@@ -202,22 +220,6 @@ public abstract class TiledImage2D extends Image.Abstract implements Image2D {
 	 * @return <code>true</code> if a new tile has been generated or needs to be initialized
 	 */
 	protected abstract boolean makeNewTile();
-	
-	protected abstract void updateTile();
-	
-	private final void ensureTileContains(final int x, final int y) {
-		final int tileX = quantize(x, this.getOptimalTileWidth());
-		final int tileY = quantize(y, this.getOptimalTileHeight());
-		final boolean tileIsUpToDate = this.getTileX() == tileX && this.getTileY() == tileY && !this.makeNewTile();
-		
-		if (!tileIsUpToDate) {
-			this.tileX = tileX;
-			this.tileY = tileY;
-			this.setTileWidth();
-			this.setTileHeight();
-			this.updateTile();
-		}
-	}
 	
 	/**
 	 * {@value}.

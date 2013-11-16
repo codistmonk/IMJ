@@ -102,6 +102,24 @@ public final class LociBackedImage extends TiledImage2D {
 		return result;
 	}
 	
+	@SuppressWarnings("unchecked")
+	@Override
+	public final byte[] updateTile() {
+		final int tileWidth = this.getTileWidth();
+		final int tileHeight = this.getTileHeight();
+		
+		this.tile = cache(Arrays.asList(this.getId(), this.getTileX(), this.getTileY()), new Callable<byte[]>() {
+			
+			@Override
+			public final byte[] call() throws Exception {
+				return LociBackedImage.this.updateTile(LociBackedImage.this.newTile(tileWidth, tileHeight));
+			}
+			
+		});
+		
+		return this.tile;
+	}
+	
 	@Override
 	protected final int getPixelValueFromTile(final int x, final int y, final int xInTile, final int yInTile) {
 		final int channelCount = this.getChannels().getChannelCount();
@@ -157,22 +175,6 @@ public final class LociBackedImage extends TiledImage2D {
 	@Override
 	protected final boolean makeNewTile() {
 		return this.tile == null;
-	}
-	
-	@SuppressWarnings("unchecked")
-	@Override
-	protected final void updateTile() {
-		final int tileWidth = this.getTileWidth();
-		final int tileHeight = this.getTileHeight();
-		
-		this.tile = cache(Arrays.asList(this.getId(), this.getTileX(), this.getTileY()), new Callable<byte[]>() {
-			
-			@Override
-			public final byte[] call() throws Exception {
-				return LociBackedImage.this.updateTile(LociBackedImage.this.newTile(tileWidth, tileHeight));
-			}
-			
-		});
 	}
 	
 	final byte[] updateTile(final byte[] tile) {
