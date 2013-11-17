@@ -259,7 +259,7 @@ public final class Image2DComponent extends JComponent {
 		if (0 < zoom && zoom != this.getZoom()) {
 			this.getScaledImage().setZoom(zoom);
 			
-			this.repaint();
+			this.updateBuffer();
 		}
 	}
 	
@@ -268,7 +268,9 @@ public final class Image2DComponent extends JComponent {
 	}
 	
 	public final void setImage(final Image2D image) {
+		final int zoom = this.getZoom();
 		this.setScaledImage(new ScaledImage2D(image));
+		this.setZoom(zoom);
 	}
 	
 	public final boolean setBuffer() {
