@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.prefs.Preferences;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -356,34 +357,41 @@ public final class MultifileImage extends TiledImage2D {
 		private static final Map<String, String> authorizations = synchronizedMap(new HashMap<String, String>());
 		
 		public static final void configureCredentials(final URLConnection connection) {
-			String authorization = authorizations.get(connection.getURL().getHost());
+			final String host = connection.getURL().getHost();
+			String authorization = authorizations.get(host);
 			
 			if (authorization == null) {
 				SwingTools.setCheckAWT(false);
-				
-				final JTextField loginField = new JTextField();
+				final Preferences preferences = Preferences.userNodeForPackage(Tools.getCallerClass());
+				final String userNameKey = "login for " + host;
+				final String userName = preferences.get(userNameKey, System.getProperty("user.name"));
+				final JTextField loginField = new JTextField(userName);
 				final JPasswordField passwordField = new JPasswordField();
 				final JComponent credentialsComponent = verticalBox(
 						horizontalBox(new JLabel("Login:"), loginField),
 						horizontalBox(new JLabel("Password:"), passwordField)
 				);
+				passwordField.requestFocusInWindow();
 				final int option = JOptionPane.showOptionDialog(null, credentialsComponent, connection.getURL().toString(),
 						JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE, null, null, null);
 				
 				SwingTools.setCheckAWT(true);
 				
 				if (option == JOptionPane.OK_OPTION) {
-					final byte[] login = loginField.getText().getBytes();
+					final String loginText = loginField.getText();
+					final byte[] login = loginText.getBytes();
 					final byte[] separator = ":".getBytes();
 					final byte[] password = getPassword(passwordField);
 					final byte[] credentials = new byte[login.length + separator.length + password.length];
+					
+					preferences.put(userNameKey, loginText);
 					
 					arraycopy(login, 0, credentials, 0, login.length);
 					arraycopy(separator, 0, credentials, login.length, separator.length);
 					arraycopy(password, 0, credentials, login.length + separator.length, password.length);
 					
 					authorization = "Basic " + javax.xml.bind.DatatypeConverter.printBase64Binary(credentials);
-					authorizations.put(connection.getURL().getHost(), authorization);
+					authorizations.put(host, authorization);
 				}
 			}
 			
