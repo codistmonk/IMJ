@@ -13,7 +13,7 @@ public final class ScaledImage2D extends TiledImage2D {
 	private int zoom;
 	
 	public ScaledImage2D(final Image2D source) {
-		super(source.getId());
+		super(source.getId() + "_scaled");
 		this.source = source;
 		this.setZoom(1);
 	}

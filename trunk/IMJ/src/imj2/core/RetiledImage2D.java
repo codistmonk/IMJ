@@ -10,7 +10,7 @@ import imj2.core.Image2D;
 public class RetiledImage2D extends FilteredTiledImage2D {
 	
 	public RetiledImage2D(final Image2D source, final int optimalTileSize) {
-		super(source.getId() + " retiled_" + optimalTileSize, source);
+		super(source.getId() + "_retiled" + optimalTileSize, source);
 		this.setOptimalTileDimensions(optimalTileSize, optimalTileSize);
 	}
 	
