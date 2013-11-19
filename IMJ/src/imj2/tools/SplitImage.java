@@ -46,7 +46,15 @@ public final class SplitImage {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final TicToc timer = new TicToc();
 		final String imageId = arguments.get("file", "");
-		final String outputBasePath = arguments.get("to", removeExtension(imageId));
+		final String imageName = removeExtension(new File(imageId).getName());
+		final String root = arguments.get("to", "");
+		final File outputBase = new File(root, imageName);
+		
+		if (!outputBase.isDirectory() && !outputBase.mkdir()) {
+			throw new IOException("Could not create directory " + outputBase);
+		}
+		
+		final String outputBasePath = outputBase + "/" + imageName;
 		final int maximumTileWidth = arguments.get("maximumTileWidth", 1024)[0];
 		final int maximumTileHeight = arguments.get("maximumTileWidth", maximumTileWidth)[0];
 		final int forcedTileWidth = arguments.get("tileWidth", 0)[0];
@@ -61,8 +69,7 @@ public final class SplitImage {
 		final int optimalTileWidth = 0 < forcedTileWidth ? forcedTileWidth : min(maximumTileWidth, image[0].getOptimalTileWidth());
 		final int optimalTileHeight = 0 < forcedTileHeight ? forcedTileHeight : min(maximumTileHeight, image[0].getOptimalTileHeight());
 		final DefaultColorModel color = new DefaultColorModel(image[0].getChannels());
-		final File outputDirectory = new File(outputBasePath).getParentFile();
-		final File dbFile = new File(outputDirectory, "imj_database.xml");
+		final File dbFile = new File(root, "imj_database.xml");
 		final Document dbXML;
 		
 		if (dbFile.canRead()) {
@@ -71,7 +78,7 @@ public final class SplitImage {
 			dbXML = parse("<images/>");
 		}
 		
-		System.out.println("outputBase: " + outputBasePath);
+		System.out.println("outputBasePath: " + outputBasePath);
 		System.out.println("Splitting... " + new Date(timer.tic()));
 		
 		for (final int lod : lods) {
@@ -150,7 +157,7 @@ public final class SplitImage {
 			});
 			
 			{
-				final String id = new File(outputBasePath).getName() + "_lod" + lod;
+				final String id = imageName + "/" + imageName  + "_lod" + lod;
 				Element imageElement = dbXML.getElementById(id);
 				
 				if (imageElement == null) {
