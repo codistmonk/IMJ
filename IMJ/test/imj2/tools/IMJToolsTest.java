@@ -2,8 +2,20 @@ package imj2.tools;
 
 import static imj2.tools.IMJTools.quantize;
 import static imj2.tools.MultiThreadTools.WORKER_COUNT;
+import static java.util.Arrays.asList;
+import static java.util.Arrays.fill;
+import static java.util.Collections.synchronizedMap;
+import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
+import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.assertEquals;
+
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.Session;
+import com.jcraft.jsch.SftpException;
+
 import imj2.core.ConcreteImage2D;
 import imj2.core.Image2D;
 import imj2.core.SubsampledImage2D;
@@ -13,14 +25,32 @@ import imj2.tools.MultifileImage.AuthenticationForHost;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Serializable;
 import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLStreamHandler;
+import java.net.URLStreamHandlerFactory;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPasswordField;
+import javax.swing.JTextField;
 
 import net.sourceforge.aprog.swing.SwingTools;
+import net.sourceforge.aprog.tools.Pair;
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -190,6 +220,32 @@ public final class IMJToolsTest {
 	}
 	
 	@Test
+	public final void testShow5() throws Exception {
+		if (!ExpensiveTest.SHOW5.equals(EXPENSIVE_TEST)) {
+			return;
+		}
+		
+		final Scanner scanner = new Scanner(new File("../Libraries/images/wsi_url.txt"));
+		scanner.nextLine();
+		
+		URL.setURLStreamHandlerFactory(new SFTPStreamHandlerFactory());
+		
+		final URL imageDirectory = new URL(scanner.nextLine());
+		
+		scanner.close();
+		
+		final String imageName = "16088";
+		final String imageLodName = imageName + "/" + imageName + "_lod0";
+		
+		final Image2D image = new MultifileImage(imageDirectory.toString(), imageLodName,
+				new AuthenticationForHost(imageDirectory.getHost()));
+		
+		debugPrint("imageWidth:", image.getWidth(), "imageHeight:", image.getHeight(), "channels:", image.getChannels());
+		
+		Image2DComponent.show(image);
+	}
+	
+	@Test
 	public final void testHistogram1() {
 		if (!ExpensiveTest.HISTOGRAM1.equals(EXPENSIVE_TEST)) {
 			return;
@@ -335,7 +391,7 @@ public final class IMJToolsTest {
 		Image2DComponent.show(lbpImage);
 	}
 	
-	private static final ExpensiveTest EXPENSIVE_TEST = ExpensiveTest.SHOW3;
+	private static final ExpensiveTest EXPENSIVE_TEST = ExpensiveTest.SHOW5;
 	
 	@BeforeClass
 	public static final void beforeClass() {
@@ -369,7 +425,7 @@ public final class IMJToolsTest {
 	 */
 	private static enum ExpensiveTest {
 		
-		SHOW1, SHOW2, SHOW3, SHOW4, HISTOGRAM1, LOD1, LOD2, LBP1;
+		SHOW1, SHOW2, SHOW3, SHOW4, SHOW5, HISTOGRAM1, LOD1, LOD2, LBP1;
 		
 	}
 	
