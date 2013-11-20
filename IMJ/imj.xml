@@ -15,6 +15,7 @@
             <zipfileset excludes="META-INF/*.SF" src="lib/aprog.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/loci_tools.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/ojalgo-33.0.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/jsch-0.1.50.jar"/>
         </jar>
         <jar destfile="imj.jar" filesetmanifest="mergewithoutmain">
             <manifest>
