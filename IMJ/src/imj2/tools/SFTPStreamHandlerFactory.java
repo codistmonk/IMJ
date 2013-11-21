@@ -1,6 +1,5 @@
 package imj2.tools;
 
-import static java.util.Arrays.asList;
 import static java.util.Arrays.fill;
 import static java.util.Collections.synchronizedMap;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
@@ -20,6 +19,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
 import java.net.URLStreamHandlerFactory;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,29 +68,43 @@ public final class SFTPStreamHandlerFactory implements URLStreamHandlerFactory, 
 			}
 			
 			try {
-				final List<String> channelKey = asList(url.getHost(), loginPassword.getFirst());
+				final String key = url.getHost();
 				final ChannelSftp channel;
-				final ChannelSftp cachedChannel = channels.get(channelKey);
 				
-				if (cachedChannel != null && cachedChannel.isConnected()) {
-					channel = cachedChannel;
-				} else {
-					final Session session = new JSch().getSession(loginPassword.getFirst(), url.getHost());
+				synchronized (channels) {
+					final ChannelSftp cachedChannel = channels.get(key);
 					
-					session.setConfig("StrictHostKeyChecking", "no");
-					session.setPassword(loginPassword.getSecond());
-					session.connect();
-					
-					debugPrint("sessionConnected:", session.isConnected());
-					
-					channel = (ChannelSftp) session.openChannel("sftp");
-					
-					channel.connect();
-					
-					debugPrint("channelConnected:", channel.isConnected());
-					
-					if (channel.isConnected()) {
-						channels.put(channelKey, channel);
+					if (cachedChannel != null && cachedChannel.isConnected()) {
+						channel = cachedChannel;
+					} else {
+						final Session session;
+						final Session cachedSession = sessions.get(key);
+						
+						if (cachedSession != null && cachedSession.isConnected()) {
+							session = cachedSession;
+						} else {
+							session = new JSch().getSession(loginPassword.getFirst(), url.getHost());
+							
+							session.setConfig("StrictHostKeyChecking", "no");
+							session.setPassword(loginPassword.getSecond());
+							session.connect();
+							
+							if (session.isConnected()) {
+								sessions.put(key, session);
+							} else {
+								throw new IOException("Failed to connect session for url: " + url);
+							}
+						}
+						
+						channel = (ChannelSftp) session.openChannel("sftp");
+						
+						channel.connect();
+						
+						if (channel.isConnected()) {
+							channels.put(key, channel);
+						} else {
+							throw new IOException("Failed to connect channel for url: " + url);
+						}
 					}
 				}
 				
@@ -124,7 +138,33 @@ public final class SFTPStreamHandlerFactory implements URLStreamHandlerFactory, 
 		 */
 		private static final long serialVersionUID = 6164151336427013720L;
 		
-		private static final Map<List<String>, ChannelSftp> channels = new HashMap<List<String>, ChannelSftp>();
+		private static final Map<String, Session> sessions = new HashMap<String, Session>();
+		
+		private static final Map<String, ChannelSftp> channels = new HashMap<String, ChannelSftp>();
+		
+		public static final List<Exception> closeAll() {
+			final List<Exception> result = new ArrayList<Exception>();
+			
+			synchronized (channels) {
+				for (final ChannelSftp channel : channels.values()) {
+					try {
+						channel.exit();
+					} catch (final Exception exception) {
+						result.add(exception);
+					}
+				}
+				
+				for (final Session session : sessions.values()) {
+					try {
+						session.disconnect();
+					} catch (final Exception exception) {
+						result.add(exception);
+					}
+				}
+			}
+			
+			return result;
+		}
 		
 		/**
 		 * @author codistmonk (creation 2013-11-18)
