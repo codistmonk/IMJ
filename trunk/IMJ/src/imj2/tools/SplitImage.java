@@ -5,15 +5,21 @@ import static imj2.tools.MultifileImage.setIdAttributes;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
+
 import imj2.core.SubsampledImage2D;
 import imj2.core.TiledImage2D;
 import imj2.tools.IMJTools.TileProcessor;
+import imj2.tools.SFTPStreamHandlerFactory.SFTPStreamHandler;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URL;
 import java.util.Date;
 
 import javax.imageio.ImageIO;
@@ -25,6 +31,7 @@ import org.w3c.dom.Node;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
 
 /**
@@ -34,6 +41,10 @@ public final class SplitImage {
 	
 	private SplitImage() {
 		throw new IllegalInstantiationException();
+	}
+	
+	static {
+		URL.setURLStreamHandlerFactory(new SFTPStreamHandlerFactory());
 	}
 	
 	public static final void main(final String[] commandLineArguments) throws Exception {
@@ -48,13 +59,7 @@ public final class SplitImage {
 		final String imageId = arguments.get("file", "");
 		final String imageName = removeExtension(new File(imageId).getName());
 		final String root = arguments.get("to", "");
-		final File outputBase = new File(root, imageName);
-		
-		if (!outputBase.isDirectory() && !outputBase.mkdir()) {
-			throw new IOException("Could not create directory " + outputBase);
-		}
-		
-		final String outputBasePath = outputBase + "/" + imageName;
+		final String outputBasePath = root + "/" + imageName + "/" + imageName;
 		final int maximumTileWidth = arguments.get("maximumTileWidth", 1024)[0];
 		final int maximumTileHeight = arguments.get("maximumTileWidth", maximumTileWidth)[0];
 		final int forcedTileWidth = arguments.get("tileWidth", 0)[0];
@@ -69,14 +74,8 @@ public final class SplitImage {
 		final int optimalTileWidth = 0 < forcedTileWidth ? forcedTileWidth : min(maximumTileWidth, image[0].getOptimalTileWidth());
 		final int optimalTileHeight = 0 < forcedTileHeight ? forcedTileHeight : min(maximumTileHeight, image[0].getOptimalTileHeight());
 		final DefaultColorModel color = new DefaultColorModel(image[0].getChannels());
-		final File dbFile = new File(root, "imj_database.xml");
-		final Document dbXML;
-		
-		if (dbFile.canRead()) {
-			dbXML = setIdAttributes(parse(new FileInputStream(dbFile)));
-		} else {
-			dbXML = parse("<images/>");
-		}
+		final String databasePath = root + "/imj_database.xml";
+		final Document database = getDatabase(databasePath);
 		
 		System.out.println("outputBasePath: " + outputBasePath);
 		System.out.println("Splitting... " + new Date(timer.tic()));
@@ -140,9 +139,12 @@ public final class SplitImage {
 				@Override
 				public final void endOfTile() {
 					if (generateTiles) {
+						final BufferedImage tile = this.tile;
+						final String format = "jpg";
+						
 						try {
-							ImageIO.write(this.tile, "jpg",
-									new File(outputBasePath + "_lod" + lod + "_" + this.tileY + "_" + this.tileX + ".jpg"));
+							ImageIO.write(tile, format, getOutputStream(
+									outputBasePath + "_lod" + lod + "_" + this.tileY + "_" + this.tileX + "." + format));
 						} catch (final IOException exception) {
 							throw unchecked(exception);
 						}
@@ -158,10 +160,10 @@ public final class SplitImage {
 			
 			{
 				final String id = imageName + "/" + imageName  + "_lod" + lod;
-				Element imageElement = dbXML.getElementById(id);
+				Element imageElement = database.getElementById(id);
 				
 				if (imageElement == null) {
-					imageElement = dbXML.createElement("image");
+					imageElement = database.createElement("image");
 				}
 				
 				imageElement.setAttribute("id", id);
@@ -172,7 +174,7 @@ public final class SplitImage {
 				imageElement.setAttribute("tileHeight", "" + optimalTileHeight);
 				
 				{
-					final Element histogramElement = dbXML.createElement("histogram");
+					final Element histogramElement = database.createElement("histogram");
 					final long pixelCount = (long) imageWidth * imageHeight;
 					final StringBuilder histogramStringBuilder = new StringBuilder();
 					final int n = histogram.length;
@@ -193,19 +195,64 @@ public final class SplitImage {
 					imageElement.appendChild(histogramElement);
 				}
 				
-				dbXML.getDocumentElement().appendChild(imageElement);
+				database.getDocumentElement().appendChild(imageElement);
 			}
 		}
 		
 		System.out.println("Splitting done time: " + timer.toc());
 		
-		XMLTools.write(dbXML, dbFile, 0);
+		final File temporaryDBFile = File.createTempFile("imj.db.", ".xml");
+		temporaryDBFile.deleteOnExit();
+		XMLTools.write(database, temporaryDBFile, 0);
+		final InputStream input = new FileInputStream(temporaryDBFile);
+		
+		try {
+			Tools.writeAndCloseOutput(input, getOutputStream(databasePath));
+		} finally {
+			input.close();
+		}
+		
+		SFTPStreamHandler.closeAll();
 	}
 	
 	public static final String removeExtension(final String path) {
 		final int i = new File(path).getName().lastIndexOf('.');
 		
 		return i < 0 ? path : path.substring(0, i);
+	}
+	
+	public static final Document getDatabase(final String path) {
+		try {
+			return setIdAttributes(parse(getInputStream(path)));
+		} catch (final Exception exception) {
+			Tools.debugPrint(exception);
+		}
+		
+		return parse("<images/>");
+	}
+	
+	public static final InputStream getInputStream(final String source) {
+		try {
+			if (MultifileImage.PROTOCOL_PATTERN.matcher(source).matches()) {
+				return new URL(source).openConnection().getInputStream();
+			} else {
+				return new FileInputStream(source);
+			}
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	public static final OutputStream getOutputStream(final String destination) {
+		try {
+			if (MultifileImage.PROTOCOL_PATTERN.matcher(destination).matches()) {
+				return new URL(destination).openConnection().getOutputStream();
+			} else {
+				return new FileOutputStream(destination);
+			}
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
 	}
 	
 }
