@@ -53,7 +53,7 @@ public final class SplitImage {
 	
 	public static final void main(final String[] commandLineArguments) throws Exception {
 		if (commandLineArguments.length == 0) {
-			System.out.println("Arguments: file <imageId> [to <outputBasePath]");
+			System.out.println("Arguments: file <imageId> [to <databasePath>]");
 			
 			return;
 		}
@@ -239,9 +239,9 @@ public final class SplitImage {
 		try {
 			if (MultifileImage.PROTOCOL_PATTERN.matcher(source).matches()) {
 				return new URL(source).openConnection().getInputStream();
-			} else {
-				return new FileInputStream(source);
 			}
+			
+			return new FileInputStream(source);
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
@@ -251,9 +251,15 @@ public final class SplitImage {
 		try {
 			if (MultifileImage.PROTOCOL_PATTERN.matcher(destination).matches()) {
 				return new URL(destination).openConnection().getOutputStream();
-			} else {
-				return new FileOutputStream(destination);
 			}
+			
+			final File parent = new File(destination).getParentFile();
+			
+			if (!parent.canRead()) {
+				parent.mkdirs();
+			}
+			
+			return new FileOutputStream(destination);
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
