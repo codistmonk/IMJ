@@ -14,6 +14,7 @@ import com.jcraft.jsch.SftpException;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Serializable;
 import java.net.URL;
 import java.net.URLConnection;
@@ -119,6 +120,35 @@ public final class SFTPStreamHandlerFactory implements URLStreamHandlerFactory, 
 					public final InputStream getInputStream() throws IOException {
 						try {
 							return channel.get(this.getURL().getFile());
+						} catch (final SftpException exception) {
+							debugPrint(this.getURL());
+							throw new IOException(exception);
+						}
+					}
+					
+					@Override
+					public final OutputStream getOutputStream() throws IOException {
+						try {
+							final String path = this.getURL().getFile();
+							
+							{
+								final String[] pathElements = path.split("/");
+								String directory = "";
+								final int n = pathElements.length - 1;
+								
+								for (int i = 0; i < n; ++i) {
+									directory += pathElements[i] + "/";
+									
+									try {
+										channel.get(directory).close();
+									} catch (final SftpException exception) {
+										System.out.println("sftp: mkdir: " + directory);
+										channel.mkdir(directory);
+									}
+								}
+							}
+							
+							return channel.put(path);
 						} catch (final SftpException exception) {
 							debugPrint(this.getURL());
 							throw new IOException(exception);
