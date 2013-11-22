@@ -44,7 +44,11 @@ public final class SplitImage {
 	}
 	
 	static {
-		URL.setURLStreamHandlerFactory(new SFTPStreamHandlerFactory());
+		try {
+			URL.setURLStreamHandlerFactory(new SFTPStreamHandlerFactory());
+		} catch (final Error error) {
+			error.printStackTrace();
+		}
 	}
 	
 	public static final void main(final String[] commandLineArguments) throws Exception {
