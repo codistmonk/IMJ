@@ -265,4 +265,59 @@ public final class SplitImage {
 		}
 	}
 	
+	/**
+	 * @author codistmonk (creation 2013-11-23)
+	 */
+	public static final class FractalZ2D {
+		
+		public static final int getX(final long index) {
+			int result = 0;
+			
+			for (int i = 0; i < USED_INT_BITS; ++i) {
+				result |= mapBit(index, D * i + 0, i);
+			}
+			
+			return result;
+		}
+		
+		public static final int getY(final long index) {
+			int result = 0;
+			
+			for (int i = 0; i < USED_INT_BITS; ++i) {
+				result |= mapBit(index, D * i + 1, i);
+			}
+			
+			return result;
+		}
+		
+		public static final long getIndex(final int x, final int y) {
+			long result = 0L;
+			
+			for (int i = 0; i < USED_INT_BITS; ++i) {
+				result |= mapBit(y, i, D * i + 1) | mapBit(x, i, D * i + 0);
+			}
+			
+			return result;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		public static final int USED_INT_BITS = Integer.SIZE - 1;
+		
+		/**
+		 * {@value}.
+		 */
+		public static final int D = 2;
+		
+		public static final long mapBit(final int value, final int bitIndexInValue, final int bitIndexInResult) {
+			return ((value >> bitIndexInValue) & 1L) << bitIndexInResult;
+		}
+		
+		public static final int mapBit(final long value, final int bitIndexInValue, final int bitIndexInResult) {
+			return ((int) (value >> bitIndexInValue) & 1) << bitIndexInResult;
+		}
+		
+	}
+	
 }
