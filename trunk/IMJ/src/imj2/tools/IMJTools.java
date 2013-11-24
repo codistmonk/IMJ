@@ -3,7 +3,6 @@ package imj2.tools;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
 import imj2.core.IMJCoreTools;
@@ -13,7 +12,11 @@ import imj2.tools.IMJTools.TileProcessor.Info;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
+import java.lang.reflect.Array;
 import java.util.Iterator;
+
+import net.sourceforge.aprog.tools.Factory;
+import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
 
@@ -21,6 +24,30 @@ import loci.formats.IFormatReader;
  * @author codistmonk (creation 2013-08-04)
  */
 public final class IMJTools extends IMJCoreTools {
+	
+	private IMJTools() {
+		throw new IllegalInstantiationException();
+	}
+	
+	public static final <T> T[] instances(final int n, final Factory<T> factory) {
+		final T element0 = factory.newInstance();
+		
+		try {
+			final T[] result = (T[]) Array.newInstance(element0.getClass(), n);
+			
+			if (0 < n) {
+				result[0] = element0;
+				
+				for (int i = 1; i < n; ++i) {
+					result[i] = factory.newInstance();
+				}
+			}
+			
+			return result;
+		} catch (final NegativeArraySizeException exception) {
+			throw unchecked(exception);
+		}
+	}
 	
 	public static final long sum(final long... values) {
 		long result = 0L;
