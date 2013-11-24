@@ -1,11 +1,14 @@
 package imj2.tools;
 
+import static imj2.core.IMJCoreTools.lockCacheKey;
+import static imj2.core.IMJCoreTools.unlockCacheKey;
 import static imj2.tools.IMJTools.forEachTile;
 import static imj2.tools.MultifileImage.setIdAttributes;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
-
+import imj2.core.FilteredTiledImage2D;
+import imj2.core.IMJCoreTools;
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
 import imj2.core.RetiledImage2D;
@@ -26,6 +29,7 @@ import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.net.URL;
 import java.util.Date;
+
 import javax.imageio.ImageIO;
 
 import org.w3c.dom.Document;
@@ -74,7 +78,7 @@ public final class SplitImage {
 		final int forcedTileWidth = arguments.get("tileWidth", 0)[0];
 		final int forcedTileHeight = arguments.get("tileHeight", forcedTileWidth)[0];
 		final int initialLOD = arguments.get("lod", 0)[0];
-		final int lodCount = arguments.get("lodCount", 1)[0];
+		final int lodCount = arguments.get("lodCount", 8)[0];
 		final boolean generateTiles = arguments.get("generateTiles", 1)[0] != 0;
 		
 		System.out.println("input: " + imageId);
@@ -85,7 +89,7 @@ public final class SplitImage {
 		final DefaultColorModel color = new DefaultColorModel(image[0].getChannels());
 		final String databasePath = root + "/imj_database.xml";
 		final Document database = getDatabase(databasePath);
-		final int algo = 0;
+		final int algo = arguments.get("algo", 0)[0];
 		
 		if (algo == 0) {
 			final long[][] histogram = IMJTools.instances(8,
@@ -381,7 +385,7 @@ public final class SplitImage {
 	 */
 	public static final class FractalZTileGenerator implements Serializable {
 		
-		private final RetiledImage2D image;
+		private final FilteredTiledImage2D image;
 		
 		private final TileProcessor processor;
 		
@@ -393,25 +397,22 @@ public final class SplitImage {
 		
 		private long tileIndex;
 		
-		public FractalZTileGenerator(final RetiledImage2D image, final int lodCount, final TileProcessor processor) {
+		public FractalZTileGenerator(final FilteredTiledImage2D image, final int lodCount, final TileProcessor processor) {
 			this.image = image;
 			this.processor = processor;
-			this.subsampling = lodCount == 1 ? null : new FractalZTileGenerator(
-					image.getLODImage(image.getLOD() + 1), lodCount - 1, processor);
 			final int optimalTileWidth = image.getOptimalTileWidth();
 			final int optimalTileHeight = image.getOptimalTileHeight();
+			this.subsampling = lodCount == 1 ? null : new FractalZTileGenerator(
+//					image.getLODImage(image.getLOD() + 1), lodCount - 1, processor);
+					new SubsampledImage2D(image), lodCount - 1, processor);
 			final Image2D lastImage = this.getLastGenerator().image;
 			final int lastImageHorizontalTileCount = (lastImage.getWidth() + optimalTileWidth - 1) / optimalTileWidth;
 			final int lastImageVerticalTileCount = (lastImage.getHeight() + optimalTileHeight - 1) / optimalTileHeight;
-//			this.endTileX = Integer.highestOneBit(image.getWidth() - 1) << 1;
-//			this.endTileY = Integer.highestOneBit(image.getHeight() - 1) << 1;
 			this.endTileX = (lastImageHorizontalTileCount << (lodCount - 1)) * optimalTileWidth;
 			this.endTileY = (lastImageVerticalTileCount << (lodCount - 1)) * optimalTileHeight;
-			
-			Tools.debugPrint(image.getLOD(), image.getWidth(), image.getHeight(), this.endTileX, this.endTileY);
 		}
 		
-		public final RetiledImage2D getImage() {
+		public final FilteredTiledImage2D getImage() {
 			return this.image;
 		}
 		
@@ -424,17 +425,37 @@ public final class SplitImage {
 		}
 		
 		public final boolean next() {
+			if (this.tileIndex % PERIODICITY == 0) {
+				for (int i = 0; i <= 3; ++i) {
+					final Object tileKey = this.getImage().getTileKey(
+							FractalZ2D.getX(this.tileIndex + i) * this.getImage().getOptimalTileWidth(),
+							FractalZ2D.getY(this.tileIndex + i) * this.getImage().getOptimalTileHeight());
+					lockCacheKey(tileKey);
+				}
+			}
+			
 			final int tileX = FractalZ2D.getX(this.tileIndex) * this.getImage().getOptimalTileWidth();
 			final int tileY = FractalZ2D.getY(this.tileIndex) * this.getImage().getOptimalTileHeight();
 			
-			if (tileX < this.getImage().getWidth() && tileY < this.image.getHeight()) {
+			if (tileX < this.getImage().getWidth() && tileY < this.getImage().getHeight()) {
 				this.processor.processTile(this.getImage(), tileX, tileY,
 						(Image2D) this.getImage().ensureTileContains(tileX, tileY).updateTile());
 			}
 			
-			if (this.tileIndex++ % PERIODICITY == PERIODICITY - 1 && this.getSubsampling() != null) {
+			if (this.tileIndex % PERIODICITY == PERIODICITY - 1 && this.getSubsampling() != null) {
 				this.getSubsampling().next();
+				
+				for (int i = -3; i <= 0; ++i) {
+					final Object tileKey = this.getImage().getTileKey(
+							FractalZ2D.getX(this.tileIndex + i) * this.getImage().getOptimalTileWidth(),
+							FractalZ2D.getY(this.tileIndex + i) * this.getImage().getOptimalTileHeight());
+					unlockCacheKey(tileKey);
+				}
+				
+//				IMJCoreTools.removeOldCacheEntries(1.0);
 			}
+			
+			++this.tileIndex;
 			
 			return tileX < this.endTileX || tileY < this.endTileY;
 		}
