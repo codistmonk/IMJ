@@ -6,6 +6,9 @@ import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
 
+import imj2.core.Image2D;
+import imj2.core.Image2D.MonopatchProcess;
+import imj2.core.RetiledImage2D;
 import imj2.core.SubsampledImage2D;
 import imj2.core.TiledImage2D;
 import imj2.tools.IMJTools.TileProcessor;
@@ -19,9 +22,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
+import java.lang.reflect.Array;
 import java.net.URL;
 import java.util.Date;
-
 import javax.imageio.ImageIO;
 
 import org.w3c.dom.Document;
@@ -29,6 +33,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
+import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
@@ -68,87 +73,74 @@ public final class SplitImage {
 		final int maximumTileHeight = arguments.get("maximumTileWidth", maximumTileWidth)[0];
 		final int forcedTileWidth = arguments.get("tileWidth", 0)[0];
 		final int forcedTileHeight = arguments.get("tileHeight", forcedTileWidth)[0];
-		final int[] lods = arguments.get("lods", 0, 1, 2, 3, 4, 5, 6, 7);
+		final int initialLOD = arguments.get("lod", 0)[0];
+		final int lodCount = arguments.get("lodCount", 1)[0];
 		final boolean generateTiles = arguments.get("generateTiles", 1)[0] != 0;
 		
 		System.out.println("input: " + imageId);
 		
-		final TiledImage2D[] image = { new LociBackedImage(imageId) };
-		int currentLOD = 0;
+		final TiledImage2D[] image = { (TiledImage2D) new LociBackedImage(imageId).getLODImage(initialLOD) };
 		final int optimalTileWidth = 0 < forcedTileWidth ? forcedTileWidth : min(maximumTileWidth, image[0].getOptimalTileWidth());
 		final int optimalTileHeight = 0 < forcedTileHeight ? forcedTileHeight : min(maximumTileHeight, image[0].getOptimalTileHeight());
 		final DefaultColorModel color = new DefaultColorModel(image[0].getChannels());
 		final String databasePath = root + "/imj_database.xml";
 		final Document database = getDatabase(databasePath);
+		final int algo = 0;
 		
-		System.out.println("outputBasePath: " + outputBasePath);
-		System.out.println("Splitting... " + new Date(timer.tic()));
-		
-		for (final int lod : lods) {
-			for (; currentLOD < lod; ++currentLOD) {
-				System.out.println("Subsampling for LOD " + (currentLOD + 1) + "... " + new Date());
-				
-				image[0] = new SubsampledImage2D(image[0], optimalTileWidth, optimalTileHeight);
-				image[0].loadAllTiles();
-			}
+		if (algo == 0) {
+			final long[][] histogram = IMJTools.instances(8,
+					new InvokerAsFactory<long[]>(Array.class, "newInstance", long.class, 64));
 			
-			if (currentLOD != lod) {
-				throw new IllegalArgumentException();
-			}
+			Tools.debugPrint(new Date(timer.tic()));
 			
-			final int imageWidth = image[0].getWidth();
-			final int imageHeight = image[0].getHeight();
-			final int preferredTileWidth = min(imageWidth, optimalTileWidth);
-			final int preferredTileHeight = min(imageHeight, optimalTileHeight);
-			final long[] histogram = new long[64];
-			
-			System.out.println("LOD: " + lod + " " + new Date());
-			System.out.println("width: " + imageWidth + " height: " + imageHeight +
-					" tileWidth: " + preferredTileWidth + " tileHeight: " + preferredTileHeight);
-			
-			forEachTile(imageWidth, imageHeight, preferredTileWidth, preferredTileHeight, new TileProcessor() {
+			final FractalZTileGenerator generator = new FractalZTileGenerator(new RetiledImage2D(image[0], optimalTileWidth), lodCount, new FractalZTileGenerator.TileProcessor() {
 				
-				private BufferedImage tile = null;
-				
-				private int tileX;
-				
-				private int tileY;
+				private final BufferedImage[] output = { null };
 				
 				@Override
-				public final void pixel(final Info info) {
-					this.tileX = info.getTileX();
-					this.tileY = info.getTileY();
+				public final void processTile(final TiledImage2D image, final int tileX, final int tileY, final Image2D tile) {
+					final int lod = image.getLOD();
 					
-					if (generateTiles && (this.tile == null ||
-							this.tile.getWidth() != info.getActualTileWidth() ||
-							this.tile.getHeight() != info.getActualTileHeight())) {
-						this.tile = new BufferedImage(info.getActualTileWidth(), info.getActualTileHeight(),
-								BufferedImage.TYPE_3BYTE_BGR);
+					if (1 < lod) {
+						Tools.debugPrint(lod, tileX, tileY, tile);
 					}
 					
-					final int pixelValue = image[0].getPixelValue(info.getTileX() + info.getPixelXInTile(),
-							info.getTileY() + info.getPixelYInTile());
-					final int red = color.red(pixelValue);
-					final int green = color.green(pixelValue);
-					final int blue = color.blue(pixelValue);
-					
-					if (generateTiles) {
-						this.tile.setRGB(info.getPixelXInTile(), info.getPixelYInTile(),
-								new Color(red, green, blue).getRGB());
+					if (this.output[0] == null ||
+							this.output[0].getWidth() != tile.getWidth() || this.output[0].getHeight() != tile.getHeight()) {
+						this.output[0] = new BufferedImage(tile.getWidth(), tile.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
 					}
 					
-					++histogram[((red & 0xC0) >> 2) | ((green & 0xC0) >> 4) | ((blue & 0xC0) >> 6)];
-				}
-				
-				@Override
-				public final void endOfTile() {
+					final BufferedImage output = this.output[0];
+					
+					final long[] h = histogram[lod];
+					
+					tile.forEachPixelInBox(0, 0, tile.getWidth(), tile.getHeight(), new MonopatchProcess() {
+						
+						@Override
+						public final void pixel(final int x, final int y) {
+							final int pixelValue = tile.getPixelValue(x, y);
+							final int red = color.red(pixelValue);
+							final int green = color.green(pixelValue);
+							final int blue = color.blue(pixelValue);
+							
+							output.setRGB(x, y, new Color(red, green, blue).getRGB());
+							
+							++h[((red & 0xC0) >> 2) | ((green & 0xC0) >> 4) | ((blue & 0xC0) >> 6)];
+						}
+						
+						/**
+						 * {@value}.
+						 */
+						private static final long serialVersionUID = -8744158533992880186L;
+						
+					});
+					
 					if (generateTiles) {
-						final BufferedImage tile = this.tile;
 						final String format = "jpg";
 						
 						try {
-							ImageIO.write(tile, format, getOutputStream(
-									outputBasePath + "_lod" + lod + "_" + this.tileY + "_" + this.tileX + "." + format));
+							ImageIO.write(output, format, getOutputStream(
+									outputBasePath + "_lod" + lod + "_" + tileY + "_" + tileX + "." + format));
 						} catch (final IOException exception) {
 							throw unchecked(exception);
 						}
@@ -158,65 +150,184 @@ public final class SplitImage {
 				/**
 				 * {@value}.
 				 */
-				private static final long serialVersionUID = 6955996121004415003L;
+				private static final long serialVersionUID = 4875727286116220095L;
 				
 			});
 			
+			while (generator.next());
+			
 			{
-				final String id = imageName + "/" + imageName  + "_lod" + lod;
-				Element imageElement = database.getElementById(id);
-				
-				if (imageElement == null) {
-					imageElement = database.createElement("image");
+				for (FractalZTileGenerator g = generator; g != null; g = g.getSubsampling()) {
+					final Image2D i = g.getImage();
+					final int lod = i.getLOD();
+					
+					addEntry(database, imageName, lod, i.getWidth(), i.getHeight(),
+							optimalTileWidth, optimalTileHeight, histogram[lod]);
 				}
 				
-				imageElement.setAttribute("id", id);
-				imageElement.setIdAttribute("id", true);
-				imageElement.setAttribute("width", "" + imageWidth);
-				imageElement.setAttribute("height", "" + imageHeight);
-				imageElement.setAttribute("tileWidth", "" + optimalTileWidth);
-				imageElement.setAttribute("tileHeight", "" + optimalTileHeight);
+				final File temporaryDBFile = File.createTempFile("imj.db.", ".xml");
+				temporaryDBFile.deleteOnExit();
+				XMLTools.write(database, temporaryDBFile, 0);
+				final InputStream input = new FileInputStream(temporaryDBFile);
 				
-				{
-					final Element histogramElement = database.createElement("histogram");
-					final long pixelCount = (long) imageWidth * imageHeight;
-					final StringBuilder histogramStringBuilder = new StringBuilder();
-					final int n = histogram.length;
+				try {
+					Tools.writeAndCloseOutput(input, getOutputStream(databasePath));
+				} finally {
+					input.close();
+				}
+				
+				SFTPStreamHandler.closeAll();
+			}
+			
+			Tools.debugPrint(timer.toc());
+		} else {
+			int currentLOD = 0;
+			
+			System.out.println("outputBasePath: " + outputBasePath);
+			System.out.println("Splitting... " + new Date(timer.tic()));
+			
+			for (int lod0 = initialLOD; lod0 < lodCount; ++lod0) {
+				final int lod = lod0;
+				
+				for (; currentLOD < lod; ++currentLOD) {
+					System.out.println("Subsampling for LOD " + (currentLOD + 1) + "... " + new Date());
 					
-					if (0 < n) {
-						histogramStringBuilder.append(255L * histogram[0] / pixelCount);
+					image[0] = new SubsampledImage2D(image[0], optimalTileWidth, optimalTileHeight);
+					image[0].loadAllTiles();
+				}
+				
+				if (currentLOD != lod) {
+					throw new IllegalArgumentException();
+				}
+				
+				final int imageWidth = image[0].getWidth();
+				final int imageHeight = image[0].getHeight();
+				final int preferredTileWidth = min(imageWidth, optimalTileWidth);
+				final int preferredTileHeight = min(imageHeight, optimalTileHeight);
+				final long[] histogram = new long[64];
+				
+				System.out.println("LOD: " + lod + " " + new Date());
+				System.out.println("width: " + imageWidth + " height: " + imageHeight +
+						" tileWidth: " + preferredTileWidth + " tileHeight: " + preferredTileHeight);
+				
+				forEachTile(imageWidth, imageHeight, preferredTileWidth, preferredTileHeight, new TileProcessor() {
+					
+					private BufferedImage tile = null;
+					
+					private int tileX;
+					
+					private int tileY;
+					
+					@Override
+					public final void pixel(final Info info) {
+						this.tileX = info.getTileX();
+						this.tileY = info.getTileY();
 						
-						for (int i = 1; i < n; ++i) {
-							histogramStringBuilder.append(' ').append(255L * histogram[i] / pixelCount);
+						if (generateTiles && (this.tile == null ||
+								this.tile.getWidth() != info.getActualTileWidth() ||
+								this.tile.getHeight() != info.getActualTileHeight())) {
+							this.tile = new BufferedImage(info.getActualTileWidth(), info.getActualTileHeight(),
+									BufferedImage.TYPE_3BYTE_BGR);
+						}
+						
+						final int pixelValue = image[0].getPixelValue(info.getTileX() + info.getPixelXInTile(),
+								info.getTileY() + info.getPixelYInTile());
+						final int red = color.red(pixelValue);
+						final int green = color.green(pixelValue);
+						final int blue = color.blue(pixelValue);
+						
+						if (generateTiles) {
+							this.tile.setRGB(info.getPixelXInTile(), info.getPixelYInTile(),
+									new Color(red, green, blue).getRGB());
+						}
+						
+						++histogram[((red & 0xC0) >> 2) | ((green & 0xC0) >> 4) | ((blue & 0xC0) >> 6)];
+					}
+					
+					@Override
+					public final void endOfTile() {
+						if (generateTiles) {
+							final BufferedImage tile = this.tile;
+							final String format = "jpg";
+							
+							try {
+								ImageIO.write(tile, format, getOutputStream(
+										outputBasePath + "_lod" + lod + "_" + this.tileY + "_" + this.tileX + "." + format));
+							} catch (final IOException exception) {
+								throw unchecked(exception);
+							}
 						}
 					}
 					
-					for (final Node oldHistogramElement : XMLTools.getNodes(imageElement, "histogram")) {
-						imageElement.removeChild(oldHistogramElement);
-					}
+					/**
+					 * {@value}.
+					 */
+					private static final long serialVersionUID = 6955996121004415003L;
 					
-					histogramElement.setTextContent(histogramStringBuilder.toString());
-					imageElement.appendChild(histogramElement);
-				}
+				});
 				
-				database.getDocumentElement().appendChild(imageElement);
+				addEntry(database, imageName, lod, imageWidth, imageHeight,
+						optimalTileWidth, optimalTileHeight, histogram);
 			}
+			
+			System.out.println("Splitting done time: " + timer.toc());
+			
+			final File temporaryDBFile = File.createTempFile("imj.db.", ".xml");
+			temporaryDBFile.deleteOnExit();
+			XMLTools.write(database, temporaryDBFile, 0);
+			final InputStream input = new FileInputStream(temporaryDBFile);
+			
+			try {
+				Tools.writeAndCloseOutput(input, getOutputStream(databasePath));
+			} finally {
+				input.close();
+			}
+			
+			SFTPStreamHandler.closeAll();
+		}
+	}
+
+	public static void addEntry(final Document database,
+			final String imageName, final int lod, final int imageWidth,
+			final int imageHeight, final int optimalTileWidth,
+			final int optimalTileHeight, final long[] histogram) {
+		final String id = imageName + "/" + imageName  + "_lod" + lod;
+		Element imageElement = database.getElementById(id);
+		
+		if (imageElement == null) {
+			imageElement = database.createElement("image");
 		}
 		
-		System.out.println("Splitting done time: " + timer.toc());
+		imageElement.setAttribute("id", id);
+		imageElement.setIdAttribute("id", true);
+		imageElement.setAttribute("width", "" + imageWidth);
+		imageElement.setAttribute("height", "" + imageHeight);
+		imageElement.setAttribute("tileWidth", "" + optimalTileWidth);
+		imageElement.setAttribute("tileHeight", "" + optimalTileHeight);
 		
-		final File temporaryDBFile = File.createTempFile("imj.db.", ".xml");
-		temporaryDBFile.deleteOnExit();
-		XMLTools.write(database, temporaryDBFile, 0);
-		final InputStream input = new FileInputStream(temporaryDBFile);
-		
-		try {
-			Tools.writeAndCloseOutput(input, getOutputStream(databasePath));
-		} finally {
-			input.close();
+		{
+			final Element histogramElement = database.createElement("histogram");
+			final long pixelCount = (long) imageWidth * imageHeight;
+			final StringBuilder histogramStringBuilder = new StringBuilder();
+			final int n = histogram.length;
+			
+			if (0 < n) {
+				histogramStringBuilder.append(255L * histogram[0] / pixelCount);
+				
+				for (int i = 1; i < n; ++i) {
+					histogramStringBuilder.append(' ').append(255L * histogram[i] / pixelCount);
+				}
+			}
+			
+			for (final Node oldHistogramElement : XMLTools.getNodes(imageElement, "histogram")) {
+				imageElement.removeChild(oldHistogramElement);
+			}
+			
+			histogramElement.setTextContent(histogramStringBuilder.toString());
+			imageElement.appendChild(histogramElement);
 		}
 		
-		SFTPStreamHandler.closeAll();
+		database.getDocumentElement().appendChild(imageElement);
 	}
 	
 	public static final String removeExtension(final String path) {
@@ -268,7 +379,95 @@ public final class SplitImage {
 	/**
 	 * @author codistmonk (creation 2013-11-23)
 	 */
+	public static final class FractalZTileGenerator implements Serializable {
+		
+		private final RetiledImage2D image;
+		
+		private final TileProcessor processor;
+		
+		private final FractalZTileGenerator subsampling;
+		
+		private final int endTileX;
+		
+		private final int endTileY;
+		
+		private long tileIndex;
+		
+		public FractalZTileGenerator(final RetiledImage2D image, final int lodCount, final TileProcessor processor) {
+			this.image = image;
+			this.processor = processor;
+			this.subsampling = lodCount == 1 ? null : new FractalZTileGenerator(
+					image.getLODImage(image.getLOD() + 1), lodCount - 1, processor);
+			final int optimalTileWidth = image.getOptimalTileWidth();
+			final int optimalTileHeight = image.getOptimalTileHeight();
+			final Image2D lastImage = this.getLastGenerator().image;
+			final int lastImageHorizontalTileCount = (lastImage.getWidth() + optimalTileWidth - 1) / optimalTileWidth;
+			final int lastImageVerticalTileCount = (lastImage.getHeight() + optimalTileHeight - 1) / optimalTileHeight;
+//			this.endTileX = Integer.highestOneBit(image.getWidth() - 1) << 1;
+//			this.endTileY = Integer.highestOneBit(image.getHeight() - 1) << 1;
+			this.endTileX = (lastImageHorizontalTileCount << (lodCount - 1)) * optimalTileWidth;
+			this.endTileY = (lastImageVerticalTileCount << (lodCount - 1)) * optimalTileHeight;
+			
+			Tools.debugPrint(image.getLOD(), image.getWidth(), image.getHeight(), this.endTileX, this.endTileY);
+		}
+		
+		public final RetiledImage2D getImage() {
+			return this.image;
+		}
+		
+		public final FractalZTileGenerator getSubsampling() {
+			return this.subsampling;
+		}
+
+		public final FractalZTileGenerator getLastGenerator() {
+			return this.getSubsampling() == null ? this : this.getSubsampling().getLastGenerator();
+		}
+		
+		public final boolean next() {
+			final int tileX = FractalZ2D.getX(this.tileIndex) * this.getImage().getOptimalTileWidth();
+			final int tileY = FractalZ2D.getY(this.tileIndex) * this.getImage().getOptimalTileHeight();
+			
+			if (tileX < this.getImage().getWidth() && tileY < this.image.getHeight()) {
+				this.processor.processTile(this.getImage(), tileX, tileY,
+						(Image2D) this.getImage().ensureTileContains(tileX, tileY).updateTile());
+			}
+			
+			if (this.tileIndex++ % PERIODICITY == PERIODICITY - 1 && this.getSubsampling() != null) {
+				this.getSubsampling().next();
+			}
+			
+			return tileX < this.endTileX || tileY < this.endTileY;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -917956928847528913L;
+		
+		/**
+		 * {@value}.
+		 */
+		public static final int PERIODICITY = 1 << FractalZ2D.D;
+		
+		/**
+		 * @author codistmonk (creation 2013-11-23)
+		 */
+		public static abstract interface TileProcessor extends Serializable {
+			
+			public abstract void processTile(TiledImage2D image, int tileX, int tileY, Image2D tile);
+			
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-11-23)
+	 */
 	public static final class FractalZ2D {
+		
+		private FractalZ2D() {
+			throw new IllegalInstantiationException();
+		}
 		
 		public static final int getX(final long index) {
 			int result = 0;
@@ -316,6 +515,32 @@ public final class SplitImage {
 		
 		public static final int mapBit(final long value, final int bitIndexInValue, final int bitIndexInResult) {
 			return ((int) (value >> bitIndexInValue) & 1) << bitIndexInResult;
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-11-24)
+	 *
+	 * @param <T>
+	 */
+	public static final class InvokerAsFactory<T> implements Factory<T> {
+		
+		private final Object objectOrClass;
+		
+		private final String methodName;
+		
+		private final Object[] arguments;
+		
+		public InvokerAsFactory(final Object objectOrClass, final String methodName, final Object... arguments) {
+			this.objectOrClass = objectOrClass;
+			this.methodName = methodName;
+			this.arguments = arguments;
+		}
+		
+		@Override
+		public final T newInstance() {
+			return Tools.invoke(this.objectOrClass, this.methodName, this.arguments);
 		}
 		
 	}
