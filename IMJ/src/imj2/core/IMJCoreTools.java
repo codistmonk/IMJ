@@ -9,9 +9,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -30,8 +32,22 @@ public abstract class IMJCoreTools {
 	
 	private static final Map<Object, CachedValue> cache = new HashMap<Object, CachedValue>();
 	
+	private static final Set<Object> lockedCacheKeys = new HashSet<Object>();
+	
 	static {
 		CacheCleaner.setup();
+	}
+	
+	public static final void lockCacheKey(final Object key) {
+		synchronized (cache) {
+			lockedCacheKeys.add(key);
+		}
+	}
+	
+	public static final void unlockCacheKey(final Object key) {
+		synchronized (cache) {
+			lockedCacheKeys.remove(key);
+		}
 	}
 	
 	public static final <V> V cache(final Object key, final Callable<V> valueFactory) {
@@ -45,6 +61,9 @@ public abstract class IMJCoreTools {
 			cachedValue = cache.get(key);
 			
 			if (cachedValue == null) {
+				if (key.toString().contains(".lod1_retiled")) {
+					Tools.debugPrint("Cache miss for key:", key);
+				}
 				cachedValue = new CachedValue(valueFactory);
 				cache.put(key, cachedValue);
 			}
@@ -71,9 +90,13 @@ public abstract class IMJCoreTools {
 			for (int i = 0; i < n; ++i) {
 				final Entry<Object, CachedValue> entry = entries.get(i);
 				
-				if (!entry.getValue().isBusy()) {
+				if (!entry.getValue().isBusy() && !lockedCacheKeys.contains(entry.getKey())) {
 					cache.remove(entry.getKey());
 				}
+			}
+			
+			if (ratio == 1.0) {
+				Tools.debugPrint("Cache purged, remaining locked items:", cache.size());
 			}
 		}
 	}
@@ -118,6 +141,7 @@ public abstract class IMJCoreTools {
 		private final AtomicBoolean busy;
 		
 		CachedValue(final Callable<?> valueFActory) {
+			this.lastAccess = timestamp.addAndGet(1L);
 			this.valueFactory = valueFActory;
 			this.busy = new AtomicBoolean();
 		}

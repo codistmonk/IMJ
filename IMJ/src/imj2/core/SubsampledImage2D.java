@@ -19,7 +19,7 @@ public final class SubsampledImage2D extends FilteredTiledImage2D {
 		super(subId(source.getId() + "_subsampled"), source);
 		this.width = source.getWidth() / 2;
 		this.height = source.getHeight() / 2;
-
+		
 		this.useOptimalTileDimensionsOf(source, 256, 256);
 	}
 	

@@ -4,7 +4,6 @@ import static imj2.core.IMJCoreTools.cache;
 import static java.util.Arrays.asList;
 
 import java.io.Serializable;
-import java.util.List;
 import java.util.concurrent.Callable;
 
 /**
@@ -40,13 +39,17 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 	}
 	
 	@SuppressWarnings("unchecked")
+	public final Object getTileKey(final int tileX, final int tileY) {
+		return asList(this.getId(), tileX, tileY);
+	}
+	
 	@Override
 	public final ConcreteImage2D<LinearIntImage> updateTile() {
 		final int tileX = this.getTileX();
 		final int tileY = this.getTileY();
 		final int tileWidth = this.getTileWidth();
 		final int tileHeight = this.getTileHeight();
-		final List<? extends Object> key = asList(this.getId(), tileX, tileY);
+		final Object key = this.getTileKey(tileX, tileY);
 		final Callable<TimestampedValue<ConcreteImage2D<LinearIntImage>>> valueFactory = new Callable<TimestampedValue<ConcreteImage2D<LinearIntImage>>>() {
 			
 			@Override
