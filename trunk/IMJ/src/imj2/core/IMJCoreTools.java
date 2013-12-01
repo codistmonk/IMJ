@@ -61,9 +61,6 @@ public abstract class IMJCoreTools {
 			cachedValue = cache.get(key);
 			
 			if (cachedValue == null) {
-				if (key.toString().contains(".lod1_retiled")) {
-					Tools.debugPrint("Cache miss for key:", key);
-				}
 				cachedValue = new CachedValue(valueFactory);
 				cache.put(key, cachedValue);
 			}

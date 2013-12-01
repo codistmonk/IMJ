@@ -119,7 +119,9 @@ public final class SFTPStreamHandlerFactory implements URLStreamHandlerFactory, 
 					@Override
 					public final InputStream getInputStream() throws IOException {
 						try {
-							return channel.get(this.getURL().getFile());
+							synchronized(channel) {
+								return channel.get(this.getURL().getFile());
+							}
 						} catch (final SftpException exception) {
 							debugPrint(this.getURL());
 							throw new IOException(exception);
