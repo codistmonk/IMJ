@@ -265,10 +265,10 @@ public final class MultifileImage extends TiledImage2D {
 				
 				connectionConfigurator.configureConnection(connection);
 				
-				return connection.getInputStream();
+				return new InstrumentedInputStream(connection.getInputStream());
 			}
 			
-			return new FileInputStream(id);
+			return new InstrumentedInputStream(new FileInputStream(id));
 		} catch (final Exception exception) {
 			if (connection != null) {
 				connectionConfigurator.connectionFailed(connection, exception);
