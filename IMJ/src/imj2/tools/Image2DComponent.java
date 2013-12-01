@@ -5,7 +5,7 @@ import static java.lang.Math.min;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
+import imj2.core.IMJCoreTools;
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
 import imj2.core.ScaledImage2D;
@@ -31,13 +31,18 @@ import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.swing.Box;
 import javax.swing.JComponent;
 import javax.swing.JScrollBar;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 
 import net.sourceforge.aprog.swing.SwingTools;
+import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-08-05)
@@ -367,7 +372,7 @@ public final class Image2DComponent extends JComponent {
 		return this.verticalScrollBar;
 	}
 	
-	final void updateBufferAccordingToScrollBars(final boolean forceRepaint) {
+	final synchronized void updateBufferAccordingToScrollBars(final boolean forceRepaint) {
 		if (this.frontBuffer == null) {
 			return;
 		}
@@ -401,6 +406,52 @@ public final class Image2DComponent extends JComponent {
 	}
 	
 	final void copyImagePixelsToBuffer(final int left, final int top, final int width, final int height) {
+		final ScaledImage2D scaledImage = Image2DComponent.this.getScaledImage();
+//		this.clearBuffer(left, top, width, height);
+//		
+//		MultiThreadTools.getExecutor().execute(new Runnable() {
+//			
+//			private boolean ok = true;
+//			
+//			@Override
+//			public final void run() {
+//				scaledImage.forEachPixelInBox(left, top, width, height, new MonopatchProcess() {
+//					
+//					@Override
+//					public final void pixel(final int x, final int y) {
+//						if (isOk()) {
+//							setOk(Image2DComponent.this.copyImagePixelToBuffer(x, y));
+//						}
+//					}
+//					
+//					/**
+//					 * {@value}.
+//					 */
+//					private static final long serialVersionUID = 1810623847473680066L;
+//					
+//				});
+//				
+//				this.done();
+//			}
+//			
+//			final void done() {
+//				if (!this.isOk()) {
+//					Image2DComponent.this.updateBufferAccordingToScrollBars(true);
+//				} else {
+//					Image2DComponent.this.repaint();
+//				}
+//			}
+//			
+//			final boolean isOk() {
+//				return this.ok && Image2DComponent.this.getScaledImage() == scaledImage;
+//			}
+//			
+//			final void setOk(final boolean ok) {
+//				this.ok = ok;
+//			}
+//			
+//		});
+		
 		this.getScaledImage().forEachPixelInBox(left, top, width, height, new MonopatchProcess() {
 			
 			@Override
@@ -416,15 +467,24 @@ public final class Image2DComponent extends JComponent {
 		});
 	}
 	
-	final void copyImagePixelToBuffer(final int xInScaledImage, final int yInScaledImage) {
+	final void clearBuffer(final int left, final int top, final int width, final int height) {
+		this.frontBufferGraphics.clearRect(left - this.scaledImageVisibleRectangle.x,
+				top - this.scaledImageVisibleRectangle.y, width, height);
+	}
+	
+	final boolean copyImagePixelToBuffer(final int xInScaledImage, final int yInScaledImage) {
 		try {
 			this.frontBuffer.setRGB(xInScaledImage - this.scaledImageVisibleRectangle.x, yInScaledImage - this.scaledImageVisibleRectangle.y,
 					this.getScaledImage().getPixelValue(xInScaledImage, yInScaledImage));
+			
+			return true;
 		} catch (final Exception exception) {
-			exception.printStackTrace();
-			debugPrint(this.frontBuffer.getWidth(), this.frontBuffer.getHeight());
-			debugPrint(xInScaledImage, yInScaledImage, xInScaledImage - this.scaledImageVisibleRectangle.x,
-					yInScaledImage - this.scaledImageVisibleRectangle.y);
+			System.err.println(Tools.debug(Tools.DEBUG_STACK_OFFSET, exception));
+//			exception.printStackTrace();
+//			debugPrint(this.frontBuffer.getWidth(), this.frontBuffer.getHeight());
+//			debugPrint(xInScaledImage, yInScaledImage, xInScaledImage - this.scaledImageVisibleRectangle.x,
+//					yInScaledImage - this.scaledImageVisibleRectangle.y);
+			return false;
 		}
 	}
 	
