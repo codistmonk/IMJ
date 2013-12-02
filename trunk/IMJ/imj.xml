@@ -15,12 +15,7 @@
             <zipfileset excludes="META-INF/*.SF" src="lib/aprog.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/loci_tools.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/ojalgo-33.0.jar"/>
-        	<!-- Security threat ? (Agent.GEK Trj) -->
             <zipfileset excludes="META-INF/*.SF" src="lib/jsch-0.1.50.jar"/>
-        	<!-- Way too slow...
-            <zipfileset excludes="META-INF/*.SF" src="lib/com.jcraft.jsch_0.1.46.v201205102330.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="lib/com.jcraft.jsch.source_0.1.46.v201205102330.jar"/>
-            -->
         </jar>
         <jar destfile="imj.jar" filesetmanifest="mergewithoutmain">
             <manifest>
