@@ -2,19 +2,8 @@ package imj2.tools;
 
 import static imj2.tools.IMJTools.quantize;
 import static imj2.tools.MultiThreadTools.WORKER_COUNT;
-import static java.util.Arrays.asList;
-import static java.util.Arrays.fill;
-import static java.util.Collections.synchronizedMap;
-import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
-import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.assertEquals;
-
-import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.Session;
-import com.jcraft.jsch.SftpException;
 
 import imj2.core.ConcreteImage2D;
 import imj2.core.Image2D;
@@ -25,33 +14,12 @@ import imj2.tools.MultifileImage.AuthenticationForHost;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Serializable;
 import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLStreamHandler;
-import java.net.URLStreamHandlerFactory;
-import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Scanner;
-import java.util.prefs.Preferences;
-
 import javax.imageio.ImageIO;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPasswordField;
-import javax.swing.JTextField;
-
 import net.sourceforge.aprog.swing.SwingTools;
-import net.sourceforge.aprog.tools.Pair;
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
