@@ -75,8 +75,8 @@ public final class Image2DComponent extends JComponent {
 		this.documentData = synchronizedMap(new LinkedHashMap<Object, Object>());
 		this.setDoubleBuffered(false);
 		this.setLayout(new BorderLayout());
-		this.add(horizontalBox(this.horizontalScrollBar, Box.createHorizontalStrut(this.verticalScrollBar.getPreferredSize().width)), BorderLayout.SOUTH);
-		this.add(this.verticalScrollBar, BorderLayout.EAST);
+		this.add(horizontalBox(this.getHorizontalScrollBar(), Box.createHorizontalStrut(this.getVerticalScrollBar().getPreferredSize().width)), BorderLayout.SOUTH);
+		this.add(this.getVerticalScrollBar(), BorderLayout.EAST);
 		
 		this.addComponentListener(new ComponentAdapter() {
 			
@@ -97,8 +97,8 @@ public final class Image2DComponent extends JComponent {
 			
 		};
 		
-		this.horizontalScrollBar.addAdjustmentListener(bufferPositionAdjuster);
-		this.verticalScrollBar.addAdjustmentListener(bufferPositionAdjuster);
+		this.getHorizontalScrollBar().addAdjustmentListener(bufferPositionAdjuster);
+		this.getVerticalScrollBar().addAdjustmentListener(bufferPositionAdjuster);
 		
 		this.setBackground(Color.BLACK);
 		
@@ -166,12 +166,12 @@ public final class Image2DComponent extends JComponent {
 	public Image2DComponent(final Image2D image) {
 		this();
 		this.scaledImage = new ScaledImage2D(image);
-		this.horizontalScrollBar.setMaximum(image.getWidth());
-		this.verticalScrollBar.setMaximum(image.getHeight());
+		this.getHorizontalScrollBar().setMaximum(image.getWidth());
+		this.getVerticalScrollBar().setMaximum(image.getHeight());
 		
 		final Dimension preferredSize = new Dimension(Toolkit.getDefaultToolkit().getScreenSize());
-		preferredSize.width = min(preferredSize.width / 2, image.getWidth() + this.verticalScrollBar.getPreferredSize().width);
-		preferredSize.height = min(preferredSize.height / 2, image.getHeight() + this.horizontalScrollBar.getPreferredSize().height);
+		preferredSize.width = min(preferredSize.width / 2, image.getWidth() + this.getVerticalScrollBar().getPreferredSize().width);
+		preferredSize.height = min(preferredSize.height / 2, image.getHeight() + this.getHorizontalScrollBar().getPreferredSize().height);
 		
 		this.setPreferredSize(preferredSize);
 	}
@@ -358,6 +358,14 @@ public final class Image2DComponent extends JComponent {
 		return max(0, (this.getUsableHeight() - this.frontBuffer.getHeight()) / 2);
 	}
 	
+	public final int getUsableHeight() {
+		return this.getHeight() - this.getHorizontalScrollBar().getHeight();
+	}
+	
+	public final int getUsableWidth() {
+		return this.getWidth() - this.getVerticalScrollBar().getWidth();
+	}
+	
 	@Override
 	protected final void paintComponent(final Graphics g) {
 		this.setBuffer();
@@ -367,6 +375,9 @@ public final class Image2DComponent extends JComponent {
 		for (final Painter<Image2DComponent> painter : this.getPainters()) {
 			painter.paint((Graphics2D) g, this, this.getWidth(), this.getHeight());
 		}
+		
+		this.getHorizontalScrollBar().repaint();
+		this.getVerticalScrollBar().repaint();
 	}
 	
 	final JScrollBar getHorizontalScrollBar() {
@@ -384,30 +395,30 @@ public final class Image2DComponent extends JComponent {
 		
 		final int width = min(this.getScaledImageWidth(), this.frontBuffer.getWidth());
 		final int height = min(this.getScaledImageHeight(), this.frontBuffer.getHeight());
-		final int left = width < this.getScaledImageWidth() ? min(this.getScaledImageWidth() - width, this.horizontalScrollBar.getValue()) : 0;
-		final int top = height < this.getScaledImageHeight() ? min(this.getScaledImageHeight() - height, this.verticalScrollBar.getValue()) : 0;
+		final int left = width < this.getScaledImageWidth() ? min(this.getScaledImageWidth() - width, this.getHorizontalScrollBar().getValue()) : 0;
+		final int top = height < this.getScaledImageHeight() ? min(this.getScaledImageHeight() - height, this.getVerticalScrollBar().getValue()) : 0;
 		
 		this.setScaledImageVisibleRectangle(new Rectangle(left, top, width, height), forceRepaint ? null : this.frontBuffer);
 	}
 	
 	final void setScrollBarsVisibleAmounts() {
-		this.horizontalScrollBar.setMaximum(this.getScaledImageWidth());
-		this.verticalScrollBar.setMaximum(this.getScaledImageHeight());
+		this.getHorizontalScrollBar().setMaximum(this.getScaledImageWidth());
+		this.getVerticalScrollBar().setMaximum(this.getScaledImageHeight());
 		
 		final int usableWidth = max(0, this.getUsableWidth());
 		final int usableHeight = max(0, this.getUsableHeight());
 		
-		if (this.horizontalScrollBar.getMaximum() <= this.horizontalScrollBar.getValue() + usableWidth) {
-			this.horizontalScrollBar.setValue(max(0, this.horizontalScrollBar.getMaximum() - usableWidth));
+		if (this.getHorizontalScrollBar().getMaximum() <= this.getHorizontalScrollBar().getValue() + usableWidth) {
+			this.getHorizontalScrollBar().setValue(max(0, this.getHorizontalScrollBar().getMaximum() - usableWidth));
 		}
 		
-		this.horizontalScrollBar.setVisibleAmount(usableWidth);
+		this.getHorizontalScrollBar().setVisibleAmount(usableWidth);
 		
-		if (this.verticalScrollBar.getMaximum() <= this.verticalScrollBar.getValue() + usableHeight) {
-			this.verticalScrollBar.setValue(max(0, this.verticalScrollBar.getMaximum() - usableHeight));
+		if (this.getVerticalScrollBar().getMaximum() <= this.getVerticalScrollBar().getValue() + usableHeight) {
+			this.getVerticalScrollBar().setValue(max(0, this.getVerticalScrollBar().getMaximum() - usableHeight));
 		}
 		
-		this.verticalScrollBar.setVisibleAmount(usableHeight);
+		this.getVerticalScrollBar().setVisibleAmount(usableHeight);
 	}
 	
 	final void copyImagePixelsToBuffer(final int left, final int top, final int width, final int height) {
@@ -505,14 +516,6 @@ public final class Image2DComponent extends JComponent {
 		if (this.getScaledImage() != null && 0 < width && 0 < height) {
 			this.copyImagePixelsToBuffer(left, top, width, height);
 		}
-	}
-	
-	private final int getUsableHeight() {
-		return this.getHeight() - this.horizontalScrollBar.getHeight();
-	}
-	
-	private final int getUsableWidth() {
-		return this.getWidth() - this.verticalScrollBar.getWidth();
 	}
 	
 	private final void setScaledImageVisibleRectangle(final Rectangle rectangle, final BufferedImage oldBuffer) {

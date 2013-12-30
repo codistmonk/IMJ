@@ -392,6 +392,11 @@ public final class BigImageComponent extends JComponent {
 		final TreePath[] selectedPaths = context.get("selectedAnnotations");
 		final int scale = context.get("scale");
 		final int lod = context.get("lod");
+		
+		drawAnnotations(annotations, selectedPaths, scale, lod, g);
+	}
+	
+	public static final void drawAnnotations(final Annotations annotations, final TreePath[] selectedPaths, final int scale, final int lod, final Graphics2D g) {
 		final Collection<Object> selection = new ArrayList<Object>(selectedPaths == null ? 0 : selectedPaths.length);
 		
 		if (selectedPaths != null) {
@@ -405,26 +410,30 @@ public final class BigImageComponent extends JComponent {
 		
 		g.scale(s, s);
 		
-		for (final Annotation annotation : annotations.getAnnotations()) {
-			if (!annotation.isVisible()) {
-				continue;
-			}
-			
-			g.setColor(annotation.getLineColor());
-			
-			final boolean annotationSelected = selection.contains(annotation);
-			
-			for (final Region region : annotation.getRegions()) {
-				final float strokeWidth = annotationSelected || selection.contains(region) ? 3F / (float) s : 1F;
-				
-				if (region.isNegative()) {
-					g.setStroke(new BasicStroke(strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER, 1F, dash, 0F));
-				} else {
-					g.setStroke(new BasicStroke(strokeWidth));
+		try {
+			for (final Annotation annotation : annotations.getAnnotations()) {
+				if (!annotation.isVisible()) {
+					continue;
 				}
 				
-				drawRegionOutline(region, g);
+				g.setColor(annotation.getLineColor());
+				
+				final boolean annotationSelected = selection.contains(annotation);
+				
+				for (final Region region : annotation.getRegions()) {
+					final float strokeWidth = annotationSelected || selection.contains(region) ? 3F / (float) s : 1F;
+					
+					if (region.isNegative()) {
+						g.setStroke(new BasicStroke(strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER, 1F, dash, 0F));
+					} else {
+						g.setStroke(new BasicStroke(strokeWidth));
+					}
+					
+					drawRegionOutline(region, g);
+				}
 			}
+		} finally {
+			g.scale(1.0 / s, 1.0 / s);
 		}
 	}
 	
