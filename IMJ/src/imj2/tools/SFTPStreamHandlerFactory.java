@@ -62,7 +62,8 @@ public final class SFTPStreamHandlerFactory implements URLStreamHandlerFactory, 
 		
 		@Override
 		protected final URLConnection openConnection(final URL url) throws IOException {
-			final Pair<String, byte[]> loginPassword = new Credentials(url.getHost()).getLoginPassword();
+			final Credentials credentials = new Credentials(url.getHost());
+			final Pair<String, byte[]> loginPassword = credentials.getLoginPassword();
 			
 			if (loginPassword == null) {
 				return null;
@@ -88,7 +89,12 @@ public final class SFTPStreamHandlerFactory implements URLStreamHandlerFactory, 
 							
 							session.setConfig("StrictHostKeyChecking", "no");
 							session.setPassword(loginPassword.getSecond());
-							session.connect();
+							try {
+								session.connect();
+							} catch (final JSchException exception) {
+								credentials.invalidate();
+								throw exception;
+							}
 							
 							if (session.isConnected()) {
 								sessions.put(key, session);
@@ -203,9 +209,12 @@ public final class SFTPStreamHandlerFactory implements URLStreamHandlerFactory, 
 		 */
 		public static final class Credentials implements Serializable {
 			
+			private final String host;
+			
 			private transient Pair<String, byte[]> loginPassword;
 			
 			public Credentials(final String host) {
+				this.host = host;
 				this.loginPassword = authorizations.get(host);
 				
 				if (this.loginPassword == null) {
@@ -231,6 +240,10 @@ public final class SFTPStreamHandlerFactory implements URLStreamHandlerFactory, 
 						authorizations.put(host, this.loginPassword);
 					}
 				}
+			}
+			
+			public final void invalidate() {
+				authorizations.remove(this.host);
 			}
 			
 			public final Pair<String, byte[]> getLoginPassword() {
