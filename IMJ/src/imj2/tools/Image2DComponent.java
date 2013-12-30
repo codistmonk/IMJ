@@ -2,10 +2,10 @@ package imj2.tools;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.util.Collections.synchronizedMap;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-import imj2.core.IMJCoreTools;
+
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
 import imj2.core.ScaledImage2D;
@@ -30,18 +30,16 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.Map;
 
 import javax.swing.Box;
 import javax.swing.JComponent;
 import javax.swing.JScrollBar;
 import javax.swing.SwingUtilities;
-import javax.swing.SwingWorker;
 
 import net.sourceforge.aprog.swing.SwingTools;
-import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
 /**
@@ -67,11 +65,14 @@ public final class Image2DComponent extends JComponent {
 	
 	private final List<Painter<Image2DComponent>> painters; 
 	
+	private final Map<Object, Object> documentData;
+	
 	public Image2DComponent() {
 		this.scaledImageVisibleRectangle = new Rectangle();
 		this.horizontalScrollBar = new JScrollBar(Adjustable.HORIZONTAL);
 		this.verticalScrollBar = new JScrollBar(Adjustable.VERTICAL);
 		this.painters = new ArrayList<Painter<Image2DComponent>>();
+		this.documentData = synchronizedMap(new LinkedHashMap<Object, Object>());
 		this.setDoubleBuffered(false);
 		this.setLayout(new BorderLayout());
 		this.add(horizontalBox(this.horizontalScrollBar, Box.createHorizontalStrut(this.verticalScrollBar.getPreferredSize().width)), BorderLayout.SOUTH);
@@ -173,6 +174,10 @@ public final class Image2DComponent extends JComponent {
 		preferredSize.height = min(preferredSize.height / 2, image.getHeight() + this.horizontalScrollBar.getPreferredSize().height);
 		
 		this.setPreferredSize(preferredSize);
+	}
+	
+	public final Map<Object, Object> getDocumentData() {
+		return this.documentData;
 	}
 	
 	public final BufferedImage getFrontBuffer() {
