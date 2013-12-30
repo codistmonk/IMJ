@@ -13,6 +13,7 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
+
 import imj2.core.ConcreteImage2D;
 import imj2.core.IMJCoreTools;
 import imj2.core.Image;
