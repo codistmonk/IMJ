@@ -79,6 +79,7 @@ public final class SplitImage {
 		final int initialLOD = arguments.get("lod", 0)[0];
 		final int lodCount = arguments.get("lodCount", 8)[0];
 		final boolean generateTiles = arguments.get("generateTiles", 1)[0] != 0;
+		final boolean skipExistingTiles = arguments.get("skipExistingTiles", 1)[0] != 0;
 		final String root = arguments.get("to", "");
 		final String[] imageIds = arguments.get("file", "").split(",");
 		final String databasePath = root + "/imj_database.xml";
@@ -129,6 +130,12 @@ public final class SplitImage {
 							@Override
 							public final void processTile(final TiledImage2D image, final int tileX, final int tileY, final Image2D tile) {
 								final int lod = image.getLOD();
+								final String format = "jpg";
+								final String destination = outputBasePath + "_lod" + lod + "_" + tileY + "_" + tileX + "." + format;
+								
+								if (skipExistingTiles && new File(destination).isFile()) {
+									return;
+								}
 								
 								if (3 <= lod) {
 									System.out.println(taskName + " lod: " + lod + " tileX: " + tileX + " tileY: " + tileY);
@@ -165,11 +172,8 @@ public final class SplitImage {
 								});
 								
 								if (generateTiles) {
-									final String format = "jpg";
-									
 									try {
-										ImageIO.write(output, format, getOutputStream(
-												outputBasePath + "_lod" + lod + "_" + tileY + "_" + tileX + "." + format));
+										ImageIO.write(output, format, getOutputStream(destination));
 									} catch (final IOException exception) {
 										throw unchecked(exception);
 									}
