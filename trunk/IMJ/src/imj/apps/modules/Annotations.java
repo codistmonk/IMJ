@@ -34,7 +34,7 @@ import org.xml.sax.helpers.DefaultHandler;
 /**
  * @author codistmonk (creation 2013-02-26)
  */
-public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotations.Annotation> {;
+public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotations.Annotation> {
 	
 	private double micronsPerPixel;
 	
@@ -46,6 +46,16 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 		return this.getItems();
 	}
 	
+	public final List<Region> collectAllRegions() {
+		final List<Region> result = new ArrayList<Region>();
+		
+		for (final Annotation annotation : this.getAnnotations()) {
+			result.addAll(annotation.getRegions());
+		}
+		
+		return result;
+	}
+	
 	public final double getMicronsPerPixel() {
 		return this.micronsPerPixel;
 	}
@@ -53,6 +63,11 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 	public final void setMicronsPerPixel(final double micronsPerPixel) {
 		this.micronsPerPixel = micronsPerPixel;
 	}
+	
+	/**
+	 * {@value}.
+	 */
+	private static final long serialVersionUID = 6894550580896794510L;
 	
 	public static Annotations fromXML(final String xmlFileName) {
 		final File annotationsFile = new File(xmlFileName);
@@ -295,6 +310,11 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 		}
 		
 		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 6031044355822486034L;
+		
+		/**
 		 * @author codistmonk (creation 2013-02-26)
 		 */
 		public final class Region extends DefaultMutableTreeNode {
@@ -370,6 +390,11 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 			public final void setNegative(final boolean negative) {
 				this.negative = negative;
 			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = -6621209121896413465L;
 			
 		}
 		
