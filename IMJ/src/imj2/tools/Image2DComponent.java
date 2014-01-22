@@ -612,8 +612,7 @@ public final class Image2DComponent extends JComponent {
 	 */
 	public static abstract interface Painter<T> extends Serializable {
 
-		public abstract void paint(Graphics2D g, T object,
-				int width, int height);
+		public abstract void paint(Graphics2D g, T component, int width, int height);
 		
 	}
 	
