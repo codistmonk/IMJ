@@ -1,25 +1,27 @@
 package imj2.tools;
 
-import static imj2.tools.IMJTools.quantize;
+import static imj2.core.IMJCoreTools.quantize;
 import static imj2.tools.MultiThreadTools.WORKER_COUNT;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.assertEquals;
 
 import imj2.core.ConcreteImage2D;
 import imj2.core.Image2D;
-import imj2.core.SubsampledImage2D;
 import imj2.core.Image2D.MonopatchProcess;
 import imj2.core.LinearIntImage;
-import imj2.tools.MultifileImage.AuthenticationForHost;
+import imj2.core.SubsampledImage2D;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.net.URL;
 import java.util.Date;
 import java.util.Scanner;
+
 import javax.imageio.ImageIO;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.TicToc;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -180,7 +182,7 @@ public final class IMJToolsTest {
 		System.setProperty("javax.net.ssl.trustStore", new File("../Libraries/cert/cacerts").getCanonicalPath());
 		
 		final Image2D image = new MultifileImage(imageDirectory.toString(), imageSimpleName,
-				new AuthenticationForHost(imageDirectory.getHost()));
+				new HTTPSAuthenticationForHost(imageDirectory.getHost()));
 		
 		debugPrint("imageWidth:", image.getWidth(), "imageHeight:", image.getHeight(), "channels:", image.getChannels());
 		
@@ -206,7 +208,7 @@ public final class IMJToolsTest {
 		final String imageLodName = imageName + "/" + imageName + "_lod0";
 		
 		final Image2D image = new MultifileImage(imageDirectory.toString(), imageLodName,
-				new AuthenticationForHost(imageDirectory.getHost()));
+				new HTTPSAuthenticationForHost(imageDirectory.getHost()));
 		
 		debugPrint("imageWidth:", image.getWidth(), "imageHeight:", image.getHeight(), "channels:", image.getChannels());
 		
