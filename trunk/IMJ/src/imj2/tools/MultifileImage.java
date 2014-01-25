@@ -71,7 +71,7 @@ public final class MultifileImage extends TiledImage2D {
 		this.idWithoutLOD = matcher.group(1);
 		this.lod = parseInt(matcher.group(2));
 		
-		final String databaseId = root + "/imj_database.xml";
+		final String databaseId = root + "/metadata.xml";
 		final Document database = cache(databaseId, new Callable<Document>() {
 			
 			@Override

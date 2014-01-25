@@ -181,7 +181,7 @@ public final class IMJToolsTest {
 		
 		System.setProperty("javax.net.ssl.trustStore", new File("../Libraries/cert/cacerts").getCanonicalPath());
 		
-		final Image2D image = new MultifileImage(imageDirectory.toString(), imageSimpleName,
+		final Image2D image = new MultifileImage(imageDirectory.toString() + "/" + imageSimpleName, imageSimpleName + "_lod0",
 				new HTTPSAuthenticationForHost(imageDirectory.getHost()));
 		
 		debugPrint("imageWidth:", image.getWidth(), "imageHeight:", image.getHeight(), "channels:", image.getChannels());
@@ -205,9 +205,9 @@ public final class IMJToolsTest {
 		scanner.close();
 		
 		final String imageName = "16088";
-		final String imageLodName = imageName + "/" + imageName + "_lod0";
+		final String imageLodName = imageName + "_lod0";
 		
-		final Image2D image = new MultifileImage(imageDirectory.toString(), imageLodName,
+		final Image2D image = new MultifileImage(imageDirectory.toString() + "/" + imageName, imageLodName,
 				new HTTPSAuthenticationForHost(imageDirectory.getHost()));
 		
 		debugPrint("imageWidth:", image.getWidth(), "imageHeight:", image.getHeight(), "channels:", image.getChannels());
