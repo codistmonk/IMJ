@@ -375,9 +375,6 @@ public final class Image2DComponent extends JComponent {
 		for (final Painter<Image2DComponent> painter : this.getPainters()) {
 			painter.paint((Graphics2D) g, this, this.getWidth(), this.getHeight());
 		}
-		
-		this.getHorizontalScrollBar().repaint();
-		this.getVerticalScrollBar().repaint();
 	}
 	
 	final JScrollBar getHorizontalScrollBar() {
@@ -422,52 +419,6 @@ public final class Image2DComponent extends JComponent {
 	}
 	
 	final void copyImagePixelsToBuffer(final int left, final int top, final int width, final int height) {
-		final ScaledImage2D scaledImage = Image2DComponent.this.getScaledImage();
-//		this.clearBuffer(left, top, width, height);
-//		
-//		MultiThreadTools.getExecutor().execute(new Runnable() {
-//			
-//			private boolean ok = true;
-//			
-//			@Override
-//			public final void run() {
-//				scaledImage.forEachPixelInBox(left, top, width, height, new MonopatchProcess() {
-//					
-//					@Override
-//					public final void pixel(final int x, final int y) {
-//						if (isOk()) {
-//							setOk(Image2DComponent.this.copyImagePixelToBuffer(x, y));
-//						}
-//					}
-//					
-//					/**
-//					 * {@value}.
-//					 */
-//					private static final long serialVersionUID = 1810623847473680066L;
-//					
-//				});
-//				
-//				this.done();
-//			}
-//			
-//			final void done() {
-//				if (!this.isOk()) {
-//					Image2DComponent.this.updateBufferAccordingToScrollBars(true);
-//				} else {
-//					Image2DComponent.this.repaint();
-//				}
-//			}
-//			
-//			final boolean isOk() {
-//				return this.ok && Image2DComponent.this.getScaledImage() == scaledImage;
-//			}
-//			
-//			final void setOk(final boolean ok) {
-//				this.ok = ok;
-//			}
-//			
-//		});
-		
 		this.getScaledImage().forEachPixelInBox(left, top, width, height, new MonopatchProcess() {
 			
 			@Override
