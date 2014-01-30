@@ -40,7 +40,7 @@ public final class TextureGradientTest {
 					
 					final BufferedImage mask = getMask();
 					final BufferedImage gradient = getGradient();
-					final boolean showGradient = true;
+					final boolean showGradient = false;
 					
 					for (int y = 0; y < height; ++y) {
 						for (int x = 0; x < width; ++x) {
@@ -74,7 +74,7 @@ public final class TextureGradientTest {
 			
 			{
 				this.radius = 16;
-				this.threshold = 0F;
+				this.threshold = 0.5F;
 				imageView.getPainters().add(this.painter);
 			}
 			
@@ -201,7 +201,7 @@ public final class TextureGradientTest {
 	/**
 	 * {@value}.
 	 */
-	public static final int Q = 5;
+	public static final int Q = 4;
 	
 	/**
 	 * {@value}.
@@ -241,19 +241,26 @@ public final class TextureGradientTest {
 	}
 	
 	public static final int[] computeHistogram(final BufferedImage image, final int x, final int y, final int radius, final int[] result) {
+		final int cellSize = 2 * radius + 1;
+		
+		return computeHistogram(image, x - radius, y - radius, cellSize, cellSize, result);
+	}
+	
+	public static final int[] computeHistogram(final BufferedImage image,
+			final int x, final int y, final int width, final int height, final int[] result) {
 		if (result != null) {
 			Arrays.fill(result, 0);
 		}
 		
-		return updateHistogram(image, x, y, radius, result);
+		return updateHistogram(image, x, y, width, height, result);
 	}
 	
-	public static final int[] updateHistogram(final BufferedImage image, final int x, final int y, final int radius, final int[] result) {
+	public static final int[] updateHistogram(final BufferedImage image, final int x, final int y, final int width, final int height, final int[] result) {
 		final int[] actualResult = result != null ? result : new int[BIN_COUNT];
-		final int firstY = max(0, y - radius);
-		final int lastY = min(image.getHeight() - 1, y + radius);
-		final int firstX = max(0, x - radius);
-		final int lastX= min(image.getWidth() - 1, x + radius);
+		final int firstY = max(0, y);
+		final int lastY = min(image.getHeight() - 1, y + height);
+		final int firstX = max(0, x);
+		final int lastX= min(image.getWidth() - 1, x + width);
 		
 		for (int yy = firstY; yy <= lastY; ++yy) {
 			for (int xx = firstX; xx <= lastX; ++xx) {
