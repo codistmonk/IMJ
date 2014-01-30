@@ -3,12 +3,12 @@ package imj2.tools;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.util.Arrays;
 
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.RegionShrinkingTest.AutoMouseAdapter;
@@ -37,11 +37,17 @@ public final class TextureGradientTest {
 					refreshMask(component.getImage());
 					
 					final BufferedImage mask = getMask();
+					final BufferedImage gradient = getGradient();
+					final boolean showGradient = true;
 					
 					for (int y = 0; y < height; ++y) {
 						for (int x = 0; x < width; ++x) {
-							if ((mask.getRGB(x, y) & 0x00FFFFFF) == 0) {
-								buffer.setRGB(x, y, 0);
+							if (showGradient) {
+								buffer.setRGB(x, y, 0xFF000000 | (0x00010101 * (0xFF & gradient.getRGB(x, y))));
+							} else {
+								if ((mask.getRGB(x, y) & 0x00FFFFFF) == 0) {
+									buffer.setRGB(x, y, 0xFF000000);
+								}
 							}
 						}
 					}
@@ -60,9 +66,11 @@ public final class TextureGradientTest {
 			
 			private BufferedImage mask;
 			
+			private BufferedImage gradient;
+			
 			{
-				this.radius = 16;
-				this.threshold = 0.2F;
+				this.radius = 8;
+				this.threshold = 0.8F;
 				imageView.getPainters().add(this.painter);
 			}
 			
@@ -78,6 +86,10 @@ public final class TextureGradientTest {
 				return this.mask;
 			}
 			
+			public final BufferedImage getGradient() {
+				return this.gradient;
+			}
+			
 			public final void refreshMask(final BufferedImage image) {
 				final int width = image.getWidth();
 				final int height = image.getHeight();
@@ -85,28 +97,31 @@ public final class TextureGradientTest {
 				if (this.getMask() == null ||
 						this.getMask().getWidth() != width || this.getMask().getHeight() != height) {
 					this.mask = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY);
+					this.gradient = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
 				}
 				
 				final BufferedImage mask = this.getMask();
+				final BufferedImage gradient = this.getGradient();
 				
-				{
-					final Graphics2D g = mask.createGraphics();
-					
-					g.setColor(Color.WHITE);
-					g.fillRect(0, 0, width, height);
-					g.dispose();
-				}
+				fill(mask, Color.WHITE);
+				
+				// Idea: find patches where the texture doesn't change too much
 				
 				final int[] referenceHistogram = new int[BIN_COUNT];
 				final int[] currentHistogram = new int[BIN_COUNT];
 				final int radius = this.getRadius();
 				final float threshold = this.getThreshold();
 				
+				// Horizontal scans
+				
 				for (int y = 0; y < height; ++y) {
 					computeHistogram(image, 0, 0, radius, referenceHistogram);
 					
 					for (int x = 0; x < width; ++x) {
 						final float distance = computeHistogramDistance(referenceHistogram, computeHistogram(image, x, y, radius, currentHistogram));
+						final int g = (int) clamp(distance * 255F, 0F, 255F);
+						
+						gradient.setRGB(x, y, g);
 						
 						if (threshold <= distance) {
 							mask.setRGB(x, y, 0);
@@ -115,11 +130,16 @@ public final class TextureGradientTest {
 					}
 				}
 				
+				// Vertical scans
+				
 				for (int x = 0; x < width; ++x) {
 					computeHistogram(image, 0, 0, radius, referenceHistogram);
 					
 					for (int y = 0; y < height; ++y) {
 						final float distance = computeHistogramDistance(referenceHistogram, computeHistogram(image, x, y, radius, currentHistogram));
+						final int g = max(0xFF & gradient.getRGB(x, y), (int) clamp(distance * 255F, 0F, 255F));
+						
+						gradient.setRGB(x, y, g);
 						
 						if (threshold <= distance) {
 							mask.setRGB(x, y, 0);
@@ -143,7 +163,7 @@ public final class TextureGradientTest {
 		
 		show(imageView, "Simple Image View", true);
 	}
-	
+
 	/**
 	 * {@value}.
 	 */
@@ -188,7 +208,7 @@ public final class TextureGradientTest {
 	
 	public static final int[] computeHistogram(final BufferedImage image, final int x, final int y, final int radius, final int[] result) {
 		if (result != null) {
-			fill(result, 0);
+			Arrays.fill(result, 0);
 		}
 		
 		return updateHistogram(image, x, y, radius, result);
@@ -226,6 +246,18 @@ public final class TextureGradientTest {
 		final float maximumDistance = referenceHistogramSize + targetHistogramSize;
 		
 		return protoresult / maximumDistance;
+	}
+	
+	public static final void fill(final BufferedImage image, final Color color) {
+		final Graphics2D g = image.createGraphics();
+		
+		g.setColor(color);
+		g.fillRect(0, 0, image.getWidth(), image.getHeight());
+		g.dispose();
+	}
+	
+	public static final float clamp(final float value, final float minimum, final float maximum) {
+		return value < minimum ? minimum : maximum < value ? maximum : value;
 	}
 	
 }
