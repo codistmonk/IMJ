@@ -10,6 +10,8 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 
+import javax.swing.ProgressMonitor;
+
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.RegionShrinkingTest.AutoMouseAdapter;
 import imj2.tools.RegionShrinkingTest.SimpleImageView;
@@ -68,9 +70,11 @@ public final class TextureGradientTest {
 			
 			private BufferedImage gradient;
 			
+			private boolean process;
+			
 			{
-				this.radius = 8;
-				this.threshold = 0.8F;
+				this.radius = 16;
+				this.threshold = 0F;
 				imageView.getPainters().add(this.painter);
 			}
 			
@@ -91,6 +95,12 @@ public final class TextureGradientTest {
 			}
 			
 			public final void refreshMask(final BufferedImage image) {
+				this.process = !this.process;
+				
+				if (!this.process) {
+					return;
+				}
+				
 				final int width = image.getWidth();
 				final int height = image.getHeight();
 				
@@ -104,49 +114,73 @@ public final class TextureGradientTest {
 				final BufferedImage gradient = this.getGradient();
 				
 				fill(mask, Color.WHITE);
+				fill(gradient, Color.BLACK);
 				
+				new Thread() {
+					
+					@Override
+					public final void run() {
+						final int[] referenceHistogram = new int[BIN_COUNT];
+						final int[] currentHistogram = new int[BIN_COUNT];
+						final int radius = getRadius();
+						final float threshold = getThreshold();
+						final ProgressMonitor monitor = new ProgressMonitor(imageView, "Processing...", null, 0, width + height);
+						
+						// Horizontal scans
+						
+						for (int y = 0; y < height; ++y) {
+							computeHistogram(image, 0, 0, radius, referenceHistogram);
+							
+							for (int x = 0; x < width; ++x) {
+								final float distance = computeHistogramDistance(referenceHistogram, computeHistogram(image, x, y, radius, currentHistogram));
+								final int g = (int) clamp(distance * 255F, 0F, 255F);
+								
+								gradient.setRGB(x, y, g);
+								
+								if (threshold <= distance) {
+									mask.setRGB(x, y, 0);
+									System.arraycopy(currentHistogram, 0, referenceHistogram, 0, BIN_COUNT);
+								}
+							}
+							
+							for (int x = 0; x < width - 1; ++x) {
+								gradient.setRGB(x, y, max(gradient.getRGB(x, y), gradient.getRGB(x + 1, y)));
+							}
+							
+							monitor.setProgress(y);
+						}
+						
+						// Vertical scans
+						
+						for (int x = 0; x < width; ++x) {
+							computeHistogram(image, 0, 0, radius, referenceHistogram);
+							
+							for (int y = 0; y < height; ++y) {
+								final float distance = computeHistogramDistance(referenceHistogram, computeHistogram(image, x, y, radius, currentHistogram));
+								final int g = max(0xFF & gradient.getRGB(x, y), (int) clamp(distance * 255F, 0F, 255F));
+								
+								gradient.setRGB(x, y, g * 20);
+								
+								if (threshold <= distance) {
+									mask.setRGB(x, y, 0);
+									System.arraycopy(currentHistogram, 0, referenceHistogram, 0, BIN_COUNT);
+								}
+							}
+							
+							for (int y = 0; y < height - 1; ++y) {
+								gradient.setRGB(x, y, max(gradient.getRGB(x, y), gradient.getRGB(x, y + 1)));
+							}
+							
+							monitor.setProgress(height + x);
+						}
+						
+						monitor.close();
+						imageView.refreshBuffer();
+					}
+					
+				}.start();
 				// Idea: find patches where the texture doesn't change too much
 				
-				final int[] referenceHistogram = new int[BIN_COUNT];
-				final int[] currentHistogram = new int[BIN_COUNT];
-				final int radius = this.getRadius();
-				final float threshold = this.getThreshold();
-				
-				// Horizontal scans
-				
-				for (int y = 0; y < height; ++y) {
-					computeHistogram(image, 0, 0, radius, referenceHistogram);
-					
-					for (int x = 0; x < width; ++x) {
-						final float distance = computeHistogramDistance(referenceHistogram, computeHistogram(image, x, y, radius, currentHistogram));
-						final int g = (int) clamp(distance * 255F, 0F, 255F);
-						
-						gradient.setRGB(x, y, g);
-						
-						if (threshold <= distance) {
-							mask.setRGB(x, y, 0);
-							System.arraycopy(currentHistogram, 0, referenceHistogram, 0, BIN_COUNT);
-						}
-					}
-				}
-				
-				// Vertical scans
-				
-				for (int x = 0; x < width; ++x) {
-					computeHistogram(image, 0, 0, radius, referenceHistogram);
-					
-					for (int y = 0; y < height; ++y) {
-						final float distance = computeHistogramDistance(referenceHistogram, computeHistogram(image, x, y, radius, currentHistogram));
-						final int g = max(0xFF & gradient.getRGB(x, y), (int) clamp(distance * 255F, 0F, 255F));
-						
-						gradient.setRGB(x, y, g);
-						
-						if (threshold <= distance) {
-							mask.setRGB(x, y, 0);
-							System.arraycopy(currentHistogram, 0, referenceHistogram, 0, BIN_COUNT);
-						}
-					}
-				}
 			}
 			
 			@Override
