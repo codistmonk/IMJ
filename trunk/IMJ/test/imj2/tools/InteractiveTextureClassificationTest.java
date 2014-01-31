@@ -2,7 +2,13 @@ package imj2.tools;
 
 import static imj2.tools.TextureGradientTest.BIN_COUNT;
 import static java.awt.Color.BLACK;
+import static java.awt.Color.BLUE;
+import static java.awt.Color.CYAN;
 import static java.awt.Color.GRAY;
+import static java.awt.Color.GREEN;
+import static java.awt.Color.MAGENTA;
+import static java.awt.Color.RED;
+import static java.awt.Color.WHITE;
 import static java.awt.Color.YELLOW;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.swing.SwingTools.show;
@@ -24,6 +30,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -67,12 +75,14 @@ public final class InteractiveTextureClassificationTest {
 			
 			private BufferedImage labels;
 			
-			private Color userLabelColor;
+			private int userLabelColorIndex;
 			
 			private boolean interactive;
 			
+			private boolean popup;
+			
 			{
-				this.userLabelColor = YELLOW;
+				this.userLabelColorIndex = 3;
 				this.interactive = false;
 				
 				final int n = CELL_SIZE * CELL_SIZE;
@@ -82,7 +92,7 @@ public final class InteractiveTextureClassificationTest {
 				
 				addLabel(blackHistogram, BLACK);
 				addLabel(rainbowHistogram, GRAY);
-				addLabel(whiteHistogram, Color.WHITE);
+				addLabel(whiteHistogram, WHITE);
 				
 				imageView.getPainters().add(this.painter);
 			}
@@ -92,7 +102,7 @@ public final class InteractiveTextureClassificationTest {
 			}
 			
 			public final Color getUserLabelColor() {
-				return this.userLabelColor;
+				return COLORS[this.userLabelColorIndex];
 			}
 			
 			public final void refreshLabels(final BufferedImage image) {
@@ -115,8 +125,12 @@ public final class InteractiveTextureClassificationTest {
 								CELL_SIZE, CELL_SIZE, histogram);
 						
 						final Color labelColor = LABEL_COLORS.get(LABEL_HISTOGRAMS.get(getLabel(histogram)));
-						
-						labels.setRGB(labelsX, labelsY, labelColor.getRGB());
+						try {
+							labels.setRGB(labelsX, labelsY, labelColor.getRGB());
+						} catch (final Exception exception) {
+							Tools.debugPrint(getLabel(histogram), labelColor, LABEL_HISTOGRAMS.get(getLabel(histogram)));
+							return;
+						}
 					}
 				}
 			}
@@ -125,8 +139,31 @@ public final class InteractiveTextureClassificationTest {
 			public final void mouseExited(final MouseEvent event) {
 				if (this.interactive) {
 					this.interactive = false;
-					LABEL_COLORS.remove(LABEL_HISTOGRAMS.remove(LABEL_HISTOGRAMS.size() - 1));
+					removeLastLabelHistogram();
+					imageView.refreshBuffer();
 				}
+			}
+			
+			@Override
+			public final void mousePressed(final MouseEvent event) {
+				this.popup = event.isPopupTrigger();
+			}
+			
+			@Override
+			public final void mouseReleased(final MouseEvent event) {
+				this.popup |= event.isPopupTrigger();
+			}
+			
+			@Override
+			public final void mouseClicked(final MouseEvent event) {
+				if (this.popup) {
+					this.popup = false;
+					this.userLabelColorIndex = (this.userLabelColorIndex + 1) % COLORS.length;
+				} else {
+					this.interactive = false;
+				}
+				
+				this.mouseMoved(event);
 			}
 			
 			@Override
@@ -145,12 +182,12 @@ public final class InteractiveTextureClassificationTest {
 						CELL_SIZE, CELL_SIZE, histogram);
 				
 				if (this.interactive) {
-					LABEL_COLORS.remove(LABEL_HISTOGRAMS.remove(LABEL_HISTOGRAMS.size() - 1));
+					removeLastLabelHistogram();
 				} else {
 					this.interactive = true;
 				}
 				
-				addLabel(histogram, this.userLabelColor);
+				addLabel(histogram, this.getUserLabelColor());
 				imageView.refreshBuffer();
 			}
 			
@@ -178,6 +215,8 @@ public final class InteractiveTextureClassificationTest {
 	
 	static final Map<ArrayHolder<int[]>, Color> LABEL_COLORS = new HashMap<ArrayHolder<int[]>, Color>();
 	
+	static final Color[] COLORS = { BLACK, GRAY, WHITE, YELLOW, RED, GREEN, BLUE, CYAN, MAGENTA };
+	
 	public static final int[] set(final int[] array, final int index, final int value) {
 		array[index] = value;
 		
@@ -188,6 +227,14 @@ public final class InteractiveTextureClassificationTest {
 		Arrays.fill(array, value);
 		
 		return array;
+	}
+	
+	static final void removeLastLabelHistogram() {
+		final ArrayHolder<int[]> h = LABEL_HISTOGRAMS.remove(LABEL_HISTOGRAMS.size() - 1);
+		
+		if (!LABEL_HISTOGRAMS.contains(h)) {
+			LABEL_COLORS.remove(h);
+		}
 	}
 	
 	static final int getLabel(final int[] histogram) {
