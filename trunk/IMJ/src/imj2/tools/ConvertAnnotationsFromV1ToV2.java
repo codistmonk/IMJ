@@ -1,12 +1,15 @@
 package imj2.tools;
 
 import static java.util.Locale.ENGLISH;
-import static net.sourceforge.aprog.tools.Tools.ignore;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
+
 import imj.apps.modules.Annotations;
+import imj.apps.modules.Annotations.Annotation;
 
 import java.io.File;
+import java.io.PrintStream;
 import java.io.Serializable;
-import java.util.Locale;
+import java.util.Scanner;
 
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.Tools;
@@ -18,11 +21,15 @@ public final class ConvertAnnotationsFromV1ToV2 {
 	
 	/**
 	 * @param commandLineArguments
+	 * <br>Must not be null
 	 */
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final File root = new File(arguments.get("path", "."));
-		final String author = arguments.get("author", "IMJ");
+		final String imjVersion = new Scanner(Tools.getResourceAsStream("imj/version")).next();
+		final String author = arguments.get("author", "IMJ.r" + imjVersion);
+		
+		System.out.println("Force author to: " + author);
 		
 		deepForEachFile(root, new FileProcessor() {
 			
@@ -31,9 +38,16 @@ public final class ConvertAnnotationsFromV1ToV2 {
 				if (file.getName().toLowerCase(ENGLISH).endsWith(".xml")) {
 					try {
 						final Annotations annotations = Annotations.fromXML(file.getPath());
-						Tools.debugPrint(file, annotations.getAnnotations().size());
+						
+						System.out.println("Processing: " + file);
+						
+						for (final Annotation annotation : annotations.getAnnotations()) {
+							annotation.setAuthor(author);
+						}
+						
+						Annotations.toXML(annotations, new PrintStream(file));
 					} catch (final Exception exception) {
-						ignore(exception);
+						debugPrint(file, exception);
 					}
 				}
 			}

@@ -9,6 +9,7 @@ import imj.apps.modules.Annotations.Annotation.Region;
 
 import java.awt.Color;
 import java.awt.geom.Point2D;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -23,7 +24,9 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
 import net.sourceforge.aprog.tools.Tools;
+import net.sourceforge.aprog.xml.XMLTools;
 
+import org.w3c.dom.Element;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -65,6 +68,8 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 	 * {@value}.
 	 */
 	private static final long serialVersionUID = 6894550580896794510L;
+	
+	private static final Element escapingElement = XMLTools.newDocument().createElement("e");
 	
 	public static Annotations fromXML(final String xmlFileName) {
 		final File annotationsFile = new File(xmlFileName);
@@ -249,7 +254,21 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 	}
 	
 	public static final String attribute(final String name, final Object value) {
-		return " " + name + "=\"" + value + "\"";
+		return " " + name + "=\"" + escape("" + value) + "\"";
+	}
+	
+	public static final String escape(final String string) {
+		final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+		
+		synchronized (escapingElement) {
+			escapingElement.setAttribute("a", string);
+			
+			XMLTools.write(escapingElement, buffer, 0);
+		}
+		
+		final String xml = buffer.toString();
+		
+		return xml.substring("<e a=\"".length(), xml.length() - "\"/>".length());
 	}
 	
 	public static final boolean parseBoolean(final String attributeValue) {
