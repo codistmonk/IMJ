@@ -3,9 +3,8 @@ package imj.apps.modules;
 import static java.lang.Double.parseDouble;
 import static java.lang.Long.parseLong;
 import static java.util.Locale.ENGLISH;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-import static net.sourceforge.aprog.tools.Tools.usedMemory;
+
 import imj.apps.modules.Annotations.Annotation.Region;
 
 import java.awt.Color;
@@ -16,7 +15,6 @@ import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -24,7 +22,6 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
-import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
 import org.xml.sax.Attributes;
@@ -84,10 +81,6 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 		
 		if (xmlInput != null) {
 			try {
-				final TicToc timer = new TicToc();
-				
-				debugPrint("Parsing XML annotations", "(", new Date(timer.tic()), ")");
-				
 				final SAXParser parser = SAXParserFactory.newInstance().newSAXParser();
 				
 				parser.parse(xmlInput, new DefaultHandler() {
@@ -101,6 +94,10 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 					@Override
 					public final void startElement(final String uri, final String localName,
 							final String qName, final Attributes attributes) throws SAXException {
+						if (this.elements.isEmpty() && !"Annotations".equals(qName)) {
+							throw new IllegalArgumentException();
+						}
+						
 						this.elements.add(0, qName);
 						
 						if ("Annotations".equals(qName)) {
@@ -110,6 +107,7 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 							this.annotation.setLineColor(new Color((int) parseLong(attributes.getValue("LineColor"))));
 							this.annotation.setSelected(parseBoolean(attributes.getValue("Selected").trim().toLowerCase(ENGLISH)));
 							this.annotation.setVisible(parseBoolean(attributes.getValue("Visible").trim().toLowerCase(ENGLISH)));
+							this.annotation.setAuthor(attributes.getValue("Author"));
 						} else if ("Region".equals(qName)) {
 							this.region = this.annotation.new Region();
 							this.region.setZoom(parseDouble(attributes.getValue("Zoom")));
@@ -141,8 +139,6 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 					}
 					
 				});
-				
-				debugPrint("Done:", "time:", timer.toc(), "memory:", usedMemory());
 			} catch (final Exception exception) {
 				throw unchecked(exception);
 			}
@@ -187,6 +183,7 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 					attribute("Selected", formatBoolean01(annotation.isSelected())) +
 					attribute("MarkupImagePath", "") +
 					attribute("MacroName", "") +
+					attribute("Author", annotation.getAuthor()) +
 			">");
 			
 			out.println("    <Attributes>");
@@ -276,6 +273,8 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 		
 		private boolean selected;
 		
+		private String author;
+		
 		public Annotation() {
 			Annotations.this.getAnnotations().add(this);
 			this.setUserObject(this.getClass().getSimpleName() + " " + (Annotations.this.getAnnotations().indexOf(this) + 1));
@@ -307,6 +306,14 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 		
 		public final void setSelected(final boolean selected) {
 			this.selected = selected;
+		}
+		
+		public final String getAuthor() {
+			return this.author;
+		}
+		
+		public final void setAuthor(final String author) {
+			this.author = author;
 		}
 		
 		/**

@@ -20,6 +20,7 @@ import java.awt.image.BufferedImage;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URL;
 import java.net.URLConnection;
 import java.util.Arrays;
 import java.util.concurrent.Callable;
@@ -258,6 +259,20 @@ public final class MultifileImage extends TiledImage2D {
 			
 			throw unchecked(exception);
 		}
+	}
+	
+	public static final InputStream open(final String resource) {
+		HTTPSAuthenticationForHost connectionConfigurator = null;
+		
+		try {
+			final URL serverURL = new URI(resource).toURL();
+			connectionConfigurator = new HTTPSAuthenticationForHost(serverURL.getHost());
+		} catch (final Exception exception) {
+			debugPrint(resource);
+			debugPrint(exception);
+		}
+		
+		return open(resource, connectionConfigurator);
 	}
 	
 	public static final ConnectionConfigurator DEFAULT_CONNECTION_CONFIGURATOR = new ConnectionConfigurator() {
