@@ -2,6 +2,7 @@
 <project default="create_imj_jar" name="Create Jar for Project IMJ">
     <!--ANT 1.7 is required                                        -->
     <target name="create_imj_jar">
+    	<exec executable="svnversion" output="src/imj/version" logError="true"/>
         <jar destfile="imj-all.jar" filesetmanifest="mergewithoutmain">
             <manifest>
                 <attribute name="Class-Path" value="."/>
@@ -28,5 +29,6 @@
         	</fileset>
             <fileset dir="src"/>
         </jar>
+    	<delete file="src/imj/version"/>
     </target>
 </project>
