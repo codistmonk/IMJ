@@ -201,7 +201,7 @@ public final class TextureGradientTest {
 	/**
 	 * {@value}.
 	 */
-	public static final int Q = 4;
+	public static final int Q = 5;
 	
 	/**
 	 * {@value}.
