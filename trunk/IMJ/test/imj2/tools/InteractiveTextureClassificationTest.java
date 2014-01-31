@@ -39,7 +39,7 @@ import org.junit.Test;
  * @author codistmonk (creation 2014-01-30)
  */
 public final class InteractiveTextureClassificationTest {
-
+	
 	@Test
 	public final void test() {
 		final SimpleImageView imageView = new SimpleImageView();
@@ -60,8 +60,29 @@ public final class InteractiveTextureClassificationTest {
 					
 					for (int labelsY = 0; labelsY < labelsHeight; ++labelsY) {
 						for (int labelsX = 0; labelsX < labelsWidth; ++labelsX) {
-							g.setColor(new Color(labels.getRGB(labelsX, labelsY)));
-							g.drawRect(labelsX * CELL_SIZE, labelsY * CELL_SIZE, cellOutlineSize, cellOutlineSize);
+							final int rgb = labels.getRGB(labelsX, labelsY);
+							final int left = labelsX * CELL_SIZE;
+							final int top = labelsY * CELL_SIZE;
+							final int right = left + cellOutlineSize;
+							final int bottom = top + cellOutlineSize;
+							
+							g.setColor(new Color(rgb));
+							
+							if (labelsX == 0 || rgb != labels.getRGB(labelsX - 1, labelsY)) {
+								g.drawLine(left, top, left, bottom);
+							}
+							
+							if (labelsY == 0 || rgb != labels.getRGB(labelsX, labelsY - 1)) {
+								g.drawLine(left, top, right, top);
+							}
+							
+							if (labelsX == labelsWidth - 1 || rgb != labels.getRGB(labelsX + 1, labelsY)) {
+								g.drawLine(right, top, right, bottom);
+							}
+							
+							if (labelsY == labelsHeight - 1 || rgb != labels.getRGB(labelsX, labelsY + 1)) {
+								g.drawLine(left, bottom, right, bottom);
+							}
 						}
 					}
 				}
