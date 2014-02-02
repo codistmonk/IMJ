@@ -62,57 +62,11 @@ public final class SFTPStreamHandlerFactory implements URLStreamHandlerFactory, 
 		
 		@Override
 		protected final URLConnection openConnection(final URL url) throws IOException {
-			final Credentials credentials = new Credentials(url.getHost());
-			final Pair<String, byte[]> loginPassword = credentials.getLoginPassword();
-			
-			if (loginPassword == null) {
-				return null;
-			}
-			
 			try {
-				final String key = url.getHost();
-				final ChannelSftp channel;
+				final ChannelSftp channel = getChannel(url);
 				
-				synchronized (channels) {
-					final ChannelSftp cachedChannel = channels.get(key);
-					
-					if (cachedChannel != null && cachedChannel.isConnected()) {
-						channel = cachedChannel;
-					} else {
-						final Session session;
-						final Session cachedSession = sessions.get(key);
-						
-						if (cachedSession != null && cachedSession.isConnected()) {
-							session = cachedSession;
-						} else {
-							session = new JSch().getSession(loginPassword.getFirst(), url.getHost());
-							
-							session.setConfig("StrictHostKeyChecking", "no");
-							session.setPassword(loginPassword.getSecond());
-							try {
-								session.connect();
-							} catch (final JSchException exception) {
-								credentials.invalidate();
-								throw exception;
-							}
-							
-							if (session.isConnected()) {
-								sessions.put(key, session);
-							} else {
-								throw new IOException("Failed to connect session for url: " + url);
-							}
-						}
-						
-						channel = (ChannelSftp) session.openChannel("sftp");
-						
-						channel.connect();
-						
-						if (channel.isConnected()) {
-							channels.put(key, channel);
-						} else {
-							throw new IOException("Failed to connect channel for url: " + url);
-						}
-					}
+				if (channel == null) {
+					return null;
 				}
 				
 				return new URLConnection(url) {
@@ -197,6 +151,61 @@ public final class SFTPStreamHandlerFactory implements URLStreamHandlerFactory, 
 						session.disconnect();
 					} catch (final Exception exception) {
 						result.add(exception);
+					}
+				}
+			}
+			
+			return result;
+		}
+		
+		public static final ChannelSftp getChannel(final URL url) throws JSchException, IOException {
+			final ChannelSftp result;
+			final String key = url.getHost();
+			final Credentials credentials = new Credentials(url.getHost());
+			final Pair<String, byte[]> loginPassword = credentials.getLoginPassword();
+			
+			if (loginPassword == null) {
+				return null;
+			}
+			
+			synchronized (channels) {
+				final ChannelSftp cachedChannel = channels.get(key);
+				
+				if (cachedChannel != null && cachedChannel.isConnected()) {
+					result = cachedChannel;
+				} else {
+					final Session session;
+					final Session cachedSession = sessions.get(key);
+					
+					if (cachedSession != null && cachedSession.isConnected()) {
+						session = cachedSession;
+					} else {
+						session = new JSch().getSession(loginPassword.getFirst(), url.getHost());
+						
+						session.setConfig("StrictHostKeyChecking", "no");
+						session.setPassword(loginPassword.getSecond());
+						try {
+							session.connect();
+						} catch (final JSchException exception) {
+							credentials.invalidate();
+							throw exception;
+						}
+						
+						if (session.isConnected()) {
+							sessions.put(key, session);
+						} else {
+							throw new IOException("Failed to connect session for url: " + url);
+						}
+					}
+					
+					result = (ChannelSftp) session.openChannel("sftp");
+					
+					result.connect();
+					
+					if (result.isConnected()) {
+						channels.put(key, result);
+					} else {
+						throw new IOException("Failed to connect channel for url: " + url);
 					}
 				}
 			}

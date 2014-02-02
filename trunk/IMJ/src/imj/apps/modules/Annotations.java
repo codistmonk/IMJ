@@ -1,10 +1,10 @@
 package imj.apps.modules;
 
+import static java.awt.Color.BLACK;
 import static java.lang.Double.parseDouble;
 import static java.lang.Long.parseLong;
 import static java.util.Locale.ENGLISH;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj.apps.modules.Annotations.Annotation.Region;
 
 import java.awt.Color;
@@ -295,6 +295,7 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 		private String author;
 		
 		public Annotation() {
+			this.lineColor = BLACK;
 			Annotations.this.getAnnotations().add(this);
 			this.setUserObject(this.getClass().getSimpleName() + " " + (Annotations.this.getAnnotations().indexOf(this) + 1));
 		}
