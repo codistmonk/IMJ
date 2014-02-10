@@ -1,8 +1,11 @@
 package imj2.tools;
 
+import static java.awt.Color.RED;
 import static net.sourceforge.aprog.swing.SwingTools.show;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.*;
 
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.event.MouseWheelEvent;
@@ -13,6 +16,8 @@ import java.util.List;
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.RegionShrinkingTest.AutoMouseAdapter;
 import imj2.tools.RegionShrinkingTest.SimpleImageView;
+
+import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -29,18 +34,26 @@ public final class MultiresolutionSegmentationTest {
 			
 			private BufferedImage[] pyramid;
 			
-			private int cellSize;
+			private int cellSize = 32;
 			
 			private final Painter<SimpleImageView> painter = new Painter<SimpleImageView>() {
 				
 				private final List<Point> particles = new ArrayList<Point>();
 				
+				{
+					imageView.getPainters().add(this);
+				}
+				
 				@Override
 				public final void paint(final Graphics2D g, final SimpleImageView component,
 						final int width, final int height) {
 					refreshLODs();
+					this.particles.clear();
+					
 					final BufferedImage[] pyramid = getPyramid();
 					final int s = getCellSize();
+					int w = 0;
+					int h = 0;
 					
 					for (int lod = pyramid.length - 1; 0 <= lod; --lod) {
 						for (final Point particle : this.particles) {
@@ -49,18 +62,33 @@ public final class MultiresolutionSegmentationTest {
 						}
 						
 						final BufferedImage image = pyramid[lod];
-						final int w = image.getWidth();
-						final int h = image.getHeight();
 						
-						if (s < w && h < s) {
-							for (int y = s; y < h; y += s) {
-								for (int x = s; x < w; x += s) {
-									if (((x / s) & 1) == 0 && ((y / s) & 1) == 0) {
+						if (w == 0) {
+							w = image.getWidth();
+							h = image.getHeight();
+						} else {
+							w *= 2;
+							h *= 2;
+						}
+						
+						if (s < w && s < h) {
+							debugPrint(lod, w, h);
+							for (int y = s, ky = 1; y < h; y += s, ++ky) {
+								for (int x = s, kx = 1; x < w; x += s, ++kx) {
+									if ((kx & 1) != 0 || (ky & 1) != 0) {
 										this.particles.add(new Point(x, y));
 									}
 								}
 							}
 						}
+					}
+					
+					debugPrint(this.particles.size());
+					
+					g.setColor(RED);
+					
+					for (final Point particle : this.particles) {
+						g.drawOval(particle.x - 1, particle.y - 1, 3, 3);
 					}
 				}
 				
@@ -73,13 +101,17 @@ public final class MultiresolutionSegmentationTest {
 			
 			@Override
 			public final void mouseWheelMoved(final MouseWheelEvent event) {
-				this.refreshLODs();
+				imageView.refreshBuffer();
 			}
 			
-			public final void refreshLODs() {
+			public final boolean refreshLODs() {
 				if (this.getPyramid() == null || this.getPyramid().length == 0 || this.getPyramid()[0] != imageView.getImage()) {
 					this.pyramid = makePyramid(imageView.getImage());
+					
+					return true;
 				}
+				
+				return false;
 			}
 			
 			public final BufferedImage[] getPyramid() {
@@ -130,7 +162,7 @@ public final class MultiresolutionSegmentationTest {
 				}
 			}
 			
-			lods.add(nextLOD);
+			lod = nextLOD;
 		} while (1 < w && 1 < h);
 		
 		return lods.toArray(new BufferedImage[0]);
