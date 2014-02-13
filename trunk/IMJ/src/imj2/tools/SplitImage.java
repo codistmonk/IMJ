@@ -82,8 +82,6 @@ public final class SplitImage {
 		final boolean skipExistingTiles = arguments.get("skipExistingTiles", 1)[0] != 0;
 		final String root = arguments.get("to", "");
 		final String[] imageIds = arguments.get("file", "").split(",");
-		final String databasePath = root + "/imj_database.xml";
-		final Document database = getDatabase(databasePath);
 		final File temporaryDBFile = File.createTempFile("imj.db.", ".xml");
 		
 		temporaryDBFile.deleteOnExit();
@@ -190,24 +188,24 @@ public final class SplitImage {
 						while (generator.next());
 						
 						try {
-							synchronized (database) {
+							// FIXME use file locking for synchronization
+							synchronized (SplitImage.class) {
+								final String metadataPath = root + "/" + imageName + "/metadata.xml";
+								final Document metadata = getMetadata(metadataPath);
+								final String databasePath = root + "/images.xml";
+								final Document database = getDatabase(databasePath);
+								
 								for (FractalZTileGenerator g = generator; g != null; g = g.getSubsampling()) {
 									final Image2D i = g.getImage();
 									final int lod = i.getLOD();
 									
-									addEntry(database, imageName, lod, i.getWidth(), i.getHeight(),
+									addMetadataEntry(metadata, imageName, lod, i.getWidth(), i.getHeight(),
 											optimalTileWidth, optimalTileHeight, histogram[lod]);
+									addDatabaseEntry(database, imageName);
 								}
 								
-								XMLTools.write(database, temporaryDBFile, 0);
-								
-								final InputStream input = new FileInputStream(temporaryDBFile);
-								
-								try {
-									Tools.writeAndCloseOutput(input, getOutputStream(databasePath));
-								} finally {
-									input.close();
-								}
+								XMLTools.write(metadata, getOutputStream(metadataPath), 0);
+								XMLTools.write(database, getOutputStream(databasePath), 0);
 							}
 						} catch (final Exception exception) {
 							exception.printStackTrace();
@@ -231,16 +229,16 @@ public final class SplitImage {
 			SFTPStreamHandler.closeAll();
 		}
 	}
-
-	public static void addEntry(final Document database,
+	
+	public static final void addMetadataEntry(final Document metadata,
 			final String imageName, final int lod, final int imageWidth,
 			final int imageHeight, final int optimalTileWidth,
 			final int optimalTileHeight, final long[] histogram) {
-		final String id = imageName + "/" + imageName  + "_lod" + lod;
-		Element imageElement = database.getElementById(id);
+		final String id = imageName  + "_lod" + lod;
+		Element imageElement = metadata.getElementById(id);
 		
 		if (imageElement == null) {
-			imageElement = database.createElement("image");
+			imageElement = metadata.createElement("image");
 		}
 		
 		imageElement.setAttribute("id", id);
@@ -251,7 +249,7 @@ public final class SplitImage {
 		imageElement.setAttribute("tileHeight", "" + optimalTileHeight);
 		
 		{
-			final Element histogramElement = database.createElement("histogram");
+			final Element histogramElement = metadata.createElement("histogram");
 			final long pixelCount = (long) imageWidth * imageHeight;
 			final StringBuilder histogramStringBuilder = new StringBuilder();
 			final int n = histogram.length;
@@ -272,7 +270,20 @@ public final class SplitImage {
 			imageElement.appendChild(histogramElement);
 		}
 		
-		database.getDocumentElement().appendChild(imageElement);
+		metadata.getDocumentElement().appendChild(imageElement);
+	}
+	
+	public static final void addDatabaseEntry(final Document database, final String imageName) {
+		final String id = imageName;
+		Element imageElement = database.getElementById(id);
+		
+		if (imageElement == null) {
+			imageElement = database.createElement("image");
+			database.getDocumentElement().appendChild(imageElement);
+		}
+		
+		imageElement.setAttribute("id", id);
+		imageElement.setIdAttribute("id", true);
 	}
 	
 	public static final String removeExtension(final String path) {
@@ -289,6 +300,16 @@ public final class SplitImage {
 		}
 		
 		return parse("<images/>");
+	}
+	
+	public static final Document getMetadata(final String path) {
+		try {
+			return setIdAttributes(parse(getInputStream(path)));
+		} catch (final Exception exception) {
+			Tools.debugPrint(exception);
+		}
+		
+		return parse("<metadata/>");
 	}
 	
 	public static final InputStream getInputStream(final String source) {
