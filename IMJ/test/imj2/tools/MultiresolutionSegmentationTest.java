@@ -1,30 +1,26 @@
 package imj2.tools;
 
-import static java.awt.Color.BLUE;
-import static java.awt.Color.CYAN;
-import static java.awt.Color.GREEN;
 import static java.awt.Color.RED;
 import static java.awt.Color.YELLOW;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-import static org.junit.Assert.*;
-
-import java.awt.Color;
-import java.awt.Graphics2D;
-import java.awt.Point;
-import java.awt.event.MouseWheelEvent;
-import java.awt.image.BufferedImage;
-import java.util.ArrayList;
-import java.util.List;
-
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.RegionShrinkingTest.AutoMouseAdapter;
 import imj2.tools.RegionShrinkingTest.SimpleImageView;
 
-import net.sourceforge.aprog.tools.Tools;
+import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.event.MouseWheelEvent;
+import java.awt.image.BufferedImage;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 import org.junit.Test;
 
@@ -41,7 +37,7 @@ public final class MultiresolutionSegmentationTest {
 			
 			private BufferedImage[] pyramid;
 			
-			private int cellSize = 4;
+			private int cellSize = 8;
 			
 			private final Painter<SimpleImageView> painter = new Painter<SimpleImageView>() {
 				
@@ -84,6 +80,8 @@ public final class MultiresolutionSegmentationTest {
 					}
 					
 					if (0 < s0) {
+						int startingLOD = -1;
+						
 						for (int lod = lodCount - 1; 0 <= lod; --lod) {
 							final BufferedImage image = pyramid[lod];
 							final int w = image.getWidth();
@@ -92,62 +90,33 @@ public final class MultiresolutionSegmentationTest {
 							
 							for (int particleY = s0; particleY < h; particleY += s0) {
 								for (int particleX = s0; particleX < w; particleX += s0) {
-									g.setColor(Color.RED);
+									if (startingLOD < 0) {
+										startingLOD = lod;
+									}
+									
+									g.setColor(RED);
 									g.drawOval((particleX << lod) - lod, (particleY << lod) - lod, diameter, diameter);
 								}
 							}
 						}
+						
+						{
+							debugPrint(startingLOD);
+							
+							Grid grid = null;
+							
+							for (int lod = startingLOD; 0 <= lod; --lod) {
+								grid = grid == null ? new Grid(pyramid[lod], s0) : grid.refine(pyramid[lod]);
+							}
+							
+							if (grid != null) {
+								for (final Point vertex : grid.getVertices()) {
+									g.setColor(YELLOW);
+									g.drawOval(vertex.x - 1, vertex.y - 1, 3, 3);
+								}
+							}
+						}
 					}
-//					final int horizontalParticleCount = widthLOD0 / s0;
-//					final int verticalParticleCount = heightLOD0 / s0;
-//					
-//					debugPrint(horizontalParticleCount, verticalParticleCount);
-//					
-//					this.particles = new Point[horizontalParticleCount * verticalParticleCount];
-//					final Color[] particleColors = new Color[this.particles.length];
-//					final Color colors[] = { RED, GREEN, BLUE, YELLOW, CYAN };
-//					
-//					for (int i = 0; i < verticalParticleCount; ++i) {
-//						for (int j = 0; j < horizontalParticleCount; ++j) {
-//							this.particles[i * horizontalParticleCount + j] = new Point(j * s0, i * s0);
-//						}
-//					}
-//					
-//					for (int lod = pyramid.length - 1; 0 <= lod; --lod) {
-//						final int s = s0 << lod;
-//						final BufferedImage image = pyramid[lod];
-//						final int w = image.getWidth();
-//						final int h = image.getHeight();
-//						
-//						if (s < w && s < h) {
-//							final int d = 1 << lod;
-//							
-//							for (int i = d; i < verticalParticleCount; i += d) {
-//								for (int j = d; j < horizontalParticleCount; j += d) {
-//									if (((i / d) & 1) == 1 || ((j / d) & 1) == 1) {
-//										final int particleIndex = i * horizontalParticleCount + j;
-//										final Point particle = this.particles[particleIndex];
-//										particleColors[particleIndex] = colors[lod];
-//									}
-//								}
-//							}
-//						}
-//					}
-//					
-//					if (true) {
-//						for (int particleIndex = 0; particleIndex < this.particles.length; ++particleIndex) {
-//							final Point particle = this.particles[particleIndex];
-//							
-//							g.setColor(particleColors[particleIndex]);
-//							g.drawOval(particle.x - 1, particle.y - 1, 3, 3);
-//						}
-//					} else {
-//						g.setColor(RED);
-//						
-//						for (final Point particle : this.particles) {
-//							g.drawOval(particle.x - 1, particle.y - 1, 3, 3);
-//						}
-//					}
 				}
 				
 				/**
@@ -201,6 +170,90 @@ public final class MultiresolutionSegmentationTest {
 		};
 		
 		show(imageView, "Simple Image View", true);
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-02-21)
+	 */
+	public static final class Grid implements Serializable {
+		
+		private final int cellSize;
+		
+		private final int horizontalVertexCount;
+		
+		private final int verticalVertexCount;
+		
+		private final Point[] vertices;
+		
+		public Grid(final BufferedImage image, final int cellSize) {
+			this(cellSize, 2 + (image.getWidth() - 1) / cellSize, 2 + (image.getHeight() - 1) / cellSize);
+			
+			final int width = image.getWidth();
+			final int height = image.getHeight();
+			
+			for (int i = 0, vertexIndex = 0; i < this.verticalVertexCount; ++i) {
+				for (int j = 0; j < this.horizontalVertexCount; ++j, ++vertexIndex) {
+					this.vertices[vertexIndex].setLocation(
+							j == 0 ? 0 : j + 1 == this.horizontalVertexCount ? width - 1 : cellSize * j,
+							i == 0 ? 0 : i + 1 == this.verticalVertexCount ? height - 1 : cellSize * i);
+				}
+			}
+		}
+		
+		private Grid(final int cellSize, final int horizontalVertexCount, final int verticalVertexCount) {
+			this.cellSize = cellSize;
+			this.horizontalVertexCount = horizontalVertexCount;
+			this.verticalVertexCount = verticalVertexCount;
+			this.vertices = instances(this.horizontalVertexCount * this.verticalVertexCount,
+					DefaultFactory.forClass(Point.class));
+		}
+		
+		public final int getHorizontalVertexCount() {
+			return this.horizontalVertexCount;
+		}
+		
+		public final int getVerticalVertexCount() {
+			return this.verticalVertexCount;
+		}
+		
+		public final Point[] getVertices() {
+			return this.vertices;
+		}
+		
+		public final Grid refine(final BufferedImage image) {
+			final Grid result = new Grid(this.cellSize,
+					this.getHorizontalVertexCount() * 2 - 1, this.getVerticalVertexCount() * 2 - 1);
+			
+			final int width = image.getWidth();
+			final int height = image.getHeight();
+			
+			for (int i = 0, vertexIndex = 0; i < result.getVerticalVertexCount(); ++i) {
+				for (int j = 0; j < result.getHorizontalVertexCount(); ++j, ++vertexIndex) {
+					
+					if (i != 0 && i + 1 != result.getVerticalVertexCount() && isEven(i) && j != 0 && j + 1 != result.getHorizontalVertexCount() && isEven(j)) {
+						final Point thisVertex = this.getVertices()[(i / 2) * this.getHorizontalVertexCount() + j / 2];
+						
+						result.getVertices()[vertexIndex].setLocation(thisVertex.x * 2, thisVertex.y * 2);
+					} else {
+						result.getVertices()[vertexIndex].setLocation(
+								j == 0 ? 0 : j + 1 == result.getHorizontalVertexCount() ? width - 1 : this.cellSize * j,
+										i == 0 ? 0 : i + 1 == result.getVerticalVertexCount() ? height - 1 : this.cellSize * i);
+					}
+				}
+			}
+			
+			return result;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -6546839284908468675L;
+		
+		public static final boolean isEven(final int n) {
+			return (n & 1) == 0;
+		}
+		
 	}
 	
 	public static final int MAXIMUM_COLOR_DISTANCE = getColorDistance(0x00000000, 0x00FFFFFF);
