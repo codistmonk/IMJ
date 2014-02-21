@@ -4,6 +4,7 @@ import static imj2.core.IMJCoreTools.lockCacheKey;
 import static imj2.core.IMJCoreTools.unlockCacheKey;
 import static imj2.tools.MultifileImage.setIdAttributes;
 import static java.lang.Math.min;
+import static net.sourceforge.aprog.tools.Tools.invoke;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
 
@@ -523,8 +524,19 @@ public final class SplitImage {
 		
 		@Override
 		public final T newInstance() {
-			return Tools.invoke(this.objectOrClass, this.methodName, this.arguments);
+			return invoke(this.objectOrClass, this.methodName, this.arguments);
 		}
+		
+		@Override
+		public final Class<T> getInstanceClass() {
+			// TODO Auto-generated method stub
+			throw new RuntimeException("TODO");
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 6321366151657819678L;
 		
 	}
 	
