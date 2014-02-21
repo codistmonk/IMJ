@@ -5,8 +5,11 @@ import static java.awt.Color.CYAN;
 import static java.awt.Color.GREEN;
 import static java.awt.Color.RED;
 import static java.awt.Color.YELLOW;
+import static java.lang.Math.abs;
+import static java.lang.Math.max;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static org.junit.Assert.*;
 
 import java.awt.Color;
@@ -38,7 +41,7 @@ public final class MultiresolutionSegmentationTest {
 			
 			private BufferedImage[] pyramid;
 			
-			private int cellSize = 16;
+			private int cellSize = 4;
 			
 			private final Painter<SimpleImageView> painter = new Painter<SimpleImageView>() {
 				
@@ -54,59 +57,97 @@ public final class MultiresolutionSegmentationTest {
 					refreshLODs();
 					
 					final BufferedImage[] pyramid = getPyramid();
+					final int lodCount = pyramid.length;
 					final int s0 = getCellSize();
 					final int widthLOD0 = pyramid[0].getWidth();
 					final int heightLOD0 = pyramid[0].getHeight();
-					final int horizontalParticleCount = widthLOD0 / s0;
-					final int verticalParticleCount = heightLOD0 / s0;
+					final boolean debugGradient = false;
 					
-					debugPrint(horizontalParticleCount, verticalParticleCount);
-					
-					this.particles = new Point[horizontalParticleCount * verticalParticleCount];
-					final Color[] particleColors = new Color[this.particles.length];
-					final Color colors[] = { RED, GREEN, BLUE, YELLOW, CYAN };
-					
-					for (int i = 0; i < verticalParticleCount; ++i) {
-						for (int j = 0; j < horizontalParticleCount; ++j) {
-							this.particles[i * horizontalParticleCount + j] = new Point(j * s0, i * s0);
-						}
-					}
-					
-					for (int lod = pyramid.length - 1; 0 <= lod; --lod) {
-						final int s = s0 << lod;
+					if (debugGradient && s0 < lodCount) {
+						final int lod = s0;
+						debugPrint(lod);
+						final int dimensionMask = (-1) << lod;
+						final int w = widthLOD0 & dimensionMask;
+						final int h = heightLOD0 & dimensionMask;
 						final BufferedImage image = pyramid[lod];
-						final int w = image.getWidth();
-						final int h = image.getHeight();
 						
-						if (s < w && s < h) {
-							final int d = 1 << lod;
-							
-							for (int i = d; i < verticalParticleCount; i += d) {
-								for (int j = d; j < horizontalParticleCount; j += d) {
-									if (((i / d) & 1) == 1 || ((j / d) & 1) == 1) {
-										final int particleIndex = i * horizontalParticleCount + j;
-										final Point particle = this.particles[particleIndex];
-										particleColors[particleIndex] = colors[lod];
-									}
+						for (int y = 0; y < h; ++y) {
+							for (int x = 0; x < w; ++x) {
+								try {
+									component.getBuffer().setRGB(x, y, gray888(getColorGradient(image, x >> lod, y >> lod)));
+								} catch (final Exception exception) {
+									debugPrint(x, y, x >> lod, y >> lod, image.getWidth(), image.getHeight());
+									throw unchecked(exception);
 								}
 							}
 						}
 					}
 					
-					if (true) {
-						for (int particleIndex = 0; particleIndex < this.particles.length; ++particleIndex) {
-							final Point particle = this.particles[particleIndex];
+					if (0 < s0) {
+						for (int lod = lodCount - 1; 0 <= lod; --lod) {
+							final BufferedImage image = pyramid[lod];
+							final int w = image.getWidth();
+							final int h = image.getHeight();
+							final int diameter = 1 + 2 * lod;
 							
-							g.setColor(particleColors[particleIndex]);
-							g.drawOval(particle.x - 1, particle.y - 1, 3, 3);
-						}
-					} else {
-						g.setColor(RED);
-						
-						for (final Point particle : this.particles) {
-							g.drawOval(particle.x - 1, particle.y - 1, 3, 3);
+							for (int particleY = s0; particleY < h; particleY += s0) {
+								for (int particleX = s0; particleX < w; particleX += s0) {
+									g.setColor(Color.RED);
+									g.drawOval((particleX << lod) - lod, (particleY << lod) - lod, diameter, diameter);
+								}
+							}
 						}
 					}
+//					final int horizontalParticleCount = widthLOD0 / s0;
+//					final int verticalParticleCount = heightLOD0 / s0;
+//					
+//					debugPrint(horizontalParticleCount, verticalParticleCount);
+//					
+//					this.particles = new Point[horizontalParticleCount * verticalParticleCount];
+//					final Color[] particleColors = new Color[this.particles.length];
+//					final Color colors[] = { RED, GREEN, BLUE, YELLOW, CYAN };
+//					
+//					for (int i = 0; i < verticalParticleCount; ++i) {
+//						for (int j = 0; j < horizontalParticleCount; ++j) {
+//							this.particles[i * horizontalParticleCount + j] = new Point(j * s0, i * s0);
+//						}
+//					}
+//					
+//					for (int lod = pyramid.length - 1; 0 <= lod; --lod) {
+//						final int s = s0 << lod;
+//						final BufferedImage image = pyramid[lod];
+//						final int w = image.getWidth();
+//						final int h = image.getHeight();
+//						
+//						if (s < w && s < h) {
+//							final int d = 1 << lod;
+//							
+//							for (int i = d; i < verticalParticleCount; i += d) {
+//								for (int j = d; j < horizontalParticleCount; j += d) {
+//									if (((i / d) & 1) == 1 || ((j / d) & 1) == 1) {
+//										final int particleIndex = i * horizontalParticleCount + j;
+//										final Point particle = this.particles[particleIndex];
+//										particleColors[particleIndex] = colors[lod];
+//									}
+//								}
+//							}
+//						}
+//					}
+//					
+//					if (true) {
+//						for (int particleIndex = 0; particleIndex < this.particles.length; ++particleIndex) {
+//							final Point particle = this.particles[particleIndex];
+//							
+//							g.setColor(particleColors[particleIndex]);
+//							g.drawOval(particle.x - 1, particle.y - 1, 3, 3);
+//						}
+//					} else {
+//						g.setColor(RED);
+//						
+//						for (final Point particle : this.particles) {
+//							g.drawOval(particle.x - 1, particle.y - 1, 3, 3);
+//						}
+//					}
 				}
 				
 				/**
@@ -118,7 +159,15 @@ public final class MultiresolutionSegmentationTest {
 			
 			@Override
 			public final void mouseWheelMoved(final MouseWheelEvent event) {
-				imageView.refreshBuffer();
+				if (event.getWheelRotation() < 0 && 0 < this.getCellSize()) {
+					--this.cellSize;
+					imageView.refreshBuffer();
+				}
+				
+				if (0 < event.getWheelRotation()) {
+					++this.cellSize;
+					imageView.refreshBuffer();
+				}
 			}
 			
 			public final boolean refreshLODs() {
@@ -154,6 +203,45 @@ public final class MultiresolutionSegmentationTest {
 		show(imageView, "Simple Image View", true);
 	}
 	
+	public static final int MAXIMUM_COLOR_DISTANCE = getColorDistance(0x00000000, 0x00FFFFFF);
+	
+	public static final int gray888(final int value8) {
+		return value8 | (value8 << 8) | (value8 << 16);
+	}
+	
+	public static final int getColorGradient(final BufferedImage image, final int x, final int y) {
+		final int maxX = image.getWidth() - 1;
+		final int maxY = image.getHeight() - 1;
+		final int rgb = image.getRGB(x, y);
+		int result = 0;
+		
+		if (0 < x) {
+			if (0 < y) {
+				result = max(result, getColorDistance(rgb, image.getRGB(x - 1, y - 1)));
+			}
+			
+			if (y < maxY) {
+				result = max(result, getColorDistance(rgb, image.getRGB(x - 1, y + 1)));
+			}
+		}
+		
+		if (x < maxX) {
+			if (0 < y) {
+				result = max(result, getColorDistance(rgb, image.getRGB(x + 1, y - 1)));
+			}
+			
+			if (y < maxY) {
+				result = max(result, getColorDistance(rgb, image.getRGB(x + 1, y + 1)));
+			}
+		}
+		
+		return result * 255 / MAXIMUM_COLOR_DISTANCE;
+	}
+	
+	public static final int getColorDistance(final int rgb1, final int rgb2) {
+		return abs(red8(rgb1) - red8(rgb2)) + abs(green8(rgb1) - green8(rgb2)) + abs(blue8(rgb1) - blue8(rgb2));
+	}
+	
 	public static final BufferedImage[] makePyramid(final BufferedImage lod0) {
 		final List<BufferedImage> lods = new ArrayList<BufferedImage>();
 		BufferedImage lod = lod0;
@@ -183,6 +271,18 @@ public final class MultiresolutionSegmentationTest {
 		} while (1 < w && 1 < h);
 		
 		return lods.toArray(new BufferedImage[0]);
+	}
+	
+	public static final int red8(final int rgb) {
+		return red(rgb) >> 16;
+	}
+	
+	public static final int green8(final int rgb) {
+		return green(rgb) >> 8;
+	}
+	
+	public static final int blue8(final int rgb) {
+		return blue(rgb);
 	}
 	
 	public static final int red(final int rgb) {
