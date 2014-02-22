@@ -8,6 +8,7 @@ import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.RegionShrinkingTest.AutoMouseAdapter;
 import imj2.tools.RegionShrinkingTest.SimpleImageView;
@@ -225,16 +226,16 @@ public final class MultiresolutionSegmentationTest {
 		}
 		
 		public final Grid refine(final BufferedImage image) {
-			final Grid result = new Grid(this.cellSize,
-					this.getHorizontalVertexCount() * 2 - 1, this.getVerticalVertexCount() * 2 - 1);
+			final Grid result = new Grid(image, this.cellSize);
 			final int width = image.getWidth();
 			final int height = image.getHeight();
 			
-			for (int i = 0; i < this.getVerticalVertexCount(); ++i) {
-				final int ii = i * 2;
+			// General case
+			for (int ii = 0; ii < result.getVerticalVertexCount(); ii += 2) {
+				final int i = ii / 2;
 				
-				for (int j = 0; j < this.getHorizontalVertexCount(); ++j) {
-					final int jj = j * 2;
+				for (int jj = 0; jj < result.getHorizontalVertexCount(); jj += 2) {
+					final int j = jj / 2;
 					final Point thisVertex = this.getVertex(i, j);
 					final Point thatVertex = result.getVertex(ii, jj);
 					
@@ -264,52 +265,48 @@ public final class MultiresolutionSegmentationTest {
 				}
 			}
 			
-			if (true) {
-				return result;
+			// Bottom row
+			{
+				final int ii = result.getVerticalVertexCount() - 1;
+				final int i = this.getVerticalVertexCount() - 1;
+				
+				for (int jj = 0; jj < result.getHorizontalVertexCount(); jj += 2) {
+					final int j = jj / 2;
+					final Point thisVertex = this.getVertex(i, j);
+					final Point thatVertex = result.getVertex(ii, jj);
+					
+					thatVertex.setLocation(
+							j + 1 == this.getHorizontalVertexCount() ? width - 1 : thisVertex.x * 2,
+							height - 1);
+					
+					final Point westVertex = 0 < j ? result.getVertex(ii, jj - 2) : null;
+					
+					if (westVertex != null) {
+						result.getVertex(ii, jj - 1).setLocation(
+								(thatVertex.x + westVertex.x) / 2, (thatVertex.y + westVertex.y) / 2);
+					}
+				}
 			}
 			
-			for (int i = 0, vertexIndex = 0; i < result.getVerticalVertexCount(); ++i) {
-				for (int j = 0; j < result.getHorizontalVertexCount(); ++j, ++vertexIndex) {
-//					if (i == 0) {
-//						result.getVertices()[vertexIndex].setLocation(j + 1 == result.getHorizontalVertexCount() ? width - 1 : this.cellSize * j, 0);
-//					} else if (j == 0) {
-//						result.getVertices()[vertexIndex].setLocation(0, i + 1 == result.getVerticalVertexCount() ? height - 1 : this.cellSize * i);
-//					} else if (j + 1 == result.getHorizontalVertexCount() - 1) {
-//						result.getVertices()[vertexIndex].setLocation(width - 1, i + 1 == result.getVerticalVertexCount() ? height - 1 : this.cellSize * i);
-//					} else if (i + 1 == result.getVerticalVertexCount() - 1) {
-//						result.getVertices()[vertexIndex].setLocation(j + 1 == result.getHorizontalVertexCount() ? width - 1 : this.cellSize * j, height - 1);
-//					}
-					final int x;
-					final int y;
+			// Right column
+			{
+				final int jj = result.getHorizontalVertexCount() - 1;
+				final int j = this.getHorizontalVertexCount() - 1;
+				
+				for (int ii = 0; ii < result.getVerticalVertexCount(); ii += 2) {
+					final int i = ii / 2;
+					final Point thisVertex = this.getVertex(i, j);
+					final Point thatVertex = result.getVertex(ii, jj);
 					
-					if (i == 0) {
-						y = 0;
-						
-						if (j == 0) {
-							x = 0;
-						} else if (j + 1 == result.getVerticalVertexCount()) {
-							x = width - 1;
-						} else if (isEven(j)) {
-							x = this.getVertices()[0 * this.getHorizontalVertexCount() + j / 2].x * 2;
-						} else {
-							x = this.getVertices()[0 * this.getHorizontalVertexCount() + (j - 1) / 2].x +
-									this.getVertices()[0 * this.getHorizontalVertexCount() + (j + 1) / 2].x;
-						}
-					} else if (i + 1 == result.getVerticalVertexCount()) {
-						y = height - 1;
-//					} else if (isEven(i)) {
-//						y = this.getVertices()[(i / 2) * this.getHorizontalVertexCount() + j / 2].y * 2;
-					}
+					thatVertex.setLocation(
+							width - 1,
+							i + 1 == this.getVerticalVertexCount() ? height - 1 : thisVertex.y * 2);
 					
+					final Point northVertex = 0 < i ? result.getVertex(ii - 2, jj) : null;
 					
-					if (i != 0 && i + 1 != result.getVerticalVertexCount() && isEven(i) && j != 0 && j + 1 != result.getHorizontalVertexCount() && isEven(j)) {
-						final Point thisVertex = this.getVertices()[(i / 2) * this.getHorizontalVertexCount() + j / 2];
-						
-						result.getVertices()[vertexIndex].setLocation(thisVertex.x * 2, thisVertex.y * 2);
-					} else {
-						result.getVertices()[vertexIndex].setLocation(
-								j + 1 == result.getHorizontalVertexCount() ? width - 1 : this.cellSize * j,
-										i + 1 == result.getVerticalVertexCount() ? height - 1 : this.cellSize * i);
+					if (northVertex != null) {
+						result.getVertex(ii - 1, jj).setLocation(
+								(thatVertex.x + northVertex.x) / 2, (thatVertex.y + northVertex.y) / 2);
 					}
 				}
 			}
