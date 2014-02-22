@@ -1,9 +1,11 @@
 package imj2.tools;
 
+import static java.awt.Color.GREEN;
 import static java.awt.Color.RED;
 import static java.awt.Color.YELLOW;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.instances;
@@ -13,6 +15,7 @@ import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.RegionShrinkingTest.AutoMouseAdapter;
 import imj2.tools.RegionShrinkingTest.SimpleImageView;
 
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.event.MouseWheelEvent;
@@ -95,8 +98,8 @@ public final class MultiresolutionSegmentationTest {
 										startingLOD = lod;
 									}
 									
-									g.setColor(RED);
-									g.drawOval((particleX << lod) - lod, (particleY << lod) - lod, diameter, diameter);
+//									g.setColor(RED);
+//									g.drawOval((particleX << lod) - lod, (particleY << lod) - lod, diameter, diameter);
 								}
 							}
 						}
@@ -111,6 +114,21 @@ public final class MultiresolutionSegmentationTest {
 							}
 							
 							if (grid != null) {
+								for (int i = 1; i < grid.getVerticalVertexCount(); ++i) {
+									for (int j = 1; j < grid.getHorizontalVertexCount(); ++j) {
+										final Point northWest = grid.getVertex(i - 1, j - 1);
+										final Point north = grid.getVertex(i - 1, j);
+										final Point west = grid.getVertex(i, j - 1);
+										final Point vertex = grid.getVertex(i, j);
+										
+										g.setColor(GREEN);
+										g.drawLine(northWest.x, northWest.y, north.x, north.y);
+										g.drawLine(north.x, north.y, vertex.x, vertex.y);
+										g.drawLine(vertex.x, vertex.y, west.x, west.y);
+										g.drawLine(west.x, west.y, northWest.x, northWest.y);
+									}
+								}
+								
 								for (final Point vertex : grid.getVertices()) {
 									g.setColor(YELLOW);
 									g.drawOval(vertex.x - 1, vertex.y - 1, 3, 3);
@@ -199,6 +217,8 @@ public final class MultiresolutionSegmentationTest {
 							i + 1 == this.verticalVertexCount ? height - 1 : cellSize * i);
 				}
 			}
+			
+			this.updateVertices(image);
 		}
 		
 		private Grid(final int cellSize, final int horizontalVertexCount, final int verticalVertexCount) {
@@ -309,9 +329,39 @@ public final class MultiresolutionSegmentationTest {
 								(thatVertex.x + northVertex.x) / 2, (thatVertex.y + northVertex.y) / 2);
 					}
 				}
+				
+				// Bottom right vertex
+				result.getVertex(result.getVerticalVertexCount() - 1, result.getHorizontalVertexCount() - 1)
+					.setLocation(width - 1, height - 1);
 			}
 			
-			return result;
+			return result.updateVertices(image);
+		}
+		
+		private final Grid updateVertices(final BufferedImage image) {
+			for (int i = 1; i + 1 < this.getVerticalVertexCount(); ++i) {
+				for (int j = 1; j + 1 < this.getHorizontalVertexCount(); ++j) {
+					final Point vertex = this.getVertex(i, j);
+					final int xStart = max(0, vertex.x - 1);
+					final int xEnd = min(image.getWidth(), xStart + 3);
+					final int yStart = max(0, vertex.y - 1);
+					final int yEnd = min(image.getHeight(), yStart + 3);
+					int maximumGradient = 0;
+					
+					for (int y = yStart; y < yEnd; ++y) {
+						for (int x = xStart; x < xEnd; ++x) {
+							final int gradient = getColorGradient(image, x, y);
+							
+							if (maximumGradient < gradient) {
+								maximumGradient = gradient;
+								vertex.setLocation(x, y);
+							}
+						}
+					}
+				}
+			}
+			
+			return this;
 		}
 		
 		/**
