@@ -17,7 +17,6 @@ import static net.sourceforge.aprog.tools.Tools.invoke;
 
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.RegionShrinkingTest.AutoMouseAdapter;
-import imj2.tools.RegionShrinkingTest.SimpleImageView;
 
 import java.awt.Color;
 import java.awt.Graphics2D;

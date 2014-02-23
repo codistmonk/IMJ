@@ -13,7 +13,6 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.RegionShrinkingTest.AutoMouseAdapter;
-import imj2.tools.RegionShrinkingTest.SimpleImageView;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -74,7 +73,7 @@ public final class MultiresolutionSegmentationTest {
 						for (int y = 0; y < h; ++y) {
 							for (int x = 0; x < w; ++x) {
 								try {
-									component.getBuffer().setRGB(x, y, gray888(getColorGradient(image, x >> lod, y >> lod)));
+									component.getBufferImage().setRGB(x, y, gray888(getColorGradient(image, x >> lod, y >> lod)));
 								} catch (final Exception exception) {
 									debugPrint(x, y, x >> lod, y >> lod, image.getWidth(), image.getHeight());
 									throw unchecked(exception);
