@@ -2,39 +2,20 @@ package imj2.tools;
 
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
-import static net.sourceforge.aprog.swing.SwingTools.getFiles;
-import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import imj2.tools.Image2DComponent.Painter;
 
-import java.awt.BorderLayout;
 import java.awt.Component;
-import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Point;
-import java.awt.dnd.DropTarget;
-import java.awt.dnd.DropTargetAdapter;
-import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-
-import javax.imageio.ImageIO;
-import javax.swing.ImageIcon;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-
-import net.sourceforge.aprog.swing.SwingTools;
 
 import org.junit.Test;
 
@@ -56,7 +37,7 @@ public final class RegionShrinkingTest {
 					final BufferedImage mask = getMask();
 					
 					if (mask != null) {
-						final BufferedImage buffer = imageView.getBuffer();
+						final BufferedImage buffer = imageView.getBufferImage();
 						final int w = buffer.getWidth();
 						final int h = buffer.getHeight();
 						
@@ -79,6 +60,11 @@ public final class RegionShrinkingTest {
 						imageView.getBufferGraphics().drawOval(mouseLocation.x - r, mouseLocation.y - r, d, d);
 					}
 				}
+				
+				/**
+				 * {@value}.
+				 */
+				private static final long serialVersionUID = 2849951641253810303L;
 				
 			};
 			
@@ -234,6 +220,11 @@ public final class RegionShrinkingTest {
 				return this.mask;
 			}
 			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = -3985769750853247131L;
+			
 		};
 		
 		show(imageView, "Simple Image View", true);
@@ -334,103 +325,6 @@ public final class RegionShrinkingTest {
 	/**
 	 * @author codistmonk (creation 2014-01-22)
 	 */
-	public static final class SimpleImageView extends JPanel {
-		
-		private final JLabel imageHolder;
-		
-		private BufferedImage image;
-		
-		private BufferedImage buffer;
-		
-		private Graphics2D bufferGraphics;
-		
-		private final List<Painter<SimpleImageView>> painters;
-		
-		public SimpleImageView() {
-			super(new BorderLayout());
-			this.imageHolder = new JLabel();
-			this.painters = new ArrayList<Painter<SimpleImageView>>();
-			
-			this.setPreferredSize(new Dimension(256, 256));
-			
-			SwingTools.setCheckAWT(false);
-			this.add(scrollable(this.imageHolder), BorderLayout.CENTER);
-			SwingTools.setCheckAWT(true);
-			
-			this.setDropTarget(new DropTarget(this, new DropTargetAdapter() {
-				
-				@Override
-				public final void drop(final DropTargetDropEvent event) {
-					final List<File> files = getFiles(event);
-					
-					try {
-						SimpleImageView.this.setImage(ImageIO.read(files.get(0)));
-					} catch (final IOException exception) {
-						throw unchecked(exception);
-					}
-				}
-				
-			}));
-		}
-		
-		public final JLabel getImageHolder() {
-			return this.imageHolder;
-		}
-		
-		public final BufferedImage getImage() {
-			return this.image;
-		}
-		
-		public final BufferedImage getBuffer() {
-			return this.buffer;
-		}
-		
-		public final Graphics2D getBufferGraphics() {
-			return this.bufferGraphics;
-		}
-		
-		public final void setImage(final BufferedImage image) {
-			this.image = image;
-			this.buffer = new BufferedImage(image.getWidth(), image.getHeight(), image.getType());
-			
-			if (this.getBufferGraphics() != null) {
-				this.getBufferGraphics().dispose();
-			}
-			this.bufferGraphics = this.getBuffer().createGraphics();
-			
-			this.getImageHolder().setIcon(new ImageIcon(this.buffer));
-			
-			this.refreshBuffer();
-		}
-		
-		public final List<Painter<SimpleImageView>> getPainters() {
-			return this.painters;
-		}
-		
-		public final void refreshBuffer() {
-			if (this.getBufferGraphics() == null) {
-				return;
-			}
-			
-			this.getBufferGraphics().drawImage(this.getImage(), 0, 0, null);
-			
-			for (final Painter<SimpleImageView> painter : this.getPainters()) {
-				painter.paint(this.getBufferGraphics(), this, this.getBuffer().getWidth(), this.getBuffer().getHeight());
-			}
-			
-			this.repaint();
-		}
-		
-		/**
-		 * {@value}.
-		 */
-		private static final long serialVersionUID = -7264772728114165458L;
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2014-01-22)
-	 */
 	public static abstract class AutoMouseAdapter extends MouseAdapter implements Serializable {
 		
 		private final Component component;
@@ -453,6 +347,11 @@ public final class RegionShrinkingTest {
 		protected void cleanup() {
 			// NOP
 		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -8003165485002210600L;
 		
 	}
 	

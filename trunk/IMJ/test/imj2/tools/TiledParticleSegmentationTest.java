@@ -1,22 +1,23 @@
 package imj2.tools;
 
 import static imj2.tools.MultiresolutionSegmentationTest.getColorGradient;
+import static java.awt.Color.BLACK;
+import static java.awt.Color.RED;
+import static java.awt.Color.WHITE;
 import static java.lang.Math.min;
 import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.instances;
+
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.RegionShrinkingTest.AutoMouseAdapter;
-import imj2.tools.RegionShrinkingTest.SimpleImageView;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
-import java.util.Arrays;
 
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
-import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -55,7 +56,10 @@ public final class TiledParticleSegmentationTest {
 			
 			private final Painter<SimpleImageView> painter = new Painter<SimpleImageView>() {
 				
+				private final Canvas canvas;
+				
 				{
+					this.canvas = new Canvas();
 					imageView.getPainters().add(this);
 				}
 				
@@ -65,6 +69,10 @@ public final class TiledParticleSegmentationTest {
 					final BufferedImage image = imageView.getImage();
 					final int imageWidth = image.getWidth();
 					final int imageHeight = image.getHeight();
+					
+					this.canvas.setFormat(imageWidth, imageHeight, BufferedImage.TYPE_BYTE_GRAY);
+					this.canvas.clear(BLACK);
+					
 					final int s = getCellSize();
 					final Point[] particles = instances(4, DefaultFactory.forClass(Point.class));
 					final int[] maximumGradients = new int[particles.length];
@@ -75,8 +83,8 @@ public final class TiledParticleSegmentationTest {
 						for (int tileX = 0; tileX < imageWidth; tileX += s) {
 							final int tileLastX = min(imageWidth - 1, tileX + s);
 							
-							particles[NORTH].setLocation((tileX + tileLastX) / 2, tileY);
-							particles[WEST].setLocation(tileX, (tileY + tileLastY) / 2);
+							particles[NORTH].setLocation((tileX + 1 + tileLastX) / 2, tileY);
+							particles[WEST].setLocation(tileX, (tileY + 1 + tileLastY) / 2);
 							particles[EAST].setLocation(tileLastX, particles[WEST].y);
 							particles[SOUTH].setLocation(particles[NORTH].x, tileLastY);
 							
@@ -96,9 +104,24 @@ public final class TiledParticleSegmentationTest {
 										getColorGradient(image, tileLastX, y));
 							}
 							
-							g.setColor(Color.RED);
-							g.drawLine(particles[NORTH].x, particles[NORTH].y, particles[SOUTH].x, particles[SOUTH].y);
-							g.drawLine(particles[WEST].x, particles[WEST].y, particles[EAST].x, particles[EAST].y);
+							this.canvas.getGraphics().setColor(WHITE);
+							this.canvas.getGraphics().drawLine(particles[NORTH].x, particles[NORTH].y, particles[SOUTH].x, particles[SOUTH].y);
+							this.canvas.getGraphics().drawLine(particles[WEST].x, particles[WEST].y, particles[EAST].x, particles[EAST].y);
+						}
+					}
+					
+					for (int y = 0; y < imageHeight; ++y) {
+						for (int x = 0; x < imageWidth; ++x) {
+							if ((this.canvas.getImage().getRGB(x, y) & 0x00FFFFFF) != 0) {
+								imageView.getBufferImage().setRGB(x, y, RED.getRGB());
+							}
+						}
+					}
+					
+					for (int tileY = 0; tileY < imageHeight; tileY += s) {
+						for (int tileX = 0; tileX < imageWidth; tileX += s) {
+							g.setColor(Color.YELLOW);
+							g.drawOval(tileX - 1, tileY - 1, 2, 2);
 						}
 					}
 				}

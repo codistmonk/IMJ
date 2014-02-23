@@ -14,7 +14,6 @@ import javax.swing.ProgressMonitor;
 
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.RegionShrinkingTest.AutoMouseAdapter;
-import imj2.tools.RegionShrinkingTest.SimpleImageView;
 
 import org.junit.Test;
 
@@ -34,7 +33,7 @@ public final class TextureGradientTest {
 				@Override
 				public final void paint(final Graphics2D g, final SimpleImageView component,
 						final int width, final int height) {
-					final BufferedImage buffer = component.getBuffer();
+					final BufferedImage buffer = component.getBufferImage();
 					
 					refreshMask(component.getImage());
 					
