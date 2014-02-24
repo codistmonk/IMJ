@@ -6,13 +6,14 @@ import static java.awt.Color.RED;
 import static java.awt.Color.WHITE;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.swing.SwingTools.show;
-
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.RegionShrinkingTest.AutoMouseAdapter;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+
+import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -70,11 +71,11 @@ public final class TiledParticleSegmentationTest {
 					
 					final int s = getCellSize();
 					
-					for (int tileY = 0; tileY < imageHeight; tileY += s) {
-						final int tileLastY = min(imageHeight - 1, tileY + s);
+					for (int tileY = 0; tileY + 2 < imageHeight; tileY += s) {
+						final int tileLastY = imageHeight <= tileY + s + 2 ? imageHeight - 1 : min(imageHeight - 1, tileY + s);
 						
-						for (int tileX = 0; tileX < imageWidth; tileX += s) {
-							final int tileLastX = min(imageWidth - 1, tileX + s);
+						for (int tileX = 0; tileX + 2 < imageWidth; tileX += s) {
+							final int tileLastX = imageWidth <= tileX + s + 2 ? imageWidth - 1 : min(imageWidth - 1, tileX + s);
 							final int northY = tileY;
 							final int westX = tileX;
 							final int eastX = tileLastX;
