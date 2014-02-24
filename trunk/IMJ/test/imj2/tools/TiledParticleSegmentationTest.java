@@ -4,8 +4,11 @@ import static imj2.tools.MultiresolutionSegmentationTest.getColorGradient;
 import static java.awt.Color.BLACK;
 import static java.awt.Color.RED;
 import static java.awt.Color.WHITE;
+import static java.lang.Math.abs;
 import static java.lang.Math.min;
+import static java.util.Arrays.sort;
 import static net.sourceforge.aprog.swing.SwingTools.show;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import imj.IntList;
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.RegionShrinkingTest.AutoMouseAdapter;
@@ -15,8 +18,12 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import net.sourceforge.aprog.tools.Tools;
@@ -106,62 +113,65 @@ public final class TiledParticleSegmentationTest {
 					}
 					
 					{
+						final Set<Color> colors = new HashSet<Color>();
+						
 						for (int tileY = 0; tileY < imageHeight; tileY += s) {
 							for (int tileX = 0; tileX < imageWidth; tileX += s) {
 								final Color[] color = { Color.YELLOW };
 								
-								new SegmentProcessor() {
-									
-									private int red = 0;
-									
-									private int green = 0;
-									
-									private int blue = 0;
-									
-									@Override
-									protected final void pixel(final int pixel, final int x, final int y) {
-										final int rgb = image.getRGB(x, y);
-										this.red += (rgb >> 16) & 0xFF;
-										this.green += (rgb >> 8) & 0xFF;
-										this.blue += (rgb >> 0) & 0xFF;
-									}
-									
-									@Override
-									protected final void afterPixels() {
-										final int pixelCount = this.getPixelCount();
-										
-										if (0 < pixelCount) {
-											this.red = (this.red / pixelCount) << 16;
-											this.green = (this.green / pixelCount) << 8;
-											this.blue = (this.blue / pixelCount) << 0;
-										}
-										
-										color[0] = new Color(this.red | this.green | this.blue);
-									}
-									
-									/**
-									 * {@value}.
-									 */
-									private static final long serialVersionUID = 8855412064679395641L;
-									
-								}.process(this.segmentation.getImage(), tileX, tileY);
+								new ComputeMeanColor(image, color).process(this.segmentation.getImage(), tileX, tileY);
 								
-								new SegmentProcessor() {
-									
-									@Override
-									protected final void pixel(final int pixel, final int x, final int y) {
-										imageView.getBuffer().getImage().setRGB(x, y, color[0].getRGB());
-									}
-									
-									/**
-									 * {@value}.
-									 */
-									private static final long serialVersionUID = -1650602767179074395L;
-									
-								}.process(this.segmentation.getImage(), tileX, tileY);
-								
+								colors.add(color[0]);
 //								g.setColor(color[0]);
 //								g.drawOval(tileX - 1, tileY - 1, 2, 2);
+							}
+						}
+						
+						{
+							final int colorCount = colors.size();
+							final Color[] sortedColors = colors.toArray(new Color[0]);
+							final int q = 4;
+							final int[] redPrototypes = new int[min(q, colorCount)];
+							final int[] greenPrototypes = redPrototypes.clone();
+							final int[] bluePrototypes = redPrototypes.clone();
+							
+							debugPrint(colorCount);
+							
+							if (q < colorCount) {
+								sort(sortedColors, COLOR_RED_COMPARATOR);
+								computePrototypes(sortedColors, 16, q, redPrototypes);
+								sort(sortedColors, COLOR_GREEN_COMPARATOR);
+								computePrototypes(sortedColors, 8, q, greenPrototypes);
+								sort(sortedColors, COLOR_BLUE_COMPARATOR);
+								computePrototypes(sortedColors, 8, q, bluePrototypes);
+							}
+							
+							debugPrint(Arrays.toString(redPrototypes));
+							debugPrint(Arrays.toString(greenPrototypes));
+							debugPrint(Arrays.toString(bluePrototypes));
+							
+							for (int tileY = 0; tileY < imageHeight; tileY += s) {
+								for (int tileX = 0; tileX < imageWidth; tileX += s) {
+									final Color[] color = { Color.YELLOW };
+									
+									new ComputeMeanColor(image, color).process(this.segmentation.getImage(), tileX, tileY);
+									
+									final int rgb = quantize(color[0], redPrototypes, greenPrototypes, bluePrototypes).getRGB();
+									
+									new SegmentProcessor() {
+										
+										@Override
+										protected final void pixel(final int pixel, final int x, final int y) {
+											imageView.getBuffer().getImage().setRGB(x, y, rgb);
+										}
+										
+										/**
+										 * {@value}.
+										 */
+										private static final long serialVersionUID = -1650602767179074395L;
+										
+									}.process(this.segmentation.getImage(), tileX, tileY);
+								}
 							}
 						}
 					}
@@ -200,6 +210,77 @@ public final class TiledParticleSegmentationTest {
 		show(imageView, this.getClass().getSimpleName(), true);
 	}
 	
+	public static final Color quantize(final Color color,
+			final int[] redPrototypes, final int[] greenPrototypes, final int[] bluePrototypes) {
+		return new Color(
+				getNearestNeighbor(color.getRed(), redPrototypes),
+				getNearestNeighbor(color.getGreen(), greenPrototypes),
+				getNearestNeighbor(color.getBlue(), bluePrototypes));
+	}
+	
+	public static final int getNearestNeighbor(final int value, final int[] prototypes) {
+		int result = value;
+		int nearestDistance = Integer.MAX_VALUE;
+		
+		for (final int prototype : prototypes) {
+			final int distance = abs(value - prototype);
+			
+			if (distance < nearestDistance) {
+				nearestDistance = distance;
+				result = prototype;
+			}
+		}
+		
+		return result;
+	}
+	
+	public static final void computePrototypes(final Color[] sortedColors, final int channelOffset,
+			final int q, final int[] prototypes) {
+		final int colorCount = sortedColors.length;
+		final int chunkSize = (colorCount + q - 1) / q;
+		
+		for (int chunkIndex = 0, prototypeIndex = 0; chunkIndex < colorCount; chunkIndex += chunkSize, ++prototypeIndex) {
+			final int nextChunkIndex = min(chunkIndex + chunkSize, colorCount);
+			
+			for (int colorIndex = chunkIndex; colorIndex < nextChunkIndex; ++colorIndex) {
+				prototypes[prototypeIndex] += (sortedColors[colorIndex].getRGB() >> channelOffset) & 0xFF;
+			}
+			
+			final int actualChunkSize = nextChunkIndex - chunkIndex;
+			
+			if (1 < actualChunkSize) {
+				prototypes[prototypeIndex] /= actualChunkSize;
+			}
+		}
+	}
+	
+	public static final Comparator<Color> COLOR_RED_COMPARATOR = new Comparator<Color>() {
+		
+		@Override
+		public final int compare(final Color color1, final Color color2) {
+			return color1.getRed() - color2.getRed();
+		}
+		
+	};
+	
+	public static final Comparator<Color> COLOR_GREEN_COMPARATOR = new Comparator<Color>() {
+		
+		@Override
+		public final int compare(final Color color1, final Color color2) {
+			return color1.getGreen() - color2.getGreen();
+		}
+		
+	};
+	
+	public static final Comparator<Color> COLOR_BLUE_COMPARATOR = new Comparator<Color>() {
+		
+		@Override
+		public final int compare(final Color color1, final Color color2) {
+			return color1.getBlue() - color2.getBlue();
+		}
+		
+	};
+	
 	public static final int findMaximumGradientX(final BufferedImage image, final int y, final int firstX, final int lastX) {
 		int maximumGradient = 0;
 		int result = (firstX + lastX) / 2;
@@ -232,6 +313,54 @@ public final class TiledParticleSegmentationTest {
 		return result;
 	}
 	
+	/**
+	 * @author codistmonk (creation 2014-02-24)
+	 */
+	public static final class ComputeMeanColor extends SegmentProcessor {
+		
+		private final BufferedImage image;
+		
+		private final Color[] color;
+		
+		private int red = 0;
+		
+		private int green = 0;
+		
+		private int blue = 0;
+		
+		public ComputeMeanColor(final BufferedImage image, final Color[] color) {
+			this.image = image;
+			this.color = color;
+		}
+		
+		@Override
+		protected final void pixel(final int pixel, final int x, final int y) {
+			final int rgb = this.image.getRGB(x, y);
+			this.red += (rgb >> 16) & 0xFF;
+			this.green += (rgb >> 8) & 0xFF;
+			this.blue += (rgb >> 0) & 0xFF;
+		}
+		
+		@Override
+		protected final void afterPixels() {
+			final int pixelCount = this.getPixelCount();
+			
+			if (0 < pixelCount) {
+				this.red = (this.red / pixelCount) << 16;
+				this.green = (this.green / pixelCount) << 8;
+				this.blue = (this.blue / pixelCount) << 0;
+			}
+			
+			this.color[0] = new Color(this.red | this.green | this.blue);
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 8855412064679395641L;
+		
+	}
+
 	/**
 	 * @author codistmonk (creation 2014-02-24)
 	 */
