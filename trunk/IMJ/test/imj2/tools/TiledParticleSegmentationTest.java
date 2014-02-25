@@ -18,11 +18,13 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -57,6 +59,14 @@ public final class TiledParticleSegmentationTest {
 	
 	@Test
 	public final void test() {
+		final int quantizationAlgorithm = 1;
+		final boolean fillSegments = false;
+		final Color regionSeparationColor = Color.GREEN;
+		final Color segmentSeparationColor = null;
+		final Color segmentLocatorColor = null;
+		final int algo0Q = 6;
+		final int algo1Q = 2;
+		
 		final SimpleImageView imageView = new SimpleImageView();
 		
 		new AutoMouseAdapter(imageView.getImageHolder()) {
@@ -104,65 +114,125 @@ public final class TiledParticleSegmentationTest {
 						}
 					}
 					
-					for (int y = 0; y < imageHeight; ++y) {
-						for (int x = 0; x < imageWidth; ++x) {
-							if ((this.segmentation.getImage().getRGB(x, y) & 0x00FFFFFF) != 0) {
-								imageView.getBufferImage().setRGB(x, y, RED.getRGB());
+					final BufferedImage segmentationMask = this.segmentation.getImage();
+					
+					if (segmentSeparationColor != null) {
+						for (int y = 0; y < imageHeight; ++y) {
+							for (int x = 0; x < imageWidth; ++x) {
+								if ((segmentationMask.getRGB(x, y) & 0x00FFFFFF) != 0) {
+									imageView.getBufferImage().setRGB(x, y, segmentSeparationColor.getRGB());
+								}
 							}
 						}
 					}
 					
 					{
-						final Set<Color> colors = new HashSet<Color>();
+						final int horizontalTileCount = (imageWidth + s - 1) / s;
+						final int verticalTileCount = (imageHeight + s - 1) / s;
+						final List<Color> colors = new ArrayList<Color>(horizontalTileCount * verticalTileCount);
 						
 						for (int tileY = 0; tileY < imageHeight; tileY += s) {
 							for (int tileX = 0; tileX < imageWidth; tileX += s) {
 								final Color[] color = { Color.YELLOW };
 								
-								new ComputeMeanColor(image, color).process(this.segmentation.getImage(), tileX, tileY);
+								new ComputeMeanColor(image, color).process(segmentationMask, tileX, tileY);
 								
 								colors.add(color[0]);
-//								g.setColor(color[0]);
-//								g.drawOval(tileX - 1, tileY - 1, 2, 2);
 							}
 						}
+						
+						debugPrint(colors.size(), horizontalTileCount, verticalTileCount);
 						
 						{
 							final int colorCount = colors.size();
 							final Color[] sortedColors = colors.toArray(new Color[0]);
-							final int q = 4;
-							final int[] redPrototypes = new int[min(q, colorCount)];
+							final int[] redPrototypes = new int[min(algo1Q, colorCount)];
 							final int[] greenPrototypes = redPrototypes.clone();
 							final int[] bluePrototypes = redPrototypes.clone();
 							
 							debugPrint(colorCount);
 							
-							if (q < colorCount) {
+							if (algo1Q < colorCount) {
 								sort(sortedColors, COLOR_RED_COMPARATOR);
-								computePrototypes(sortedColors, 16, q, redPrototypes);
+								computePrototypes(sortedColors, 16, algo1Q, redPrototypes);
 								sort(sortedColors, COLOR_GREEN_COMPARATOR);
-								computePrototypes(sortedColors, 8, q, greenPrototypes);
+								computePrototypes(sortedColors, 8, algo1Q, greenPrototypes);
 								sort(sortedColors, COLOR_BLUE_COMPARATOR);
-								computePrototypes(sortedColors, 8, q, bluePrototypes);
+								computePrototypes(sortedColors, 8, algo1Q, bluePrototypes);
 							}
 							
 							debugPrint(Arrays.toString(redPrototypes));
 							debugPrint(Arrays.toString(greenPrototypes));
 							debugPrint(Arrays.toString(bluePrototypes));
 							
-							for (int tileY = 0; tileY < imageHeight; tileY += s) {
-								for (int tileX = 0; tileX < imageWidth; tileX += s) {
-									final Color[] color = { Color.YELLOW };
-									
-									new ComputeMeanColor(image, color).process(this.segmentation.getImage(), tileX, tileY);
-									
-									final int rgb = quantize(color[0], redPrototypes, greenPrototypes, bluePrototypes).getRGB();
+							final List<Color> quantizedColors = new ArrayList<Color>(colorCount);
+							final Set<Color> uniqueQuantizedColors = new HashSet<Color>();
+							
+							for (final Color color : colors) {
+								final Color quantizedColor;
+								
+								if (quantizationAlgorithm == 0) {
+									quantizedColor = quantize(color, algo0Q);
+								} else {
+									quantizedColor = quantize(color, redPrototypes, greenPrototypes, bluePrototypes);
+								}
+								
+								quantizedColors.add(quantizedColor);
+								uniqueQuantizedColors.add(quantizedColor);
+							}
+							
+							final BufferedImage labels = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
+							
+							for (int tileY = s, tileRowIndex = tileY / s; tileY < imageHeight; tileY += s, ++tileRowIndex) {
+								for (int tileX = s, tileColumnIndex = tileX / s; tileX < imageWidth; tileX += s, ++tileColumnIndex) {
+									final int tileIndex = tileRowIndex * horizontalTileCount + tileColumnIndex;
+									final int rgb = quantizedColors.get(tileIndex).getRGB();
 									
 									new SegmentProcessor() {
 										
 										@Override
 										protected final void pixel(final int pixel, final int x, final int y) {
-											imageView.getBuffer().getImage().setRGB(x, y, rgb);
+											labels.setRGB(x, y, rgb);
+										}
+										
+										/**
+										 * {@value}.
+										 */
+										private static final long serialVersionUID = 3483091181451079097L;
+										
+									}.process(segmentationMask, tileX, tileY);
+								}
+							}
+							
+							for (int tileY = 0; tileY < imageHeight; tileY += s) {
+								for (int tileX = 0; tileX < imageWidth; tileX += s) {
+									final int rgb = labels.getRGB(tileX, tileY);
+									
+									new SegmentProcessor() {
+										
+										@Override
+										protected final void pixel(final int pixel, final int x, final int y) {
+											if (regionSeparationColor != null) {
+												if (2 < y && (segmentationMask.getRGB(x, y - 1) & 0x00FFFFFF) != 0) {
+													final int neighbor = labels.getRGB(x, y - 2);
+													
+													if ((neighbor & 0x00FFFFFF) != 0 && neighbor != rgb) {
+														imageView.getBuffer().getImage().setRGB(x, y - 1, regionSeparationColor.getRGB());
+													}
+												}
+												
+												if (2 < x && (segmentationMask.getRGB(x - 1, y) & 0x00FFFFFF) != 0) {
+													final int neighbor = labels.getRGB(x - 2, y);
+													
+													if ((neighbor & 0x00FFFFFF) != 0 && neighbor != rgb) {
+														imageView.getBuffer().getImage().setRGB(x - 1, y, regionSeparationColor.getRGB());
+													}
+												}
+											}
+											
+											if (fillSegments) {
+												imageView.getBuffer().getImage().setRGB(x, y, rgb);
+											}
 										}
 										
 										/**
@@ -170,18 +240,18 @@ public final class TiledParticleSegmentationTest {
 										 */
 										private static final long serialVersionUID = -1650602767179074395L;
 										
-									}.process(this.segmentation.getImage(), tileX, tileY);
+									}.process(segmentationMask, tileX, tileY);
+									
+									if (segmentLocatorColor != null) {
+										g.setColor(segmentLocatorColor);
+										g.drawOval(tileX - 1, tileY - 1, 2, 2);
+									}
 								}
 							}
+							
+							debugPrint(uniqueQuantizedColors.size(), uniqueQuantizedColors);
 						}
 					}
-					
-//					for (int tileY = 0; tileY < imageHeight; tileY += s) {
-//						for (int tileX = 0; tileX < imageWidth; tileX += s) {
-//							g.setColor(Color.YELLOW);
-//							g.drawOval(tileX - 1, tileY - 1, 2, 2);
-//						}
-//					}
 				}
 				
 				/**
@@ -210,6 +280,12 @@ public final class TiledParticleSegmentationTest {
 		show(imageView, this.getClass().getSimpleName(), true);
 	}
 	
+	public static final Color quantize(final Color color, final int q) {
+		final int quantizationMask = ((((~0) << q) & 0xFF) * 0x00010101) | 0xFF000000;
+		
+		return new Color(color.getRGB() & quantizationMask);
+	}
+		
 	public static final Color quantize(final Color color,
 			final int[] redPrototypes, final int[] greenPrototypes, final int[] bluePrototypes) {
 		return new Color(
