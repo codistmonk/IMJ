@@ -1,6 +1,7 @@
 package imj2.tools;
 
 import static imj2.tools.MultiresolutionSegmentationTest.getColorGradient;
+import static imj2.tools.TiledParticleSegmentationTest.XYW.xyw;
 import static java.awt.Color.BLACK;
 import static java.awt.Color.RED;
 import static java.awt.Color.WHITE;
@@ -71,7 +72,7 @@ public final class TiledParticleSegmentationTest {
 		
 		new AutoMouseAdapter(imageView.getImageHolder()) {
 			
-			private int cellSize = 8;
+			private int cellSize = 4;
 			
 			private final Painter<SimpleImageView> painter = new Painter<SimpleImageView>() {
 				
@@ -93,6 +94,11 @@ public final class TiledParticleSegmentationTest {
 					this.segmentation.clear(BLACK);
 					
 					final int s = getCellSize();
+					final int horizontalTileCount = (imageWidth + s - 1) / s;
+					final int verticalTileCount = (imageHeight + s - 1) / s;
+					
+					final int[] northXs = new int[horizontalTileCount * verticalTileCount];
+					final int[] westYs = new int[horizontalTileCount * verticalTileCount];
 					
 					for (int tileY = 0; tileY + 2 < imageHeight; tileY += s) {
 						final int tileLastY = imageHeight <= tileY + s + 2 ? imageHeight - 1 : min(imageHeight - 1, tileY + s);
@@ -107,6 +113,11 @@ public final class TiledParticleSegmentationTest {
 							final int westY = findMaximumGradientY(image, westX, northY + 1, southY - 1);
 							final int eastY = findMaximumGradientY(image, eastX, northY + 1, southY - 1);
 							final int southX = findMaximumGradientX(image, southY, westX + 1, eastX - 1);
+							final int tileIndex = tileY / s * horizontalTileCount + tileX / s;
+							northXs[tileIndex] = northX;
+							northXs[tileIndex + horizontalTileCount] = southX;
+							westYs[tileIndex] = westY;
+							westYs[tileIndex + 1] = eastY;
 							
 							this.segmentation.getGraphics().setColor(WHITE);
 							this.segmentation.getGraphics().drawLine(northX, northY, southX, southY);
@@ -127,8 +138,6 @@ public final class TiledParticleSegmentationTest {
 					}
 					
 					{
-						final int horizontalTileCount = (imageWidth + s - 1) / s;
-						final int verticalTileCount = (imageHeight + s - 1) / s;
 						final List<Color> colors = new ArrayList<Color>(horizontalTileCount * verticalTileCount);
 						
 						for (int tileY = 0; tileY < imageHeight; tileY += s) {
@@ -204,47 +213,65 @@ public final class TiledParticleSegmentationTest {
 								}
 							}
 							
-							for (int tileY = 0; tileY < imageHeight; tileY += s) {
-								for (int tileX = 0; tileX < imageWidth; tileX += s) {
+							for (int tileY = 0; tileY + 2 < imageHeight; tileY += s) {
+								final int tileLastY = imageHeight <= tileY + s + 2 ? imageHeight - 1 : min(imageHeight - 1, tileY + s);
+								
+								for (int tileX = 0; tileX + 2 < imageWidth; tileX += s) {
+									final int tileLastX = imageWidth <= tileX + s + 2 ? imageWidth - 1 : min(imageWidth - 1, tileX + s);
 									final int rgb = labels.getRGB(tileX, tileY);
 									
-									new SegmentProcessor() {
-										
-										@Override
-										protected final void pixel(final int pixel, final int x, final int y) {
-											if (regionSeparationColor != null) {
-												if (2 < y && (segmentationMask.getRGB(x, y - 1) & 0x00FFFFFF) != 0) {
-													final int neighbor = labels.getRGB(x, y - 2);
-													
-													if ((neighbor & 0x00FFFFFF) != 0 && neighbor != rgb) {
-														imageView.getBuffer().getImage().setRGB(x, y - 1, regionSeparationColor.getRGB());
-													}
-												}
-												
-												if (2 < x && (segmentationMask.getRGB(x - 1, y) & 0x00FFFFFF) != 0) {
-													final int neighbor = labels.getRGB(x - 2, y);
-													
-													if ((neighbor & 0x00FFFFFF) != 0 && neighbor != rgb) {
-														imageView.getBuffer().getImage().setRGB(x - 1, y, regionSeparationColor.getRGB());
-													}
-												}
+									if (fillSegments) {
+										new SegmentProcessor() {
+											
+											@Override
+											protected final void pixel(final int pixel, final int x, final int y) {
+													imageView.getBuffer().getImage().setRGB(x, y, rgb);
 											}
 											
-											if (fillSegments) {
-												imageView.getBuffer().getImage().setRGB(x, y, rgb);
-											}
-										}
-										
-										/**
-										 * {@value}.
-										 */
-										private static final long serialVersionUID = -1650602767179074395L;
-										
-									}.process(segmentationMask, tileX, tileY);
+											/**
+											 * {@value}.
+											 */
+											private static final long serialVersionUID = -1650602767179074395L;
+											
+										}.process(segmentationMask, tileX, tileY);
+									}
 									
 									if (segmentLocatorColor != null) {
 										g.setColor(segmentLocatorColor);
 										g.drawOval(tileX - 1, tileY - 1, 2, 2);
+									}
+									
+									if (regionSeparationColor != null) {
+										final int northY = tileY;
+										final int westX = tileX;
+										final int eastX = tileLastX;
+										final int southY = tileLastY;
+										final int tileIndex = tileY / s * horizontalTileCount + tileX / s;
+										final int northX = northXs[tileIndex];
+										final int westY = westYs[tileIndex];
+										final int southX = northXs[tileIndex + horizontalTileCount];
+										final int eastY = westYs[tileIndex + 1];
+										final XYW intersection = intersection(xyw(northX, northY), xyw(southX, southY), xyw(westX, westY), xyw(eastX, eastY));
+										final int intersectionX = intersection.getUnscaledX();
+										final int intersectionY = intersection.getUnscaledY();
+										
+										g.setColor(regionSeparationColor);
+										
+										if (rgb != labels.getRGB(tileLastX, tileY)) {
+											g.drawLine(northX, northY, intersectionX, intersectionY);
+										}
+										
+										if (rgb != labels.getRGB(tileX, tileLastY)) {
+											g.drawLine(westX, westY, intersectionX, intersectionY);
+										}
+										
+										if (labels.getRGB(tileX, tileLastY) != labels.getRGB(tileLastX, tileLastY)) {
+											g.drawLine(intersectionX, intersectionY, southX, southY);
+										}
+										
+										if (labels.getRGB(tileLastX, tileY) != labels.getRGB(tileLastX, tileLastY)) {
+											g.drawLine(intersectionX, intersectionY, eastX, eastY);
+										}
 									}
 								}
 							}
@@ -278,6 +305,18 @@ public final class TiledParticleSegmentationTest {
 		};
 		
 		show(imageView, this.getClass().getSimpleName(), true);
+	}
+	
+	public static final XYW intersection(final XYW line1Point1, final XYW line1Point2, final XYW line2Point1, final XYW line2Point2) {
+		final XYW line1 = line1Point1.cross(line1Point2);
+		final XYW line2 = line2Point1.cross(line2Point2);
+		
+		assert line1.dot(line1Point1) == 0;
+		assert line1.dot(line1Point2) == 0;
+		assert line2.dot(line2Point1) == 0;
+		assert line2.dot(line2Point2) == 0;
+		
+		return line1.cross(line2);
 	}
 	
 	public static final Color quantize(final Color color, final int q) {
@@ -505,6 +544,74 @@ public final class TiledParticleSegmentationTest {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -5860299062780405885L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-02-25)
+	 */
+	public static final class XYW implements Serializable {
+		
+		private final int x;
+		
+		private final int y;
+		
+		private final int w;
+		
+		public XYW(final int x, final int y, final int w) {
+			this.x = x;
+			this.y = y;
+			this.w = w;
+		}
+		
+		public final int getX() {
+			return this.x;
+		}
+		
+		public final int getY() {
+			return this.y;
+		}
+		
+		public final int getW() {
+			return this.w;
+		}
+		
+		public final int getUnscaledX() {
+			return this.getX() / this.getW();
+		}
+		
+		public final int getUnscaledY() {
+			return this.getY() / this.getW();
+		}
+		
+		public final int dot(final XYW that) {
+			return this.getX() * that.getX() + this.getY() * that.getY() + this.getW() * that.getW();
+		}
+		
+		public final XYW cross(final XYW that) {
+			return new XYW(
+					det(this.getY(), this.getW(), that.getY(), that.getW()),
+					det(this.getW(), this.getX(), that.getW(), that.getX()),
+					det(this.getX(), this.getY(), that.getX(), that.getY()));
+		}
+		
+		@Override
+		public final String toString() {
+			return "[" + this.getX() + " " + this.getY() + " " + this.getW() + "]";
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -3326572044424114312L;
+		
+		public static final int det(final int a, final int b, final int c, final int d) {
+			return a * d - b * c;
+		}
+		
+		public static final XYW xyw(final int x, final int y) {
+			return new XYW(x, y, 1);
+		}
 		
 	}
 	
