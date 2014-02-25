@@ -8,6 +8,7 @@ import static java.awt.Color.WHITE;
 import static java.lang.Math.abs;
 import static java.lang.Math.min;
 import static java.util.Arrays.sort;
+import static java.util.Collections.nCopies;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import imj.IntList;
@@ -22,6 +23,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -72,7 +74,7 @@ public final class TiledParticleSegmentationTest {
 		
 		new AutoMouseAdapter(imageView.getImageHolder()) {
 			
-			private int cellSize = 4;
+			private int cellSize = 7;
 			
 			private final Painter<SimpleImageView> painter = new Painter<SimpleImageView>() {
 				
@@ -94,8 +96,8 @@ public final class TiledParticleSegmentationTest {
 					this.segmentation.clear(BLACK);
 					
 					final int s = getCellSize();
-					final int horizontalTileCount = (imageWidth + s - 1) / s;
-					final int verticalTileCount = (imageHeight + s - 1) / s;
+					final int horizontalTileCount = (imageWidth + s - 1) / s + 1;
+					final int verticalTileCount = (imageHeight + s - 1) / s + 1;
 					
 					final int[] northXs = new int[horizontalTileCount * verticalTileCount];
 					final int[] westYs = new int[horizontalTileCount * verticalTileCount];
@@ -138,7 +140,7 @@ public final class TiledParticleSegmentationTest {
 					}
 					
 					{
-						final List<Color> colors = new ArrayList<Color>(horizontalTileCount * verticalTileCount);
+						final List<Color> colors = new ArrayList<Color>(nCopies(horizontalTileCount * verticalTileCount, Color.BLACK));
 						
 						for (int tileY = 0; tileY < imageHeight; tileY += s) {
 							for (int tileX = 0; tileX < imageWidth; tileX += s) {
@@ -146,7 +148,7 @@ public final class TiledParticleSegmentationTest {
 								
 								new ComputeMeanColor(image, color).process(segmentationMask, tileX, tileY);
 								
-								colors.add(color[0]);
+								colors.set(tileY / s * horizontalTileCount + tileX / s , color[0]);
 							}
 						}
 						
