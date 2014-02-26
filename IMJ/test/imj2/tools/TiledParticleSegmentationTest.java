@@ -71,7 +71,7 @@ public final class TiledParticleSegmentationTest {
 		final Color segmentSeparationColor = null;
 		final Color segmentLocatorColor = null;
 		final int algo0Q = 6;
-		final int algo1Q = 3;
+		final int algo1Q = 2;
 		
 		final SimpleImageView imageView = new SimpleImageView();
 		
@@ -136,20 +136,6 @@ public final class TiledParticleSegmentationTest {
 					debugPrint("Segmenting done in", timer.toc(), "ms");
 					
 					final BufferedImage segmentationMask = this.segmentation.getImage();
-					
-					if (segmentSeparationColor != null) {
-						debugPrint("Filling segments started", new Date(timer.tic()));
-						
-						for (int y = 0; y < imageHeight; ++y) {
-							for (int x = 0; x < imageWidth; ++x) {
-								if ((segmentationMask.getRGB(x, y) & 0x00FFFFFF) != 0) {
-									imageView.getBufferImage().setRGB(x, y, segmentSeparationColor.getRGB());
-								}
-							}
-						}
-						
-						debugPrint("Filling segments done in", timer.toc(), "ms");
-					}
 					
 					{
 						debugPrint("Computing descriptors...", new Date(timer.tic()));
@@ -219,26 +205,13 @@ public final class TiledParticleSegmentationTest {
 							
 							debugPrint("Labeling...", new Date(timer.tic()));
 							
-							final int[] labels = new int[imageWidth * imageHeight];
+							final int[] labels = new int[horizontalTileCount * verticalTileCount];
 							
 							for (int tileY = s, tileRowIndex = tileY / s; tileY < imageHeight; tileY += s, ++tileRowIndex) {
 								for (int tileX = s, tileColumnIndex = tileX / s; tileX < imageWidth; tileX += s, ++tileColumnIndex) {
 									final int tileIndex = tileRowIndex * horizontalTileCount + tileColumnIndex;
 									final int rgb = quantizedColors.get(tileIndex).getRGB();
-									
-									new SegmentProcessor() {
-										
-										@Override
-										protected final void pixel(final int pixel, final int x, final int y) {
-											labels[pixel] = rgb;
-										}
-										
-										/**
-										 * {@value}.
-										 */
-										private static final long serialVersionUID = 3483091181451079097L;
-										
-									}.process(segmentationMask, tileX, tileY);
+									labels[tileIndex] = rgb;
 								}
 							}
 							
@@ -246,19 +219,34 @@ public final class TiledParticleSegmentationTest {
 							
 							debugPrint("Computing visualization...", new Date(timer.tic()));
 							
+							if (segmentSeparationColor != null) {
+								debugPrint("Outlining segments...", new Date(timer.tic()));
+								
+								for (int y = 0; y < imageHeight; ++y) {
+									for (int x = 0; x < imageWidth; ++x) {
+										if ((segmentationMask.getRGB(x, y) & 0x00FFFFFF) != 0) {
+											imageView.getBufferImage().setRGB(x, y, segmentSeparationColor.getRGB());
+										}
+									}
+								}
+								
+								debugPrint("Outlining segments done in", timer.toc(), "ms");
+							}
+							
 							for (int tileY = 0; tileY + 2 < imageHeight; tileY += s) {
 								final int tileLastY = imageHeight <= tileY + s + 2 ? imageHeight - 1 : min(imageHeight - 1, tileY + s);
 								
 								for (int tileX = 0; tileX + 2 < imageWidth; tileX += s) {
 									final int tileLastX = imageWidth <= tileX + s + 2 ? imageWidth - 1 : min(imageWidth - 1, tileX + s);
-									final int rgb = labels[tileY * imageWidth + tileX];
+									final int tileIndex = tileY / s * horizontalTileCount + tileX / s;
+									final int rgb = labels[tileIndex];
 									
 									if (fillSegments) {
 										new SegmentProcessor() {
 											
 											@Override
 											protected final void pixel(final int pixel, final int x, final int y) {
-													imageView.getBuffer().getImage().setRGB(x, y, rgb);
+												imageView.getBuffer().getImage().setRGB(x, y, rgb);
 											}
 											
 											/**
@@ -279,7 +267,6 @@ public final class TiledParticleSegmentationTest {
 										final int westX = tileX;
 										final int eastX = tileLastX;
 										final int southY = tileLastY;
-										final int tileIndex = tileY / s * horizontalTileCount + tileX / s;
 										final int northX = northXs[tileIndex];
 										final int westY = westYs[tileIndex];
 										final int southX = northXs[tileIndex + horizontalTileCount];
@@ -290,19 +277,19 @@ public final class TiledParticleSegmentationTest {
 										
 										g.setColor(regionSeparationColor);
 										
-										if (rgb != labels[tileLastX + imageWidth * tileY]) {
+										if (rgb != labels[tileIndex + 1]) {
 											g.drawLine(northX, northY, intersectionX, intersectionY);
 										}
 										
-										if (rgb != labels[tileX + imageWidth * tileLastY]) {
+										if (rgb != labels[tileIndex + horizontalTileCount]) {
 											g.drawLine(westX, westY, intersectionX, intersectionY);
 										}
 										
-										if (labels[tileX + imageWidth * tileLastY] != labels[tileLastX + imageWidth * tileLastY]) {
+										if (labels[tileIndex + horizontalTileCount] != labels[tileIndex + horizontalTileCount + 1]) {
 											g.drawLine(intersectionX, intersectionY, southX, southY);
 										}
 										
-										if (labels[tileLastX + imageWidth * tileY] != labels[tileLastX + imageWidth * tileLastY]) {
+										if (labels[tileIndex + 1] != labels[tileIndex + horizontalTileCount + 1]) {
 											g.drawLine(intersectionX, intersectionY, eastX, eastY);
 										}
 									}
