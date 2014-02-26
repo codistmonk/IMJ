@@ -3,35 +3,38 @@ package imj2.tools;
 import static imj2.tools.MultiresolutionSegmentationTest.getColorGradient;
 import static imj2.tools.TiledParticleSegmentationTest.XYW.xyw;
 import static java.awt.Color.BLACK;
-import static java.awt.Color.RED;
 import static java.awt.Color.WHITE;
 import static java.lang.Math.abs;
 import static java.lang.Math.min;
+import static java.lang.Thread.currentThread;
 import static java.util.Arrays.sort;
 import static java.util.Collections.nCopies;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.getOrCreate;
+
 import imj.IntList;
+
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.RegionShrinkingTest.AutoMouseAdapter;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
-import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.WeakHashMap;
 
-import net.sourceforge.aprog.tools.Tools;
+import net.sourceforge.aprog.tools.Factory.DefaultFactory;
+import net.sourceforge.aprog.tools.TicToc;
 
 import org.junit.Test;
 
@@ -68,7 +71,7 @@ public final class TiledParticleSegmentationTest {
 		final Color segmentSeparationColor = null;
 		final Color segmentLocatorColor = null;
 		final int algo0Q = 6;
-		final int algo1Q = 2;
+		final int algo1Q = 3;
 		
 		final SimpleImageView imageView = new SimpleImageView();
 		
@@ -88,6 +91,7 @@ public final class TiledParticleSegmentationTest {
 				@Override
 				public final void paint(final Graphics2D g, final SimpleImageView component,
 						final int width, final int height) {
+					final TicToc timer = new TicToc();
 					final BufferedImage image = imageView.getImage();
 					final int imageWidth = image.getWidth();
 					final int imageHeight = image.getHeight();
@@ -101,6 +105,8 @@ public final class TiledParticleSegmentationTest {
 					
 					final int[] northXs = new int[horizontalTileCount * verticalTileCount];
 					final int[] westYs = new int[horizontalTileCount * verticalTileCount];
+					
+					debugPrint("Segmenting...", new Date(timer.tic()));
 					
 					for (int tileY = 0; tileY + 2 < imageHeight; tileY += s) {
 						final int tileLastY = imageHeight <= tileY + s + 2 ? imageHeight - 1 : min(imageHeight - 1, tileY + s);
@@ -127,9 +133,13 @@ public final class TiledParticleSegmentationTest {
 						}
 					}
 					
+					debugPrint("Segmenting done in", timer.toc(), "ms");
+					
 					final BufferedImage segmentationMask = this.segmentation.getImage();
 					
 					if (segmentSeparationColor != null) {
+						debugPrint("Filling segments started", new Date(timer.tic()));
+						
 						for (int y = 0; y < imageHeight; ++y) {
 							for (int x = 0; x < imageWidth; ++x) {
 								if ((segmentationMask.getRGB(x, y) & 0x00FFFFFF) != 0) {
@@ -137,9 +147,13 @@ public final class TiledParticleSegmentationTest {
 								}
 							}
 						}
+						
+						debugPrint("Filling segments done in", timer.toc(), "ms");
 					}
 					
 					{
+						debugPrint("Computing descriptors...", new Date(timer.tic()));
+						
 						final List<Color> colors = new ArrayList<Color>(nCopies(horizontalTileCount * verticalTileCount, Color.BLACK));
 						
 						for (int tileY = 0; tileY < imageHeight; tileY += s) {
@@ -152,29 +166,36 @@ public final class TiledParticleSegmentationTest {
 							}
 						}
 						
-						debugPrint(colors.size(), horizontalTileCount, verticalTileCount);
+						debugPrint("Computing descriptors done in", timer.toc(), "ms");
+						debugPrint("tileCount:", colors.size(), "horizontalTileCount:", horizontalTileCount, "verticalTileCount:", verticalTileCount);
 						
 						{
-							final int colorCount = colors.size();
-							final Color[] sortedColors = colors.toArray(new Color[0]);
+							final Color[] sortedColors = new HashSet<Color>(colors).toArray(new Color[0]);
+							final int colorCount = sortedColors.length;
 							final int[] redPrototypes = new int[min(algo1Q, colorCount)];
 							final int[] greenPrototypes = redPrototypes.clone();
 							final int[] bluePrototypes = redPrototypes.clone();
 							
-							debugPrint(colorCount);
-							
-							if (algo1Q < colorCount) {
-								sort(sortedColors, COLOR_RED_COMPARATOR);
-								computePrototypes(sortedColors, 16, algo1Q, redPrototypes);
-								sort(sortedColors, COLOR_GREEN_COMPARATOR);
-								computePrototypes(sortedColors, 8, algo1Q, greenPrototypes);
-								sort(sortedColors, COLOR_BLUE_COMPARATOR);
-								computePrototypes(sortedColors, 8, algo1Q, bluePrototypes);
+							if (quantizationAlgorithm == 1) {
+								debugPrint("Clustering descriptors...", new Date(timer.tic()));
+								
+								if (algo1Q < colorCount) {
+									sort(sortedColors, COLOR_RED_COMPARATOR);
+									computePrototypes(sortedColors, 16, algo1Q, redPrototypes);
+									sort(sortedColors, COLOR_GREEN_COMPARATOR);
+									computePrototypes(sortedColors, 8, algo1Q, greenPrototypes);
+									sort(sortedColors, COLOR_BLUE_COMPARATOR);
+									computePrototypes(sortedColors, 8, algo1Q, bluePrototypes);
+								}
+								
+								debugPrint(Arrays.toString(redPrototypes));
+								debugPrint(Arrays.toString(greenPrototypes));
+								debugPrint(Arrays.toString(bluePrototypes));
+								
+								debugPrint("Clustering descriptors done in", timer.toc(), "ms");
 							}
 							
-							debugPrint(Arrays.toString(redPrototypes));
-							debugPrint(Arrays.toString(greenPrototypes));
-							debugPrint(Arrays.toString(bluePrototypes));
+							debugPrint("Quantizing descriptors...", new Date(timer.tic()));
 							
 							final List<Color> quantizedColors = new ArrayList<Color>(colorCount);
 							final Set<Color> uniqueQuantizedColors = new HashSet<Color>();
@@ -192,7 +213,13 @@ public final class TiledParticleSegmentationTest {
 								uniqueQuantizedColors.add(quantizedColor);
 							}
 							
-							final BufferedImage labels = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
+							debugPrint("Quantizing descriptors done in", timer.toc(), "ms");
+							
+							debugPrint("uniqueQuantizedColorCount:", uniqueQuantizedColors.size(), "uniqueQuantizedColors:", uniqueQuantizedColors);
+							
+							debugPrint("Labeling...", new Date(timer.tic()));
+							
+							final int[] labels = new int[imageWidth * imageHeight];
 							
 							for (int tileY = s, tileRowIndex = tileY / s; tileY < imageHeight; tileY += s, ++tileRowIndex) {
 								for (int tileX = s, tileColumnIndex = tileX / s; tileX < imageWidth; tileX += s, ++tileColumnIndex) {
@@ -203,7 +230,7 @@ public final class TiledParticleSegmentationTest {
 										
 										@Override
 										protected final void pixel(final int pixel, final int x, final int y) {
-											labels.setRGB(x, y, rgb);
+											labels[pixel] = rgb;
 										}
 										
 										/**
@@ -215,12 +242,16 @@ public final class TiledParticleSegmentationTest {
 								}
 							}
 							
+							debugPrint("Labeling done in", timer.toc(), "ms");
+							
+							debugPrint("Computing visualization...", new Date(timer.tic()));
+							
 							for (int tileY = 0; tileY + 2 < imageHeight; tileY += s) {
 								final int tileLastY = imageHeight <= tileY + s + 2 ? imageHeight - 1 : min(imageHeight - 1, tileY + s);
 								
 								for (int tileX = 0; tileX + 2 < imageWidth; tileX += s) {
 									final int tileLastX = imageWidth <= tileX + s + 2 ? imageWidth - 1 : min(imageWidth - 1, tileX + s);
-									final int rgb = labels.getRGB(tileX, tileY);
+									final int rgb = labels[tileY * imageWidth + tileX];
 									
 									if (fillSegments) {
 										new SegmentProcessor() {
@@ -259,26 +290,27 @@ public final class TiledParticleSegmentationTest {
 										
 										g.setColor(regionSeparationColor);
 										
-										if (rgb != labels.getRGB(tileLastX, tileY)) {
+										if (rgb != labels[tileLastX + imageWidth * tileY]) {
 											g.drawLine(northX, northY, intersectionX, intersectionY);
 										}
 										
-										if (rgb != labels.getRGB(tileX, tileLastY)) {
+										if (rgb != labels[tileX + imageWidth * tileLastY]) {
 											g.drawLine(westX, westY, intersectionX, intersectionY);
 										}
 										
-										if (labels.getRGB(tileX, tileLastY) != labels.getRGB(tileLastX, tileLastY)) {
+										if (labels[tileX + imageWidth * tileLastY] != labels[tileLastX + imageWidth * tileLastY]) {
 											g.drawLine(intersectionX, intersectionY, southX, southY);
 										}
 										
-										if (labels.getRGB(tileLastX, tileY) != labels.getRGB(tileLastX, tileLastY)) {
+										if (labels[tileLastX + imageWidth * tileY] != labels[tileLastX + imageWidth * tileLastY]) {
 											g.drawLine(intersectionX, intersectionY, eastX, eastY);
 										}
 									}
 								}
 							}
 							
-							debugPrint(uniqueQuantizedColors.size(), uniqueQuantizedColors);
+							debugPrint("Computing visualization done in", timer.toc(), "ms");
+							debugPrint("All done in", timer.getTotalTime(), "ms");
 						}
 					}
 				}
@@ -486,12 +518,15 @@ public final class TiledParticleSegmentationTest {
 		private int pixelCount;
 		
 		public final SegmentProcessor process(final BufferedImage segmentation, final int tileX, final int tileY) {
-			final IntList todo = new IntList();
+			final SchedulingData schedulingData = getOrCreate(reusableSchedulingData, currentThread(), SchedulingData.FACTORY);
+			final IntList todo = schedulingData.getTodo();
+			final BitSet done = schedulingData.getDone();
 			final int w = segmentation.getWidth();
 			final int h = segmentation.getHeight();
-			final BitSet done = new BitSet(w * h);
 			this.pixelCount = 0;
 			
+			todo.clear();
+			done.clear();
 			todo.add(tileY * w + tileX);
 			
 			this.beforePixels();
@@ -546,6 +581,39 @@ public final class TiledParticleSegmentationTest {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -5860299062780405885L;
+		
+		private static final Map<Thread, SchedulingData> reusableSchedulingData = new WeakHashMap<Thread, SchedulingData>();
+		
+		/**
+		 * @author codistmonk (creation 2014-02-26)
+		 */
+		public static final class SchedulingData implements Serializable {
+			
+			private final IntList todo;
+			
+			private final BitSet done;
+			
+			public SchedulingData() {
+				this.todo = new IntList();
+				this.done = new BitSet();
+			}
+			
+			public final IntList getTodo() {
+				return this.todo;
+			}
+			
+			public final BitSet getDone() {
+				return this.done;
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = -3771171821850295230L;
+			
+			public static final DefaultFactory<SchedulingData> FACTORY = DefaultFactory.forClass(SchedulingData.class);
+			
+		}
 		
 	}
 	
