@@ -6,12 +6,10 @@ import static java.awt.Color.BLACK;
 import static java.awt.Color.WHITE;
 import static java.lang.Math.abs;
 import static java.lang.Math.min;
-import static java.lang.Thread.currentThread;
 import static java.util.Arrays.sort;
 import static java.util.Collections.nCopies;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 
 import imj.IntList;
 
@@ -29,11 +27,8 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.WeakHashMap;
 
-import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.TicToc;
 
 import org.junit.Test;
@@ -505,7 +500,7 @@ public final class TiledParticleSegmentationTest {
 		private int pixelCount;
 		
 		public final SegmentProcessor process(final BufferedImage segmentation, final int tileX, final int tileY) {
-			final SchedulingData schedulingData = getOrCreate(reusableSchedulingData, currentThread(), SchedulingData.FACTORY);
+			final SchedulingData schedulingData = SchedulingData.getInstance();
 			final IntList todo = schedulingData.getTodo();
 			final BitSet done = schedulingData.getDone();
 			final int w = segmentation.getWidth();
@@ -568,39 +563,6 @@ public final class TiledParticleSegmentationTest {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -5860299062780405885L;
-		
-		private static final Map<Thread, SchedulingData> reusableSchedulingData = new WeakHashMap<Thread, SchedulingData>();
-		
-		/**
-		 * @author codistmonk (creation 2014-02-26)
-		 */
-		public static final class SchedulingData implements Serializable {
-			
-			private final IntList todo;
-			
-			private final BitSet done;
-			
-			public SchedulingData() {
-				this.todo = new IntList();
-				this.done = new BitSet();
-			}
-			
-			public final IntList getTodo() {
-				return this.todo;
-			}
-			
-			public final BitSet getDone() {
-				return this.done;
-			}
-			
-			/**
-			 * {@value}.
-			 */
-			private static final long serialVersionUID = -3771171821850295230L;
-			
-			public static final DefaultFactory<SchedulingData> FACTORY = DefaultFactory.forClass(SchedulingData.class);
-			
-		}
 		
 	}
 	
