@@ -65,7 +65,7 @@ public final class TiledParticleSegmentationTest {
 		final Color regionSeparationColor = Color.GREEN;
 		final Color segmentSeparationColor = null;
 		final Color segmentLocatorColor = null;
-		final int algo0Q = 6;
+		final int algo0Q = 5;
 		final int algo1Q = 2;
 		
 		final SimpleImageView imageView = new SimpleImageView();
@@ -166,7 +166,7 @@ public final class TiledParticleSegmentationTest {
 									sort(sortedColors, COLOR_GREEN_COMPARATOR);
 									computePrototypes(sortedColors, 8, algo1Q, greenPrototypes);
 									sort(sortedColors, COLOR_BLUE_COMPARATOR);
-									computePrototypes(sortedColors, 8, algo1Q, bluePrototypes);
+									computePrototypes(sortedColors, 0, algo1Q, bluePrototypes);
 								}
 								
 								debugPrint(Arrays.toString(redPrototypes));
