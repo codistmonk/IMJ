@@ -1,19 +1,16 @@
 package imj2.tools;
 
 import static java.lang.Math.abs;
-import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.signum;
+import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-import static org.junit.Assert.*;
 
 import imj2.tools.Image2DComponent.Painter;
-import imj2.tools.RegionShrinking2Test.Segmenter.Segment;
 import imj2.tools.RegionShrinking2Test.Segmenter.Segment.Processor;
 import imj2.tools.RegionShrinkingTest.AutoMouseAdapter;
 
@@ -23,19 +20,18 @@ import java.awt.Point;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
-import java.lang.reflect.Array;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.WeakHashMap;
 
-import net.sourceforge.aprog.tools.Factory;
-import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import javax.media.jai.Histogram;
+
 import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
@@ -55,7 +51,7 @@ public final class RegionShrinking2Test {
 			
 			private final Point mouseLocation = new Point(-1, 0);
 			
-			private final PolygonalSegment contour = new PolygonalSegment();
+			private final PolygonalSegment referenceContour = new PolygonalSegment();
 			
 			private ContourState contourState = ContourState.OPEN;
 			
@@ -71,13 +67,13 @@ public final class RegionShrinking2Test {
 				@Override
 				public final void paint(final Graphics2D g, final SimpleImageView component,
 						final int width, final int height) {
-					final int n = contour.getVertices().size() - (contourState == ContourState.CLOSED ? 0 : 1);
+					final int n = referenceContour.getVertices().size() - (contourState == ContourState.CLOSED ? 0 : 1);
 					
 					g.setColor(Color.GREEN);
 					
 					for (int i = 0; i < n; ++i) {
-						final Point p1 = contour.getVertices().get(i);
-						final Point p2 = contour.getVertices().get((i + 1) % contour.getVertices().size());
+						final Point p1 = referenceContour.getVertices().get(i);
+						final Point p2 = referenceContour.getVertices().get((i + 1) % referenceContour.getVertices().size());
 						
 						g.drawLine(p1.x, p1.y, p2.x, p2.y);
 					}
@@ -87,18 +83,18 @@ public final class RegionShrinking2Test {
 						
 						if (contourState == ContourState.OPEN) {
 //						g.drawRect(ifloor(mouseLocation.x, segmentSize), ifloor(mouseLocation.y, segmentSize), segmentSize, segmentSize);
-							g.drawLine(contour.getVertices().get(n).x, contour.getVertices().get(n).y,
+							g.drawLine(referenceContour.getVertices().get(n).x, referenceContour.getVertices().get(n).y,
 									mouseLocation.x, mouseLocation.y);
 						} else if (contourState == ContourState.SNAP) {
-							g.drawLine(contour.getVertices().get(n).x, contour.getVertices().get(n).y,
-									contour.getVertices().get(0).x, contour.getVertices().get(0).y);
+							g.drawLine(referenceContour.getVertices().get(n).x, referenceContour.getVertices().get(n).y,
+									referenceContour.getVertices().get(0).x, referenceContour.getVertices().get(0).y);
 						}
 					}
 					
 					// TODO apply region shrinking mask
 					
 					if (contourState == ContourState.CLOSED) {
-						contour.process(new Processor() {
+						referenceContour.process(new Processor() {
 							
 							@Override
 							public final void pixel(final int x, final int y, final boolean isBorder) {
@@ -128,7 +124,7 @@ public final class RegionShrinking2Test {
 				this.mouseLocation.setLocation(event.getX(), event.getY());
 				
 				if (this.contourState != ContourState.CLOSED) {
-					if (!this.contour.getVertices().isEmpty() && this.mouseLocation.distance(this.contour.getVertices().get(0)) < 10.0) {
+					if (!this.referenceContour.getVertices().isEmpty() && this.mouseLocation.distance(this.referenceContour.getVertices().get(0)) < 10.0) {
 						this.contourState = ContourState.SNAP;
 					} else {
 						this.contourState = ContourState.OPEN;
@@ -141,13 +137,48 @@ public final class RegionShrinking2Test {
 			@Override
 			public final void mouseClicked(final MouseEvent event) {
 				if (this.contourState == ContourState.OPEN) {
-					this.contour.getVertices().add(event.getPoint());
+					this.referenceContour.getVertices().add(event.getPoint());
 				} else if (this.contourState == ContourState.SNAP) {
 					this.contourState = ContourState.CLOSED;
-					// TODO compute histogram
-					// TODO compute region shrinking mask
+					final BufferedImage image = imageView.getImage();
+					final QuantizedDenseHistogramExtractor histogramExtractor =
+							new QuantizedDenseHistogramExtractor(image, 2);
+					
+					this.referenceContour.process(histogramExtractor);
+					
+					final int[] referenceHistogram = histogramExtractor.takeHistogram();
+					
+					{
+						final int w = image.getWidth();
+						final int h = image.getHeight();
+						
+						new GridSegmenter.Segment(0, 0, w, h).process(histogramExtractor);
+						
+						final int[] shrinkingHistogram = histogramExtractor.takeHistogram();
+						final Queue<GenericComparable<Point>> shrinkingContour = new PriorityQueue<GenericComparable<Point>>();
+						
+						for (int x = 0; x < w; x += segmentSize) {
+							shrinkingContour.add(newRemovable(image, referenceHistogram, shrinkingHistogram, this.segmenter,
+									x, 0, histogramExtractor));
+							shrinkingContour.add(newRemovable(image, referenceHistogram, shrinkingHistogram, this.segmenter,
+									x, ifloor(h - 1, segmentSize), histogramExtractor));
+						}
+						
+						for (int y = 0; y < h; y += segmentSize) {
+							shrinkingContour.add(newRemovable(image, referenceHistogram, shrinkingHistogram, this.segmenter,
+									0, y, histogramExtractor));
+							shrinkingContour.add(newRemovable(image, referenceHistogram, shrinkingHistogram, this.segmenter,
+									ifloor(w - 1, segmentSize), y, histogramExtractor));
+						}
+						
+						debugPrint(shrinkingContour.peek().getComparisonKey());
+						
+						final boolean[] markedSegments = new boolean[w * h];
+						
+						// TODO shrink until comparison key is small enough
+					}
 				} else {
-					this.contour.getVertices().clear();
+					this.referenceContour.getVertices().clear();
 					this.contourState = ContourState.OPEN;
 				}
 				
@@ -175,6 +206,122 @@ public final class RegionShrinking2Test {
 	
 	public static final int iceil(final int value, final int step) {
 		return (value + step - 1) / step;
+	}
+	
+	public static final GenericComparable<Point> newRemovable(final BufferedImage image, final int[] targetHistogram, final int[] currentHistogram,
+			final Segmenter segmenter, final int x, final int y, final QuantizedDenseHistogramExtractor histogramExtractor) {
+		segmenter.getSegment(image, x, y).process(histogramExtractor);
+		
+		final int[] segmentHistogram = histogramExtractor.takeHistogram();
+		double score = 0.0;
+		final int n = targetHistogram.length;
+		final double n1 = sum(targetHistogram);
+		final double n2 = sum(currentHistogram);
+		final double n3 = sum(segmentHistogram);
+		
+		for (int  i = 0; i < n; ++i) {
+			score += abs(targetHistogram[i] / n1 - (currentHistogram[i] - segmentHistogram[i]) / (n2 - n3));
+		}
+		
+		return new GenericComparable<Point>(new Point(x, y)).setComparisonKey(-score);
+	}
+	
+	public static final int sum(final int... values) {
+		int result = 0;
+		
+		for (final int value : values) {
+			result += value;
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-04-04)
+	 * @param <T>
+	 */
+	public static final class GenericComparable<T> implements Serializable, Comparable<GenericComparable<T>> {
+		
+		private final T object;
+		
+		private double comparisonKey;
+		
+		public GenericComparable(final T object) {
+			this.object = object;
+		}
+		
+		public final double getComparisonKey() {
+			return this.comparisonKey;
+		}
+		
+		public final GenericComparable<T> setComparisonKey(final double comparisonKey) {
+			this.comparisonKey = comparisonKey;
+			
+			return this;
+		}
+		
+		@Override
+		public final int compareTo(final GenericComparable<T> that) {
+			return Double.compare(this.getComparisonKey(), that.getComparisonKey());
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -5910200560852476778L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-04-04)
+	 */
+	public static final class QuantizedDenseHistogramExtractor implements Processor {
+		
+		private final BufferedImage image;
+		
+		private final int q;
+		
+		private final int b;
+		
+		private final int[] histogram;
+		
+		private final int channelMask;
+		
+		public QuantizedDenseHistogramExtractor(final BufferedImage image, final int q) {
+			this.image = image;
+			this.q = q;
+			this.b = 8 - q;
+			this.histogram = new int[1 << (3 * this.b)];
+			this.channelMask = 0xFF >> q;
+		}
+		
+		public final int[] getHistogram() {
+			return this.histogram;
+		}
+		
+		public final int[] takeHistogram() {
+			final int[] result = this.histogram.clone();
+			
+			fill(this.getHistogram(), 0);
+			
+			return result;
+		}
+		
+		@Override
+		public final void pixel(final int x, final int y, final boolean isBorder) {
+			final int rgb = this.image.getRGB(x, y);
+			final int red = (rgb >> (16 + this.q)) & this.channelMask;
+			final int green = (rgb >> (8 + this.q)) & this.channelMask;
+			final int blue = (rgb >> this.q) & this.channelMask;
+			
+			++this.histogram[(red << (2 * this.b)) | (green << this.b) | blue];
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 3704408875166069152L;
+		
 	}
 	
 	/**
@@ -282,8 +429,13 @@ public final class RegionShrinking2Test {
 		
 		@Override
 		public final Segment getSegment(final BufferedImage image, final int x, final int y) {
-			return (Segment) this.cache.getOrCreateSegments(image).get(
-					(y / this.segmentHeight) * iceil(image.getWidth(), this.segmentWidth) + x / this.segmentWidth);
+			try {
+				return (Segment) this.cache.getOrCreateSegments(image).get(
+						(y / this.segmentHeight) * iceil(image.getWidth(), this.segmentWidth) + x / this.segmentWidth);
+			} catch (Exception exception) {
+				debugPrint(image.getWidth(), image.getHeight(), this.segmentWidth, this.segmentHeight, x, y);
+				throw unchecked(exception);
+			}
 		}
 		
 		/**
