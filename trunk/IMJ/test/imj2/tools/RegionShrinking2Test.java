@@ -43,7 +43,7 @@ public final class RegionShrinking2Test {
 	public final void test() {
 		final SimpleImageView imageView = new SimpleImageView();
 		
-		final int segmentSize = 24;
+		final int segmentSize = 16;
 		
 		new AutoMouseAdapter(imageView.getImageHolder()) {
 			
@@ -188,20 +188,22 @@ public final class RegionShrinking2Test {
 						}
 						
 						if (!shrinkingContour.isEmpty()) {
+							final int segmentCount = iceil(w, segmentSize) * iceil(h, segmentSize);
 							double shrinkability = moveSmallestToFront(shrinkingContour, targetHistogram, shrinkingHistogram);
 							
-							debugPrint(shrinkability, w * h / segmentSize / segmentSize);
+							debugPrint(shrinkability, shrinkingContour.size(), segmentCount);
 							
 							final boolean[] markedSegments = new boolean[w * h];
-							int remainingIterations = 300;
+							final boolean[] discardedSegments = markedSegments.clone();
+							int remainingIterations = segmentCount;
 							
-							while (shrinkability < 1.96 && 0 <= --remainingIterations) {
-								shrinkability = shrink(shrinkingContour, markedSegments, image, targetHistogram, shrinkingHistogram,
+							while (shrinkability < 0.0 && 0 <= --remainingIterations) {
+								shrinkability = shrink(shrinkingContour, markedSegments, discardedSegments, image, targetHistogram, shrinkingHistogram,
 										histogramExtractor, segmentSize, this.segmenter);
-								debugPrint(shrinkability, remainingIterations);
+								debugPrint(shrinkability, shrinkingContour.size(), remainingIterations, "/", segmentCount);
 							}
 							
-							this.markedSegments[0] = markedSegments;
+							this.markedSegments[0] = discardedSegments;
 						}
 					}
 				} else {
@@ -229,26 +231,44 @@ public final class RegionShrinking2Test {
 	
 	public static final double moveSmallestToFront(final List<Removable> list,
 			final int[] targetHistogram, final int[] currentHistogram) {
-		double result = Double.POSITIVE_INFINITY;
-		int indexOfSmallest = 0;
-		final int n = list.size();
+		double smallest = Double.POSITIVE_INFINITY;
 		
-		for (int i = 0; i < n; ++i) {
-			final Removable r = list.get(i);
-			final double key = computeScore(targetHistogram, currentHistogram, r.getHistogram());
+		{
+			int indexOfSmallest = 0;
+			final int n = list.size();
 			
-			if (key < result) {
-				result = key;
-				indexOfSmallest = i;
+			for (int i = 0; i < n; ++i) {
+				final Removable r = list.get(i);
+				final double key = computeScore(targetHistogram, currentHistogram, r.getHistogram());
+				
+				if (key < smallest) {
+					smallest = key;
+					indexOfSmallest = i;
+				}
 			}
+			
+			if (0 < indexOfSmallest) {
+				swap(list, indexOfSmallest, 0);
+			}
+			
+			return smallest;
 		}
 		
-		swap(list, indexOfSmallest, 0);
-		
-		return result;
+//		{
+//			final int n = targetHistogram.length;
+//			final double n1 = sum(targetHistogram);
+//			final double n2 = sum(currentHistogram);
+//			double result = 0.0;
+//			
+//			for (int i = 0; i < n; ++i) {
+//				result += abs(targetHistogram[i] / n1 - currentHistogram[i] / n2);
+//			}
+//			
+//			return result;
+//		}
 	}
 	
-	public static final double shrink(final List<Removable> shrinkingContour, final boolean[] markedSegments,
+	public static final double shrink(final List<Removable> shrinkingContour, final boolean[] markedSegments, final boolean[] discardedSegments,
 			final BufferedImage image, final int[] targetHistogram, final int[] shrinkingHistogram,
 			final QuantizedDenseHistogramExtractor histogramExtractor, final int segmentSize, final Segmenter segmenter) {
 		final Removable removed = shrinkingContour.remove(0);
@@ -256,26 +276,32 @@ public final class RegionShrinking2Test {
 		final int y = removed.getY();
 		final int w = image.getWidth();
 		final int h = image.getHeight();
-		markedSegments[y * w + x] = true;
+		discardedSegments[y * w + x] = true;
+		
+		removed.removeFrom(shrinkingHistogram);
 		
 		if (segmentSize < y && !markedSegments[(y - segmentSize) * w + x]) {
 			shrinkingContour.add(newRemovable(image, targetHistogram, shrinkingHistogram,
 					segmenter, x, y - segmentSize, histogramExtractor));
+			markedSegments[(y - segmentSize) * w + x] = true;
 		}
 		
 		if (segmentSize < x && !markedSegments[y * w + x - segmentSize]) {
 			shrinkingContour.add(newRemovable(image, targetHistogram, shrinkingHistogram,
 					segmenter, x - segmentSize, y, histogramExtractor));
+			markedSegments[y * w + x - segmentSize] = true;
 		}
 		
 		if (x + segmentSize < w && !markedSegments[y * w + x + segmentSize]) {
 			shrinkingContour.add(newRemovable(image, targetHistogram, shrinkingHistogram,
 					segmenter, x + segmentSize, y, histogramExtractor));
+			markedSegments[y * w + x + segmentSize] = true;
 		}
 		
 		if (y + segmentSize < h && !markedSegments[(y + segmentSize) * w + x]) {
 			shrinkingContour.add(newRemovable(image, targetHistogram, shrinkingHistogram,
 					segmenter, x, y + segmentSize, histogramExtractor));
+			markedSegments[(y + segmentSize) * w + x] = true;
 		}
 		
 		return moveSmallestToFront(shrinkingContour, targetHistogram, shrinkingHistogram);
@@ -322,7 +348,10 @@ public final class RegionShrinking2Test {
 				break;
 			}
 			
-			score += abs(targetHistogram[i] / n1 - (currentHistogram[i] - segmentHistogram[i]) / (n2 - n3));
+			final double currentError = abs(targetHistogram[i] / n1 - currentHistogram[i] / n2);
+			final double newError = abs(targetHistogram[i] / n1 - (currentHistogram[i] - segmentHistogram[i]) / (n2 - n3));
+			
+			score += newError - currentError;
 		}
 		
 		return score;
