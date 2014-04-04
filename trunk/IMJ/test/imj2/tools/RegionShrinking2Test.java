@@ -43,7 +43,7 @@ public final class RegionShrinking2Test {
 	public final void test() {
 		final SimpleImageView imageView = new SimpleImageView();
 		
-		final int segmentSize = 16;
+		final int segmentSize = 24;
 		
 		new AutoMouseAdapter(imageView.getImageHolder()) {
 			
@@ -190,12 +190,12 @@ public final class RegionShrinking2Test {
 						if (!shrinkingContour.isEmpty()) {
 							double shrinkability = moveSmallestToFront(shrinkingContour, targetHistogram, shrinkingHistogram);
 							
-							debugPrint(shrinkability);
+							debugPrint(shrinkability, w * h / segmentSize / segmentSize);
 							
 							final boolean[] markedSegments = new boolean[w * h];
-							int remainingIterations = 100;
+							int remainingIterations = 300;
 							
-							while (shrinkability < -0.4 && 0 <= --remainingIterations) {
+							while (shrinkability < 1.96 && 0 <= --remainingIterations) {
 								shrinkability = shrink(shrinkingContour, markedSegments, image, targetHistogram, shrinkingHistogram,
 										histogramExtractor, segmentSize, this.segmenter);
 								debugPrint(shrinkability, remainingIterations);
@@ -318,14 +318,14 @@ public final class RegionShrinking2Test {
 		
 		for (int  i = 0; i < n; ++i) {
 			if (currentHistogram[i] < segmentHistogram[i]) {
-				score = 0.0;
+				score = Double.POSITIVE_INFINITY;
 				break;
 			}
 			
 			score += abs(targetHistogram[i] / n1 - (currentHistogram[i] - segmentHistogram[i]) / (n2 - n3));
 		}
 		
-		return -score;
+		return score;
 	}
 	
 	/**
