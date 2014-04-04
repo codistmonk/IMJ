@@ -4,6 +4,7 @@ import static java.lang.Math.abs;
 import static java.lang.Math.min;
 import static java.lang.Math.signum;
 import static java.util.Arrays.fill;
+import static java.util.Collections.swap;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.debug;
@@ -22,6 +23,7 @@ import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -29,10 +31,6 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.WeakHashMap;
-
-import javax.media.jai.Histogram;
-
-import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -56,6 +54,8 @@ public final class RegionShrinking2Test {
 			private ContourState contourState = ContourState.OPEN;
 			
 			private final Segmenter segmenter = new GridSegmenter(segmentSize);
+			
+			private final boolean[][] markedSegments = { null };
 			
 			private final Painter<SimpleImageView> painter = new Painter<SimpleImageView>() {
 				
@@ -93,15 +93,31 @@ public final class RegionShrinking2Test {
 					
 					// TODO apply region shrinking mask
 					
+					if (markedSegments[0] != null) {
+						final BufferedImage image = imageView.getImage();
+						
+						for (final Segmenter.Segment segment : segmenter.getSegments(image)) {
+							if (!markedSegments[0][image.getWidth() * segment.getSomeY() + segment.getSomeX()]) {
+								g.setColor(Color.BLUE);
+								g.drawOval(segment.getSomeX() - 2, segment.getSomeY() - 2, 4, 4);
+							}
+						}
+					}
+					
 					if (contourState == ContourState.CLOSED) {
 						referenceContour.process(new Processor() {
-							
+
 							@Override
 							public final void pixel(final int x, final int y, final boolean isBorder) {
 								if ((x & 3) == 0 && (y & 3) == 0) {
 									imageView.getBufferImage().setRGB(x, y, Color.GREEN.getRGB());
 								}
 							}
+							
+							/**
+							 * {@value}.
+							 */
+							private static final long serialVersionUID = -4519204375451527829L;
 							
 						});
 					}
@@ -146,7 +162,7 @@ public final class RegionShrinking2Test {
 					
 					this.referenceContour.process(histogramExtractor);
 					
-					final int[] referenceHistogram = histogramExtractor.takeHistogram();
+					final int[] targetHistogram = histogramExtractor.takeHistogram();
 					
 					{
 						final int w = image.getWidth();
@@ -155,27 +171,38 @@ public final class RegionShrinking2Test {
 						new GridSegmenter.Segment(0, 0, w, h).process(histogramExtractor);
 						
 						final int[] shrinkingHistogram = histogramExtractor.takeHistogram();
-						final Queue<GenericComparable<Point>> shrinkingContour = new PriorityQueue<GenericComparable<Point>>();
+						final List<Removable> shrinkingContour = new ArrayList<Removable>();
 						
 						for (int x = 0; x < w; x += segmentSize) {
-							shrinkingContour.add(newRemovable(image, referenceHistogram, shrinkingHistogram, this.segmenter,
+							shrinkingContour.add(newRemovable(image, targetHistogram, shrinkingHistogram, this.segmenter,
 									x, 0, histogramExtractor));
-							shrinkingContour.add(newRemovable(image, referenceHistogram, shrinkingHistogram, this.segmenter,
+							shrinkingContour.add(newRemovable(image, targetHistogram, shrinkingHistogram, this.segmenter,
 									x, ifloor(h - 1, segmentSize), histogramExtractor));
 						}
 						
 						for (int y = 0; y < h; y += segmentSize) {
-							shrinkingContour.add(newRemovable(image, referenceHistogram, shrinkingHistogram, this.segmenter,
+							shrinkingContour.add(newRemovable(image, targetHistogram, shrinkingHistogram, this.segmenter,
 									0, y, histogramExtractor));
-							shrinkingContour.add(newRemovable(image, referenceHistogram, shrinkingHistogram, this.segmenter,
+							shrinkingContour.add(newRemovable(image, targetHistogram, shrinkingHistogram, this.segmenter,
 									ifloor(w - 1, segmentSize), y, histogramExtractor));
 						}
 						
-						debugPrint(shrinkingContour.peek().getComparisonKey());
-						
-						final boolean[] markedSegments = new boolean[w * h];
-						
-						// TODO shrink until comparison key is small enough
+						if (!shrinkingContour.isEmpty()) {
+							double shrinkability = moveSmallestToFront(shrinkingContour, targetHistogram, shrinkingHistogram);
+							
+							debugPrint(shrinkability);
+							
+							final boolean[] markedSegments = new boolean[w * h];
+							int remainingIterations = 100;
+							
+							while (shrinkability < -0.4 && 0 <= --remainingIterations) {
+								shrinkability = shrink(shrinkingContour, markedSegments, image, targetHistogram, shrinkingHistogram,
+										histogramExtractor, segmentSize, this.segmenter);
+								debugPrint(shrinkability, remainingIterations);
+							}
+							
+							this.markedSegments[0] = markedSegments;
+						}
 					}
 				} else {
 					this.referenceContour.getVertices().clear();
@@ -200,6 +227,72 @@ public final class RegionShrinking2Test {
 		show(imageView, this.getClass().getName(), true);
 	}
 	
+	public static final double moveSmallestToFront(final List<Removable> list,
+			final int[] targetHistogram, final int[] currentHistogram) {
+		double result = Double.POSITIVE_INFINITY;
+		int indexOfSmallest = 0;
+		final int n = list.size();
+		
+		for (int i = 0; i < n; ++i) {
+			final Removable r = list.get(i);
+			final double key = computeScore(targetHistogram, currentHistogram, r.getHistogram());
+			
+			if (key < result) {
+				result = key;
+				indexOfSmallest = i;
+			}
+		}
+		
+		swap(list, indexOfSmallest, 0);
+		
+		return result;
+	}
+	
+	public static final double shrink(final List<Removable> shrinkingContour, final boolean[] markedSegments,
+			final BufferedImage image, final int[] targetHistogram, final int[] shrinkingHistogram,
+			final QuantizedDenseHistogramExtractor histogramExtractor, final int segmentSize, final Segmenter segmenter) {
+		final Removable removed = shrinkingContour.remove(0);
+		final int x = removed.getX();
+		final int y = removed.getY();
+		final int w = image.getWidth();
+		final int h = image.getHeight();
+		markedSegments[y * w + x] = true;
+		
+		if (segmentSize < y && !markedSegments[(y - segmentSize) * w + x]) {
+			shrinkingContour.add(newRemovable(image, targetHistogram, shrinkingHistogram,
+					segmenter, x, y - segmentSize, histogramExtractor));
+		}
+		
+		if (segmentSize < x && !markedSegments[y * w + x - segmentSize]) {
+			shrinkingContour.add(newRemovable(image, targetHistogram, shrinkingHistogram,
+					segmenter, x - segmentSize, y, histogramExtractor));
+		}
+		
+		if (x + segmentSize < w && !markedSegments[y * w + x + segmentSize]) {
+			shrinkingContour.add(newRemovable(image, targetHistogram, shrinkingHistogram,
+					segmenter, x + segmentSize, y, histogramExtractor));
+		}
+		
+		if (y + segmentSize < h && !markedSegments[(y + segmentSize) * w + x]) {
+			shrinkingContour.add(newRemovable(image, targetHistogram, shrinkingHistogram,
+					segmenter, x, y + segmentSize, histogramExtractor));
+		}
+		
+		return moveSmallestToFront(shrinkingContour, targetHistogram, shrinkingHistogram);
+	}
+	
+	public static final int count(final boolean...values) {
+		int result = 0;
+		
+		for (final boolean value : values) {
+			if (value) {
+				++result;
+			}
+		}
+		
+		return result;
+	}
+	
 	public static final int ifloor(final int value, final int step) {
 		return value - (value % step);
 	}
@@ -208,11 +301,15 @@ public final class RegionShrinking2Test {
 		return (value + step - 1) / step;
 	}
 	
-	public static final GenericComparable<Point> newRemovable(final BufferedImage image, final int[] targetHistogram, final int[] currentHistogram,
+	public static final Removable newRemovable(final BufferedImage image, final int[] targetHistogram, final int[] currentHistogram,
 			final Segmenter segmenter, final int x, final int y, final QuantizedDenseHistogramExtractor histogramExtractor) {
 		segmenter.getSegment(image, x, y).process(histogramExtractor);
 		
-		final int[] segmentHistogram = histogramExtractor.takeHistogram();
+		return new Removable(x, y, histogramExtractor.takeHistogram());
+	}
+	
+	public static final double computeScore(final int[] targetHistogram,
+			final int[] currentHistogram, final int[] segmentHistogram) {
 		double score = 0.0;
 		final int n = targetHistogram.length;
 		final double n1 = sum(targetHistogram);
@@ -220,10 +317,59 @@ public final class RegionShrinking2Test {
 		final double n3 = sum(segmentHistogram);
 		
 		for (int  i = 0; i < n; ++i) {
+			if (currentHistogram[i] < segmentHistogram[i]) {
+				score = 0.0;
+				break;
+			}
+			
 			score += abs(targetHistogram[i] / n1 - (currentHistogram[i] - segmentHistogram[i]) / (n2 - n3));
 		}
 		
-		return new GenericComparable<Point>(new Point(x, y)).setComparisonKey(-score);
+		return -score;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-04-04)
+	 */
+	public static final class Removable implements Serializable {
+		
+		private final int x;
+		
+		private final int y;
+		
+		private final int[] histogram;
+		
+		public Removable(final int x, final int y, final int[] histogram) {
+			this.x = x;
+			this.y = y;
+			this.histogram = histogram;
+		}
+		
+		public final int getX() {
+			return this.x;
+		}
+		
+		public final int getY() {
+			return this.y;
+		}
+		
+		public final int[] getHistogram() {
+			return this.histogram;
+		}
+		
+		public final void removeFrom(final int[] histogram) {
+			final int n = histogram.length;
+			
+			for (int i = 0; i < n; ++i) {
+				histogram[i] -= this.histogram[i];
+			}
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -6041578594737086733L;
+		
 	}
 	
 	public static final int sum(final int... values) {
@@ -248,6 +394,10 @@ public final class RegionShrinking2Test {
 		
 		public GenericComparable(final T object) {
 			this.object = object;
+		}
+		
+		public final T getObject() {
+			return this.object;
 		}
 		
 		public final double getComparisonKey() {
@@ -342,6 +492,8 @@ public final class RegionShrinking2Test {
 		
 		public abstract Segment getSegment(BufferedImage image, int x, int y);
 		
+		public abstract List<? extends Segment> getSegments(BufferedImage image);
+		
 		/**
 		 * @author codistmonk (creation 2014-04-03)
 		 */
@@ -430,12 +582,17 @@ public final class RegionShrinking2Test {
 		@Override
 		public final Segment getSegment(final BufferedImage image, final int x, final int y) {
 			try {
-				return (Segment) this.cache.getOrCreateSegments(image).get(
+				return (Segment) this.getSegments(image).get(
 						(y / this.segmentHeight) * iceil(image.getWidth(), this.segmentWidth) + x / this.segmentWidth);
 			} catch (Exception exception) {
 				debugPrint(image.getWidth(), image.getHeight(), this.segmentWidth, this.segmentHeight, x, y);
 				throw unchecked(exception);
 			}
+		}
+		
+		@Override
+		public final List<Segment> getSegments(final BufferedImage image) {
+			return (List<Segment>) this.cache.getOrCreateSegments(image);
 		}
 		
 		/**
@@ -500,6 +657,10 @@ public final class RegionShrinking2Test {
 	 */
 	public static final class PolygonalSegment implements Segmenter.Segment {
 		
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -4739067006981388485L;
 		private final List<Point> vertices = new ArrayList<Point>();
 		
 		public final List<Point> getVertices() {
