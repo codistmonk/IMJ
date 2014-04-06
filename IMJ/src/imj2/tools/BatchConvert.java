@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
@@ -39,6 +40,18 @@ public final class BatchConvert {
 			
 			@Override
 			public final void run() {
+				final String extensions = JOptionPane.showInputDialog("Extensions", "tiff");
+				String regex = ".+";
+				
+				if (extensions != null) {
+					regex += "(";
+					for (final String extension : extensions.trim().split("\\s+")) {
+						regex += "\\." + extension;
+					}
+					regex += ")$";
+				}
+				
+				final String filter = regex;
 				final JFrame frame = new JFrame("IMJ Batch Convert");
 				final JTextArea textArea = new JTextArea();
 				
@@ -52,7 +65,7 @@ public final class BatchConvert {
 					@Override
 					public final synchronized void drop(final DropTargetDropEvent event) {
 						for (final File file : SwingTools.getFiles(event)) {
-							MultiThreadTools.getExecutor().submit(new FileProcessor(file, textArea));
+							MultiThreadTools.getExecutor().submit(new FileProcessor(filter, file, textArea));
 						}
 					}
 					
@@ -83,17 +96,32 @@ public final class BatchConvert {
 	 */
 	public static final class FileProcessor implements Runnable {
 		
+		private final String filter;
+		
 		private final File file;
 		
 		private final JTextArea textArea;
 		
-		public FileProcessor(final File file, final JTextArea textArea) {
+		public FileProcessor(final String filter, final File file, final JTextArea textArea) {
+			this.filter = filter;
 			this.file = file;
 			this.textArea = textArea;
 		}
 		
 		@Override
 		public final void run() {
+			if (this.file.isDirectory()) {
+				for (final File file : this.file.listFiles()) {
+					MultiThreadTools.getExecutor().submit(new FileProcessor(this.filter, file, this.textArea));
+				}
+				
+				return;
+			}
+			
+			if (!this.file.getName().matches(this.filter)) {
+				return;
+			}
+			
 			final String id = this.file.toString();
 			
 			this.message("Processing " + id + "...");
