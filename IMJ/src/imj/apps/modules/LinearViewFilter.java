@@ -3,7 +3,8 @@ package imj.apps.modules;
 import static java.lang.Double.parseDouble;
 import static java.lang.Math.exp;
 import static java.lang.Math.sqrt;
-import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
+import static net.sourceforge.aprog.tools.MathTools.square;
+
 import imj.apps.modules.FilteredImage.LinearFilter;
 
 import java.util.Arrays;
