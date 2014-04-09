@@ -2,9 +2,12 @@ package imj2.tools;
 
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
+import static java.lang.Math.round;
 import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.MathTools.square;
 import static org.junit.Assert.*;
+
+import java.awt.Color;
 
 import org.junit.Test;
 
@@ -19,14 +22,29 @@ public final class BitwiseQuantizationTest {
 	}
 	
 	public static final int[] rgbToHSV(final int[] rgb, final int[] result) {
+		final float[] hsv = new float[3];
+		
+		Color.RGBtoHSB(rgb[0], rgb[1], rgb[2], hsv);
+		
+		result[0] = round(hsv[0] * 255F);
+		result[1] = round(hsv[1] * 255F);
+		result[2] = round(hsv[2] * 255F);
+		
 		return result;
 	}
 	
 	public static final int[] hsvToRGB(final int[] hsv, final int[] result) {
+		final int rgb = Color.HSBtoRGB(hsv[0] / 255F, hsv[1] / 255F, hsv[2] / 255F);
+		
+		result[0] = (rgb >> 16) & 0xFF;
+		result[1] = (rgb >> 8) & 0xFF;
+		result[2] = (rgb >> 0) & 0xFF;
+		
 		return result;
 	}
 	
 	public static final int[] rgbToXYZ(final int[] rgb, final int[] result) {
+		// TODO
 		return result;
 	}
 	
