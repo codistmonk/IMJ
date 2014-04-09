@@ -2,7 +2,7 @@ package imj.clustering;
 
 import static java.lang.Math.abs;
 import static java.lang.Math.sqrt;
-import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
+import static net.sourceforge.aprog.tools.MathTools.square;
 
 /**
  * @author codistmonk (creation 2013-03-31)
