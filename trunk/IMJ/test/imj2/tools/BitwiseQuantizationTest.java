@@ -35,10 +35,14 @@ public final class BitwiseQuantizationTest {
 	}
 	
 	public static final int[] quantize(final int[] abc, final int qA, final int qB, final int qC, final int[] result) {
+		result[0] = abc[0] & ((~0) << qA);
+		result[1] = abc[1] & ((~0) << qB);
+		result[2] = abc[2] & ((~0) << qC);
+		
 		return result;
 	}
 	
-	public static final double distanceL0(final int[] abc1, final int[] abc2) {
+	public static final double distance0(final int[] abc1, final int[] abc2) {
 		final int n = abc1.length;
 		double result = 0.0;
 		
@@ -49,7 +53,7 @@ public final class BitwiseQuantizationTest {
 		return result;
 	}
 	
-	public static final double distanceL1(final int[] abc1, final int[] abc2) {
+	public static final double distance1(final int[] abc1, final int[] abc2) {
 		final int n = abc1.length;
 		double result = 0.0;
 		
@@ -60,7 +64,7 @@ public final class BitwiseQuantizationTest {
 		return result;
 	}
 	
-	public static final double distanceL2(final int[] abc1, final int[] abc2) {
+	public static final double distance2(final int[] abc1, final int[] abc2) {
 		final int n = abc1.length;
 		double sum = 0.0;
 		
