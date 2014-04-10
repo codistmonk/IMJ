@@ -1,5 +1,6 @@
 package imj2.tools;
 
+import static java.lang.Math.abs;
 import static java.lang.Math.pow;
 import static java.lang.Math.round;
 import static java.lang.Math.sqrt;
@@ -160,7 +161,7 @@ public final class BitwiseQuantizationTest {
 	@Test
 	public final void test2() {
 		final Color contourColor = Color.GREEN;
-		final int minimumComponentSize = 20;
+		final int minimumComponentSize = 80;
 		
 		debugPrint(quantizers);
 		
@@ -243,6 +244,7 @@ public final class BitwiseQuantizationTest {
 						
 						if (schedulingData.getTodo().size() < minimumComponentSize) {
 							final IntList neighborLabels = new IntList();
+							final IntList neighborRGBs = new IntList();
 							
 							for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
 								final int p = schedulingData.getTodo().get(i);
@@ -254,6 +256,7 @@ public final class BitwiseQuantizationTest {
 									
 									if (neighborLabel != labelId) {
 										neighborLabels.add(neighborLabel);
+										neighborRGBs.add(image.getRGB(xx, yy - 1));
 									}
 								}
 								
@@ -262,6 +265,7 @@ public final class BitwiseQuantizationTest {
 									
 									if (neighborLabel != labelId) {
 										neighborLabels.add(neighborLabel);
+										neighborRGBs.add(image.getRGB(xx - 1, yy));
 									}
 								}
 								
@@ -270,6 +274,7 @@ public final class BitwiseQuantizationTest {
 									
 									if (neighborLabel != labelId) {
 										neighborLabels.add(neighborLabel);
+										neighborRGBs.add(image.getRGB(xx + 1, yy));
 									}
 								}
 								
@@ -278,29 +283,24 @@ public final class BitwiseQuantizationTest {
 									
 									if (neighborLabel != labelId) {
 										neighborLabels.add(neighborLabel);
+										neighborRGBs.add(image.getRGB(xx, yy + 1));
 									}
 								}
 							}
 							
-							neighborLabels.sort();
-							
 							int neighborLabel = -1;
-							int highestNeighborCount = 0;
-//							int closestNeighborColorDistance = Integer.MAX_VALUE;
-//							final int[] rgb = rgbToRGB(image.getRGB(x, y), new int[3]);
-//							final int[] neighborRGB = new int[3];
+							int closestNeighborColorDistance = Integer.MAX_VALUE;
+							final int[] rgb = rgbToRGB(image.getRGB(x, y), new int[3]);
+							final int[] neighborRGB = new int[3];
 							
-							for (int i = 0, count = 1, previousLabel = -1; i < neighborLabels.size(); ++i, ++count) {
-								final int label = neighborLabels.get(i);
+							for (int i = 0/*, count = 1, previousLabel = -1*/; i < neighborLabels.size(); ++i/*, ++count*/) {
+								rgbToRGB(neighborRGBs.get(i), neighborRGB);
 								
-								if (label != previousLabel) {
-									count = 1;
-									previousLabel = label;
-								}
+								final int d = distance1(rgb, neighborRGB);
 								
-								if (highestNeighborCount < count) {
-									highestNeighborCount = count;
-									neighborLabel = label;
+								if (d < closestNeighborColorDistance) {
+									closestNeighborColorDistance = d;
+									neighborLabel = neighborLabels.get(i);
 								}
 							}
 							
@@ -1734,6 +1734,17 @@ public final class BitwiseQuantizationTest {
 		result[0] = abc[0] & ((~0) << qA);
 		result[1] = abc[1] & ((~0) << qB);
 		result[2] = abc[2] & ((~0) << qC);
+		
+		return result;
+	}
+	
+	public static final int distance1(final int[] abc1, final int[] abc2) {
+		final int n = abc1.length;
+		int result = 0;
+		
+		for (int i = 0; i < n; ++i) {
+			result += abs(abc1[i] - abc2[i]);
+		}
 		
 		return result;
 	}
