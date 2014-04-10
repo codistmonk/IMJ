@@ -42,7 +42,7 @@ public final class BitwiseQuantizationTest {
 							final float[] xyz = new float[3];
 							final float[] cielab = new float[3];
 							final float[] qCIELAB = cielab.clone();
-							final Statistics statistics = new Statistics();
+							final Statistics error = new Statistics();
 							
 							for (int color = 0; color <= 0x00FFFFFF; ++color) {
 								rgbToRGB(color, rgb);
@@ -54,11 +54,11 @@ public final class BitwiseQuantizationTest {
 								rgbToXYZ(qRGB, xyz);
 								xyzToCIELAB(xyz, qCIELAB);
 								
-								statistics.addValue(distance2(cielab, qCIELAB));
+								error.addValue(distance2(cielab, qCIELAB));
 							}
 							
-							final double[] key = { qR + qG + qB, statistics.getMean() };
-							final String line = "qRGB: " + qR + " " + qG + " " + qB + " " + ((qR + qG + qB)) + " " + "error: " + statistics.getMinimum() + " <= " + statistics.getMean() + " ( " + sqrt(statistics.getVariance()) + ") <= " + statistics.getMaximum();
+							final double[] key = { qR + qG + qB, error.getMean() };
+							final String line = "qRGB: " + qR + " " + qG + " " + qB + " " + ((qR + qG + qB)) + " " + "error: " + error.getMinimum() + " <= " + error.getMean() + " ( " + sqrt(error.getVariance()) + ") <= " + error.getMaximum();
 							
 							synchronized (lines) {
 								lines.put(key, line);
@@ -91,7 +91,7 @@ public final class BitwiseQuantizationTest {
 							final float[] qCIELAB = cielab.clone();
 							final int[] hsv = new int[3];
 							final int[] qHSV = hsv.clone();
-							final Statistics statistics = new Statistics();
+							final Statistics error = new Statistics();
 							
 							for (int color = 0; color <= 0x00FFFFFF; ++color) {
 								rgbToRGB(color, rgb);
@@ -105,11 +105,11 @@ public final class BitwiseQuantizationTest {
 								rgbToXYZ(qRGB, xyz);
 								xyzToCIELAB(xyz, qCIELAB);
 								
-								statistics.addValue(distance2(cielab, qCIELAB));
+								error.addValue(distance2(cielab, qCIELAB));
 							}
 							
-							final double[] key = { qH + qS + qV, statistics.getMean() };
-							final String line = "qHSV: " + qH + " " + qS + " " + qV + " " + ((qH + qS + qV)) + " " + "error: " + statistics.getMinimum() + " <= " + statistics.getMean() + " ( " + sqrt(statistics.getVariance()) + ") <= " + statistics.getMaximum();
+							final double[] key = { qH + qS + qV, error.getMean() };
+							final String line = "qHSV: " + qH + " " + qS + " " + qV + " " + ((qH + qS + qV)) + " " + "error: " + error.getMinimum() + " <= " + error.getMean() + " ( " + sqrt(error.getVariance()) + ") <= " + error.getMaximum();
 							
 							synchronized (lines) {
 								lines.put(key, line);
