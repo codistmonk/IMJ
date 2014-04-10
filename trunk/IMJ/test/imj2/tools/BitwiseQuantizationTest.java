@@ -1,11 +1,19 @@
 package imj2.tools;
 
+import static java.lang.Math.min;
 import static java.lang.Math.pow;
 import static java.lang.Math.round;
 import static java.lang.Math.sqrt;
+import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
+import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.array;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import imj2.tools.Image2DComponent.Painter;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -14,6 +22,13 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+
+import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -143,11 +158,83 @@ public final class BitwiseQuantizationTest {
 	@Test
 	public final void test2() {
 		Tools.debugPrint(quantizers);
+		
+		final SimpleImageView imageView = new SimpleImageView();
+		final JSpinner spinner = new JSpinner(new SpinnerNumberModel(0, 0, quantizers.size() - 1, 1));
+		
+		imageView.getPainters().add(new Painter<SimpleImageView>() {
+			
+			@Override
+			public final void paint(final Graphics2D g, final SimpleImageView component,
+					final int width, final int height) {
+				final ColorQuantizer quantizer = quantizers.get(((Number) spinner.getValue()).intValue());
+				final BufferedImage image = imageView.getImage();
+				final BufferedImage buffer = imageView.getBufferImage();
+				final int w = buffer.getWidth();
+				final int h = buffer.getHeight();
+				
+				for (int y = 0; y < h; ++y) {
+					for (int x = 0; x < w; ++x) {
+						int north = 0;
+						int west = 0;
+						int east = 0;
+						int south = 0;
+						
+						if (0 < y) {
+							north = quantizer.quantize(image.getRGB(x, y - 1));
+						}
+						
+						if (0 < x) {
+							west = quantizer.quantize(image.getRGB(x - 1, y));
+						}
+						
+						if (x + 1 < w) {
+							east = quantizer.quantize(image.getRGB(x + 1, y));
+						}
+						
+						if (y + 1 < h) {
+							south = quantizer.quantize(image.getRGB(x, y + 1));
+						}
+						
+						final int center = quantizer.quantize(image.getRGB(x, y));
+						
+						if (min(north, min(west, min(east, south))) < center) {
+							buffer.setRGB(x, y, Color.YELLOW.getRGB());
+						}
+						
+					}
+				}
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 8306989611117085093L;
+			
+		});
+		
+		final JPanel panel = new JPanel(new BorderLayout());
+		
+		SwingTools.setCheckAWT(false);
+		
+		spinner.addChangeListener(new ChangeListener() {
+			
+			@Override
+			public final void stateChanged(final ChangeEvent event) {
+				imageView.refreshBuffer();
+			}
+			
+		});
+		
+		panel.add(horizontalBox(spinner), BorderLayout.NORTH);
+		panel.add(imageView, BorderLayout.CENTER);
+		
+		show(panel, this.getClass().getSimpleName(), true);
 	}
 	
 	private static final List<Object[]> table = new ArrayList<Object[]>();
 	
-	private static final List<ColorQuantizer> quantizers = new ArrayList<ColorQuantizer>();
+	static final List<ColorQuantizer> quantizers = new ArrayList<ColorQuantizer>();
 	
 	static {
 		table.add(array("qRGB", 0, 0, 0, 0.0));
@@ -1211,9 +1298,9 @@ public final class BitwiseQuantizationTest {
 			
 			this.rgbToABC(rgb, abc);
 			
-			final int a = ((abc[0] >> 16) & 0xFF) >> this.qA;
-			final int b = ((abc[0] >> 8) & 0xFF) >> this.qB;
-			final int c = ((abc[0] >> 0) & 0xFF) >> this.qC;
+			final int a = (abc[0] & 0xFF) >> this.qA;
+			final int b = (abc[1] & 0xFF) >> this.qB;
+			final int c = (abc[2] & 0xFF) >> this.qC;
 			
 			return (a << (16 - this.qB - this.qC)) | (b << (8 - this.qC)) | (c << 0);
 		}
