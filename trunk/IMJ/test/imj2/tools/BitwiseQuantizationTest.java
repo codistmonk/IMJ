@@ -160,7 +160,7 @@ public final class BitwiseQuantizationTest {
 	@Test
 	public final void test2() {
 		final Color contourColor = Color.GREEN;
-		final int minimumComponentSize = 10;
+		final int minimumComponentSize = 20;
 		
 		debugPrint(quantizers);
 		
@@ -284,14 +284,18 @@ public final class BitwiseQuantizationTest {
 							
 							neighborLabels.sort();
 							
-							int highestNeighborCount = 0;
 							int neighborLabel = -1;
+							int highestNeighborCount = 0;
+//							int closestNeighborColorDistance = Integer.MAX_VALUE;
+//							final int[] rgb = rgbToRGB(image.getRGB(x, y), new int[3]);
+//							final int[] neighborRGB = new int[3];
 							
 							for (int i = 0, count = 1, previousLabel = -1; i < neighborLabels.size(); ++i, ++count) {
 								final int label = neighborLabels.get(i);
 								
 								if (label != previousLabel) {
 									count = 1;
+									previousLabel = label;
 								}
 								
 								if (highestNeighborCount < count) {
