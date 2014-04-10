@@ -1,20 +1,17 @@
 package imj2.tools;
 
-import static java.lang.Math.abs;
-import static java.lang.Math.max;
 import static java.lang.Math.pow;
 import static java.lang.Math.round;
 import static java.lang.Math.sqrt;
-import static net.sourceforge.aprog.tools.MathTools.square;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import static org.junit.Assert.*;
 
 import java.awt.Color;
-import java.util.Arrays;
+import java.io.Serializable;
+import java.util.Comparator;
+import java.util.TreeMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
-import net.sourceforge.aprog.tools.MathTools;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
-import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -25,57 +22,122 @@ public final class BitwiseQuantizationTest {
 	
 	@Test
 	public final void test() {
-		final int[] rgb = new int[3];
-		final int[] qRGB = rgb.clone();
-		final float[] xyz = new float[3];
-		final float[] cielab = new float[3];
-		final float[] qCIELAB = cielab.clone();
+		final TreeMap<double[], String> lines = new TreeMap<double[], String>(DoubleArrayComparator.INSTANCE);
 		
-		for (int q = 0; q <= 7; ++q) {
-			final Statistics statistics = new Statistics();
+		for (int qR0 = 0; qR0 <= 7; ++qR0) {
+			final int qR = qR0;
 			
-			for (int color = 0; color <= 0x00FFFFFF; ++color) {
-				rgbToRGB(color, rgb);
+			for (int qG0 = 0; qG0 <= 7; ++qG0) {
+				final int qG = qG0;
 				
-				rgbToXYZ(rgb, xyz);
-				xyzToCIELAB(xyz, cielab);
-				
-				quantize(rgb, q, qRGB);
-				rgbToXYZ(qRGB, xyz);
-				xyzToCIELAB(xyz, qCIELAB);
-				
-				statistics.addValue(distance2(cielab, qCIELAB));
-			}
-			
-			debugPrint("q:", q, "error:", statistics.getMinimum(), "<=", statistics.getMean(), "(" + sqrt(statistics.getVariance()) + ")", "<=", statistics.getMaximum());
-		}
-		
-		final int[] hsv = new int[3];
-		final int[] qHSV = hsv.clone();
-		
-		for (int qH = 0; qH <= 7; ++qH) {
-			for (int qS = 0; qS <= 7; ++qS) {
-				for (int qV = 0; qV <= 7; ++qV) {
-					final Statistics statistics = new Statistics();
+				for (int qB0 = 0; qB0 <= 7; ++qB0) {
+					final int qB = qB0;
 					
-					for (int color = 0; color <= 0x00FFFFFF; ++color) {
-						rgbToRGB(color, rgb);
+					MultiThreadTools.getExecutor().submit(new Runnable() {
 						
-						rgbToXYZ(rgb, xyz);
-						xyzToCIELAB(xyz, cielab);
+						@Override
+						public final void run() {
+							final int[] rgb = new int[3];
+							final int[] qRGB = rgb.clone();
+							final float[] xyz = new float[3];
+							final float[] cielab = new float[3];
+							final float[] qCIELAB = cielab.clone();
+							final Statistics statistics = new Statistics();
+							
+							for (int color = 0; color <= 0x00FFFFFF; ++color) {
+								rgbToRGB(color, rgb);
+								
+								rgbToXYZ(rgb, xyz);
+								xyzToCIELAB(xyz, cielab);
+								
+								quantize(rgb, qR, qG, qB, qRGB);
+								rgbToXYZ(qRGB, xyz);
+								xyzToCIELAB(xyz, qCIELAB);
+								
+								statistics.addValue(distance2(cielab, qCIELAB));
+							}
+							
+							final double[] key = { qR + qG + qB, statistics.getMean() };
+							final String line = "qRGB: " + qR + " " + qG + " " + qB + " " + ((qR + qG + qB)) + " " + "error: " + statistics.getMinimum() + " <= " + statistics.getMean() + " ( " + sqrt(statistics.getVariance()) + ") <= " + statistics.getMaximum();
+							
+							synchronized (lines) {
+								lines.put(key, line);
+								System.out.println(line);
+							}
+						}
 						
-						rgbToHSV(rgb, hsv);
-						quantize(hsv, qH, qS, qV, qHSV);
-						hsvToRGB(qHSV, qRGB);
-						rgbToXYZ(qRGB, xyz);
-						xyzToCIELAB(xyz, qCIELAB);
-						
-						statistics.addValue(distance2(cielab, qCIELAB));
-					}
-					
-					debugPrint("qHSV:", qH, qS, qV, "error:", statistics.getMinimum(), "<=", statistics.getMean(), "(" + sqrt(statistics.getVariance()) + ")", "<=", statistics.getMaximum());
+					});
 				}
 			}
+		}
+		
+		for (int qH0 = 0; qH0 <= 7; ++qH0) {
+			final int qH = qH0;
+			
+			for (int qS0 = 0; qS0 <= 7; ++qS0) {
+				final int qS = qS0;
+				
+				for (int qV0 = 0; qV0 <= 7; ++qV0) {
+					final int qV = qV0;
+					
+					MultiThreadTools.getExecutor().submit(new Runnable() {
+						
+						@Override
+						public final void run() {
+							final int[] rgb = new int[3];
+							final int[] qRGB = rgb.clone();
+							final float[] xyz = new float[3];
+							final float[] cielab = new float[3];
+							final float[] qCIELAB = cielab.clone();
+							final int[] hsv = new int[3];
+							final int[] qHSV = hsv.clone();
+							final Statistics statistics = new Statistics();
+							
+							for (int color = 0; color <= 0x00FFFFFF; ++color) {
+								rgbToRGB(color, rgb);
+								
+								rgbToXYZ(rgb, xyz);
+								xyzToCIELAB(xyz, cielab);
+								
+								rgbToHSV(rgb, hsv);
+								quantize(hsv, qH, qS, qV, qHSV);
+								hsvToRGB(qHSV, qRGB);
+								rgbToXYZ(qRGB, xyz);
+								xyzToCIELAB(xyz, qCIELAB);
+								
+								statistics.addValue(distance2(cielab, qCIELAB));
+							}
+							
+							final double[] key = { qH + qS + qV, statistics.getMean() };
+							final String line = "qHSV: " + qH + " " + qS + " " + qV + " " + ((qH + qS + qV)) + " " + "error: " + statistics.getMinimum() + " <= " + statistics.getMean() + " ( " + sqrt(statistics.getVariance()) + ") <= " + statistics.getMaximum();
+							
+							synchronized (lines) {
+								lines.put(key, line);
+								System.out.println(line);
+							}
+						}
+						
+					});
+				}
+			}
+		}
+		
+		shutdownAndWait(MultiThreadTools.getExecutor(), Long.MAX_VALUE);
+		
+		System.out.println();
+		
+		for (final String line : lines.values()) {
+			System.out.println(line);
+		}
+	}
+	
+	public static final void shutdownAndWait(final ExecutorService executor, final long milliseconds) {
+		executor.shutdown();
+		
+		try {
+			executor.awaitTermination(milliseconds, TimeUnit.MILLISECONDS);
+		} catch (final InterruptedException exception) {
+			exception.printStackTrace();
 		}
 	}
 	
@@ -210,6 +272,37 @@ public final class BitwiseQuantizationTest {
 		}
 		
 		return sqrt(sum);
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-04-10)
+	 */
+	public static final class DoubleArrayComparator implements Serializable, Comparator<double[]> {
+		
+		@Override
+		public final int compare(final double[] array1, final double[] array2) {
+			final int n1 = array1.length;
+			final int n2 = array2.length;
+			final int n = Math.min(n1, n2);
+			
+			for (int i = 0; i < n; ++i) {
+				final int comparison = Double.compare(array1[i], array2[i]);
+				
+				if (comparison != 0) {
+					return comparison;
+				}
+			}
+			
+			return n1 - n2;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -88586465954519984L;
+		
+		public static final DoubleArrayComparator INSTANCE = new DoubleArrayComparator();
+		
 	}
 	
 }
