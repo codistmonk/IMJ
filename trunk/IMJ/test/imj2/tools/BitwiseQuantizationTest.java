@@ -202,6 +202,7 @@ public final class BitwiseQuantizationTest {
 							for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
 								final int p = schedulingData.getTodo().get(i);
 								
+								this.labels.getImage().setRGB(p % w, p / w, labelId);
 								this.process(w, h, schedulingData, p % w, p / w, p, labelId, rgb);
 							}
 							
@@ -209,6 +210,30 @@ public final class BitwiseQuantizationTest {
 							
 							++labelId;
 							totalPixelCount += componentPixelCount;
+							
+							schedulingData.getTodo().clear();
+						}
+					}
+				}
+				
+				schedulingData.getDone().clear();
+				
+				for (int y = 0, pixel = 0, labelId = 0xFF000000; y < h; ++y) {
+					for (int x = 0; x < w; ++x, ++pixel) {
+						if (!schedulingData.getDone().get(pixel)) {
+							schedulingData.getTodo().add(pixel);
+							
+							final int rgb = this.labels.getImage().getRGB(x, y);
+							
+							for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
+								final int p = schedulingData.getTodo().get(i);
+								
+								this.process(w, h, schedulingData, p % w, p / w, p, labelId, rgb);
+							}
+							
+							final int componentPixelCount = schedulingData.getTodo().size();
+							
+							++labelId;
 							
 							if (componentPixelCount <= 100) {
 								final IntList neighborLabels = new IntList();
@@ -324,7 +349,6 @@ public final class BitwiseQuantizationTest {
 			private final void process(final int w, final int h,
 					final SchedulingData schedulingData, final int x, final int y,
 					final int pixel, final int labelId, final int rgb) {
-				this.labels.getImage().setRGB(x, y, labelId);
 				schedulingData.getDone().set(pixel);
 				
 				if (0 < y && this.labels.getImage().getRGB(x, y - 1) == rgb) {
