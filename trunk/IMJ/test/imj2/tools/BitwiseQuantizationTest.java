@@ -8,9 +8,7 @@ import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-
 import imj.IntList;
-
 import imj2.tools.Image2DComponent.Painter;
 
 import java.awt.BorderLayout;
@@ -33,6 +31,7 @@ import javax.swing.event.ChangeListener;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
+import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
@@ -172,6 +171,10 @@ public final class BitwiseQuantizationTest {
 			@Override
 			public final void paint(final Graphics2D g, final SimpleImageView component,
 					final int width, final int height) {
+				final TicToc timer = new TicToc();
+				
+				timer.tic();
+				
 				final ColorQuantizer quantizer = quantizers.get(((Number) spinner.getValue()).intValue());
 				final BufferedImage image = imageView.getImage();
 				final BufferedImage buffer = imageView.getBufferImage();
@@ -314,6 +317,8 @@ public final class BitwiseQuantizationTest {
 				if (w * h != totalPixelCount) {
 					System.err.println(debug(Tools.DEBUG_STACK_OFFSET, "Error:", "expected:", w * h, "actual:", totalPixelCount));
 				}
+				
+				debugPrint(timer.toc());
 			}
 			
 			private final void process(final int w, final int h,
