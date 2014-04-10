@@ -1,5 +1,6 @@
 package imj2.tools;
 
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.pow;
 import static java.lang.Math.round;
@@ -198,10 +199,9 @@ public final class BitwiseQuantizationTest {
 						
 						final int center = quantizer.quantize(image.getRGB(x, y));
 						
-						if (min(north, min(west, min(east, south))) < center) {
+						if (min(north, west, east, south) < center) {
 							buffer.setRGB(x, y, Color.YELLOW.getRGB());
 						}
-						
 					}
 				}
 			}
@@ -1263,15 +1263,17 @@ public final class BitwiseQuantizationTest {
 		table.add(array("qHSV", 7, 7, 7, 134.22861938161395));
 		
 		for (final Object[] row : table) {
-			final int qA = ((Number) row[1]).intValue();
-			final int qB = ((Number) row[2]).intValue();
-			final int qC = ((Number) row[3]).intValue();
-			final int q = qA + qB + qC;
+			final String type = (String) row[0];
 			
-			if (quantizers.size() <= q) {
-				final String type = (String) row[0];
+			/*if ("qHSV".equals(type))*/ {
+				final int qA = ((Number) row[1]).intValue();
+				final int qB = ((Number) row[2]).intValue();
+				final int qC = ((Number) row[3]).intValue();
+				final int q = qA + qB + qC;
 				
-				quantizers.add(ColorQuantizer.newQuantizer(type, qA, qB, qC));
+				if (quantizers.size() <= q) {
+					quantizers.add(ColorQuantizer.newQuantizer(type, qA, qB, qC));
+				}
 			}
 		}
 	}
@@ -1527,6 +1529,30 @@ public final class BitwiseQuantizationTest {
 		}
 		
 		return sqrt(sum);
+	}
+	
+	public static final int min(final int... values) {
+		int result = Integer.MAX_VALUE;
+		
+		for (final int value : values) {
+			if (value < result) {
+				result = value;
+			}
+		}
+		
+		return result;
+	}
+	
+	public static final int max(final int... values) {
+		int result = Integer.MIN_VALUE;
+		
+		for (final int value : values) {
+			if (result < value) {
+				result = value;
+			}
+		}
+		
+		return result;
 	}
 	
 	/**
