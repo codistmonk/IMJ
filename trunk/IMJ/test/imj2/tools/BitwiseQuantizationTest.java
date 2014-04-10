@@ -242,9 +242,7 @@ public final class BitwiseQuantizationTest {
 							this.process(w, h, schedulingData, p % w, p / w, p, labelId, rgb);
 						}
 						
-						final int componentPixelCount = schedulingData.getTodo().size();
-						
-						if (componentPixelCount <= 100) {
+						{
 							final IntList neighborLabels = new IntList();
 							
 							for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
