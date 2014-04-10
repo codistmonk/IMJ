@@ -1,6 +1,5 @@
 package imj2.tools;
 
-import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.pow;
 import static java.lang.Math.round;
@@ -8,7 +7,7 @@ import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.array;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
+
 import imj2.tools.Image2DComponent.Painter;
 
 import java.awt.BorderLayout;
@@ -199,7 +198,8 @@ public final class BitwiseQuantizationTest {
 						
 						final int center = quantizer.quantize(image.getRGB(x, y));
 						
-						if (min(north, west, east, south) < center) {
+//						if (min(north, west, east, south) < center) {
+						if (north != center || west != center || east != center || south != center) {
 							buffer.setRGB(x, y, Color.YELLOW.getRGB());
 						}
 					}
