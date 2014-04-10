@@ -7,6 +7,7 @@ import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.array;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import imj2.tools.Image2DComponent.Painter;
 
@@ -157,7 +158,7 @@ public final class BitwiseQuantizationTest {
 	
 	@Test
 	public final void test2() {
-		Tools.debugPrint(quantizers);
+		debugPrint(quantizers);
 		
 		final SimpleImageView imageView = new SimpleImageView();
 		final JSpinner spinner = new JSpinner(new SpinnerNumberModel(0, 0, quantizers.size() - 1, 1));
@@ -181,26 +182,29 @@ public final class BitwiseQuantizationTest {
 						int south = 0;
 						
 						if (0 < y) {
-							north = quantizer.quantize(image.getRGB(x, y - 1));
+							north = quantizer.pack(image.getRGB(x, y - 1));
 						}
 						
 						if (0 < x) {
-							west = quantizer.quantize(image.getRGB(x - 1, y));
+							west = quantizer.pack(image.getRGB(x - 1, y));
 						}
 						
 						if (x + 1 < w) {
-							east = quantizer.quantize(image.getRGB(x + 1, y));
+							east = quantizer.pack(image.getRGB(x + 1, y));
 						}
 						
 						if (y + 1 < h) {
-							south = quantizer.quantize(image.getRGB(x, y + 1));
+							south = quantizer.pack(image.getRGB(x, y + 1));
 						}
 						
-						final int center = quantizer.quantize(image.getRGB(x, y));
+						final int centerRGB = image.getRGB(x, y);
+						final int center = quantizer.pack(centerRGB);
 						
-//						if (min(north, west, east, south) < center) {
-						if (north != center || west != center || east != center || south != center) {
+						if (min(north, west, east, south) < center) {
+//						if (north != center || west != center || east != center || south != center) {
 							buffer.setRGB(x, y, Color.YELLOW.getRGB());
+						} else {
+//							buffer.setRGB(x, y, quantizer.quantize(centerRGB));
 						}
 					}
 				}
@@ -1300,6 +1304,20 @@ public final class BitwiseQuantizationTest {
 			
 			this.rgbToABC(rgb, abc);
 			
+			abc[0] = ((abc[0] & 0xFF) >> this.qA) << this.qA;
+			abc[1] = ((abc[1] & 0xFF) >> this.qB) << this.qB;
+			abc[2] = ((abc[2] & 0xFF) >> this.qC) << this.qC;
+			
+			this.abcToRGB(abc, abc);
+			
+			return (abc[0] << 16) | (abc[1] << 8) | (abc[2] << 0);
+		}
+		
+		public final int pack(final int rgb) {
+			final int[] abc = new int[3];
+			
+			this.rgbToABC(rgb, abc);
+			
 			final int a = (abc[0] & 0xFF) >> this.qA;
 			final int b = (abc[1] & 0xFF) >> this.qB;
 			final int c = (abc[2] & 0xFF) >> this.qC;
@@ -1325,6 +1343,8 @@ public final class BitwiseQuantizationTest {
 		}
 		
 		protected abstract void rgbToABC(final int rgb, final int[] abc);
+		
+		protected abstract void abcToRGB(final int[] abc, final int[] rgb);
 		
 		/**
 		 * {@value}.
@@ -1359,6 +1379,11 @@ public final class BitwiseQuantizationTest {
 			rgbToRGB(rgb, abc);
 		}
 		
+		@Override
+		protected final void abcToRGB(final int[] abc, final int[] rgb) {
+			System.arraycopy(abc, 0, rgb, 0, abc.length);
+		}
+		
 		/**
 		 * {@value}.
 		 */
@@ -1379,6 +1404,11 @@ public final class BitwiseQuantizationTest {
 		protected final void rgbToABC(final int rgb, final int[] abc) {
 			rgbToRGB(rgb, abc);
 			rgbToHSV(abc, abc);
+		}
+		
+		@Override
+		protected final void abcToRGB(final int[] abc, final int[] rgb) {
+			hsvToRGB(abc, rgb);
 		}
 		
 		/**
