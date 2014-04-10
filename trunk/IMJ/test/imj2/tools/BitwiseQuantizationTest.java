@@ -159,6 +159,8 @@ public final class BitwiseQuantizationTest {
 	
 	@Test
 	public final void test2() {
+		final Color contourColor = Color.GREEN;
+		
 		debugPrint(quantizers);
 		
 		final SimpleImageView imageView = new SimpleImageView();
@@ -191,6 +193,7 @@ public final class BitwiseQuantizationTest {
 				
 				final SchedulingData schedulingData = new SchedulingData();
 				int totalPixelCount = 0;
+				final IntList small = new IntList();
 				
 				for (int y = 0, pixel = 0, labelId = 0xFF000000; y < h; ++y) {
 					for (int x = 0; x < w; ++x, ++pixel) {
@@ -211,6 +214,10 @@ public final class BitwiseQuantizationTest {
 							++labelId;
 							totalPixelCount += componentPixelCount;
 							
+							if (componentPixelCount <= 100) {
+								small.add(pixel);
+							}
+							
 							schedulingData.getTodo().clear();
 						}
 					}
@@ -218,93 +225,94 @@ public final class BitwiseQuantizationTest {
 				
 				schedulingData.getDone().clear();
 				
-				for (int y = 0, pixel = 0, labelId = 0xFF000000; y < h; ++y) {
-					for (int x = 0; x < w; ++x, ++pixel) {
-						if (!schedulingData.getDone().get(pixel)) {
-							schedulingData.getTodo().add(pixel);
+				while (!small.isEmpty()) {
+					final int pixel = small.remove(0);
+					final int x = pixel % w;
+					final int y = pixel / w;
+					final int labelId = this.labels.getImage().getRGB(x, y);
+					
+					if (!schedulingData.getDone().get(pixel)) {
+						schedulingData.getTodo().add(pixel);
+						
+						final int rgb = this.labels.getImage().getRGB(x, y);
+						
+						for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
+							final int p = schedulingData.getTodo().get(i);
 							
-							final int rgb = this.labels.getImage().getRGB(x, y);
+							this.process(w, h, schedulingData, p % w, p / w, p, labelId, rgb);
+						}
+						
+						final int componentPixelCount = schedulingData.getTodo().size();
+						
+						if (componentPixelCount <= 100) {
+							final IntList neighborLabels = new IntList();
 							
 							for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
 								final int p = schedulingData.getTodo().get(i);
+								final int xx = p % w;
+								final int yy = p / w;
 								
-								this.process(w, h, schedulingData, p % w, p / w, p, labelId, rgb);
-							}
-							
-							final int componentPixelCount = schedulingData.getTodo().size();
-							
-							++labelId;
-							
-							if (componentPixelCount <= 100) {
-								final IntList neighborLabels = new IntList();
-								
-								for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
-									final int p = schedulingData.getTodo().get(i);
-									final int xx = p % w;
-									final int yy = p / w;
+								if (0 < yy) {
+									final int neighborLabel = this.labels.getImage().getRGB(xx, yy - 1);
 									
-									if (0 < yy) {
-										final int neighborLabel = this.labels.getImage().getRGB(xx, yy - 1);
-										
-										if (neighborLabel != labelId) {
-											neighborLabels.add(neighborLabel);
-										}
-									}
-									
-									if (0 < xx) {
-										final int neighborLabel = this.labels.getImage().getRGB(xx - 1, yy);
-										
-										if (neighborLabel != labelId) {
-											neighborLabels.add(neighborLabel);
-										}
-									}
-									
-									if (xx + 1 < w) {
-										final int neighborLabel = this.labels.getImage().getRGB(xx + 1, yy);
-										
-										if (neighborLabel != labelId) {
-											neighborLabels.add(neighborLabel);
-										}
-									}
-									
-									if (yy + 1 < h) {
-										final int neighborLabel = this.labels.getImage().getRGB(xx, yy + 1);
-										
-										if (neighborLabel != labelId) {
-											neighborLabels.add(neighborLabel);
-										}
+									if (neighborLabel != labelId) {
+										neighborLabels.add(neighborLabel);
 									}
 								}
 								
-								neighborLabels.sort();
-								
-								int highestNeighborCount = 0;
-								int neighborLabel = -1;
-								
-								for (int i = 0, count = 1, previousLabel = -1; i < neighborLabels.size(); ++i, ++count) {
-									final int label = neighborLabels.get(i);
+								if (0 < xx) {
+									final int neighborLabel = this.labels.getImage().getRGB(xx - 1, yy);
 									
-									if (label != previousLabel) {
-										count = 1;
-									}
-									
-									if (highestNeighborCount < count) {
-										highestNeighborCount = count;
-										neighborLabel = label;
+									if (neighborLabel != labelId) {
+										neighborLabels.add(neighborLabel);
 									}
 								}
 								
-								for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
-									final int p = schedulingData.getTodo().get(i);
-									final int xx = p % w;
-									final int yy = p / w;
+								if (xx + 1 < w) {
+									final int neighborLabel = this.labels.getImage().getRGB(xx + 1, yy);
 									
-									this.labels.getImage().setRGB(xx, yy, neighborLabel);
+									if (neighborLabel != labelId) {
+										neighborLabels.add(neighborLabel);
+									}
+								}
+								
+								if (yy + 1 < h) {
+									final int neighborLabel = this.labels.getImage().getRGB(xx, yy + 1);
+									
+									if (neighborLabel != labelId) {
+										neighborLabels.add(neighborLabel);
+									}
 								}
 							}
 							
-							schedulingData.getTodo().clear();
+							neighborLabels.sort();
+							
+							int highestNeighborCount = 0;
+							int neighborLabel = -1;
+							
+							for (int i = 0, count = 1, previousLabel = -1; i < neighborLabels.size(); ++i, ++count) {
+								final int label = neighborLabels.get(i);
+								
+								if (label != previousLabel) {
+									count = 1;
+								}
+								
+								if (highestNeighborCount < count) {
+									highestNeighborCount = count;
+									neighborLabel = label;
+								}
+							}
+							
+							for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
+								final int p = schedulingData.getTodo().get(i);
+								final int xx = p % w;
+								final int yy = p / w;
+								
+								this.labels.getImage().setRGB(xx, yy, neighborLabel);
+							}
 						}
+						
+						schedulingData.getTodo().clear();
 					}
 				}
 				
@@ -334,7 +342,7 @@ public final class BitwiseQuantizationTest {
 						final int center = this.labels.getImage().getRGB(x, y);
 						
 						if (min(north, west, east, south) < center) {
-							buffer.setRGB(x, y, Color.YELLOW.getRGB());
+							buffer.setRGB(x, y, contourColor.getRGB());
 						}
 					}
 				}
