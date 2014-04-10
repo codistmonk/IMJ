@@ -1,13 +1,15 @@
 package imj2.tools;
 
-import static java.lang.Math.min;
 import static java.lang.Math.pow;
 import static java.lang.Math.round;
 import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.array;
+import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+
+import imj.IntList;
 
 import imj2.tools.Image2DComponent.Painter;
 
@@ -161,9 +163,11 @@ public final class BitwiseQuantizationTest {
 		debugPrint(quantizers);
 		
 		final SimpleImageView imageView = new SimpleImageView();
-		final JSpinner spinner = new JSpinner(new SpinnerNumberModel(0, 0, quantizers.size() - 1, 1));
+		final JSpinner spinner = new JSpinner(new SpinnerNumberModel(19, 0, quantizers.size() - 1, 1));
 		
 		imageView.getPainters().add(new Painter<SimpleImageView>() {
+			
+			private Canvas labels = new Canvas();
 			
 			@Override
 			public final void paint(final Graphics2D g, final SimpleImageView component,
@@ -174,6 +178,108 @@ public final class BitwiseQuantizationTest {
 				final int w = buffer.getWidth();
 				final int h = buffer.getHeight();
 				
+				this.labels.setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR);
+				
+				for (int y = 0; y < h; ++y) {
+					for (int x = 0; x < w; ++x) {
+						this.labels.getImage().setRGB(x, y, quantizer.pack(image.getRGB(x, y)));
+					}
+				}
+				
+				final SchedulingData schedulingData = new SchedulingData();
+				int totalPixelCount = 0;
+				
+				for (int y = 0, pixel = 0, labelId = 0xFF000000; y < h; ++y) {
+					for (int x = 0; x < w; ++x, ++pixel) {
+						if (!schedulingData.getDone().get(pixel)) {
+							schedulingData.getTodo().add(pixel);
+							
+							final int rgb = this.labels.getImage().getRGB(x, y);
+							
+							for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
+								final int p = schedulingData.getTodo().get(i);
+								
+								this.process(w, h, schedulingData, p % w, p / w, p, labelId, rgb);
+							}
+							
+							final int componentPixelCount = schedulingData.getTodo().size();
+							
+							++labelId;
+							totalPixelCount += componentPixelCount;
+							
+							if (componentPixelCount <= 100) {
+								final IntList neighborLabels = new IntList();
+								
+								for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
+									final int p = schedulingData.getTodo().get(i);
+									final int xx = p % w;
+									final int yy = p / w;
+									
+									if (0 < yy) {
+										final int neighborLabel = this.labels.getImage().getRGB(xx, yy - 1);
+										
+										if (neighborLabel != labelId) {
+											neighborLabels.add(neighborLabel);
+										}
+									}
+									
+									if (0 < xx) {
+										final int neighborLabel = this.labels.getImage().getRGB(xx - 1, yy);
+										
+										if (neighborLabel != labelId) {
+											neighborLabels.add(neighborLabel);
+										}
+									}
+									
+									if (xx + 1 < w) {
+										final int neighborLabel = this.labels.getImage().getRGB(xx + 1, yy);
+										
+										if (neighborLabel != labelId) {
+											neighborLabels.add(neighborLabel);
+										}
+									}
+									
+									if (yy + 1 < h) {
+										final int neighborLabel = this.labels.getImage().getRGB(xx, yy + 1);
+										
+										if (neighborLabel != labelId) {
+											neighborLabels.add(neighborLabel);
+										}
+									}
+								}
+								
+								neighborLabels.sort();
+								
+								int highestNeighborCount = 0;
+								int neighborLabel = -1;
+								
+								for (int i = 0, count = 1, previousLabel = -1; i < neighborLabels.size(); ++i, ++count) {
+									final int label = neighborLabels.get(i);
+									
+									if (label != previousLabel) {
+										count = 1;
+									}
+									
+									if (highestNeighborCount < count) {
+										highestNeighborCount = count;
+										neighborLabel = label;
+									}
+								}
+								
+								for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
+									final int p = schedulingData.getTodo().get(i);
+									final int xx = p % w;
+									final int yy = p / w;
+									
+									this.labels.getImage().setRGB(xx, yy, neighborLabel);
+								}
+							}
+							
+							schedulingData.getTodo().clear();
+						}
+					}
+				}
+				
 				for (int y = 0; y < h; ++y) {
 					for (int x = 0; x < w; ++x) {
 						int north = 0;
@@ -182,30 +288,73 @@ public final class BitwiseQuantizationTest {
 						int south = 0;
 						
 						if (0 < y) {
-							north = quantizer.pack(image.getRGB(x, y - 1));
+							north = this.labels.getImage().getRGB(x, y - 1);
 						}
 						
 						if (0 < x) {
-							west = quantizer.pack(image.getRGB(x - 1, y));
+							west = this.labels.getImage().getRGB(x - 1, y);
 						}
 						
 						if (x + 1 < w) {
-							east = quantizer.pack(image.getRGB(x + 1, y));
+							east = this.labels.getImage().getRGB(x + 1, y);
 						}
 						
 						if (y + 1 < h) {
-							south = quantizer.pack(image.getRGB(x, y + 1));
+							south = this.labels.getImage().getRGB(x, y + 1);
 						}
 						
-						final int centerRGB = image.getRGB(x, y);
-						final int center = quantizer.pack(centerRGB);
+						final int center = this.labels.getImage().getRGB(x, y);
 						
 						if (min(north, west, east, south) < center) {
-//						if (north != center || west != center || east != center || south != center) {
 							buffer.setRGB(x, y, Color.YELLOW.getRGB());
-						} else {
-//							buffer.setRGB(x, y, quantizer.quantize(centerRGB));
 						}
+					}
+				}
+				
+				if (w * h != totalPixelCount) {
+					System.err.println(debug(Tools.DEBUG_STACK_OFFSET, "Error:", "expected:", w * h, "actual:", totalPixelCount));
+				}
+			}
+			
+			private final void process(final int w, final int h,
+					final SchedulingData schedulingData, final int x, final int y,
+					final int pixel, final int labelId, final int rgb) {
+				this.labels.getImage().setRGB(x, y, labelId);
+				schedulingData.getDone().set(pixel);
+				
+				if (0 < y && this.labels.getImage().getRGB(x, y - 1) == rgb) {
+					final int neighbor = pixel - w;
+					
+					if (!schedulingData.getDone().get(neighbor)) {
+						schedulingData.getDone().set(neighbor);
+						schedulingData.getTodo().add(neighbor);
+					}
+				}
+				
+				if (0 < x && this.labels.getImage().getRGB(x - 1, y) == rgb) {
+					final int neighbor = pixel - 1;
+					
+					if (!schedulingData.getDone().get(neighbor)) {
+						schedulingData.getDone().set(neighbor);
+						schedulingData.getTodo().add(neighbor);
+					}
+				}
+				
+				if (x + 1 < w && this.labels.getImage().getRGB(x + 1, y) == rgb) {
+					final int neighbor = pixel + 1;
+					
+					if (!schedulingData.getDone().get(neighbor)) {
+						schedulingData.getDone().set(neighbor);
+						schedulingData.getTodo().add(neighbor);
+					}
+				}
+				
+				if (y + 1 < h && this.labels.getImage().getRGB(x, y + 1) == rgb) {
+					final int neighbor = pixel + w;
+					
+					if (!schedulingData.getDone().get(neighbor)) {
+						schedulingData.getDone().set(neighbor);
+						schedulingData.getTodo().add(neighbor);
 					}
 				}
 			}
