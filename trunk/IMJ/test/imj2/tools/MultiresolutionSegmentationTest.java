@@ -416,32 +416,37 @@ public final class MultiresolutionSegmentationTest {
 	public static final BufferedImage[] makePyramid(final BufferedImage lod0) {
 		final List<BufferedImage> lods = new ArrayList<BufferedImage>();
 		BufferedImage lod = lod0;
-		int w = lod.getWidth();
-		int h = lod.getHeight();
 		
-		do {
+		lods.add(lod);
+		
+		while (1 < lod.getWidth() && 1 < lod.getHeight()) {
+			lod = nextLOD(lod);
 			lods.add(lod);
-			
-			final BufferedImage nextLOD = new BufferedImage(w /= 2, h /= 2, lod.getType());
-			
-			for (int y = 0; y < h; ++y) {
-				for (int x = 0; x < w; ++x) {
-					final int c00 = lod.getRGB(2 * x + 0, 2 * y + 0);
-					final int c10 = lod.getRGB(2 * x + 1, 2 * y + 0);
-					final int c01 = lod.getRGB(2 * x + 0, 2 * y + 1);
-					final int c11 = lod.getRGB(2 * x + 1, 2 * y + 1);
-					
-					nextLOD.setRGB(x, y,
-							mean(red(c00), red(c10), red(c01), red(c11)) |
-							mean(green(c00), green(c10), green(c01), green(c11)) |
-							mean(blue(c00), blue(c10), blue(c01), blue(c11)));
-				}
-			}
-			
-			lod = nextLOD;
-		} while (1 < w && 1 < h);
+		}
 		
 		return lods.toArray(new BufferedImage[0]);
+	}
+
+	public static final BufferedImage nextLOD(final BufferedImage lod) {
+		final int w = lod.getWidth() / 2;
+		final int h = lod.getHeight() / 2;
+		final BufferedImage result = new BufferedImage(w, h, lod.getType());
+		
+		for (int y = 0; y < h; ++y) {
+			for (int x = 0; x < w; ++x) {
+				final int c00 = lod.getRGB(2 * x + 0, 2 * y + 0);
+				final int c10 = lod.getRGB(2 * x + 1, 2 * y + 0);
+				final int c01 = lod.getRGB(2 * x + 0, 2 * y + 1);
+				final int c11 = lod.getRGB(2 * x + 1, 2 * y + 1);
+				
+				result.setRGB(x, y,
+						mean(red(c00), red(c10), red(c01), red(c11)) |
+						mean(green(c00), green(c10), green(c01), green(c11)) |
+						mean(blue(c00), blue(c10), blue(c01), blue(c11)));
+			}
+		}
+		
+		return result;
 	}
 	
 	public static final int red8(final int rgb) {

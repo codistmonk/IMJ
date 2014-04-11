@@ -257,9 +257,9 @@ public final class TextureGradientTest {
 	public static final int[] updateHistogram(final BufferedImage image, final int x, final int y, final int width, final int height, final int[] result) {
 		final int[] actualResult = result != null ? result : new int[BIN_COUNT];
 		final int firstY = max(0, y);
-		final int lastY = min(image.getHeight() - 1, y + height);
+		final int lastY = min(image.getHeight() - 1, y + height - 1);
 		final int firstX = max(0, x);
-		final int lastX= min(image.getWidth() - 1, x + width);
+		final int lastX= min(image.getWidth() - 1, x + width - 1);
 		
 		for (int yy = firstY; yy <= lastY; ++yy) {
 			for (int xx = firstX; xx <= lastX; ++xx) {

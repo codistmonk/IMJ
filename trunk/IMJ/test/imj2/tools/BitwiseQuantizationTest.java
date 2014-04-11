@@ -229,6 +229,10 @@ public final class BitwiseQuantizationTest {
 				
 				schedulingData.getDone().clear();
 				
+				if (w * h != totalPixelCount) {
+					System.err.println(debug(Tools.DEBUG_STACK_OFFSET, "Error:", "expected:", w * h, "actual:", totalPixelCount));
+				}
+				
 				debugPrint(timer.toc());
 				
 				while (!small.isEmpty()) {
@@ -360,10 +364,6 @@ public final class BitwiseQuantizationTest {
 							buffer.setRGB(x, y, contourColor.getRGB());
 						}
 					}
-				}
-				
-				if (w * h != totalPixelCount) {
-					System.err.println(debug(Tools.DEBUG_STACK_OFFSET, "Error:", "expected:", w * h, "actual:", totalPixelCount));
 				}
 				
 				debugPrint(timer.getTotalTime());
@@ -1512,6 +1512,10 @@ public final class BitwiseQuantizationTest {
 			this.abcToRGB(abc, abc);
 			
 			return (abc[0] << 16) | (abc[1] << 8) | (abc[2] << 0);
+		}
+		
+		public final int getBinCount() {
+			return this.pack(0x00FFFFFF);
 		}
 		
 		public final int pack(final int rgb) {
