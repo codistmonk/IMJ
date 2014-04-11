@@ -166,7 +166,7 @@ public final class BitwiseQuantizationTest {
 		debugPrint(quantizers);
 		
 		final SimpleImageView imageView = new SimpleImageView();
-		final JSpinner spinner = new JSpinner(new SpinnerNumberModel(19, 0, quantizers.size() - 1, 1));
+		final JSpinner spinner = new JSpinner(new SpinnerNumberModel(12, 0, quantizers.size() - 1, 1));
 		
 		imageView.getPainters().add(new Painter<SimpleImageView>() {
 			
@@ -192,6 +192,8 @@ public final class BitwiseQuantizationTest {
 						this.labels.getImage().setRGB(x, y, quantizer.pack(image.getRGB(x, y)));
 					}
 				}
+				
+				debugPrint(timer.toc());
 				
 				final SchedulingData schedulingData = new SchedulingData();
 				int totalPixelCount = 0;
@@ -227,7 +229,14 @@ public final class BitwiseQuantizationTest {
 				
 				schedulingData.getDone().clear();
 				
+				debugPrint(timer.toc());
+				
 				while (!small.isEmpty()) {
+					if (5000L <= timer.toc()) {
+						debugPrint(small.size());
+						timer.tic();
+					}
+					
 					final int pixel = small.remove(0);
 					final int x = pixel % w;
 					final int y = pixel / w;
@@ -293,7 +302,7 @@ public final class BitwiseQuantizationTest {
 							final int[] rgb = rgbToRGB(image.getRGB(x, y), new int[3]);
 							final int[] neighborRGB = new int[3];
 							
-							for (int i = 0/*, count = 1, previousLabel = -1*/; i < neighborLabels.size(); ++i/*, ++count*/) {
+							for (int i = 0; i < neighborLabels.size(); ++i) {
 								rgbToRGB(neighborRGBs.get(i), neighborRGB);
 								
 								final int d = distance1(rgb, neighborRGB);
@@ -317,6 +326,8 @@ public final class BitwiseQuantizationTest {
 						schedulingData.getTodo().clear();
 					}
 				}
+				
+				debugPrint(timer.getTotalTime());
 				
 				for (int y = 0; y < h; ++y) {
 					for (int x = 0; x < w; ++x) {
@@ -343,6 +354,8 @@ public final class BitwiseQuantizationTest {
 						
 						final int center = this.labels.getImage().getRGB(x, y);
 						
+//						buffer.setRGB(x, y, center << 2);
+						
 						if (min(north, west, east, south) < center) {
 							buffer.setRGB(x, y, contourColor.getRGB());
 						}
@@ -353,7 +366,7 @@ public final class BitwiseQuantizationTest {
 					System.err.println(debug(Tools.DEBUG_STACK_OFFSET, "Error:", "expected:", w * h, "actual:", totalPixelCount));
 				}
 				
-				debugPrint(timer.toc());
+				debugPrint(timer.getTotalTime());
 			}
 			
 			private final void process(final int w, final int h,
