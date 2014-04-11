@@ -2,7 +2,6 @@ package imj2.tools;
 
 import static imj2.tools.BitwiseQuantizationTest.min;
 import static imj2.tools.MultiresolutionSegmentationTest.nextLOD;
-import static imj2.tools.TextureGradientTest.computeHistogram;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -11,22 +10,18 @@ import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
-import static org.junit.Assert.*;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import imj.IntList;
 import imj2.tools.BitwiseQuantizationTest.ColorQuantizer;
 import imj2.tools.Image2DComponent.Painter;
-import net.sourceforge.aprog.swing.SwingTools;
+
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
-import net.sourceforge.aprog.tools.MathTools;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -229,8 +224,6 @@ public final class HighSegmentationLowLabelingTest {
 						
 						final int center = this.labels0.getImage().getRGB(x, y);
 						
-//						buffer.setRGB(x, y, center << 2);
-						
 						if (min(north, west, east, south) < center) {
 							buffer.setRGB(x, y, contourColor.getRGB());
 						}
@@ -294,11 +287,11 @@ public final class HighSegmentationLowLabelingTest {
 							
 							for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
 								final int p = schedulingData.getTodo().get(i);
-								try {
-									getOrCreate(lowLabeling, this.labels1.getImage().getRGB((p % w) / 2, (p / w) / 2), factory).incrementAndGet();
-								} catch (final Exception exception) {
-//									exception.printStackTrace();
-									System.err.println(exception + " " + ((p % w) / 2) + " " + ((p / w) / 2) + " " + this.labels1.getWidth() + " " + this.labels1.getHeight());
+								final int xx = (p % w) / 2;
+								final int yy = (p / w) / 2;
+								
+								if (xx < this.labels1.getWidth() && yy < this.labels1.getHeight()) {
+									getOrCreate(lowLabeling, this.labels1.getImage().getRGB(xx, yy), factory).incrementAndGet();
 								}
 							}
 							
