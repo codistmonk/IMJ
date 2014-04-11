@@ -10,6 +10,7 @@ import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static org.junit.Assert.*;
 
 import java.awt.Color;
@@ -24,6 +25,7 @@ import imj.IntList;
 import imj2.tools.BitwiseQuantizationTest.ColorQuantizer;
 import imj2.tools.Image2DComponent.Painter;
 import net.sourceforge.aprog.swing.SwingTools;
+import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.MathTools;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
@@ -58,7 +60,7 @@ public final class HighSegmentationLowLabelingTest {
 				
 				timer.tic();
 				
-				final ColorQuantizer quantizer = BitwiseQuantizationTest.quantizers.get(18);
+				final ColorQuantizer quantizer = BitwiseQuantizationTest.quantizers.get(17);
 				
 				if (this.image0 != imageView.getImage()) {
 					this.image0 = imageView.getImage();
@@ -84,7 +86,7 @@ public final class HighSegmentationLowLabelingTest {
 				debugPrint(timer.toc());
 				
 				final int windowSize = 5;
-				final int[] histogram = new int[quantizer.getBinCount()];
+				final int[] histogram = new int[1 + quantizer.getBinCount()];
 				final int[][] binHistograms = new int[histogram.length][windowSize * windowSize + 1];
 				
 				for (int y = 0; y + windowSize <= h1; ++y) {
@@ -101,7 +103,7 @@ public final class HighSegmentationLowLabelingTest {
 				
 				final int[] quantas = repeat(histogram.length, windowSize * windowSize);
 				
-				reduce(quantas, binHistograms, histogram.length * windowSize * windowSize - 100);
+				reduce(quantas, binHistograms, (histogram.length + 1) * windowSize * windowSize - 200);
 				
 				debugPrint(timer.toc());
 				
@@ -114,12 +116,16 @@ public final class HighSegmentationLowLabelingTest {
 //						final int label = this.image1.getRGB(x, y);
 						this.labels1.getImage().setRGB(x, y, label);
 						
-						imageView.getBufferImage().setRGB(2 * x + 0, 2 * y + 0, label << 3);
-						imageView.getBufferImage().setRGB(2 * x + 1, 2 * y + 0, label << 3);
-						imageView.getBufferImage().setRGB(2 * x + 0, 2 * y + 1, label << 3);
-						imageView.getBufferImage().setRGB(2 * x + 1, 2 * y + 1, label << 3);
+//						imageView.getBufferImage().setRGB(2 * x + 0, 2 * y + 0, label << 3);
+//						imageView.getBufferImage().setRGB(2 * x + 1, 2 * y + 0, label << 3);
+//						imageView.getBufferImage().setRGB(2 * x + 0, 2 * y + 1, label << 3);
+//						imageView.getBufferImage().setRGB(2 * x + 1, 2 * y + 1, label << 3);
 					}
 				}
+				
+				debugPrint(timer.toc());
+				
+				this.adjustLabels(w0, h0);
 				
 				debugPrint(timer.toc());
 				
@@ -265,6 +271,60 @@ public final class HighSegmentationLowLabelingTest {
 				if (w * h != totalPixelCount) {
 					System.err.println(debug(Tools.DEBUG_STACK_OFFSET, "Error:", "expected:", w * h, "actual:", totalPixelCount));
 				}
+			}
+			
+			private void adjustLabels(final int w, final int h) {
+				final SchedulingData schedulingData = new SchedulingData();
+				final DefaultFactory<AtomicInteger> factory = DefaultFactory.forClass(AtomicInteger.class);
+				
+				for (int y = 0, pixel = 0; y < h; ++y) {
+					for (int x = 0; x < w; ++x, ++pixel) {
+						if (!schedulingData.getDone().get(pixel)) {
+							schedulingData.getTodo().add(pixel);
+							
+							final int rgb = this.labels0.getImage().getRGB(x, y);
+							
+							for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
+								final int p = schedulingData.getTodo().get(i);
+								
+								this.process(w, h, schedulingData, p % w, p / w, p, rgb);
+							}
+							
+							final Map<Integer, AtomicInteger> lowLabeling = new HashMap<Integer, AtomicInteger>();
+							
+							for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
+								final int p = schedulingData.getTodo().get(i);
+								try {
+									getOrCreate(lowLabeling, this.labels1.getImage().getRGB((p % w) / 2, (p / w) / 2), factory).incrementAndGet();
+								} catch (final Exception exception) {
+//									exception.printStackTrace();
+									System.err.println(exception + " " + ((p % w) / 2) + " " + ((p / w) / 2) + " " + this.labels1.getWidth() + " " + this.labels1.getHeight());
+								}
+							}
+							
+							int newLabel = rgb;
+							int newLabelCount = 0;
+							
+							for (final Map.Entry<Integer, AtomicInteger> entry : lowLabeling.entrySet()) {
+								final int count = entry.getValue().get();
+								
+								if (newLabelCount < count) {
+									newLabelCount = count;
+									newLabel = entry.getKey();
+								}
+							}
+							
+							for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
+								final int p = schedulingData.getTodo().get(i);
+								this.labels0.getImage().setRGB(p % w, p / w, newLabel);
+							}
+							
+							schedulingData.getTodo().clear();
+						}
+					}
+				}
+				
+				schedulingData.getDone().clear();
 			}
 			
 			private final void initializeLabels(final BufferedImage image, final ColorQuantizer quantizer, final BufferedImage labels) {
