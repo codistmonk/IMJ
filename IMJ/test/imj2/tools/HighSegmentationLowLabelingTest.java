@@ -1,6 +1,8 @@
 package imj2.tools;
 
 import static imj2.tools.BitwiseQuantizationTest.min;
+import static imj2.tools.TextureGradientTest.computeHistogram;
+import static java.lang.Math.abs;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -13,6 +15,7 @@ import java.awt.image.BufferedImage;
 import imj.IntList;
 import imj2.tools.BitwiseQuantizationTest.ColorQuantizer;
 import imj2.tools.Image2DComponent.Painter;
+import net.sourceforge.aprog.tools.MathTools;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -73,7 +76,7 @@ public final class HighSegmentationLowLabelingTest {
 				
 				for (int y = 0; y + windowSize <= h1; y += windowSize) {
 					for (int x = 0; x + windowSize <= w1; x += windowSize) {
-						TextureGradientTest.computeHistogram(this.image1, x, y, windowSize, windowSize, histogram);
+						computeHistogram(this.image1, x, y, windowSize, windowSize, histogram);
 						
 						for (int i = 0; i < histogram.length; ++i) {
 							++binHistograms[i][histogram[i]];
@@ -88,10 +91,37 @@ public final class HighSegmentationLowLabelingTest {
 				debugPrint(timer.toc());
 			}
 			
-			private final double computeQuantizationError(final int[][] binHistogram, final int bin) {
+			private final void reduce(final int[] quantas, final int[][] binHistograms) {
+				final int n = quantas.length;
+				double minimumError = Double.POSITIVE_INFINITY;
+				int index = -1;
+				
+				for (int i = 0; i < n; ++i) {
+					if (1 < quantas[i]) {
+						final double e = this.computeQuantizationError(binHistograms, i, quantas[i] - 1);
+						
+						if (e < minimumError) {
+							minimumError = e;
+							index = i;
+						}
+					}
+				}
+				
+				if (0 <= index) {
+					--quantas[index];
+				}
+			}
+			
+			private final double computeQuantizationError(final int[][] binHistogram, final int bin, final int quanta) {
 				double result = 0.0;
 				
+				final int max = binHistogram[bin].length - 1;
 				
+				for (int i = 0; i <= max; ++i) {
+					final int value = binHistogram[bin][i];
+					final int quantizedValue = value * quanta / max;
+					result += abs(quantizedValue - value);
+				}
 				
 				return result;
 			}
