@@ -440,9 +440,9 @@ public final class MultiresolutionSegmentationTest {
 				final int c11 = lod.getRGB(2 * x + 1, 2 * y + 1);
 				
 				result.setRGB(x, y,
-						mean(red(c00), red(c10), red(c01), red(c11)) |
-						mean(green(c00), green(c10), green(c01), green(c11)) |
-						mean(blue(c00), blue(c10), blue(c01), blue(c11)));
+						red(mean(red(c00), red(c10), red(c01), red(c11))) |
+						green(mean(green(c00), green(c10), green(c01), green(c11))) |
+						blue(mean(blue(c00), blue(c10), blue(c01), blue(c11))));
 			}
 		}
 		
