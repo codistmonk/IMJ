@@ -44,9 +44,13 @@ public final class HighSegmentationLowLabelingTest {
 			
 			private Canvas labels1 = new Canvas();
 			
+			private Canvas labels2 = new Canvas();
+			
 			private BufferedImage image0;
 			
 			private BufferedImage image1;
+			
+			private BufferedImage image2;
 			
 			@Override
 			public final void paint(final Graphics2D g, final SimpleImageView component,
@@ -62,17 +66,22 @@ public final class HighSegmentationLowLabelingTest {
 				}
 				
 				this.image1 = nextLOD(this.image0);
+				this.image2 = nextLOD(this.image1);
 				
 				final int w0 = this.image0.getWidth();
 				final int h0 = this.image0.getHeight();
 				final int w1 = this.image1.getWidth();
 				final int h1 = this.image1.getHeight();
+				final int w2 = this.image2.getWidth();
+				final int h2 = this.image2.getHeight();
 				
 				this.labels0.setFormat(w0, h0, BufferedImage.TYPE_3BYTE_BGR);
 				this.labels1.setFormat(w1, h1, BufferedImage.TYPE_3BYTE_BGR);
+				this.labels2.setFormat(w2, h2, BufferedImage.TYPE_3BYTE_BGR);
 				
-				this.initializeLabels(this.image0, quantizer, this.labels0.getImage());
-				this.initializeLabels(this.image1, quantizer, this.image1);
+				this.pack(this.image0, quantizer, this.labels0.getImage());
+				this.pack(this.image1, quantizer, this.image1);
+				this.pack(this.image2, quantizer, this.image2);
 				
 				debugPrint(timer.toc());
 				
@@ -82,17 +91,7 @@ public final class HighSegmentationLowLabelingTest {
 				
 				final int windowSize = 5;
 				final int[] histogram = new int[1 + quantizer.getBinCount()];
-				final int[][] binHistograms = new int[histogram.length][windowSize * windowSize + 1];
-				
-				for (int y = 0; y + windowSize <= h1; ++y) {
-					for (int x = 0; x + windowSize <= w1; ++x) {
-						computeHistogram(this.image1, x, y, windowSize, windowSize, histogram);
-						
-						for (int i = 0; i < histogram.length; ++i) {
-							++binHistograms[i][histogram[i]];
-						}
-					}
-				}
+				final int[][] binHistograms = computeBinHistograms(this.image1, histogram, windowSize);
 				
 				debugPrint(timer.toc());
 				
@@ -102,14 +101,32 @@ public final class HighSegmentationLowLabelingTest {
 				
 				debugPrint(timer.toc());
 				
+				this.quantize(this.image1, windowSize, histogram, quantas, this.labels1.getImage());
+				
+				debugPrint(timer.toc());
+				
+				this.adjustLabels(this.labels1.getImage(), this.labels0.getImage());
+				
+				debugPrint(timer.toc());
+				
+				this.drawContours(contourColor, imageView.getBufferImage());
+				
+				debugPrint(timer.toc());
+			}
+
+			private final void quantize(final BufferedImage source,
+					final int windowSize, final int[] histogram, final int[] quantas,
+					final BufferedImage target) {
+				final int w = target.getWidth();
+				final int h = target.getHeight();
 				final Map<String, Integer> quantizedHistogramIds = new HashMap<String, Integer>();
 				
-				for (int y = 0; y + windowSize <= h1; ++y) {
-					for (int x = 0; x + windowSize <= w1; ++x) {
-						computeHistogram(this.image1, x, y, windowSize, windowSize, histogram);
+				for (int y = 0; y + windowSize <= h; ++y) {
+					for (int x = 0; x + windowSize <= w; ++x) {
+						computeHistogram(source, x, y, windowSize, windowSize, histogram);
 						final int label = quantize(histogram, windowSize * windowSize, quantas, quantizedHistogramIds);
 //						final int label = this.image1.getRGB(x, y);
-						this.labels1.getImage().setRGB(x, y, label);
+						target.setRGB(x, y, label);
 						
 //						imageView.getBufferImage().setRGB(2 * x + 0, 2 * y + 0, label << 3);
 //						imageView.getBufferImage().setRGB(2 * x + 1, 2 * y + 0, label << 3);
@@ -117,16 +134,24 @@ public final class HighSegmentationLowLabelingTest {
 //						imageView.getBufferImage().setRGB(2 * x + 1, 2 * y + 1, label << 3);
 					}
 				}
+			}
+
+			private final int[][] computeBinHistograms(final BufferedImage quantizedImage, final int[] histogram, final int windowSize) {
+				final int w = quantizedImage.getWidth();
+				final int h = quantizedImage.getHeight();
+				final int[][] result = new int[histogram.length][windowSize * windowSize + 1];
 				
-				debugPrint(timer.toc());
+				for (int y = 0; y + windowSize <= h; ++y) {
+					for (int x = 0; x + windowSize <= w; ++x) {
+						computeHistogram(quantizedImage, x, y, windowSize, windowSize, histogram);
+						
+						for (int i = 0; i < histogram.length; ++i) {
+							++result[i][histogram[i]];
+						}
+					}
+				}
 				
-				this.adjustLabels(w0, h0);
-				
-				debugPrint(timer.toc());
-				
-				this.drawContours(contourColor, imageView.getBufferImage());
-				
-				debugPrint(timer.toc());
+				return result;
 			}
 			
 			private final int quantize(final int[] histogram, final int pixelCount, final int[] quantas, final Map<String, Integer> quantizedHistogramIds) {
@@ -266,16 +291,19 @@ public final class HighSegmentationLowLabelingTest {
 				}
 			}
 			
-			private void adjustLabels(final int w, final int h) {
+			private void adjustLabels(final BufferedImage source, final BufferedImage target) {
 				final SchedulingData schedulingData = new SchedulingData();
 				final DefaultFactory<AtomicInteger> factory = DefaultFactory.forClass(AtomicInteger.class);
+				final int w = target.getWidth();
+				final int h = target.getHeight();
+				final int s = target.getWidth() / source.getWidth();
 				
 				for (int y = 0, pixel = 0; y < h; ++y) {
 					for (int x = 0; x < w; ++x, ++pixel) {
 						if (!schedulingData.getDone().get(pixel)) {
 							schedulingData.getTodo().add(pixel);
 							
-							final int rgb = this.labels0.getImage().getRGB(x, y);
+							final int rgb = target.getRGB(x, y);
 							
 							for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
 								final int p = schedulingData.getTodo().get(i);
@@ -287,11 +315,11 @@ public final class HighSegmentationLowLabelingTest {
 							
 							for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
 								final int p = schedulingData.getTodo().get(i);
-								final int xx = (p % w) / 2;
-								final int yy = (p / w) / 2;
+								final int xx = (p % w) / s;
+								final int yy = (p / w) / s;
 								
-								if (xx < this.labels1.getWidth() && yy < this.labels1.getHeight()) {
-									getOrCreate(lowLabeling, this.labels1.getImage().getRGB(xx, yy), factory).incrementAndGet();
+								if (xx < source.getWidth() && yy < source.getHeight()) {
+									getOrCreate(lowLabeling, source.getRGB(xx, yy), factory).incrementAndGet();
 								}
 							}
 							
@@ -309,18 +337,16 @@ public final class HighSegmentationLowLabelingTest {
 							
 							for (int i = 0; i < schedulingData.getTodo().size(); ++i) {
 								final int p = schedulingData.getTodo().get(i);
-								this.labels0.getImage().setRGB(p % w, p / w, newLabel);
+								target.setRGB(p % w, p / w, newLabel);
 							}
 							
 							schedulingData.getTodo().clear();
 						}
 					}
 				}
-				
-				schedulingData.getDone().clear();
 			}
 			
-			private final void initializeLabels(final BufferedImage image, final ColorQuantizer quantizer, final BufferedImage labels) {
+			private final void pack(final BufferedImage image, final ColorQuantizer quantizer, final BufferedImage labels) {
 				final int w = image.getWidth();
 				final int h = image.getHeight();
 				
