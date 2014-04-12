@@ -1515,7 +1515,7 @@ public final class BitwiseQuantizationTest {
 		}
 		
 		public final int getBinCount() {
-			return this.pack(0x00FFFFFF);
+			return this.pack(0x00FFFFFF) + 1;
 		}
 		
 		public final int pack(final int rgb) {
