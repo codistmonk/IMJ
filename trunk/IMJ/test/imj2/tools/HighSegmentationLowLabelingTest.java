@@ -1,6 +1,10 @@
 package imj2.tools;
 
 import static imj2.tools.BitwiseQuantizationTest.min;
+import static imj2.tools.BitwiseQuantizationTest.packCIELAB;
+import static imj2.tools.BitwiseQuantizationTest.rgbToRGB;
+import static imj2.tools.BitwiseQuantizationTest.rgbToXYZ;
+import static imj2.tools.BitwiseQuantizationTest.xyzToCIELAB;
 import static imj2.tools.MultiresolutionSegmentationTest.nextLOD;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
@@ -23,7 +27,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import imj2.tools.BitwiseQuantizationTest.ColorQuantizer;
 import imj2.tools.Image2DComponent.Painter;
 
-import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
@@ -58,6 +61,7 @@ public final class HighSegmentationLowLabelingTest {
 			@Override
 			public final void paint(final Graphics2D g, final SimpleImageView component,
 					final int width, final int height) {
+				
 				final TicToc timer = new TicToc();
 				
 				debugPrint("Initializing...", new Date(timer.tic()));
@@ -73,6 +77,20 @@ public final class HighSegmentationLowLabelingTest {
 				
 				final int w0 = this.image0.getWidth();
 				final int h0 = this.image0.getHeight();
+				
+				if (false) {
+					for (int y = 0; y < h0; ++y) {
+						for (int x = 0; x < w0; ++x) {
+							final int[] rgb = rgbToRGB(this.image0.getRGB(x, y), new int[3]);
+							final float[] cielab = xyzToCIELAB(rgbToXYZ(rgb, new float[3]));
+							
+							imageView.getBufferImage().setRGB(x, y, packCIELAB(cielab));
+						}
+					}
+					
+					return;
+				}
+				
 				final int w1 = this.image1.getWidth();
 				final int h1 = this.image1.getHeight();
 				final int w2 = this.image2.getWidth();

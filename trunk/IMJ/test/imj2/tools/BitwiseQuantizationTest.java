@@ -1633,6 +1633,14 @@ public final class BitwiseQuantizationTest {
 		}
 	}
 	
+	public static final int packRGB(final int[] rgb) {
+		return 0xFF000000 | ((rgb[0] & 0xFF) << 16) | ((rgb[1] & 0xFF) << 8) |((rgb[2] & 0xFF) << 0);
+	}
+	
+	public static final int packCIELAB(final float[] cielab) {
+		return 0xFF000000 | (round((cielab[0] % 100F) * 2.55F) << 16) | (round((cielab[1] % 100F) * 2.55F) << 8) | (round((cielab[2] % 100F) * 2.55F) << 0);
+	}
+	
 	public static final int[] rgbToRGB(final int rgb, final int[] result) {
 		result[0] = (rgb >> 16) & 0xFF;
 		result[1] = (rgb >> 8) & 0xFF;
@@ -1684,6 +1692,10 @@ public final class BitwiseQuantizationTest {
 		result[2] = round(255F * (0.00092090F * x - 0.0025498F * y + 0.17860F * z));
 		
 		return result;
+	}
+	
+	public static final float[] xyzToCIELAB(final float[] abc) {
+		return xyzToCIELAB(abc, abc);
 	}
 	
 	public static final float[] xyzToCIELAB(final float[] xyz, final float[] result) {
