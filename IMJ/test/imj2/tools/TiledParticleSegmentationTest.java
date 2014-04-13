@@ -63,7 +63,7 @@ public final class TiledParticleSegmentationTest {
 		final int quantizationAlgorithm = 1;
 		final boolean fillSegments = false;
 		final Color regionSeparationColor = Color.GREEN;
-		final Color segmentSeparationColor = null;
+		final Color segmentSeparationColor = null;//Color.BLACK;
 		final Color segmentLocatorColor = null;
 		final int algo0Q = 5;
 		final int algo1Q = 2;
@@ -510,6 +510,7 @@ public final class TiledParticleSegmentationTest {
 			todo.clear();
 			done.clear();
 			todo.add(tileY * w + tileX);
+			done.set(tileY * w + tileX);
 			
 			this.beforePixels();
 			
@@ -519,23 +520,26 @@ public final class TiledParticleSegmentationTest {
 				final int y = pixel / w;
 				
 				++this.pixelCount;
-				done.set(pixel);
 				
 				this.pixel(pixel, x, y);
 				
 				if (0 < y && !done.get(pixel - w) && (segmentation.getRGB(x, y - 1) & 0x00FFFFFF) == 0) {
+					done.set(pixel - w);
 					todo.add(pixel - w);
 				}
 				
 				if (0 < x && !done.get(pixel - 1) && (segmentation.getRGB(x - 1, y) & 0x00FFFFFF) == 0) {
+					done.set(pixel - 1);
 					todo.add(pixel - 1);
 				}
 				
 				if (x + 1 < w && !done.get(pixel + 1) && (segmentation.getRGB(x + 1, y) & 0x00FFFFFF) == 0) {
+					done.set(pixel + 1);
 					todo.add(pixel + 1);
 				}
 				
 				if (y + 1 < h && !done.get(pixel + w) && (segmentation.getRGB(x, y + 1) & 0x00FFFFFF) == 0) {
+					done.set(pixel + w);
 					todo.add(pixel + w);
 				}
 			}
