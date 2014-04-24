@@ -1,10 +1,10 @@
 package imj2.tools;
 
-import static imj2.tools.BitwiseQuantizationTest.min;
-import static imj2.tools.BitwiseQuantizationTest.packCIELAB;
-import static imj2.tools.BitwiseQuantizationTest.rgbToRGB;
-import static imj2.tools.BitwiseQuantizationTest.rgbToXYZ;
-import static imj2.tools.BitwiseQuantizationTest.xyzToCIELAB;
+import static imj2.tools.BitwiseQuantizationTest.ColorTools1.min;
+import static imj2.tools.BitwiseQuantizationTest.ColorTools1.packCIELAB;
+import static imj2.tools.BitwiseQuantizationTest.ColorTools1.rgbToRGB;
+import static imj2.tools.BitwiseQuantizationTest.ColorTools1.rgbToXYZ;
+import static imj2.tools.BitwiseQuantizationTest.ColorTools1.xyzToCIELAB;
 import static imj2.tools.MultiresolutionSegmentationTest.nextLOD;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
@@ -15,6 +15,9 @@ import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 
+import imj2.tools.BitwiseQuantizationTest.ColorQuantizer;
+import imj2.tools.Image2DComponent.Painter;
+
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -23,9 +26,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import imj2.tools.BitwiseQuantizationTest.ColorQuantizer;
-import imj2.tools.Image2DComponent.Painter;
 
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.TicToc;
