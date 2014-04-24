@@ -1,5 +1,16 @@
 package imj2.tools;
 
+import static imj2.tools.BitwiseQuantizationTest.ColorTools1.distance1;
+import static imj2.tools.BitwiseQuantizationTest.ColorTools1.distance2;
+import static imj2.tools.BitwiseQuantizationTest.ColorTools1.hsvToRGB;
+import static imj2.tools.BitwiseQuantizationTest.ColorTools1.ints;
+import static imj2.tools.BitwiseQuantizationTest.ColorTools1.min;
+import static imj2.tools.BitwiseQuantizationTest.ColorTools1.quantize;
+import static imj2.tools.BitwiseQuantizationTest.ColorTools1.rgbToCIELAB;
+import static imj2.tools.BitwiseQuantizationTest.ColorTools1.rgbToHSV;
+import static imj2.tools.BitwiseQuantizationTest.ColorTools1.rgbToRGB;
+import static imj2.tools.BitwiseQuantizationTest.ColorTools1.rgbToXYZ;
+import static imj2.tools.BitwiseQuantizationTest.ColorTools1.xyzToCIELAB;
 import static java.lang.Math.abs;
 import static java.lang.Math.pow;
 import static java.lang.Math.round;
@@ -18,6 +29,7 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.TreeMap;
@@ -31,6 +43,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import net.sourceforge.aprog.swing.SwingTools;
+import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
@@ -1633,184 +1646,552 @@ public final class BitwiseQuantizationTest {
 		}
 	}
 	
-	public static final int packRGB(final int[] rgb) {
-		return 0xFF000000 | ((rgb[0] & 0xFF) << 16) | ((rgb[1] & 0xFF) << 8) |((rgb[2] & 0xFF) << 0);
-	}
-	
-	public static final int packCIELAB(final float[] cielab) {
-		return 0xFF000000 | (round((cielab[0] % 100F) * 2.55F) << 16) | (round((cielab[1] % 100F) * 2.55F) << 8) | (round((cielab[2] % 100F) * 2.55F) << 0);
-	}
-	
-	public static final int[] rgbToRGB(final int rgb, final int[] result) {
-		result[0] = (rgb >> 16) & 0xFF;
-		result[1] = (rgb >> 8) & 0xFF;
-		result[2] = (rgb >> 0) & 0xFF;
+	/**
+	 * @author codistmonk (creation 2014-04-24)
+	 */
+	public static final class ColorTools1 {
 		
-		return result;
-	}
-	
-	public static final int[] rgbToHSV(final int[] rgb, final int[] result) {
-		final float[] hsv = new float[3];
-		
-		Color.RGBtoHSB(rgb[0], rgb[1], rgb[2], hsv);
-		
-		result[0] = round(hsv[0] * 255F);
-		result[1] = round(hsv[1] * 255F);
-		result[2] = round(hsv[2] * 255F);
-		
-		return result;
-	}
-	
-	public static final int[] hsvToRGB(final int[] hsv, final int[] result) {
-		return rgbToRGB(Color.HSBtoRGB(hsv[0] / 255F, hsv[1] / 255F, hsv[2] / 255F), result);
-	}
-	
-	public static final float[] rgbToXYZ(final int[] rgb, final float[] result) {
-		// http://en.wikipedia.org/wiki/CIE_1931_color_space
-		
-		final float r = rgb[0] / 255F;
-		final float g = rgb[1] / 255F;
-		final float b = rgb[2] / 255F;
-		final float b21 = 0.17697F;
-		
-		result[0] = (0.49F * r + 0.31F * g + 0.20F * b) / b21;
-		result[1] = (b21 * r + 0.81240F * g + 0.01063F * b) / b21;
-		result[2] = (0.00F * r + 0.01F * g + 0.99F * b) / b21;
-		
-		return result;
-	}
-	
-	public static final int[] xyzToRGB(final float[] xyz, final int[] result) {
-		// http://en.wikipedia.org/wiki/CIE_1931_color_space
-		
-		final float x = xyz[0];
-		final float y = xyz[1];
-		final float z = xyz[2];
-		
-		result[0] = round(255F * (0.41847F * x - 0.15866F * y - 0.082835F * z));
-		result[1] = round(255F * (-0.091169F * x + 0.25243F * y + 0.015708F * z));
-		result[2] = round(255F * (0.00092090F * x - 0.0025498F * y + 0.17860F * z));
-		
-		return result;
-	}
-	
-	public static final float[] xyzToCIELAB(final float[] abc) {
-		return xyzToCIELAB(abc, abc);
-	}
-	
-	public static final float[] xyzToCIELAB(final float[] xyz, final float[] result) {
-		// http://en.wikipedia.org/wiki/Illuminant_D65
-		
-		final float d65X = 0.95047F;
-		final float d65Y = 1.0000F;
-		final float d65Z = 1.08883F;
-		
-		// http://en.wikipedia.org/wiki/Lab_color_space
-		
-		final float fX = f(xyz[0] / d65X);
-		final float fY = f(xyz[1] / d65Y);
-		final float fZ = f(xyz[2] / d65Z);
-		
-		result[0] = 116F * fY - 16F;
-		result[1] = 500F * (fX - fY);
-		result[2] = 200F * (fY - fZ);
-		
-		return result;
-	}
-	
-	public static final float[] cielabToXYZ(final float[] cielab, final float[] result) {
-		// http://en.wikipedia.org/wiki/Illuminant_D65
-		
-		final float d65X = 0.95047F;
-		final float d65Y = 1.0000F;
-		final float d65Z = 1.08883F;
-		
-		// http://en.wikipedia.org/wiki/Lab_color_space
-		
-		final float lStar = cielab[0];
-		final float aStar = cielab[1];
-		final float bStar = cielab[2];
-		final float c = (lStar + 16F) / 116F;
-		
-		result[0] = d65X * fInv(c + aStar / 500F);
-		result[1] = d65Y * fInv(c);
-		result[2] = d65Z * fInv(c - bStar / 200F);
-		
-		return result;
-	}
-	
-	public static final float f(final float t) {
-		return cube(6F / 29F) < t ? (float) pow(t, 1.0 / 3.0) : square(29F / 6F) * t / 3F + 4F / 29F;
-	}
-	
-	public static final float fInv(final float t) {
-		return 6F / 29F < t ? cube(t) : 3F * square(6F / 29F) * (t - 4F / 29F);
-	}
-	
-	public static final float square(final float value) {
-		return value * value;
-	}
-	
-	public static final float cube(final float value) {
-		return value * value * value;
-	}
-	
-	public static final int[] quantize(final int[] abc, final int q, final int[] result) {
-		return quantize(abc, q, q, q, result);
-	}
-	
-	public static final int[] quantize(final int[] abc, final int qA, final int qB, final int qC, final int[] result) {
-		result[0] = abc[0] & ((~0) << qA);
-		result[1] = abc[1] & ((~0) << qB);
-		result[2] = abc[2] & ((~0) << qC);
-		
-		return result;
-	}
-	
-	public static final int distance1(final int[] abc1, final int[] abc2) {
-		final int n = abc1.length;
-		int result = 0;
-		
-		for (int i = 0; i < n; ++i) {
-			result += abs(abc1[i] - abc2[i]);
+		private ColorTools1() {
+			throw new IllegalInstantiationException();
 		}
 		
-		return result;
-	}
-	
-	public static final double distance2(final float[] abc1, final float[] abc2) {
-		final int n = abc1.length;
-		double sum = 0.0;
-		
-		for (int i = 0; i < n; ++i) {
-			sum += square(abc1[i] - abc2[i]);
+		public static final int[] ints(final int... result) {
+			return result;
 		}
 		
-		return sqrt(sum);
-	}
-	
-	public static final int min(final int... values) {
-		int result = Integer.MAX_VALUE;
+		public static final int packRGB(final int[] rgb) {
+			return 0xFF000000 | ((rgb[0] & 0xFF) << 16) | ((rgb[1] & 0xFF) << 8) |((rgb[2] & 0xFF) << 0);
+		}
 		
-		for (final int value : values) {
-			if (value < result) {
-				result = value;
+		public static final int packCIELAB(final float[] cielab) {
+			return 0xFF000000 | (round((cielab[0] % 100F) * 2.55F) << 16) | (round((cielab[1] % 100F) * 2.55F) << 8) | (round((cielab[2] % 100F) * 2.55F) << 0);
+		}
+		
+		public static final int[] rgbToRGB(final int rgb, final int[] result) {
+			result[0] = (rgb >> 16) & 0xFF;
+			result[1] = (rgb >> 8) & 0xFF;
+			result[2] = (rgb >> 0) & 0xFF;
+			
+			return result;
+		}
+		
+		public static final int[] rgbToHSV(final int[] rgb, final int[] result) {
+			final float[] hsv = new float[3];
+			
+			Color.RGBtoHSB(rgb[0], rgb[1], rgb[2], hsv);
+			
+			result[0] = round(hsv[0] * 255F);
+			result[1] = round(hsv[1] * 255F);
+			result[2] = round(hsv[2] * 255F);
+			
+			return result;
+		}
+		
+		public static final int[] hsvToRGB(final int[] hsv, final int[] result) {
+			return rgbToRGB(Color.HSBtoRGB(hsv[0] / 255F, hsv[1] / 255F, hsv[2] / 255F), result);
+		}
+		
+		public static final float[] rgbToCIELAB(final int[] rgb) {
+			return rgbToCIELAB(rgb, new float[3]);
+		}
+		
+		public static final float[] rgbToCIELAB(final int[] rgb, final float[] result) {
+			return xyzToCIELAB(rgbToXYZ(rgb, result));
+		}
+		
+		public static final int[] cielabToRGB(final float[] cielab) {
+			return cielabToRGB(cielab, new int[3]);
+		}
+		
+		public static final int[] cielabToRGB(final float[] cielab, final int[] result) {
+			return xyzToRGB(cielabToXYZ(cielab, new float[3]), result);
+		}
+		
+		public static final float[] rgbToXYZ(final int[] rgb) {
+			return rgbToXYZ(rgb, new float[3]);
+		}
+		
+		public static final float[] rgbToXYZ(final int[] rgb, final float[] result) {
+			// http://en.wikipedia.org/wiki/CIE_1931_color_space
+			
+			final float r = rgb[0] / 255F;
+			final float g = rgb[1] / 255F;
+			final float b = rgb[2] / 255F;
+			final float b21 = 0.17697F;
+			
+			result[0] = (0.49F * r + 0.31F * g + 0.20F * b) / b21;
+			result[1] = (b21 * r + 0.81240F * g + 0.01063F * b) / b21;
+			result[2] = (0.00F * r + 0.01F * g + 0.99F * b) / b21;
+			
+			return result;
+		}
+		
+		public static final int[] xyzToRGB(final float[] xyz) {
+			return xyzToRGB(xyz, new int[3]);
+		}
+		
+		public static final int[] xyzToRGB(final float[] xyz, final int[] result) {
+			// http://en.wikipedia.org/wiki/CIE_1931_color_space
+			
+			final float x = xyz[0];
+			final float y = xyz[1];
+			final float z = xyz[2];
+			
+			result[0] = round(255F * (0.41847F * x - 0.15866F * y - 0.082835F * z));
+			result[1] = round(255F * (-0.091169F * x + 0.25243F * y + 0.015708F * z));
+			result[2] = round(255F * (0.00092090F * x - 0.0025498F * y + 0.17860F * z));
+			
+			return result;
+		}
+		
+		public static final float[] xyzToCIELAB(final float[] abc) {
+			return xyzToCIELAB(abc, abc);
+		}
+		
+		public static final float[] xyzToCIELAB(final float[] xyz, final float[] result) {
+			// http://en.wikipedia.org/wiki/Illuminant_D65
+			
+			final float d65X = 0.95047F;
+			final float d65Y = 1.0000F;
+			final float d65Z = 1.08883F;
+			
+			// http://en.wikipedia.org/wiki/Lab_color_space
+			
+			final float fX = f(xyz[0] / d65X);
+			final float fY = f(xyz[1] / d65Y);
+			final float fZ = f(xyz[2] / d65Z);
+			
+			result[0] = 116F * fY - 16F;
+			result[1] = 500F * (fX - fY);
+			result[2] = 200F * (fY - fZ);
+			
+			return result;
+		}
+		
+		public static final float[] cielabToXYZ(final float[] abc) {
+			return cielabToXYZ(abc, abc);
+		}
+		
+		public static final float[] cielabToXYZ(final float[] cielab, final float[] result) {
+			// http://en.wikipedia.org/wiki/Illuminant_D65
+			
+			final float d65X = 0.95047F;
+			final float d65Y = 1.0000F;
+			final float d65Z = 1.08883F;
+			
+			// http://en.wikipedia.org/wiki/Lab_color_space
+			
+			final float lStar = cielab[0];
+			final float aStar = cielab[1];
+			final float bStar = cielab[2];
+			final float c = (lStar + 16F) / 116F;
+			
+			result[0] = d65X * fInv(c + aStar / 500F);
+			result[1] = d65Y * fInv(c);
+			result[2] = d65Z * fInv(c - bStar / 200F);
+			
+			return result;
+		}
+		
+		public static final float f(final float t) {
+			return cube(6F / 29F) < t ? (float) pow(t, 1.0 / 3.0) : square(29F / 6F) * t / 3F + 4F / 29F;
+		}
+		
+		public static final float fInv(final float t) {
+			return 6F / 29F < t ? cube(t) : 3F * square(6F / 29F) * (t - 4F / 29F);
+		}
+		
+		public static final float square(final float value) {
+			return value * value;
+		}
+		
+		public static final float cube(final float value) {
+			return value * value * value;
+		}
+		
+		public static final int[] quantize(final int[] abc, final int q, final int[] result) {
+			return quantize(abc, q, q, q, result);
+		}
+		
+		public static final int[] quantize(final int[] abc, final int qA, final int qB, final int qC, final int[] result) {
+			result[0] = abc[0] & ((~0) << qA);
+			result[1] = abc[1] & ((~0) << qB);
+			result[2] = abc[2] & ((~0) << qC);
+			
+			return result;
+		}
+		
+		public static final int distance1(final int[] abc1, final int[] abc2) {
+			final int n = abc1.length;
+			int result = 0;
+			
+			for (int i = 0; i < n; ++i) {
+				result += abs(abc1[i] - abc2[i]);
 			}
+			
+			return result;
 		}
 		
-		return result;
+		public static final double distance2(final float[] abc1, final float[] abc2) {
+			final int n = abc1.length;
+			double sum = 0.0;
+			
+			for (int i = 0; i < n; ++i) {
+				sum += square(abc1[i] - abc2[i]);
+			}
+			
+			return sqrt(sum);
+		}
+		
+		public static final int min(final int... values) {
+			int result = Integer.MAX_VALUE;
+			
+			for (final int value : values) {
+				if (value < result) {
+					result = value;
+				}
+			}
+			
+			return result;
+		}
+		
+		public static final int max(final int... values) {
+			int result = Integer.MIN_VALUE;
+			
+			for (final int value : values) {
+				if (result < value) {
+					result = value;
+				}
+			}
+			
+			return result;
+		}
+		
 	}
 	
-	public static final int max(final int... values) {
-		int result = Integer.MIN_VALUE;
+	/**
+	 * @author codistmonk (creation 2014-04-24)
+	 */
+	public static final class ColorTools2 {
 		
-		for (final int value : values) {
-			if (result < value) {
-				result = value;
-			}
+		private ColorTools2() {
+			throw new IllegalInstantiationException();
 		}
 		
-		return result;
+		public static final float[] floats(final float... result) {
+			return result;
+		}
+		
+		public static final int[] xyzToRGB(final float[] xyz) {
+			return xyzToRGB(xyz, new int[3]);
+		}
+		
+		public static final int[] xyzToRGB(final float[] xyz, final int[] rgb) {
+			// http://www.easyrgb.com/index.php?X=MATH&H=01#text1
+			
+			final double x = xyz[0] / 100.0;        //xyz[0] from 0 to  95.047      (Observer = 2°, Illuminant = D65)
+			final double y = xyz[1] / 100.0;        //xyz[1] from 0 to 100.000
+			final double z = xyz[2] / 100.0;        //xyz[2] from 0 to 108.883
+
+			double r = x *  3.2406 + y * -1.5372F + z * -0.4986;
+			double g = x * -0.9689 + y *  1.8758F + z *  0.0415;
+			double b = x *  0.0557 + y * -0.2040F + z *  1.0570;
+
+			if (r > 0.0031308) {
+				r = 1.055 * pow(r, 1.0 / 2.4) - 0.055;
+			} else {
+				r = 12.92 * r;
+			}
+			
+			if ( g > 0.0031308 ) {
+				g = 1.055 * pow(g, 1.0 / 2.4) - 0.055;
+			} else {
+				g = 12.92 * g;
+			}
+			
+			if (b > 0.0031308) {
+				b = 1.055 * pow(b, 1.0 / 2.4) - 0.055;
+			} else {
+				b = 12.92 * b;
+			}
+
+			rgb[0] = (int) round(r * 255.0);
+			rgb[1] = (int) round(g * 255.0);
+			rgb[2] = (int) round(b * 255.0);
+					
+			return rgb;
+		}
+		
+		public static final float[] rgbToXYZ(final int[] rgb) {
+			return rgbToXYZ(rgb, new float[3]);
+		}
+		
+		public static final float[] rgbToXYZ(final int[] rgb, final float[] xyz) {
+			// http://www.easyrgb.com/index.php?X=MATH&H=02#text2
+			
+			double r = rgb[0] / 255.0;        //R from 0 to 255
+			double g = rgb[1] / 255.0;        //G from 0 to 255
+			double b = rgb[2] / 255.0;        //B from 0 to 255
+
+			if (r > 0.04045) {
+				r = pow((r + 0.055) / 1.055, 2.4);
+			} else {
+				r = r / 12.92;
+			}
+			
+			if (g > 0.04045) {
+				g = pow((g + 0.055) / 1.055, 2.4);
+			} else {
+				g = g / 12.92;
+			}
+			
+			if (b > 0.04045) {
+				b = pow((b + 0.055 ) / 1.055, 2.4);
+			} else {
+				b = b / 12.92;
+			}
+			
+			r = r * 100.0;
+			g = g * 100.0;
+			b = b * 100.0;
+			
+			//Observer = 2°, Illuminant = D65
+			xyz[0] = (float) (r * 0.4124 + g * 0.3576 + b * 0.1805);
+			xyz[1] = (float) (r * 0.2126 + g * 0.7152 + b * 0.0722);
+			xyz[2] = (float) (r * 0.0193 + g * 0.1192 + b * 0.9505);
+			
+			return xyz;
+		}
+		
+		public static final float[] xyzToCIELAB(final float[] abc) {
+			return xyzToCIELAB(abc, abc);
+		}
+		
+		public static final float[] xyzToCIELAB(final float[] xyz, final float[] cielab) {
+			return xyzToCIELAB(xyz, Illuminant.D65.getX2Y2Z2(), cielab);
+		}
+		
+		public static final float[] xyzToCIELAB(final float[] xyz, final float[] referenceXYZ, final float[] cielab) {
+			// http://www.easyrgb.com/index.php?X=MATH&H=07#text7
+			
+			double var_X = xyz[0] / referenceXYZ[0];
+			double var_Y = xyz[1] / referenceXYZ[1];
+			double var_Z = xyz[2] / referenceXYZ[2];
+			
+			if (var_X > 0.008856) {
+				var_X = pow(var_X, 1.0 / 3.0);
+			} else {
+				var_X = 7.787 * var_X + 16.0 / 116.0;
+			}
+			
+			if ( var_Y > 0.008856 ) {
+				var_Y = pow(var_Y, 1.0 / 3.0);
+			} else {
+				var_Y = 7.787 * var_Y + 16.0 / 116.0;
+			}
+			
+			if (var_Z > 0.008856) {
+				var_Z = pow(var_Z, 1.0 / 3.0);
+			} else {
+				var_Z = 7.787 * var_Z + 16.0 / 116.0;
+			}
+			
+			cielab[0] = (float) (116.0 * var_Y - 16.0); // L*
+			cielab[1] = (float) (500.0 * (var_X - var_Y)); // a*
+			cielab[2] = (float) (200.0 * (var_Y - var_Z)); // b*
+			
+			return cielab;
+		}
+		
+		public static final float[] cielabToXYZ(final float[] abc) {
+			return cielabToXYZ(abc, abc);
+		}
+		
+		public static final float[] cielabToXYZ(final float[] cielab, final float[] xyz) {
+			return cielabToXYZ(cielab, Illuminant.D65.getX2Y2Z2(), xyz);
+		}
+		
+		public static final float[] cielabToXYZ(final float[] cielab, final float[] referenceXYZ, final float[] xyz) {
+			// http://www.easyrgb.com/index.php?X=MATH&H=08#text8
+			
+			double y = (cielab[0] + 16.0) / 116.0;
+			double x = cielab[1] / 500.0 + y;
+			double z = y - cielab[2] / 200.0;
+			
+			if (cube(y) > 0.008856) {
+				y = cube(y);
+			} else {
+				y = (y - 16.0 / 116.0) / 7.787;
+			}
+			
+			if (cube(x) > 0.008856) {
+				x = cube(x);
+			} else {
+				x = (x - 16.0 / 116.0) / 7.787;
+			}
+			
+			if (cube(z) > 0.008856) {
+				z = cube(z);
+			} else {
+				z = (z - 16.0 / 116.0) / 7.787;
+			}
+			
+			xyz[0] = (float) (referenceXYZ[0] * x);
+			xyz[1] = (float) (referenceXYZ[1] * y);
+			xyz[2] = (float) (referenceXYZ[2] * z);
+			
+			return xyz;
+		}
+		
+		public static final float[] rgbToCIELAB(final int[] rgb) {
+			return rgbToCIELAB(rgb, new float[3]);
+		}
+		
+		public static final float[] rgbToCIELAB(final int[] rgb, final float[] cielab) {
+			return rgbToCIELAB(rgb, Illuminant.D65.getX2Y2Z2(), cielab);
+		}
+		
+		public static final float[] rgbToCIELAB(final int[] rgb, final float[] referenceXYZ, final float[] cielab) {
+			return xyzToCIELAB(rgbToXYZ(rgb, cielab), referenceXYZ, cielab);
+		}
+		
+		public static final int[] cielabToRGB(final float[] cielab) {
+			return cielabToRGB(cielab, new int[3]);
+		}
+		
+		public static final int[] cielabToRGB(final float[] cielab, final int[] rgb) {
+			return cielabToRGB(cielab, Illuminant.D65.getX2Y2Z2(), rgb);
+		}
+		
+		public static final int[] cielabToRGB(final float[] cielab, final float[] referenceXYZ, final int[] rgb) {
+			return xyzToRGB(cielabToXYZ(cielab, referenceXYZ, new float[3]), rgb);
+		}
+		
+		public static final double cube(final double value) {
+			return value * value * value;
+		}
+		
+		/**
+		 * @author codistmonk (creation 2014-04-24)
+		 */
+		public static enum Illuminant {
+			
+			A {
+				
+				@Override
+				public final float[] getX2Y2Z2() {
+					return floats(109.850F, 100F, 35.585F);
+				}
+				
+				@Override
+				public final float[] getX10Y10Z10() {
+					return floats(111.144F, 100F, 35.200F);
+				}
+				
+			}, C {
+				
+				@Override
+				public final float[] getX2Y2Z2() {
+					return floats(98.074F, 100F, 118.232F);
+				}
+				
+				@Override
+				public final float[] getX10Y10Z10() {
+					return floats(97.285F, 100F, 116.145F);
+				}
+				
+			}, D50 {
+				
+				@Override
+				public final float[] getX2Y2Z2() {
+					return floats(96.422F, 100F, 82.521F);
+				}
+				
+				@Override
+				public final float[] getX10Y10Z10() {
+					return floats(96.720F, 100F, 81.427F);
+				}
+				
+			}, D55 {
+				
+				@Override
+				public final float[] getX2Y2Z2() {
+					return floats(95.682F, 100F, 92.149F);
+				}
+				
+				@Override
+				public final float[] getX10Y10Z10() {
+					return floats(95.799F, 100F, 90.926F);
+				}
+				
+			}, D65 {
+				
+				@Override
+				public final float[] getX2Y2Z2() {
+					return floats(95.047F, 100F, 108.883F);
+				}
+				
+				@Override
+				public final float[] getX10Y10Z10() {
+					return floats(94.811F, 100F, 107.304F);
+				}
+				
+			}, D75 {
+				
+				@Override
+				public final float[] getX2Y2Z2() {
+					return floats(94.972F, 100F, 122.638F);
+				}
+				
+				@Override
+				public final float[] getX10Y10Z10() {
+					return floats(94.416F, 100F, 120.641F);
+				}
+				
+			}, F2 {
+				
+				@Override
+				public final float[] getX2Y2Z2() {
+					return floats(99.187F, 100F, 67.395F);
+				}
+				
+				@Override
+				public final float[] getX10Y10Z10() {
+					return floats(103.280F, 100F, 69.026F);
+				}
+				
+			}, F7 {
+				
+				@Override
+				public final float[] getX2Y2Z2() {
+					return floats(95.044F, 100F, 108.755F);
+				}
+				
+				@Override
+				public final float[] getX10Y10Z10() {
+					return floats(95.792F, 100F, 107.687F);
+				}
+				
+			}, F11 {
+				
+				@Override
+				public final float[] getX2Y2Z2() {
+					return floats(100.966F, 100F, 64.370F);
+				}
+				
+				@Override
+				public final float[] getX10Y10Z10() {
+					return floats(103.866F, 100F, 65.627F);
+				}
+				
+			};
+			
+			public abstract float[] getX2Y2Z2();
+			
+			public abstract float[] getX10Y10Z10();
+			
+		}
+		
 	}
 	
 	/**
