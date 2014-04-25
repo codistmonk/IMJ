@@ -25,15 +25,20 @@ import imj2.tools.Image2DComponent.Painter;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
@@ -180,7 +185,11 @@ public final class BitwiseQuantizationTest {
 		debugPrint(quantizers);
 		
 		final SimpleImageView imageView = new SimpleImageView();
-		final JSpinner spinner = new JSpinner(new SpinnerNumberModel(12, 0, quantizers.size() - 1, 1));
+		final JComboBox<String> qTypeSelector = new JComboBox<String>(array(RGBQuantizer.TYPE, HSVQuantizer.TYPE, XYZQuantizer.TYPE, CIELABQuantizer.TYPE));
+		final JSpinner qASpinner = new JSpinner(new SpinnerNumberModel(0, 0, 7, 1));
+		final JSpinner qBSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 7, 1));
+		final JSpinner qCSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 7, 1));
+//		final JSpinner spinner = new JSpinner(new SpinnerNumberModel(12, 0, quantizers.size() - 1, 1));
 		
 		imageView.getPainters().add(new Painter<SimpleImageView>() {
 			
@@ -191,9 +200,11 @@ public final class BitwiseQuantizationTest {
 					final int width, final int height) {
 				final TicToc timer = new TicToc();
 				
-				timer.tic();
+				debugPrint("Quantization started...", new Date(timer.tic()));
 				
-				final ColorQuantizer quantizer = quantizers.get(((Number) spinner.getValue()).intValue());
+//				final ColorQuantizer quantizer = quantizers.get(((Number) spinner.getValue()).intValue());
+				final ColorQuantizer quantizer = ColorQuantizer.newQuantizer(qTypeSelector.getSelectedItem().toString(),
+						((Number) qASpinner.getValue()).intValue(), ((Number) qBSpinner.getValue()).intValue(), ((Number) qCSpinner.getValue()).intValue());
 				final BufferedImage image = imageView.getImage();
 				final BufferedImage buffer = imageView.getBufferImage();
 				final int w = buffer.getWidth();
@@ -207,7 +218,8 @@ public final class BitwiseQuantizationTest {
 					}
 				}
 				
-				debugPrint(timer.toc());
+				debugPrint("Quantization done in", timer.toc(), "ms");
+				debugPrint("Labeling started...", new Date(timer.tic()));
 				
 				final SchedulingData schedulingData = new SchedulingData();
 				int totalPixelCount = 0;
@@ -247,12 +259,17 @@ public final class BitwiseQuantizationTest {
 					System.err.println(debug(Tools.DEBUG_STACK_OFFSET, "Error:", "expected:", w * h, "actual:", totalPixelCount));
 				}
 				
-				debugPrint(timer.toc());
+				debugPrint("Labeling done in", timer.toc(), "ms");
+				debugPrint("Merging started...", new Date(timer.tic()));
+				
+				final TicToc progressTimer = new TicToc();
+				
+				progressTimer.tic();
 				
 				while (!small.isEmpty()) {
-					if (5000L <= timer.toc()) {
+					if (5000L <= progressTimer.toc()) {
 						debugPrint(small.size());
-						timer.tic();
+						progressTimer.tic();
 					}
 					
 					final int pixel = small.remove(0);
@@ -345,7 +362,8 @@ public final class BitwiseQuantizationTest {
 					}
 				}
 				
-				debugPrint(timer.getTotalTime());
+				debugPrint("Merging done in", timer.toc(), "ms");
+				debugPrint("Rendering started...", new Date(timer.tic()));
 				
 				for (int y = 0; y < h; ++y) {
 					for (int x = 0; x < w; ++x) {
@@ -380,7 +398,8 @@ public final class BitwiseQuantizationTest {
 					}
 				}
 				
-				debugPrint(timer.getTotalTime());
+				debugPrint("Rendering done in", timer.toc(), "ms");
+				debugPrint("All done in", timer.getTotalTime(), "ms");
 			}
 			
 			private final void process(final int w, final int h,
@@ -436,16 +455,31 @@ public final class BitwiseQuantizationTest {
 		
 		SwingTools.setCheckAWT(false);
 		
-		spinner.addChangeListener(new ChangeListener() {
+		final ChangeListener changeListener = new ChangeListener() {
 			
 			@Override
 			public final void stateChanged(final ChangeEvent event) {
 				imageView.refreshBuffer();
 			}
 			
+		};
+		
+		qTypeSelector.addActionListener(new ActionListener() {
+			
+			@Override
+			public final void actionPerformed(final ActionEvent event) {
+				imageView.refreshBuffer();
+			}
+			
 		});
 		
-		panel.add(horizontalBox(spinner), BorderLayout.NORTH);
+		qASpinner.addChangeListener(changeListener);
+		qBSpinner.addChangeListener(changeListener);
+		qCSpinner.addChangeListener(changeListener);
+//		spinner.addChangeListener(changeListener);
+		
+		panel.add(horizontalBox(new JLabel("qType:"), qTypeSelector, new JLabel("qA:"), qASpinner,
+				new JLabel("qB:"), qBSpinner, new JLabel("qC:"), qCSpinner/*, new JLabel("q:"), spinner*/), BorderLayout.NORTH);
 		panel.add(imageView, BorderLayout.CENTER);
 		
 		show(panel, this.getClass().getSimpleName(), true);
@@ -493,7 +527,7 @@ public final class BitwiseQuantizationTest {
 		}
 		
 		{
-			debugPrint("Computing RGB -> XYZ bounds...");
+			debugPrint("Computing RGB -> XYZ (D65, 2°) bounds...");
 			
 			if (false) {
 				final int[] rgb = new int[3];
@@ -1567,6 +1601,20 @@ public final class BitwiseQuantizationTest {
 		}
 	}
 	
+	public static final int iround(final double value) {
+		return (int) round(value);
+	}
+	
+	public static final void shutdownAndWait(final ExecutorService executor, final long milliseconds) {
+		executor.shutdown();
+		
+		try {
+			executor.awaitTermination(milliseconds, TimeUnit.MILLISECONDS);
+		} catch (final InterruptedException exception) {
+			exception.printStackTrace();
+		}
+	}
+	
 	/**
 	 * @author codistmonk (creation 2014-04-10)
 	 */
@@ -1614,17 +1662,7 @@ public final class BitwiseQuantizationTest {
 			return (a << (16 - this.qB - this.qC)) | (b << (8 - this.qC)) | (c << 0);
 		}
 		
-		public final String getType() {
-			if (this instanceof RGBQuantizer) {
-				return "qRGB";
-			}
-			
-			if (this instanceof HSVQuantizer) {
-				return "qHSV";
-			}
-			
-			return this.getClass().getSimpleName();
-		}
+		public abstract String getType();
 		
 		@Override
 		public final String toString() {
@@ -1641,12 +1679,20 @@ public final class BitwiseQuantizationTest {
 		private static final long serialVersionUID = -5601399591176973099L;
 		
 		public static final ColorQuantizer newQuantizer(final String type, final int qA, final int qB, final int qC) {
-			if ("qRGB".equals(type)) {
+			if (RGBQuantizer.TYPE.equals(type)) {
 				return new RGBQuantizer(qA, qC, qB);
 			}
 			
-			if ("qHSV".equals(type)) {
+			if (HSVQuantizer.TYPE.equals(type)) {
 				return new HSVQuantizer(qA, qC, qB);
+			}
+			
+			if (XYZQuantizer.TYPE.equals(type)) {
+				return new XYZQuantizer(qA, qC, qB);
+			}
+			
+			if (CIELABQuantizer.TYPE.equals(type)) {
+				return new CIELABQuantizer(qA, qC, qB);
 			}
 			
 			throw new IllegalArgumentException();
@@ -1664,6 +1710,11 @@ public final class BitwiseQuantizationTest {
 		}
 		
 		@Override
+		public final String getType() {
+			return TYPE;
+		}
+		
+		@Override
 		protected final void rgbToABC(final int rgb, final int[] abc) {
 			rgbToRGB(rgb, abc);
 		}
@@ -1678,6 +1729,11 @@ public final class BitwiseQuantizationTest {
 		 */
 		private static final long serialVersionUID = -739890245396913487L;
 		
+		/**
+		 * {@value}.
+		 */
+		public static final String TYPE = "qRGB";
+		
 	}
 	
 	/**
@@ -1687,6 +1743,11 @@ public final class BitwiseQuantizationTest {
 		
 		public HSVQuantizer(final int qH, final int qS, final int qV) {
 			super(qH, qS, qV);
+		}
+		
+		@Override
+		public final String getType() {
+			return TYPE;
 		}
 		
 		@Override
@@ -1705,16 +1766,103 @@ public final class BitwiseQuantizationTest {
 		 */
 		private static final long serialVersionUID = -739890245396913487L;
 		
+		/**
+		 * {@value}.
+		 */
+		public static final String TYPE = "qHSV";
+		
 	}
 	
-	public static final void shutdownAndWait(final ExecutorService executor, final long milliseconds) {
-		executor.shutdown();
+	/**
+	 * @author codistmonk (creation 2014-04-10)
+	 */
+	public static final class XYZQuantizer extends ColorQuantizer {
 		
-		try {
-			executor.awaitTermination(milliseconds, TimeUnit.MILLISECONDS);
-		} catch (final InterruptedException exception) {
-			exception.printStackTrace();
+		public XYZQuantizer(final int qX, final int qY, final int qZ) {
+			super(qX, qY, qZ);
 		}
+		
+		@Override
+		public final String getType() {
+			return TYPE;
+		}
+		
+		@Override
+		protected final void rgbToABC(final int rgb, final int[] abc) {
+			final float[] xyz = ColorTools2.rgbToXYZ(rgbToRGB(rgb, abc));
+			
+			for (int i = 0; i < abc.length; ++i) {
+				abc[i] = iround(xyzStatistics[i].getNormalizedValue(xyz[i]) * 255.0);
+			}
+		}
+		
+		@Override
+		protected final void abcToRGB(final int[] abc, final int[] rgb) {
+			final float[] xyz = new float[abc.length];
+			
+			for (int i = 0; i < abc.length; ++i) {
+				xyz[i] = (float) xyzStatistics[i].getDenormalizedValue(abc[i] / 255.0);
+			}
+			
+			ColorTools2.xyzToRGB(xyz, rgb);
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -5420720995966390554L;
+		
+		/**
+		 * {@value}.
+		 */
+		public static final String TYPE = "qXYZ";
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-04-10)
+	 */
+	public static final class CIELABQuantizer extends ColorQuantizer {
+		
+		public CIELABQuantizer(final int qL, final int qA, final int qB) {
+			super(qL, qA, qB);
+		}
+		
+		@Override
+		public final String getType() {
+			return TYPE;
+		}
+		
+		@Override
+		protected final void rgbToABC(final int rgb, final int[] abc) {
+			final float[] cielab = ColorTools2.rgbToCIELAB(rgbToRGB(rgb, abc));
+			
+			for (int i = 0; i < abc.length; ++i) {
+				abc[i] = iround(cielabStatistics[i].getNormalizedValue(cielab[i]) * 255.0);
+			}
+		}
+		
+		@Override
+		protected final void abcToRGB(final int[] abc, final int[] rgb) {
+			final float[] cielab = new float[abc.length];
+			
+			for (int i = 0; i < abc.length; ++i) {
+				cielab[i] = (float) cielabStatistics[i].getDenormalizedValue(abc[i] / 255.0);
+			}
+			
+			ColorTools2.cielabToRGB(cielab, rgb);
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -5420720995966390554L;
+		
+		/**
+		 * {@value}.
+		 */
+		public static final String TYPE = "qCIE-L*a*b*";
+		
 	}
 	
 	/**
