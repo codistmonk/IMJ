@@ -457,9 +457,11 @@ public final class BitwiseQuantizationTest {
 	
 	static final Statistics[] cielabStatistics = instances(3, DefaultFactory.forClass(Statistics.class));
 	
+	static final Statistics[] xyzStatistics = instances(3, DefaultFactory.forClass(Statistics.class));
+	
 	static {
 		{
-			debugPrint("Computing RGB -> CIE-L*a*b* bounds...");
+			debugPrint("Computing RGB -> CIE-L*a*b* (D65, 2°) bounds...");
 			
 			if (false) {
 				final int[] rgb = new int[3];
@@ -488,6 +490,38 @@ public final class BitwiseQuantizationTest {
 			debugPrint("L*:", cielabStatistics[0].getMinimum(), cielabStatistics[0].getMaximum());
 			debugPrint("a*:", cielabStatistics[1].getMinimum(), cielabStatistics[1].getMaximum());
 			debugPrint("b*:", cielabStatistics[2].getMinimum(), cielabStatistics[2].getMaximum());
+		}
+		
+		{
+			debugPrint("Computing RGB -> XYZ bounds...");
+			
+			if (false) {
+				final int[] rgb = new int[3];
+				final float[] xyz = new float[3];
+				
+				for (int color = 0; color <= 0x00FFFFFF; ++color) {
+					if ((color % 200000) == 0) {
+						debugPrint(Integer.toHexString(color));
+					}
+					
+					ColorTools2.rgbToXYZ(rgbToRGB(color, rgb), xyz);
+					
+					xyzStatistics[0].addValue(xyz[0]);
+					xyzStatistics[1].addValue(xyz[1]);
+					xyzStatistics[2].addValue(xyz[2]);
+				}
+			} else {
+				xyzStatistics[0].addValue(0.0);
+				xyzStatistics[0].addValue(95.05000305175781);
+				xyzStatistics[1].addValue(0.0);
+				xyzStatistics[1].addValue(100.0);
+				xyzStatistics[2].addValue(0.0);
+				xyzStatistics[2].addValue(108.9000015258789);
+			}
+			
+			debugPrint("X:", xyzStatistics[0].getMinimum(), xyzStatistics[0].getMaximum());
+			debugPrint("Y:", xyzStatistics[1].getMinimum(), xyzStatistics[1].getMaximum());
+			debugPrint("Z:", xyzStatistics[2].getMinimum(), xyzStatistics[2].getMaximum());
 		}
 		
 		debugPrint("Initializing quantizers...");
@@ -1983,7 +2017,7 @@ public final class BitwiseQuantizationTest {
 			}
 			
 			if (b > 0.04045) {
-				b = pow((b + 0.055 ) / 1.055, 2.4);
+				b = pow((b + 0.055) / 1.055, 2.4);
 			} else {
 				b = b / 12.92;
 			}
@@ -2011,31 +2045,31 @@ public final class BitwiseQuantizationTest {
 		public static final float[] xyzToCIELAB(final float[] xyz, final float[] referenceXYZ, final float[] cielab) {
 			// http://www.easyrgb.com/index.php?X=MATH&H=07#text7
 			
-			double var_X = xyz[0] / referenceXYZ[0];
-			double var_Y = xyz[1] / referenceXYZ[1];
-			double var_Z = xyz[2] / referenceXYZ[2];
+			double x = xyz[0] / referenceXYZ[0];
+			double y = xyz[1] / referenceXYZ[1];
+			double z = xyz[2] / referenceXYZ[2];
 			
-			if (var_X > 0.008856) {
-				var_X = pow(var_X, 1.0 / 3.0);
+			if (x > 0.008856) {
+				x = pow(x, 1.0 / 3.0);
 			} else {
-				var_X = 7.787 * var_X + 16.0 / 116.0;
+				x = 7.787 * x + 16.0 / 116.0;
 			}
 			
-			if ( var_Y > 0.008856 ) {
-				var_Y = pow(var_Y, 1.0 / 3.0);
+			if ( y > 0.008856 ) {
+				y = pow(y, 1.0 / 3.0);
 			} else {
-				var_Y = 7.787 * var_Y + 16.0 / 116.0;
+				y = 7.787 * y + 16.0 / 116.0;
 			}
 			
-			if (var_Z > 0.008856) {
-				var_Z = pow(var_Z, 1.0 / 3.0);
+			if (z > 0.008856) {
+				z = pow(z, 1.0 / 3.0);
 			} else {
-				var_Z = 7.787 * var_Z + 16.0 / 116.0;
+				z = 7.787 * z + 16.0 / 116.0;
 			}
 			
-			cielab[0] = (float) (116.0 * var_Y - 16.0); // L*
-			cielab[1] = (float) (500.0 * (var_X - var_Y)); // a*
-			cielab[2] = (float) (200.0 * (var_Y - var_Z)); // b*
+			cielab[0] = (float) (116.0 * y - 16.0); // L*
+			cielab[1] = (float) (500.0 * (x - y)); // a*
+			cielab[2] = (float) (200.0 * (y - z)); // b*
 			
 			return cielab;
 		}
