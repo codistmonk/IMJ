@@ -7,8 +7,8 @@ import static imj2.tools.BitwiseQuantizationTest.ColorTools1.min;
 import static imj2.tools.BitwiseQuantizationTest.ColorTools1.quantize;
 import static imj2.tools.BitwiseQuantizationTest.ColorTools1.rgbToHSV;
 import static imj2.tools.BitwiseQuantizationTest.ColorTools1.rgbToRGB;
-import static imj2.tools.BitwiseQuantizationTest.ColorTools1.rgbToXYZ;
-import static imj2.tools.BitwiseQuantizationTest.ColorTools1.xyzToCIELAB;
+import static imj2.tools.BitwiseQuantizationTest.ColorTools2.rgbToXYZ;
+import static imj2.tools.BitwiseQuantizationTest.ColorTools2.xyzToCIELAB;
 import static java.lang.Math.abs;
 import static java.lang.Math.pow;
 import static java.lang.Math.round;
@@ -57,6 +57,8 @@ public final class BitwiseQuantizationTest {
 	
 //	@Test
 	public final void test1() {
+		debugPrint();
+		
 		final TreeMap<double[], String> lines = new TreeMap<double[], String>(DoubleArrayComparator.INSTANCE);
 		
 		for (int qR0 = 0; qR0 <= 7; ++qR0) {
