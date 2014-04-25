@@ -19,7 +19,9 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.instances;
+
 import imj.IntList;
+
 import imj2.tools.Image2DComponent.Painter;
 
 import java.awt.BorderLayout;
@@ -27,8 +29,6 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -183,11 +183,11 @@ public final class BitwiseQuantizationTest {
 	@Test
 	public final void test2() {
 		final Color contourColor = Color.GREEN;
-		final int minimumComponentSize = 80;
 		
 		debugPrint(quantizers);
 		
 		final SimpleImageView imageView = new SimpleImageView();
+		final JSpinner mergeSpinner = new JSpinner(new SpinnerNumberModel(80, 0, 1000, 10));
 		final JComboBox<String> qTypeSelector = new JComboBox<String>(array(RGBQuantizer.TYPE, HSVQuantizer.TYPE, XYZQuantizer.TYPE, CIELABQuantizer.TYPE));
 		final JSpinner qASpinner = new JSpinner(new SpinnerNumberModel(0, 0, 7, 1));
 		final JSpinner qBSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 7, 1));
@@ -213,6 +213,7 @@ public final class BitwiseQuantizationTest {
 				final BufferedImage buffer = imageView.getBufferImage();
 				final int w = buffer.getWidth();
 				final int h = buffer.getHeight();
+				final int minimumComponentSize = ((Number) mergeSpinner.getValue()).intValue();
 				final boolean showQuantization = showQuantizationCheckBox.isSelected();
 				
 				this.labels.setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR);
@@ -468,8 +469,8 @@ public final class BitwiseQuantizationTest {
 		
 		final Updater updater = new Updater(imageView);
 		
+		mergeSpinner.addChangeListener(updater);
 		qTypeSelector.addActionListener(updater);
-		
 		qASpinner.addChangeListener(updater);
 		qBSpinner.addChangeListener(updater);
 		qCSpinner.addChangeListener(updater);
@@ -477,7 +478,9 @@ public final class BitwiseQuantizationTest {
 		
 		showQuantizationCheckBox.addActionListener(updater);
 		
-		panel.add(horizontalBox(new JLabel("qType:"), qTypeSelector, new JLabel("qA:"), qASpinner,
+		panel.add(horizontalBox(
+				new JLabel("mergeIf<"), mergeSpinner,
+				new JLabel("qType:"), qTypeSelector, new JLabel("qA:"), qASpinner,
 				new JLabel("qB:"), qBSpinner, new JLabel("qC:"), qCSpinner/*, new JLabel("q:"), spinner*/,
 				showQuantizationCheckBox), BorderLayout.NORTH);
 		panel.add(imageView, BorderLayout.CENTER);
