@@ -27,6 +27,8 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -37,6 +39,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -189,6 +192,7 @@ public final class BitwiseQuantizationTest {
 		final JSpinner qASpinner = new JSpinner(new SpinnerNumberModel(0, 0, 7, 1));
 		final JSpinner qBSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 7, 1));
 		final JSpinner qCSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 7, 1));
+		final JCheckBox showQuantizationCheckBox = new JCheckBox("Show quantization", false);
 //		final JSpinner spinner = new JSpinner(new SpinnerNumberModel(12, 0, quantizers.size() - 1, 1));
 		
 		imageView.getPainters().add(new Painter<SimpleImageView>() {
@@ -209,12 +213,19 @@ public final class BitwiseQuantizationTest {
 				final BufferedImage buffer = imageView.getBufferImage();
 				final int w = buffer.getWidth();
 				final int h = buffer.getHeight();
+				final boolean showQuantization = showQuantizationCheckBox.isSelected();
 				
 				this.labels.setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR);
 				
 				for (int y = 0; y < h; ++y) {
 					for (int x = 0; x < w; ++x) {
-						this.labels.getImage().setRGB(x, y, quantizer.pack(image.getRGB(x, y)));
+						final int rgb = image.getRGB(x, y);
+						
+						this.labels.getImage().setRGB(x, y, quantizer.pack(rgb));
+						
+						if (showQuantization) {
+							imageView.getBufferImage().setRGB(x, y, quantizer.quantize(rgb));
+						}
 					}
 				}
 				
@@ -455,34 +466,51 @@ public final class BitwiseQuantizationTest {
 		
 		SwingTools.setCheckAWT(false);
 		
-		final ChangeListener changeListener = new ChangeListener() {
-			
-			@Override
-			public final void stateChanged(final ChangeEvent event) {
-				imageView.refreshBuffer();
-			}
-			
-		};
+		final Updater updater = new Updater(imageView);
 		
-		qTypeSelector.addActionListener(new ActionListener() {
-			
-			@Override
-			public final void actionPerformed(final ActionEvent event) {
-				imageView.refreshBuffer();
-			}
-			
-		});
+		qTypeSelector.addActionListener(updater);
 		
-		qASpinner.addChangeListener(changeListener);
-		qBSpinner.addChangeListener(changeListener);
-		qCSpinner.addChangeListener(changeListener);
-//		spinner.addChangeListener(changeListener);
+		qASpinner.addChangeListener(updater);
+		qBSpinner.addChangeListener(updater);
+		qCSpinner.addChangeListener(updater);
+//		spinner.addChangeListener(updater);
+		
+		showQuantizationCheckBox.addActionListener(updater);
 		
 		panel.add(horizontalBox(new JLabel("qType:"), qTypeSelector, new JLabel("qA:"), qASpinner,
-				new JLabel("qB:"), qBSpinner, new JLabel("qC:"), qCSpinner/*, new JLabel("q:"), spinner*/), BorderLayout.NORTH);
+				new JLabel("qB:"), qBSpinner, new JLabel("qC:"), qCSpinner/*, new JLabel("q:"), spinner*/,
+				showQuantizationCheckBox), BorderLayout.NORTH);
 		panel.add(imageView, BorderLayout.CENTER);
 		
 		show(panel, this.getClass().getSimpleName(), true);
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-04-25)
+	 */
+	public static final class Updater implements ChangeListener, ActionListener, Serializable {
+		
+		private final SimpleImageView imageView;
+		
+		public Updater(final SimpleImageView imageView) {
+			this.imageView = imageView;
+		}
+		
+		@Override
+		public final void actionPerformed(final ActionEvent event) {
+			this.imageView.refreshBuffer();
+		}
+		
+		@Override
+		public final void stateChanged(final ChangeEvent event) {
+			this.imageView.refreshBuffer();
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 3336259394282831156L;
+		
 	}
 	
 	private static final List<Object[]> qTable = new ArrayList<Object[]>();
