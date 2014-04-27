@@ -3,21 +3,14 @@ package imj.apps.modules;
 import static imj.IMJTools.argb;
 import static imj.Image.Abstract.index;
 import static java.util.Arrays.fill;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import imj.IMJTools.StatisticsSelector;
 import imj.Image;
 import imj.ImageOfInts;
-import imj.IntList;
-import imj.apps.modules.FilteredImage.StatisticsFilter.ChannelStatistics;
 import imj.apps.modules.ViewFilter.Channel;
 
-import java.awt.Dimension;
 import java.awt.Point;
-import java.util.Arrays;
 
+import jgencode.primitivelists.IntList;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.MathTools.Statistics;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-02-18)

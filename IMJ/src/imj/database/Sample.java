@@ -1,6 +1,5 @@
 package imj.database;
 
-import imj.ByteList;
 import imj.apps.modules.RegionOfInterest;
 import imj.database.BKSearch.Metric;
 import imj.database.IMJDatabaseTools.ChessboardMetric;
@@ -14,7 +13,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Map;
 
-import net.sourceforge.aprog.tools.Tools;
+import jgencode.primitivelists.ByteList;
 
 /**
  * @author codistmonk (creation 2013-04-25)
@@ -32,10 +31,12 @@ public final class Sample implements Value {
 		this.count = 1;
 	}
 	
+	@Override
 	public final byte[] getKey() {
 		return this.key;
 	}
 	
+	@Override
 	public final void setKey(final byte[] key) {
 		this.key = key;
 	}

@@ -7,6 +7,7 @@ import static imj.MathOperations.BinaryOperator.Predefined.PLUS;
 import static java.lang.Math.ceil;
 import imj.IMJTools.StatisticsSelector;
 import imj.Labeling.NeighborhoodShape.Distance;
+import jgencode.primitivelists.IntList;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**

@@ -18,7 +18,6 @@ import static net.sourceforge.aprog.tools.Tools.readObject;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
 import imj.Image;
-import imj.IntList;
 import imj.apps.GenerateSampleDatabase.Configuration;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.RegionOfInterest;
@@ -43,6 +42,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
+import jgencode.primitivelists.IntList;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
@@ -270,13 +270,20 @@ public final class GenerateClassificationData {
 						this.pixels.forEach(new IntList.Processor() {
 							
 							@Override
-							public final void process(final int pixel) {
+							public final boolean process(final int pixel) {
 								if (groundTruth.get(pixel)) {
 									actualRow.incrementTruePositive(predicted, 1L);
 								} else {
 									actualRow.incrementFalsePositive(null, 1L);
 								}
+								
+								return true;
 							}
+							
+							/**
+							 * {@value}.
+							 */
+							private static final long serialVersionUID = 5488637471567602143L;
 							
 						});
 					} else {
@@ -285,13 +292,20 @@ public final class GenerateClassificationData {
 						this.pixels.forEach(new IntList.Processor() {
 							
 							@Override
-							public final void process(final int pixel) {
+							public final boolean process(final int pixel) {
 								if (groundTruth.get(pixel)) {
 									actualRow.incrementFalseNegative(predicted, 1L);
 								} else {
 									actualRow.incrementTrueNegative(null, 1L);
 								}
+								
+								return true;
 							}
+							
+							/**
+							 * {@value}.
+							 */
+							private static final long serialVersionUID = 7774800778023348632L;
 							
 						});
 					}

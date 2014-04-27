@@ -8,7 +8,6 @@ import static junit.framework.Assert.assertNotNull;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static org.junit.Assert.assertEquals;
-import imj.ByteList;
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.ViewFilter.Channel;
@@ -21,6 +20,7 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.Map;
 
+import jgencode.primitivelists.ByteList;
 import net.sourceforge.aprog.tools.TicToc;
 
 import org.junit.Test;
