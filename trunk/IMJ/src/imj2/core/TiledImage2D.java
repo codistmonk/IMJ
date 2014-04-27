@@ -5,8 +5,7 @@ import static imj2.core.ConcreteImage2D.getY;
 import static imj2.core.IMJCoreTools.quantize;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.cast;
-
-import imj.IntList;
+import jgencode.primitivelists.IntList;
 
 /**
  * @author codistmonk (creation 2013-08-07)

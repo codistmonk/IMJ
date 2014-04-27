@@ -1,9 +1,8 @@
 package imj.apps.modules;
 
-import imj.IntList;
-import imj.IntList.Processor;
+import jgencode.primitivelists.IntList;
+import jgencode.primitivelists.IntList.Processor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-04-27)
@@ -52,9 +51,16 @@ public final class RadixSort {
 			private int i;
 			
 			@Override
-			public final void process(final int value) {
+			public final boolean process(final int value) {
 				values[this.i++] = value;
+				
+				return true;
 			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = -5141753932964748059L;
 			
 		};
 		
@@ -69,9 +75,16 @@ public final class RadixSort {
 		final Processor processor = new Processor() {
 			
 			@Override
-			public final void process(final int value) {
+			public final boolean process(final int value) {
 				getOrCreate(lists2, ((value ^ xor) >> shift) & 0x000000FF).add(value);
+				
+				return true;
 			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 4847026989229701538L;
 			
 		};
 		

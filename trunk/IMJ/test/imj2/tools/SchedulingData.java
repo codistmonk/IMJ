@@ -3,13 +3,12 @@ package imj2.tools;
 import static java.lang.Thread.currentThread;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 
-import imj.IntList;
-
 import java.io.Serializable;
 import java.util.BitSet;
 import java.util.Map;
 import java.util.WeakHashMap;
 
+import jgencode.primitivelists.IntList;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 /**

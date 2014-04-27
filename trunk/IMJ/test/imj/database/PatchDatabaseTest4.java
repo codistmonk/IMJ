@@ -19,7 +19,6 @@ import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj.Image;
 import imj.ImageWrangler;
-import imj.IntList;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.Annotations.Annotation;
 import imj.apps.modules.RegionOfInterest;
@@ -47,6 +46,7 @@ import java.util.concurrent.Future;
 
 import javax.imageio.ImageIO;
 
+import jgencode.primitivelists.IntList;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.SystemProperties;
 import net.sourceforge.aprog.tools.TicToc;
@@ -201,14 +201,21 @@ public final class PatchDatabaseTest4 {
 						this.pixels.forEach(new IntList.Processor() {
 							
 							@Override
-							public final void process(final int pixel) {
+							public final boolean process(final int pixel) {
 								final int x = pixel % imageColumnCount;
 								final int y = pixel / imageColumnCount;
 								
 //								labels.setRGB(x, y, ((x | y) & 1) != 0 ? color.getRGB() : image.getValue(pixel));
 								
 								labels.setRGB(x, y, color != excluded[0] ? color.getRGB() : image.getValue(pixel));
+								
+								return true;
 							}
+							
+							/**
+							 * {@value}.
+							 */
+							private static final long serialVersionUID = 2987113063265672793L;
 							
 						});
 						

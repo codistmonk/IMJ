@@ -1,9 +1,9 @@
 package imj.database;
 
-import imj.ByteList;
 import imj.IMJTools.PixelProcessor;
 import imj.Image;
 import imj.apps.modules.ViewFilter.Channel;
+import jgencode.primitivelists.ByteList;
 
 /**
  * @author codistmonk (creation 2013-04-22)

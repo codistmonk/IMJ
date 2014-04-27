@@ -1,6 +1,5 @@
 package imj.database;
 
-import static imj.IMJTools.argb;
 import static imj.IMJTools.unsigned;
 import static imj.apps.modules.ShowActions.baseName;
 import static imj.database.HistogramSampler.COUNT_QUANTIZATION_MASK;
@@ -10,7 +9,6 @@ import static java.util.Collections.unmodifiableMap;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-import imj.ByteList;
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
@@ -26,6 +24,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeSet;
+
+import jgencode.primitivelists.ByteList;
 
 import org.junit.Test;
 

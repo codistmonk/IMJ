@@ -5,7 +5,7 @@ import static java.lang.Math.ceil;
 import static java.lang.Math.max;
 import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.MathTools.square;
-
+import jgencode.primitivelists.IntList;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**
