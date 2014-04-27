@@ -22,14 +22,10 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.Queue;
 import java.util.WeakHashMap;
 
 import org.junit.Test;
@@ -253,19 +249,6 @@ public final class RegionShrinking2Test {
 			
 			return smallest;
 		}
-		
-//		{
-//			final int n = targetHistogram.length;
-//			final double n1 = sum(targetHistogram);
-//			final double n2 = sum(currentHistogram);
-//			double result = 0.0;
-//			
-//			for (int i = 0; i < n; ++i) {
-//				result += abs(targetHistogram[i] / n1 - currentHistogram[i] / n2);
-//			}
-//			
-//			return result;
-//		}
 	}
 	
 	public static final double shrink(final List<Removable> shrinkingContour, final boolean[] markedSegments, final boolean[] discardedSegments,
@@ -686,10 +669,6 @@ public final class RegionShrinking2Test {
 	 */
 	public static final class PolygonalSegment implements Segmenter.Segment {
 		
-		/**
-		 * 
-		 */
-		private static final long serialVersionUID = -4739067006981388485L;
 		private final List<Point> vertices = new ArrayList<Point>();
 		
 		public final List<Point> getVertices() {
@@ -774,6 +753,11 @@ public final class RegionShrinking2Test {
 				}
 			}
 		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -4739067006981388485L;
 		
 		public static final int orientation(final List<Point> vertices, final int index) {
 			final int n = vertices.size();
