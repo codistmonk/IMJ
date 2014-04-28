@@ -10,8 +10,12 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
+import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBuffer;
+import java.awt.image.WritableRaster;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -40,7 +44,11 @@ public final class Pixel3DDemo {
 		final Statistics time = new Statistics();
 		final SimpleImageView imageView = new SimpleImageView();
 		
-		imageView.setImage(new BufferedImage(200, 200, BufferedImage.TYPE_3BYTE_BGR));
+		final int w = 800;
+		final int h = w;
+		
+		imageView.setImage(new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB));
+		imageView.setPreferredSize(new Dimension(w, h));
 		
 		SwingTools.show(imageView, Pixel3DDemo.class.getName(), false);
 		
@@ -55,21 +63,27 @@ public final class Pixel3DDemo {
 				
 				timer.tic();
 				
+				imageView.getBuffer().clear(Color.BLACK);
+				
 				this.renderer.setCanvas(imageView.getBufferImage());
 				this.renderer.clear();
 				
-				PolygonTools.render(new ARGBShader(this.renderer, 0xA0FF0000),
-						10.0, 50.0, 0.0,
-						80.0, 90.0, 1.0,
-						80.0, 20.0, 1.0);
-				PolygonTools.render(new ARGBShader(this.renderer, 0x8000FF00),
-						10.0, 10.0, 1.0,
-						90.0, 90.0, 0.0,
-						10.0, 90.0, 1.0);
-				PolygonTools.render(new ARGBShader(this.renderer, 0x8000FF00),
-						10.0, 10.0, 1.0,
-						90.0, 90.0, 0.0,
-						90.0, 10.0, 0.0);
+				for (int ty = 0; ty < h; ty += 100) {
+					for (int tx = 0; tx < w; tx += 100) {
+						PolygonTools.render(new ARGBShader(this.renderer, 0x80FF0000),
+								tx + 10.0, ty + 0.0, 0.0,
+								tx + 100.0, ty + 40.0, 1.0,
+								tx + 0.0, ty + 10.0, 0.0);
+						PolygonTools.render(new ARGBShader(this.renderer, 0x8000FF00),
+								tx + 90.0, ty + 0.0, 0.0,
+								tx + 100.0, ty + 10.0, 0.0,
+								tx + 0.0, ty + 80.0, 1.0);
+						PolygonTools.render(new ARGBShader(this.renderer, 0x800000FF),
+								tx + 45.0, ty + 80.0, 0.0,
+								tx + 55.0, ty + 70.0, 0.0,
+								tx + 20.0, ty + 0.0, 1.0);
+					}
+				}
 				
 				this.renderer.render();
 				
@@ -122,6 +136,10 @@ final class OrthographicRenderer implements Serializable {
 	private int pixelCount;
 	
 	public OrthographicRenderer(final BufferedImage canvas) {
+		if (canvas.getType() != BufferedImage.TYPE_INT_ARGB && canvas.getType() != BufferedImage.TYPE_INT_RGB) {
+			throw new IllegalArgumentException();
+		}
+		
 		this.canvas = canvas;
 //		this.indices = new int[1];
 		this.indices = new Integer[1];
@@ -202,9 +220,8 @@ final class OrthographicRenderer implements Serializable {
 			
 		});
 		
-		final int w = this.canvas.getWidth();
-		
 		if (debug) {
+			final int w = this.canvas.getWidth();
 			double previousZ = Double.NEGATIVE_INFINITY;
 			
 			for (int i = 0; i < n; ++i) {
@@ -222,12 +239,12 @@ final class OrthographicRenderer implements Serializable {
 				previousZ = z;
 			}
 		} else {
+			final DataBuffer dataBuffer = this.canvas.getRaster().getDataBuffer();
+			
 			for (int i = 0; i < n; ++i) {
 				final int index = this.indices[i];
 				final int pixel = this.pixels[index];
-				final int x = pixel % w;
-				final int y = pixel / w;
-				final int previousRGB = this.canvas.getRGB(x, y);
+				final int previousRGB = dataBuffer.getElem(pixel);
 				final int previousRed = previousRGB & R;
 				final int previousGreen = previousRGB & G;
 				final int previousBlue = previousRGB & B;
@@ -238,7 +255,7 @@ final class OrthographicRenderer implements Serializable {
 				final int green = (((rgb & G) * alpha + previousGreen * beta) / 255) & G;
 				final int blue = (((rgb & B) * alpha + previousBlue * beta) / 255) & B;
 				
-				this.canvas.setRGB(x, y, 0xFF000000 | red | green | blue);
+				dataBuffer.setElem(pixel, 0xFF000000 | red | green | blue);
 			}
 		}
 	}
