@@ -1,0 +1,189 @@
+package pixel3d;
+
+import static java.lang.Math.min;
+import static java.util.Arrays.copyOf;
+import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
+import static net.sourceforge.aprog.tools.Tools.debug;
+
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBuffer;
+import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Comparator;
+
+/**
+ * @author codistmonk (creation 2014-04-27)
+ */
+public final class OrthographicRenderer implements Serializable {
+	
+	private final BufferedImage canvas;
+	
+//	private int[] indices;
+	private Integer[] indices;
+	
+	private int[] pixels;
+	
+	private float[] zValues;
+	
+	private int[] colors;
+	
+	private int pixelCount;
+	
+	public OrthographicRenderer(final BufferedImage canvas) {
+		if (canvas.getType() != BufferedImage.TYPE_INT_ARGB && canvas.getType() != BufferedImage.TYPE_INT_RGB) {
+			throw new IllegalArgumentException();
+		}
+		
+		this.canvas = canvas;
+//		this.indices = new int[1];
+		this.indices = new Integer[1];
+		this.pixels = new int[1];
+		this.zValues = new float[1];
+		this.colors = new int[1];
+	}
+	
+	public final OrthographicRenderer setCanvas(final BufferedImage canvas) {
+		final int oldW = this.canvas.getWidth();
+		final int oldH = this.canvas.getHeight();
+		final int newW = canvas.getWidth();
+		final int newH = canvas.getHeight();
+		
+		if (oldW != newW || newH < oldH) {
+			this.clear();
+		}
+		
+		return this;
+	}
+	
+	public final OrthographicRenderer reserve(final int n) {
+		if (this.pixels.length < n) {
+			this.indices = copyOf(this.indices, n);
+			this.pixels = copyOf(this.pixels, n);
+			this.zValues = copyOf(this.zValues, n);
+			this.colors = copyOf(this.colors, n);
+		}
+		
+		return this;
+	}
+	
+	public final void beforeAdd() {
+		if (this.pixels.length <= this.pixelCount) {
+			this.reserve((int) min(Integer.MAX_VALUE, 2L * (this.pixelCount + 1L)));
+		}
+	}
+	
+	public final void clear() {
+		this.pixelCount = 0;
+	}
+	
+	public final OrthographicRenderer addPixel(final double x, final double y, final double z, final int argb) {
+		final int w = this.canvas.getWidth();
+		final int h = this.canvas.getHeight();
+		
+		if (x < 0.0 || w <= x || y < 0.0 || h <= y) {
+			return this;
+		}
+		
+		this.beforeAdd();
+		
+		final int pixel = (h - 1 - (int) y) * w + (int) x;
+		
+		this.indices[this.pixelCount] = this.pixelCount;
+		this.pixels[this.pixelCount] = pixel;
+		this.zValues[this.pixelCount] = (float) z;
+		this.colors[this.pixelCount] = argb;
+		
+		++this.pixelCount;
+		
+		return this;
+	}
+	
+	public final void render() {
+		final boolean debug = false;
+		final int n = this.pixelCount;
+		
+		Arrays.sort(this.indices, 0, n, new Comparator<Integer>() {
+			
+			@Override
+			public final int compare(final Integer index1, final Integer index2) {
+				final float z1 = OrthographicRenderer.this.getZValue(index1);
+				final float z2 = OrthographicRenderer.this.getZValue(index2);
+				
+				return Float.compare(z1, z2);
+			}
+			
+		});
+		
+		if (debug) {
+			final int w = this.canvas.getWidth();
+			double previousZ = Double.NEGATIVE_INFINITY;
+			
+			for (int i = 0; i < n; ++i) {
+				final int index = this.indices[i];
+				final int pixel = this.pixels[index];
+				final int x = pixel % w;
+				final int y = pixel / w;
+				final double z = this.zValues[index];
+				
+				if (z < previousZ) {
+					System.err.println(debug(DEBUG_STACK_OFFSET, previousZ, z));
+				}
+				
+				this.canvas.setRGB(x, y, (this.canvas.getRGB(x, y) & 0xFF00FFFF) | this.colors[index]);
+				previousZ = z;
+			}
+		} else {
+			final DataBuffer dataBuffer = this.canvas.getRaster().getDataBuffer();
+			
+			for (int i = 0; i < n; ++i) {
+				final int index = this.indices[i];
+				final int pixel = this.pixels[index];
+				final int previousRGB = dataBuffer.getElem(pixel);
+				final int previousRed = previousRGB & R;
+				final int previousGreen = previousRGB & G;
+				final int previousBlue = previousRGB & B;
+				final int rgb = this.colors[index];
+				final int alpha = (rgb >> 24) & 0xFF;
+				final int beta = 255 - alpha;
+				final int red = (((rgb & R) * alpha + previousRed * beta) / 255) & R;
+				final int green = (((rgb & G) * alpha + previousGreen * beta) / 255) & G;
+				final int blue = (((rgb & B) * alpha + previousBlue * beta) / 255) & B;
+				
+				dataBuffer.setElem(pixel, 0xFF000000 | red | green | blue);
+			}
+		}
+	}
+	
+	final int getPixel(final int index) {
+		return this.pixels[index];
+	}
+	
+	final float getZValue(final int index) {
+		return this.zValues[index];
+	}
+	
+	final int getColor(final int index) {
+		return this.colors[index];
+	}
+	
+	/**
+	 * {@value}.
+	 */
+	private static final long serialVersionUID = -6618739135450612928L;
+	
+	/**
+	 * {@value}.
+	 */
+	public static final int R = 0x00FF0000;
+	
+	/**
+	 * {@value}.
+	 */
+	public static final int G = 0x0000FF00;
+	
+	/**
+	 * {@value}.
+	 */
+	public static final int B = 0x000000FF;
+	
+}
