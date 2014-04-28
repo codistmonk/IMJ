@@ -8,7 +8,6 @@ import static java.util.Arrays.copyOf;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
@@ -63,43 +62,24 @@ public final class Pixel3DDemo {
 				this.renderer.setCanvas(imageView.getBufferImage());
 				this.renderer.clear();
 				
-				PolygonTools.render(new PolygonTools.Processor() {
-					
-					@Override
-					public final void pixel(final double x, final double y, final double z) {
-//						renderer.addPixel(x, y, z, 0xFF800000 | ((int) (z * 255.0)) * 0x00000100);
-						renderer.addPixel(x, y, z, 0x80FF0000);
-					}
-					
-					/**
-					 * {@value}.
-					 */
-					private static final long serialVersionUID = 2591204837732124053L;
-					
-				},
-				10.0, 0.0, 0.0,
-				80.0, 90.0, 1.0,
-				80.0, 20.0, 1.0);
+				PolygonTools.render(new ARGBShader(this.renderer, 0xA0FF0000),
+						10.0, 50.0, 0.0,
+						80.0, 90.0, 1.0,
+						80.0, 20.0, 1.0);
 				
-				PolygonTools.render(new PolygonTools.Processor() {
-					
-					@Override
-					public final void pixel(final double x, final double y, final double z) {
-//						renderer.addPixel(x, y, z, 0xFFFF0000 | ((int) (z * 255.0)) * 0x00000001);
-						renderer.addPixel(x, y, z, 0x8000FF00);
-					}
-					
-					/**
-					 * {@value}.
-					 */
-					private static final long serialVersionUID = 2591204837732124053L;
-					
-				},
-				10.0, 10.0, 1.0,
-				90.0, 90.0, 0.0,
-				90.0, 10.0, 0.0);
+				PolygonTools.render(new ARGBShader(this.renderer, 0x8000FF00),
+						10.0, 10.0, 1.0,
+						90.0, 90.0, 0.0,
+						10.0, 90.0, 1.0);
 				
-				renderer.render();
+				PolygonTools.render(new ARGBShader(this.renderer, 0x8000FF00),
+						10.0, 10.0, 1.0,
+						90.0, 90.0, 0.0,
+						90.0, 10.0, 0.0);
+				
+				this.renderer.render();
+				
+//				imageView.getBufferImage().setRGB(47, 162, Color.YELLOW.getRGB());
 				
 				time.addValue(timer.toc());
 				
@@ -117,7 +97,7 @@ public final class Pixel3DDemo {
 			
 			@Override
 			public final void run() {
-				for (int i = 0; i < 200; ++i) {
+				for (int i = 0; i < 1; ++i) {
 					if (i % 21 == 0) {
 						time.reset();
 					}
@@ -222,7 +202,17 @@ final class OrthographicRenderer implements Serializable {
 			
 			@Override
 			public final int compare(final Integer index1, final Integer index2) {
-				return Float.compare(OrthographicRenderer.this.getZValue(index1), OrthographicRenderer.this.getZValue(index2));
+				final float z1 = OrthographicRenderer.this.getZValue(index1);
+				final float z2 = OrthographicRenderer.this.getZValue(index2);
+				int result = Float.compare(z1, z2);
+				
+//				if (result == 0) {
+//					final int pixel1 = OrthographicRenderer.this.getPixel(index1);
+//					final int pixel2 = OrthographicRenderer.this.getPixel(index2);
+//					result = pixel1 - pixel2;
+//				}
+				
+				return result;
 			}
 			
 		});
@@ -435,5 +425,31 @@ final class PolygonTools {
 		public abstract void pixel(double x, double y, double z);
 		
 	}
+	
+}
+
+/**
+ * @author codistmonk (creation 2014-04-28)
+ */
+final class ARGBShader implements PolygonTools.Processor {
+	
+	private final OrthographicRenderer renderer;
+	
+	private final int argb;
+	
+	public ARGBShader(final OrthographicRenderer renderer, final int argb) {
+		this.argb = argb;
+		this.renderer = renderer;
+	}
+	
+	@Override
+	public final void pixel(final double x, final double y, final double z) {
+		this.renderer.addPixel(x, y, z, this.argb);
+	}
+	
+	/**
+	 * {@value}.
+	 */
+	private static final long serialVersionUID = 2591204837732124053L;
 	
 }
