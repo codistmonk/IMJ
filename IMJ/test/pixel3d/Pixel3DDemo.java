@@ -7,7 +7,6 @@ import static java.util.Arrays.copyOf;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
@@ -23,6 +22,7 @@ import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-04-27)
@@ -327,30 +327,32 @@ final class PolygonTools {
 			bottom = min(clipBottom, max(bottom, y));
 		}
 		
-		final int MAX_POLY_CORNERS = 10;
-		int  nodes;
-		final int[] nodeX = new int[MAX_POLY_CORNERS];
-		final double[] nodeZ = new double[MAX_POLY_CORNERS];
+		final int maximumCorners = vertices.length / 3;
+		final int[] nodeX = new int[maximumCorners];
+		final double[] nodeZ = new double[maximumCorners];
 		
-		// Loop through the rows
+		// Loop through the rows.
 		for (int y = top; y < bottom; y++) {
 			// Build a list of nodes.
-			nodes = 0;
+			int nodes = 0;
 			
 			for (int i = 0, j = vertices.length - 3; i < vertices.length; j = i, i += 3) {
 				final int y1 = (int) vertices[i + Y];
 				final int y2 = (int) vertices[j + Y];
+				final int dy = y2 - y1;
 				
 				if (y1 < y && y <= y2 || y2 < y && y <= y1) {
 					final int x1 = (int) vertices[i + X];
 					final int x2 = (int) vertices[j + X];
 					final int dx = x2 - x1;
-					final int dy = y2 - y1;
 					nodeX[nodes] = (int) (x1 + (double) (y - y1) * dx / dy);
+					
 					final double z1 = vertices[i + Z];
 					final double z2 = vertices[j + Z];
 					final double dz = z2 - z1;
-					nodeZ[nodes++] = z1 + (y - y1) * dz / dy;
+					nodeZ[nodes] = z1 + (y - y1) * dz / dy;
+					
+					++nodes;
 				}
 			}
 			
@@ -368,6 +370,10 @@ final class PolygonTools {
 				}
 			}
 			
+			if ((nodes & 1) != 0) {
+				System.err.println(debug(DEBUG_STACK_OFFSET, "Internal error detected"));
+			}
+			
 			// Fill the pixels between node pairs.
 			for (int i = 0; i < nodes; i += 2) {
 				int x1 = nodeX[i];
@@ -378,7 +384,7 @@ final class PolygonTools {
 				
 				int x2 = nodeX[i + 1];
 				
-				if (x2 > clipLeft) {
+				if (clipLeft < x2) {
 					if (x1 < clipLeft) {
 						x1 = clipLeft;
 					}
