@@ -36,6 +36,8 @@ public final class SimpleImageView extends JPanel {
 	
 	private final List<Painter<SimpleImageView>> painters;
 	
+	private int bufferType;
+	
 	public SimpleImageView() {
 		super(new BorderLayout());
 		this.imageHolder = new JLabel();
@@ -62,6 +64,16 @@ public final class SimpleImageView extends JPanel {
 		}));
 	}
 	
+	public final int getBufferType() {
+		return this.bufferType;
+	}
+	
+	public final SimpleImageView setBufferType(final int bufferType) {
+		this.bufferType = bufferType;
+		
+		return this;
+	}
+	
 	public final JLabel getImageHolder() {
 		return this.imageHolder;
 	}
@@ -84,8 +96,8 @@ public final class SimpleImageView extends JPanel {
 	
 	public final void setImage(final BufferedImage image) {
 		this.image = image;
-		
-		this.getBuffer().setFormat(image.getWidth(), image.getHeight(), image.getType());
+		this.getBuffer().setFormat(image.getWidth(), image.getHeight(),
+				this.getBufferType() != 0 ? this.getBufferType() : image.getType());
 		
 		this.getImageHolder().setIcon(new ImageIcon(this.getBuffer().getImage()));
 		

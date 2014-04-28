@@ -2,7 +2,9 @@ package imj2.tools;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.abs;
+import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.show;
+import static net.sourceforge.aprog.swing.SwingTools.verticalSplit;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static org.junit.Assert.*;
@@ -13,12 +15,14 @@ import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 import javax.swing.AbstractAction;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JSplitPane;
@@ -36,6 +40,8 @@ import net.sourceforge.aprog.tools.Tools;
 import org.apache.log4j.lf5.viewer.categoryexplorer.TreeModelAdapter;
 import org.junit.Test;
 
+import pixel3d.OrthographicRenderer;
+
 /**
  * @author codistmonk (creation 2014-04-23)
  */
@@ -44,10 +50,15 @@ public final class PaletteBasedSegmentationTest {
 	@Test
 	public final void test() {
 		SwingTools.useSystemLookAndFeel();
+		SwingTools.setCheckAWT(false);
 		
-		final SimpleImageView imageView = new SimpleImageView();
+		final SimpleImageView imageView = new SimpleImageView().setBufferType(BufferedImage.TYPE_INT_ARGB);
+		final Canvas histogramCanvas = new Canvas();
+		final JLabel histogramView = new JLabel("TODO");
 		final GenericTree clustersEditor = new GenericTree("Clusters");
-		final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, imageView, clustersEditor);
+		final JSplitPane splitPane = horizontalSplit(imageView, verticalSplit(clustersEditor, histogramView));
+		
+		SwingTools.setCheckAWT(true);
 		
 		clustersEditor.getModel().addTreeModelListener(new TreeModelAdapter() {
 			
@@ -75,12 +86,18 @@ public final class PaletteBasedSegmentationTest {
 		
 		imageView.getPainters().add(new Painter<SimpleImageView>() {
 			
+			private final BitSet histogram = new BitSet();
+			
+			private OrthographicRenderer histogramRenderer = null;
+			
 			@Override
 			public final void paint(final Graphics2D g, final SimpleImageView component,
 					final int width, final int height) {
 				final Map<Integer, Collection<Integer>> clusters = getClusters(clustersEditor);
 				
 				debugPrint(clusters);
+				
+				this.histogram.clear();
 				
 				final BufferedImage image = imageView.getImage();
 				final BufferedImage buffer = imageView.getBufferImage();
@@ -90,6 +107,9 @@ public final class PaletteBasedSegmentationTest {
 				for (int y = 0; y < h; ++y) {
 					for (int x = 0; x < w; ++x) {
 						final int rgb = image.getRGB(x, y);
+						
+						this.histogram.set(rgb & 0x00FFFFFF);
+						
 						int bestCluster = rgb;
 						int bestDistance = Integer.MAX_VALUE;
 						
@@ -107,6 +127,8 @@ public final class PaletteBasedSegmentationTest {
 						buffer.setRGB(x, y, bestCluster);
 					}
 				}
+				
+				debugPrint(this.histogram.cardinality());
 			}
 			
 			/**
