@@ -42,6 +42,7 @@ import net.sourceforge.aprog.tools.Tools;
 import org.apache.log4j.lf5.viewer.categoryexplorer.TreeModelAdapter;
 import org.junit.Test;
 
+import pixel3d.OrbiterMouseHandler;
 import pixel3d.OrthographicRenderer;
 
 /**
@@ -55,8 +56,7 @@ public final class PaletteBasedSegmentationTest {
 		SwingTools.setCheckAWT(false);
 		
 		final SimpleImageView imageView = new SimpleImageView();
-		final Canvas histogramCanvas = new Canvas().setFormat(512, 512, BufferedImage.TYPE_INT_ARGB);
-		final JLabel histogramView = new JLabel(new ImageIcon(histogramCanvas.getImage()));
+		final HistogramView histogramView = new HistogramView();
 		final GenericTree clustersEditor = new GenericTree("Clusters");
 		final JSplitPane splitPane = horizontalSplit(imageView, verticalSplit(clustersEditor, histogramView));
 		
@@ -88,10 +88,6 @@ public final class PaletteBasedSegmentationTest {
 		
 		imageView.getPainters().add(new Painter<SimpleImageView>() {
 			
-			private final BitSet histogram = new BitSet();
-			
-			private final OrthographicRenderer histogramRenderer = new OrthographicRenderer(histogramCanvas.getImage());
-			
 			@Override
 			public final void paint(final Graphics2D g, final SimpleImageView component,
 					final int width, final int height) {
@@ -99,7 +95,7 @@ public final class PaletteBasedSegmentationTest {
 				
 				debugPrint(clusters);
 				
-				this.histogram.clear();
+				histogramView.getHistogram().clear();
 				
 				final BufferedImage image = imageView.getImage();
 				final BufferedImage buffer = imageView.getBufferImage();
@@ -110,7 +106,7 @@ public final class PaletteBasedSegmentationTest {
 					for (int x = 0; x < w; ++x) {
 						final int rgb = image.getRGB(x, y);
 						
-						this.histogram.set(rgb & 0x00FFFFFF);
+						histogramView.getHistogram().set(rgb & 0x00FFFFFF);
 						
 						int bestCluster = rgb;
 						int bestDistance = Integer.MAX_VALUE;
@@ -130,20 +126,7 @@ public final class PaletteBasedSegmentationTest {
 					}
 				}
 				
-				debugPrint(this.histogram.cardinality());
-				
-				this.histogramRenderer.clear();
-				
-				for (int rgb = 0x00000000; rgb <= 0x00FFFFFF; ++rgb) {
-					if (this.histogram.get(rgb)) {
-						this.histogramRenderer.addPixel((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, (rgb >> 0) & 0xFF, 0xFF000000 | rgb);
-					}
-				}
-				
-				histogramCanvas.clear(Color.GRAY);
-				this.histogramRenderer.render();
-				
-				histogramView.repaint();
+				histogramView.refresh();
 			}
 			
 			/**
@@ -286,6 +269,65 @@ public final class PaletteBasedSegmentationTest {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = 2264597555092857049L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-04-28)
+	 */
+	public static final class HistogramView extends JLabel {
+		
+		private final Canvas canvas;
+		
+		private final BitSet histogram;
+		
+		private final OrthographicRenderer histogramRenderer;
+		
+		private final OrbiterMouseHandler orbiter;
+		
+		public HistogramView() {
+			this.canvas = new Canvas().setFormat(512, 512, BufferedImage.TYPE_INT_ARGB);
+			this.histogram = new BitSet(0x00FFFFFF);
+			this.histogramRenderer = new OrthographicRenderer(this.canvas.getImage());
+			this.orbiter = new OrbiterMouseHandler(null).addTo(this);
+			
+			this.setIcon(new ImageIcon(this.canvas.getImage()));
+		}
+		
+		public final BitSet getHistogram() {
+			return this.histogram;
+		}
+		
+		public final void refresh() {
+			debugPrint(this.histogram.cardinality());
+			
+			this.histogramRenderer.clear();
+			
+			final int x0 = this.canvas.getWidth() / 2;
+			final int y0 = this.canvas.getHeight() / 2;
+			
+			debugPrint(x0, y0);
+			
+			for (int rgb = 0x00000000; rgb <= 0x00FFFFFF; ++rgb) {
+				if (this.histogram.get(rgb)) {
+					this.histogramRenderer.addPixel(
+							x0 + ((rgb >> 16) & 0xFF) - 128,
+							y0 + ((rgb >> 8) & 0xFF) - 128,
+							((rgb >> 0) & 0xFF) - 128,
+							0xFF000000 | rgb);
+				}
+			}
+			
+			this.canvas.clear(Color.GRAY);
+			this.histogramRenderer.render();
+			
+			this.repaint();
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 8150020673886684998L;
 		
 	}
 	
