@@ -9,6 +9,7 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static org.junit.Assert.*;
 
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.PopupMenu;
 import java.awt.event.ActionEvent;
@@ -22,6 +23,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import javax.swing.AbstractAction;
+import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
@@ -52,9 +54,9 @@ public final class PaletteBasedSegmentationTest {
 		SwingTools.useSystemLookAndFeel();
 		SwingTools.setCheckAWT(false);
 		
-		final SimpleImageView imageView = new SimpleImageView().setBufferType(BufferedImage.TYPE_INT_ARGB);
-		final Canvas histogramCanvas = new Canvas();
-		final JLabel histogramView = new JLabel("TODO");
+		final SimpleImageView imageView = new SimpleImageView();
+		final Canvas histogramCanvas = new Canvas().setFormat(512, 512, BufferedImage.TYPE_INT_ARGB);
+		final JLabel histogramView = new JLabel(new ImageIcon(histogramCanvas.getImage()));
 		final GenericTree clustersEditor = new GenericTree("Clusters");
 		final JSplitPane splitPane = horizontalSplit(imageView, verticalSplit(clustersEditor, histogramView));
 		
@@ -88,7 +90,7 @@ public final class PaletteBasedSegmentationTest {
 			
 			private final BitSet histogram = new BitSet();
 			
-			private OrthographicRenderer histogramRenderer = null;
+			private final OrthographicRenderer histogramRenderer = new OrthographicRenderer(histogramCanvas.getImage());
 			
 			@Override
 			public final void paint(final Graphics2D g, final SimpleImageView component,
@@ -129,6 +131,19 @@ public final class PaletteBasedSegmentationTest {
 				}
 				
 				debugPrint(this.histogram.cardinality());
+				
+				this.histogramRenderer.clear();
+				
+				for (int rgb = 0x00000000; rgb <= 0x00FFFFFF; ++rgb) {
+					if (this.histogram.get(rgb)) {
+						this.histogramRenderer.addPixel((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, (rgb >> 0) & 0xFF, 0xFF000000 | rgb);
+					}
+				}
+				
+				histogramCanvas.clear(Color.GRAY);
+				this.histogramRenderer.render();
+				
+				histogramView.repaint();
 			}
 			
 			/**
