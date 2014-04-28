@@ -1,25 +1,21 @@
 package pixel3d;
 
-import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.round;
-import static java.lang.Math.signum;
 import static java.util.Arrays.copyOf;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.List;
 
 import javax.swing.SwingUtilities;
 
@@ -63,17 +59,17 @@ public final class Pixel3DDemo {
 				this.renderer.setCanvas(imageView.getBufferImage());
 				this.renderer.clear();
 				
-				PolygonTools.render2(new ARGBShader(this.renderer, 0xA0FF0000),
+				PolygonTools.render(new ARGBShader(this.renderer, 0xA0FF0000),
 						10.0, 50.0, 0.0,
 						80.0, 90.0, 1.0,
 						80.0, 20.0, 1.0);
 				
-				PolygonTools.render2(new ARGBShader(this.renderer, 0x8000FF00),
+				PolygonTools.render(new ARGBShader(this.renderer, 0x8000FF00),
 						10.0, 10.0, 1.0,
 						90.0, 90.0, 0.0,
 						10.0, 90.0, 1.0);
 				
-				PolygonTools.render2(new ARGBShader(this.renderer, 0x8000FF00),
+				PolygonTools.render(new ARGBShader(this.renderer, 0x8000FF00),
 						10.0, 10.0, 1.0,
 						90.0, 90.0, 0.0,
 						90.0, 10.0, 0.0);
@@ -205,15 +201,8 @@ final class OrthographicRenderer implements Serializable {
 			public final int compare(final Integer index1, final Integer index2) {
 				final float z1 = OrthographicRenderer.this.getZValue(index1);
 				final float z2 = OrthographicRenderer.this.getZValue(index2);
-				int result = Float.compare(z1, z2);
 				
-//				if (result == 0) {
-//					final int pixel1 = OrthographicRenderer.this.getPixel(index1);
-//					final int pixel2 = OrthographicRenderer.this.getPixel(index2);
-//					result = pixel1 - pixel2;
-//				}
-				
-				return result;
+				return Float.compare(z1, z2);
 			}
 			
 		});
@@ -321,14 +310,9 @@ final class PolygonTools {
 		return result;
 	}
 	
-	public static final void render2(final Processor processor, final double... vertices) {
+	public static final void render(final Processor processor, final double... vertices) {
 		//  Adapted from http://alienryderflex.com/polygon_fill/ (public-domain code by Darel Rex Finley, 2007)
 		
-		final int MAX_POLY_CORNERS = 10;
-		int  nodes;
-		final int[] nodeX = new int[MAX_POLY_CORNERS];
-		final double[] nodeZ = new double[MAX_POLY_CORNERS];
-		final int polyCorners = vertices.length / 3;
 		final int clipLeft = 0;
 		final int clipRight = Integer.MAX_VALUE;
 		final int clipBottom = Integer.MAX_VALUE;
@@ -343,53 +327,44 @@ final class PolygonTools {
 			bottom = min(clipBottom, max(bottom, y));
 		}
 		
-		// Loop through the rows of the image.
+		final int MAX_POLY_CORNERS = 10;
+		int  nodes;
+		final int[] nodeX = new int[MAX_POLY_CORNERS];
+		final double[] nodeZ = new double[MAX_POLY_CORNERS];
+		
+		// Loop through the rows
 		for (int y = top; y < bottom; y++) {
 			// Build a list of nodes.
 			nodes = 0;
 			
-			for (int i = 0, j = polyCorners - 1; i < polyCorners; j = i++) {
-				final int y1 = (int) vertices[3 * i + Y];
-				final int y2 = (int) vertices[3 * j + Y];
+			for (int i = 0, j = vertices.length - 3; i < vertices.length; j = i, i += 3) {
+				final int y1 = (int) vertices[i + Y];
+				final int y2 = (int) vertices[j + Y];
 				
-				if (y1 < y && y2 >= y
-						|| y2 < y
-						&& y1 >= y) {
-					final int x1 = (int) vertices[3 * i + X];
-					final int x2 = (int) vertices[3 * j + X];
+				if (y1 < y && y <= y2 || y2 < y && y <= y1) {
+					final int x1 = (int) vertices[i + X];
+					final int x2 = (int) vertices[j + X];
 					final int dx = x2 - x1;
 					final int dy = y2 - y1;
 					nodeX[nodes] = (int) (x1 + (double) (y - y1) * dx / dy);
-					final double z1 = vertices[3 * i + Z];
-					final double z2 = vertices[3 * j + Z];
+					final double z1 = vertices[i + Z];
+					final double z2 = vertices[j + Z];
 					final double dz = z2 - z1;
 					nodeZ[nodes++] = z1 + (y - y1) * dz / dy;
 				}
 			}
 			
-			{
-				// Sort the nodes, via a simple “Bubble” sort.
-				int i = 0;
-				while (i < nodes - 1) {
-					if (nodeX[i] > nodeX[i + 1]) {
-						{
-							final int swap = nodeX[i];
-							nodeX[i] = nodeX[i + 1];
-							nodeX[i + 1] = swap;
-						}
-						
-						{
-							final double swap = nodeZ[i];
-							nodeZ[i] = nodeZ[i + 1];
-							nodeZ[i + 1] = swap;
-						}
-						
-						if (i != 0) {
-							--i;
-						}
-					} else {
-						++i;
+			// Sort the nodes, via a simple “Bubble” sort.
+			for (int i = 0; i < nodes - 1;) {
+				if (nodeX[i] > nodeX[i + 1]) {
+					swap(nodeX, i, i + 1);
+					swap(nodeZ, i, i + 1);
+					
+					if (i != 0) {
+						--i;
 					}
+				} else {
+					++i;
 				}
 			}
 			
@@ -425,105 +400,16 @@ final class PolygonTools {
 		}
 	}
 	
-	/**
-	 * Defective.
-	 */
-	@Deprecated
-	public static final void render(final Processor processor, final double... vertices) {
-		final List<double[]> points = new ArrayList<double[]>();
-		
-		{
-			final int n = vertices.length;
-			
-			for (int offset = 0; offset < n; offset += 3) {
-				final double p1X = vertices[offset + X];
-				final double p1Y = vertices[offset + Y];
-				final double p1Z = vertices[offset + Z];
-				final double p2X = vertices[(offset + 3) % n + X];
-				final double p2Y = vertices[(offset + 3) % n + Y];
-				final double p2Z = vertices[(offset + 3) % n + Z];
-				final double dy = p2Y - p1Y;
-				final double previousDySignum = signum(vertices[(n + offset - 3) % n + Y] - p1Y);
-				
-				if (dy == 0 && 0 < orientation(vertices, offset)) {
-					points.add(v(p1X, p1Y, p1Z));
-				} else if (dy != 0) {
-					if (signum(dy) == previousDySignum) {
-						points.add(v(p1X, p1Y, p1Z));
-					}
-					
-					final double dx = p2X - p1X;
-					final double dz = p2Z - p1Z;
-					final double m = abs(dy);
-					
-					for (int j = 0; j < m; ++j) {
-						points.add(v(p1X + dx * j / m, p1Y + dy * j / m, p1Z + dz * j / m));
-					}
-				}
-			}
-		}
-		
-		Collections.sort(points, new Comparator<double[]>() {
-			
-			@Override
-			public final int compare(final double[] p1, final double[] p2) {
-				int result = Double.compare(p1[Y], p2[Y]);
-				
-				if (result == 0) {
-					result = Double.compare(p1[X], p2[X]);
-				}
-				
-				return result;
-			}
-			
-		});
-		
-		{
-			final int n = points.size();
-			
-			if ((n & 1) != 0) {
-				System.err.println(debug(DEBUG_STACK_OFFSET, "Internal error detected"));
-			}
-			
-			for (int i = 0; i + 1 < n; i += 2) {
-				final double[] p1 = points.get(i);
-				final double[] p2 = points.get(i + 1);
-				final double y = p1[Y];
-				
-				if ((int) y == (int) p2[Y]) {
-					final double x1 = p1[X];
-					final double x2 = p2[X];
-					final double dx = x2 - x1;
-					final double z1 = p1[Z];
-					final double dz = p2[Z] - z1;
-					
-					for (double x = x1; x < x2; ++x) {
-						final double z = z1 + (x - x1) * dz / dx;
-						
-						processor.pixel(x, y, z);
-					}
-				} else {
-					System.err.println(debug(DEBUG_STACK_OFFSET, "Internal error detected"));
-					break;
-				}
-			}
-		}
+	public static final void swap(final int[] array, final int i, final int j) {
+		final int tmp = array[i];
+		array[i] = array[j];
+		array[j] = tmp;
 	}
 	
-	public static final double orientation(final double[] vertices, final int offset) {
-		final int n = vertices.length;
-		final double v1X = vertices[(n + offset - 3 + 0) % n];
-		final double v1Y = vertices[(n + offset - 3 + 1) % n];
-		final double v2X = vertices[(n + offset + 0 + 0) % n];
-		final double v2Y = vertices[(n + offset + 0 + 1) % n];
-		final double v3X = vertices[(n + offset + 3 + 0) % n];
-		final double v3Y = vertices[(n + offset + 3 + 1) % n];
-		final double v21X = v1X - v2X;
-		final double v21Y = v1Y - v2Y;
-		final double v23X = v3X - v2X;
-		final double v23Y = v3Y - v2Y;
-		
-		return v21X * v23Y - v21Y * v23X;
+	public static final void swap(final double[] array, final int i, final int j) {
+		final double tmp = array[i];
+		array[i] = array[j];
+		array[j] = tmp;
 	}
 	
 	/**
