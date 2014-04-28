@@ -15,6 +15,7 @@ import java.awt.PopupMenu;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.util.BitSet;
 import java.util.Collection;
@@ -42,6 +43,7 @@ import net.sourceforge.aprog.tools.Tools;
 import org.apache.log4j.lf5.viewer.categoryexplorer.TreeModelAdapter;
 import org.junit.Test;
 
+import pixel3d.MouseHandler;
 import pixel3d.OrbiterMouseHandler;
 import pixel3d.OrthographicRenderer;
 
@@ -95,8 +97,6 @@ public final class PaletteBasedSegmentationTest {
 				
 				debugPrint(clusters);
 				
-				histogramView.getHistogram().clear();
-				
 				final BufferedImage image = imageView.getImage();
 				final BufferedImage buffer = imageView.getBufferImage();
 				final int w = image.getWidth();
@@ -105,9 +105,6 @@ public final class PaletteBasedSegmentationTest {
 				for (int y = 0; y < h; ++y) {
 					for (int x = 0; x < w; ++x) {
 						final int rgb = image.getRGB(x, y);
-						
-						histogramView.getHistogram().set(rgb & 0x00FFFFFF);
-						
 						int bestCluster = rgb;
 						int bestDistance = Integer.MAX_VALUE;
 						
@@ -126,7 +123,7 @@ public final class PaletteBasedSegmentationTest {
 					}
 				}
 				
-				histogramView.refresh();
+				histogramView.refresh(image);
 			}
 			
 			/**
@@ -285,6 +282,8 @@ public final class PaletteBasedSegmentationTest {
 		
 		private final OrbiterMouseHandler orbiter;
 		
+		private BufferedImage oldImage;
+		
 		public HistogramView() {
 			this.canvas = new Canvas().setFormat(512, 512, BufferedImage.TYPE_INT_ARGB);
 			this.histogram = new BitSet(0x00FFFFFF);
@@ -292,21 +291,54 @@ public final class PaletteBasedSegmentationTest {
 			this.orbiter = new OrbiterMouseHandler(null).addTo(this);
 			
 			this.setIcon(new ImageIcon(this.canvas.getImage()));
-		}
-		
-		public final BitSet getHistogram() {
-			return this.histogram;
+			
+			new MouseHandler(this.orbiter.getUpdateNeeded()) {
+				
+				@Override
+				public final void mouseWheelMoved(final MouseWheelEvent event) {
+					HistogramView.this.refresh();
+				}
+				
+				@Override
+				public final void mouseDragged(final MouseEvent event) {
+					HistogramView.this.refresh();
+				}
+				
+				/**
+				 * {@value}.
+				 */
+				private static final long serialVersionUID = 465287425693150361L;
+				
+			}.addTo(this);
 		}
 		
 		public final void refresh() {
-			debugPrint(this.histogram.cardinality());
+			this.refresh(this.oldImage);
+		}
+		
+		public final void refresh(final BufferedImage image) {
+			if (this.oldImage != image) {
+				this.oldImage = image;
+				final int w = image.getWidth();
+				final int h = image.getHeight();
+				
+				this.histogram.clear();
+				
+				for (int y = 0; y < h; ++y) {
+					for (int x = 0; x < w; ++x) {
+						final int rgb = image.getRGB(x, y);
+						
+						this.histogram.set(rgb & 0x00FFFFFF);
+					}
+				}
+				
+				debugPrint(this.histogram.cardinality());
+			}
 			
 			this.histogramRenderer.clear();
 			
 			final int x0 = this.canvas.getWidth() / 2;
 			final int y0 = this.canvas.getHeight() / 2;
-			
-			debugPrint(x0, y0);
 			
 			for (int rgb = 0x00000000; rgb <= 0x00FFFFFF; ++rgb) {
 				if (this.histogram.get(rgb)) {
