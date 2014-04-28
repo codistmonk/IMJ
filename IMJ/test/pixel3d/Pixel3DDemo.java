@@ -22,7 +22,6 @@ import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-04-27)
@@ -63,20 +62,16 @@ public final class Pixel3DDemo {
 						10.0, 50.0, 0.0,
 						80.0, 90.0, 1.0,
 						80.0, 20.0, 1.0);
-				
 				PolygonTools.render(new ARGBShader(this.renderer, 0x8000FF00),
 						10.0, 10.0, 1.0,
 						90.0, 90.0, 0.0,
 						10.0, 90.0, 1.0);
-				
 				PolygonTools.render(new ARGBShader(this.renderer, 0x8000FF00),
 						10.0, 10.0, 1.0,
 						90.0, 90.0, 0.0,
 						90.0, 10.0, 0.0);
 				
 				this.renderer.render();
-				
-//				imageView.getBufferImage().setRGB(47, 162, Color.YELLOW.getRGB());
 				
 				time.addValue(timer.toc());
 				
@@ -94,7 +89,7 @@ public final class Pixel3DDemo {
 			
 			@Override
 			public final void run() {
-				for (int i = 0; i < 1; ++i) {
+				for (int i = 0; i < 100; ++i) {
 					if (i % 21 == 0) {
 						time.reset();
 					}
