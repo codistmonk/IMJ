@@ -1,6 +1,7 @@
 package pixel3d;
 
 import static java.lang.Math.abs;
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.round;
 import static java.lang.Math.signum;
@@ -62,17 +63,17 @@ public final class Pixel3DDemo {
 				this.renderer.setCanvas(imageView.getBufferImage());
 				this.renderer.clear();
 				
-				PolygonTools.render(new ARGBShader(this.renderer, 0xA0FF0000),
+				PolygonTools.render2(new ARGBShader(this.renderer, 0xA0FF0000),
 						10.0, 50.0, 0.0,
 						80.0, 90.0, 1.0,
 						80.0, 20.0, 1.0);
 				
-				PolygonTools.render(new ARGBShader(this.renderer, 0x8000FF00),
+				PolygonTools.render2(new ARGBShader(this.renderer, 0x8000FF00),
 						10.0, 10.0, 1.0,
 						90.0, 90.0, 0.0,
 						10.0, 90.0, 1.0);
 				
-				PolygonTools.render(new ARGBShader(this.renderer, 0x8000FF00),
+				PolygonTools.render2(new ARGBShader(this.renderer, 0x8000FF00),
 						10.0, 10.0, 1.0,
 						90.0, 90.0, 0.0,
 						90.0, 10.0, 0.0);
@@ -320,6 +321,114 @@ final class PolygonTools {
 		return result;
 	}
 	
+	public static final void render2(final Processor processor, final double... vertices) {
+		//  Adapted from http://alienryderflex.com/polygon_fill/ (public-domain code by Darel Rex Finley, 2007)
+		
+		final int MAX_POLY_CORNERS = 10;
+		int  nodes;
+		final int[] nodeX = new int[MAX_POLY_CORNERS];
+		final double[] nodeZ = new double[MAX_POLY_CORNERS];
+		final int polyCorners = vertices.length / 3;
+		final int clipLeft = 0;
+		final int clipRight = Integer.MAX_VALUE;
+		final int clipBottom = Integer.MAX_VALUE;
+		final int clipTop = 0;
+		
+		int top = Integer.MAX_VALUE;
+		int bottom = Integer.MIN_VALUE;
+		
+		for (int i = 0; i < vertices.length; i += 3) {
+			final int y = (int) vertices[i + Y];
+			top = max(clipTop, min(top, y));
+			bottom = min(clipBottom, max(bottom, y));
+		}
+		
+		// Loop through the rows of the image.
+		for (int y = top; y < bottom; y++) {
+			// Build a list of nodes.
+			nodes = 0;
+			
+			for (int i = 0, j = polyCorners - 1; i < polyCorners; j = i++) {
+				final int y1 = (int) vertices[3 * i + Y];
+				final int y2 = (int) vertices[3 * j + Y];
+				
+				if (y1 < y && y2 >= y
+						|| y2 < y
+						&& y1 >= y) {
+					final int x1 = (int) vertices[3 * i + X];
+					final int x2 = (int) vertices[3 * j + X];
+					final int dx = x2 - x1;
+					final int dy = y2 - y1;
+					nodeX[nodes] = (int) (x1 + (double) (y - y1) * dx / dy);
+					final double z1 = vertices[3 * i + Z];
+					final double z2 = vertices[3 * j + Z];
+					final double dz = z2 - z1;
+					nodeZ[nodes++] = z1 + (y - y1) * dz / dy;
+				}
+			}
+			
+			{
+				// Sort the nodes, via a simple “Bubble” sort.
+				int i = 0;
+				while (i < nodes - 1) {
+					if (nodeX[i] > nodeX[i + 1]) {
+						{
+							final int swap = nodeX[i];
+							nodeX[i] = nodeX[i + 1];
+							nodeX[i + 1] = swap;
+						}
+						
+						{
+							final double swap = nodeZ[i];
+							nodeZ[i] = nodeZ[i + 1];
+							nodeZ[i + 1] = swap;
+						}
+						
+						if (i != 0) {
+							--i;
+						}
+					} else {
+						++i;
+					}
+				}
+			}
+			
+			// Fill the pixels between node pairs.
+			for (int i = 0; i < nodes; i += 2) {
+				int x1 = nodeX[i];
+				
+				if (clipRight <= x1) {
+					break;
+				}
+				
+				int x2 = nodeX[i + 1];
+				
+				if (x2 > clipLeft) {
+					if (x1 < clipLeft) {
+						x1 = clipLeft;
+					}
+					
+					if (clipRight < x2) {
+						x2 = clipRight;
+					}
+					
+					final int dx = x2 - x1;
+					final double z1 = nodeZ[i];
+					final double z2 = nodeZ[i + 1];
+					final double dz = z2 - z1;
+					
+					for (int x = x1; x < x2; x++) {
+						processor.pixel(x, y, z1 + (x - x1) * dz / dx);
+					}
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Defective.
+	 */
+	@Deprecated
 	public static final void render(final Processor processor, final double... vertices) {
 		final List<double[]> points = new ArrayList<double[]>();
 		
