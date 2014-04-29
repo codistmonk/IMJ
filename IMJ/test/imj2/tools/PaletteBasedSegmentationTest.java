@@ -9,7 +9,6 @@ import static net.sourceforge.aprog.swing.SwingTools.verticalSplit;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static pixel3d.PolygonTools.*;
-
 import imj2.tools.Image2DComponent.Painter;
 
 import java.awt.Color;
@@ -33,17 +32,16 @@ import javax.swing.JPopupMenu;
 import javax.swing.JSplitPane;
 import javax.swing.JTree;
 import javax.swing.event.TreeModelEvent;
+import javax.swing.event.TreeModelListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeModel;
 
 import jgencode.primitivelists.DoubleList;
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.TicToc;
 
-import org.apache.log4j.lf5.viewer.categoryexplorer.TreeModelAdapter;
 import org.junit.Test;
 
 import pixel3d.MouseHandler;
@@ -70,7 +68,7 @@ public final class PaletteBasedSegmentationTest {
 		
 		SwingTools.setCheckAWT(true);
 		
-		clustersEditor.getModel().addTreeModelListener(new TreeModelAdapter() {
+		clustersEditor.getModel().addTreeModelListener(new TreeModelListener() {
 			
 			@Override
 			public final void treeNodesChanged(final TreeModelEvent event) {
