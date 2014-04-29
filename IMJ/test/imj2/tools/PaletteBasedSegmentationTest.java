@@ -8,6 +8,8 @@ import static net.sourceforge.aprog.swing.SwingTools.verticalSplit;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static org.junit.Assert.*;
+import static pixel3d.OrbiterMouseHandler.transform;
+import static pixel3d.PolygonTools.*;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -17,6 +19,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
+import java.io.Serializable;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.List;
@@ -46,6 +49,8 @@ import org.junit.Test;
 import pixel3d.MouseHandler;
 import pixel3d.OrbiterMouseHandler;
 import pixel3d.OrthographicRenderer;
+import pixel3d.PolygonTools;
+import pixel3d.OrbiterMouseHandler.OrbiterParameters;
 
 /**
  * @author codistmonk (creation 2014-04-23)
@@ -282,6 +287,8 @@ public final class PaletteBasedSegmentationTest {
 		
 		private final OrbiterMouseHandler orbiter;
 		
+		private final Graphics3D histogramGraphics;
+		
 		private BufferedImage oldImage;
 		
 		public HistogramView() {
@@ -289,6 +296,7 @@ public final class PaletteBasedSegmentationTest {
 			this.histogram = new BitSet(0x00FFFFFF);
 			this.histogramRenderer = new OrthographicRenderer(this.canvas.getImage());
 			this.orbiter = new OrbiterMouseHandler(null).addTo(this);
+			this.histogramGraphics = new Graphics3D(this.histogramRenderer).setOrbiterParameters(this.orbiter.getParameters());
 			
 			this.setIcon(new ImageIcon(this.canvas.getImage()));
 			
@@ -337,14 +345,18 @@ public final class PaletteBasedSegmentationTest {
 			
 			this.histogramRenderer.clear();
 			
-			final int x0 = this.canvas.getWidth() / 2;
-			final int y0 = this.canvas.getHeight() / 2;
+//			final int x0 = this.canvas.getWidth() / 2;
+//			final int y0 = this.canvas.getHeight() / 2;
+			
+			this.histogramGraphics.getOrbiterParameters()
+					.setCenterX(this.canvas.getWidth() / 2)
+					.setCenterY(this.canvas.getHeight() / 2);
 			
 			for (int rgb = 0x00000000; rgb <= 0x00FFFFFF; ++rgb) {
 				if (this.histogram.get(rgb)) {
-					this.histogramRenderer.addPixel(
-							x0 + ((rgb >> 16) & 0xFF) - 128,
-							y0 + ((rgb >> 8) & 0xFF) - 128,
+					this.histogramGraphics.drawPoint(
+							((rgb >> 16) & 0xFF) + 128,
+							((rgb >> 8) & 0xFF) + 128,
 							((rgb >> 0) & 0xFF) - 128,
 							0xFF000000 | rgb);
 				}
@@ -360,6 +372,79 @@ public final class PaletteBasedSegmentationTest {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = 8150020673886684998L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-04-29)
+	 */
+	public static final class Graphics3D implements Serializable {
+		
+		private final OrthographicRenderer renderer;
+		
+		private OrbiterParameters orbiterParameters;
+		
+		public Graphics3D(final OrthographicRenderer renderer) {
+			this.renderer = renderer;
+			this.orbiterParameters = new OrbiterParameters();
+		}
+		
+		public final OrbiterParameters getOrbiterParameters() {
+			return this.orbiterParameters;
+		}
+		
+		public final Graphics3D setOrbiterParameters(OrbiterParameters orbiterParameters) {
+			this.orbiterParameters = orbiterParameters;
+			
+			return this;
+		}
+		
+		public final double getCenterX() {
+			return this.getOrbiterParameters().getCenterX();
+		}
+		
+		public final double getCenterY() {
+			return this.getOrbiterParameters().getCenterY();
+		}
+		
+		public final double getCenterZ() {
+			return this.getOrbiterParameters().getCenterZ();
+		}
+		
+		public final double getRoll() {
+			return this.getOrbiterParameters().getRoll();
+		}
+		
+		public final double getPitch() {
+			return this.getOrbiterParameters().getPitch();
+		}
+		
+		public final double getScale() {
+			return this.getOrbiterParameters().getScale();
+		}
+		
+		public final Graphics3D drawPoint(final double x, final double y, final double z, final int argb) {
+			final double[] point = new double[] { x, y, z };
+			
+			this.transform(point);
+			
+			this.renderer.addPixel(point[X], point[Y], point[Z], argb);
+			
+			return this;
+		}
+		
+		public final Graphics3D transform(final double... points) {
+			OrbiterMouseHandler.transform(points,
+					this.getRoll(), this.getPitch(), this.getScale(),
+					this.getCenterX(), this.getCenterY(), this.getCenterZ());
+			
+			return this;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -1033925831595591034L;
 		
 	}
 	
