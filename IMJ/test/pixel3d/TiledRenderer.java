@@ -3,6 +3,9 @@ package pixel3d;
 import static net.sourceforge.aprog.tools.Tools.instances;
 
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import net.sourceforge.aprog.tools.Factory;
 
@@ -15,8 +18,12 @@ public final class TiledRenderer implements Renderer {
 	
 	private final Renderer[] subrenderers;
 	
+	private final Executor executor;
+	
 	public TiledRenderer(final Factory<? extends Renderer> subrendererFactory) {
-		this.subrenderers = instances(4, subrendererFactory);
+		final int n = 4;
+		this.subrenderers = instances(n, subrendererFactory);
+		this.executor = new Executor(n);
 	}
 	
 	@Override
@@ -62,13 +69,53 @@ public final class TiledRenderer implements Renderer {
 	@Override
 	public final void render() {
 		for (final Renderer subrenderer : this.subrenderers) {
-			subrenderer.render();
+			this.executor.submit(new Runnable() {
+				
+				@Override
+				public final void run() {
+					subrenderer.render();
+				}
+				
+			});
 		}
+		
+		this.executor.join();
 	}
 	
 	/**
 	 * {@value}.
 	 */
 	private static final long serialVersionUID = 2137387212914109831L;
+	
+	/**
+	 * @author codistmonk (creation 2014-04-29)
+	 */
+	public static final class Executor {
+		
+		private final Collection<Thread> threads;
+		
+		public Executor(final int threadCount) {
+			this.threads = new ArrayList<Thread>(threadCount);
+		}
+		
+		public final void submit(final Runnable task) {
+			final Thread thread = new Thread(task);
+			
+			this.threads.add(thread);
+			
+			thread.start();
+		}
+		
+		public final void join() {
+			for (final Thread thread : this.threads) {
+				try {
+					thread.join();
+				} catch (final InterruptedException exception) {
+					exception.printStackTrace();
+				}
+			}
+		}
+		
+	}
 	
 }
