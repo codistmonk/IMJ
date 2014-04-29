@@ -8,8 +8,8 @@ import static net.sourceforge.aprog.tools.Tools.debug;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.io.Serializable;
-import java.util.Arrays;
-import java.util.Comparator;
+
+import pixel3d.DualPivotQuicksort.IntComparator;
 
 /**
  * @author codistmonk (creation 2014-04-27)
@@ -18,8 +18,7 @@ public final class OrthographicRenderer implements Serializable {
 	
 	private final BufferedImage canvas;
 	
-//	private int[] indices;
-	private Integer[] indices;
+	private int[] indices;
 	
 	private int[] pixels;
 	
@@ -35,8 +34,7 @@ public final class OrthographicRenderer implements Serializable {
 		}
 		
 		this.canvas = canvas;
-//		this.indices = new int[1];
-		this.indices = new Integer[1];
+		this.indices = new int[1];
 		this.pixels = new int[1];
 		this.zValues = new float[1];
 		this.colors = new int[1];
@@ -102,15 +100,20 @@ public final class OrthographicRenderer implements Serializable {
 		final boolean debug = false;
 		final int n = this.pixelCount;
 		
-		Arrays.sort(this.indices, 0, n, new Comparator<Integer>() {
-			
+		DualPivotQuicksort.sort(this.indices, 0, n - 1, new IntComparator() {
+
 			@Override
-			public final int compare(final Integer index1, final Integer index2) {
+			public final int compare(final int index1, final int index2) {
 				final float z1 = OrthographicRenderer.this.getZValue(index1);
 				final float z2 = OrthographicRenderer.this.getZValue(index2);
 				
 				return Float.compare(z1, z2);
 			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 1379706747335956894L;
 			
 		});
 		
