@@ -148,17 +148,21 @@ public final class OrbiterMouseHandler extends MouseHandler {
 	public static final void transform(final double[] locations, final double roll, final double pitch, final double scale,
 			final double centerX, final double centerY, final double centerZ) {
 		final int n = locations.length;
+		final double cosRoll = cos(roll);
+		final double sinRoll = sin(roll);
+		final double cosPitch = cos(pitch);
+		final double sinPitch = sin(pitch);
 		
 		for (int i = 0; i < n; i += 3) {
 			final double x1 = scale * (locations[i + 0] - centerX);
 			final double y1 = scale * (locations[i + 1] - centerY);
 			final double z1 = scale * (locations[i + 2] - centerZ);
-			final double x2 = x1 * cos(roll) - y1 * sin(roll);
-			final double y2 = x1 * sin(roll) + y1 * cos(roll);
+			final double x2 = x1 * cosRoll - y1 * sinRoll;
+			final double y2 = x1 * sinRoll + y1 * cosRoll;
 			final double z2 = z1;
 			locations[i + 0] = centerX + x2;
-			locations[i + 1] = centerY + y2 * cos(pitch) - z2 * sin(pitch);
-			locations[i + 2] = centerZ + y2 * sin(pitch) + z2 * cos(pitch);
+			locations[i + 1] = centerY + y2 * cosPitch - z2 * sinPitch;
+			locations[i + 2] = centerZ + y2 * sinPitch + z2 * cosPitch;
 		}
 	}
 	

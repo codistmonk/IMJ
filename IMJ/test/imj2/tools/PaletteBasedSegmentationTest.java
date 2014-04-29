@@ -8,13 +8,10 @@ import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.swing.SwingTools.verticalSplit;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
-import static org.junit.Assert.*;
-import static pixel3d.OrbiterMouseHandler.transform;
 import static pixel3d.PolygonTools.*;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
-import java.awt.PopupMenu;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -23,7 +20,6 @@ import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.BitSet;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -39,10 +35,13 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeModel;
 
+import jgencode.primitivelists.DoubleList;
+
 import imj2.tools.Image2DComponent.Painter;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
-import net.sourceforge.aprog.tools.Tools;
+import net.sourceforge.aprog.tools.TicToc;
 
 import org.apache.log4j.lf5.viewer.categoryexplorer.TreeModelAdapter;
 import org.junit.Test;
@@ -50,7 +49,6 @@ import org.junit.Test;
 import pixel3d.MouseHandler;
 import pixel3d.OrbiterMouseHandler;
 import pixel3d.OrthographicRenderer;
-import pixel3d.PolygonTools;
 import pixel3d.OrbiterMouseHandler.OrbiterParameters;
 
 /**
@@ -344,35 +342,63 @@ public final class PaletteBasedSegmentationTest {
 				debugPrint(this.histogram.cardinality());
 			}
 			
+			final double x0 = this.canvas.getWidth() / 2;
+			final double y0 = this.canvas.getHeight() / 2;
+			final double z0 = 0.0;
+			final double tx = x0 - 128.0;
+			final double ty = x0 - 128.0;
+			final double tz = z0 - 128.0;
+			final TicToc timer = new TicToc();
+			final DoubleList times = new DoubleList();
+			
+			this.histogramGraphics.getOrbiterParameters().setCenterX(x0).setCenterY(y0);
+			
+			timer.tic();
+			
 			this.histogramRenderer.clear();
 			
-//			final int x0 = this.canvas.getWidth() / 2;
-//			final int y0 = this.canvas.getHeight() / 2;
+			this.drawHistogramPoints(tx, ty, tz);
 			
-			this.histogramGraphics.getOrbiterParameters()
-					.setCenterX(this.canvas.getWidth() / 2)
-					.setCenterY(this.canvas.getHeight() / 2);
-			
-			final double tx = 128.0;
-			final double ty = 128.0;
-			final double tz = -128.0;
-			
-			for (int rgb = 0x00000000; rgb <= 0x00FFFFFF; ++rgb) {
-				if (this.histogram.get(rgb)) {
-					this.histogramGraphics.drawPoint(
-							((rgb >> 16) & 0xFF) + tx,
-							((rgb >> 8) & 0xFF) + ty,
-							((rgb >> 0) & 0xFF) + tz,
-							0xFF000000 | rgb);
-				}
-			}
+			times.add(tocTic(timer));
 			
 			this.drawBox(tx, ty, tz);
 			
+			times.add(tocTic(timer));
+			
 			this.canvas.clear(Color.GRAY);
+			
 			this.histogramRenderer.render();
 			
+			times.add(tocTic(timer));
+			
+			debugPrint(times);
+			
 			this.repaint();
+		}
+		
+		public static final long tocTic(final TicToc timer) {
+			final long result = timer.toc();
+			
+			timer.tic();
+			
+			return result;
+		}
+		
+		private final void drawHistogramPoints(final double tx, final double ty, final double tz) {
+			final int n = this.histogram.cardinality();
+			final double[] points = new double[n * 3];
+			final int[] argbs = new int[n];
+			
+			for (int rgb = 0x00000000, i = 0, j = 0; rgb <= 0x00FFFFFF; ++rgb) {
+				if (this.histogram.get(rgb)) {
+					points[i++] = ((rgb >> 16) & 0xFF) + tx;
+					points[i++] = ((rgb >> 8) & 0xFF) + ty;
+					points[i++] = ((rgb >> 0) & 0xFF) + tz;
+					argbs[j++] = 0xFF000000 | rgb;
+				}
+			}
+			
+			this.histogramGraphics.transformAndDrawPoints(points, argbs);
 		}
 		
 		private final void drawBox(final double tx, final double ty, final double tz) {
@@ -503,14 +529,18 @@ public final class PaletteBasedSegmentationTest {
 			return this;
 		}
 		
-		public final Graphics3D drawPoint(final double x, final double y, final double z, final int argb) {
-			final double[] point = new double[] { x, y, z };
+		public final Graphics3D transformAndDrawPoints(final double[] points, final int[] argbs) {
+			this.transform(points);
 			
-			this.transform(point);
-			
-			this.renderer.addPixel(point[X], point[Y], point[Z], argb);
+			for (int i = 0, j = 0; i < points.length; i += 3, ++j) {
+				this.renderer.addPixel(points[i + X], points[i + Y], points[i + Z], argbs[j]);
+			}
 			
 			return this;
+		}
+		
+		public final Graphics3D drawPoint(final double x, final double y, final double z, final int argb) {
+			return this.transformAndDrawPoints(new double[] { x, y, z }, new int[] { argb });
 		}
 		
 		public final Graphics3D transform(final double... points) {
