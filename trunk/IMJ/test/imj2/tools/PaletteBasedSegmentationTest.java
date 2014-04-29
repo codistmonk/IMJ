@@ -282,6 +282,10 @@ public final class PaletteBasedSegmentationTest {
 		
 		private final BitSet histogram;
 		
+		private double[] histogramPoints;
+		
+		private int[] histogramARGBs;
+		
 		private final OrthographicRenderer histogramRenderer;
 		
 		private final OrbiterMouseHandler orbiter;
@@ -324,6 +328,13 @@ public final class PaletteBasedSegmentationTest {
 		}
 		
 		public final void refresh(final BufferedImage image) {
+			final double x0 = this.canvas.getWidth() / 2;
+			final double y0 = this.canvas.getHeight() / 2;
+			final double z0 = 0.0;
+			final double tx = x0 - 128.0;
+			final double ty = x0 - 128.0;
+			final double tz = z0 - 128.0;
+			
 			if (this.oldImage != image) {
 				this.oldImage = image;
 				final int w = image.getWidth();
@@ -333,21 +344,27 @@ public final class PaletteBasedSegmentationTest {
 				
 				for (int y = 0; y < h; ++y) {
 					for (int x = 0; x < w; ++x) {
-						final int rgb = image.getRGB(x, y);
-						
-						this.histogram.set(rgb & 0x00FFFFFF);
+						this.histogram.set(image.getRGB(x, y) & 0x00FFFFFF);
 					}
 				}
 				
-				debugPrint(this.histogram.cardinality());
+				final int n = this.histogram.cardinality();
+				
+				debugPrint(n);
+				
+				this.histogramPoints = new double[n * 3];
+				this.histogramARGBs = new int[n];
+				
+				for (int rgb = 0x00000000, i = 0, j = 0; rgb <= 0x00FFFFFF; ++rgb) {
+					if (this.histogram.get(rgb)) {
+						this.histogramPoints[i++] = ((rgb >> 16) & 0xFF) + tx;
+						this.histogramPoints[i++] = ((rgb >> 8) & 0xFF) + ty;
+						this.histogramPoints[i++] = ((rgb >> 0) & 0xFF) + tz;
+						this.histogramARGBs[j++] = 0xFF000000 | rgb;
+					}
+				}
 			}
 			
-			final double x0 = this.canvas.getWidth() / 2;
-			final double y0 = this.canvas.getHeight() / 2;
-			final double z0 = 0.0;
-			final double tx = x0 - 128.0;
-			final double ty = x0 - 128.0;
-			final double tz = z0 - 128.0;
 			final TicToc timer = new TicToc();
 			final DoubleList times = new DoubleList();
 			
@@ -357,7 +374,7 @@ public final class PaletteBasedSegmentationTest {
 			
 			this.histogramRenderer.clear();
 			
-			this.drawHistogramPoints(tx, ty, tz);
+			this.histogramGraphics.transformAndDrawPoints(this.histogramPoints.clone(), this.histogramARGBs);
 			
 			times.add(tocTic(timer));
 			
@@ -382,23 +399,6 @@ public final class PaletteBasedSegmentationTest {
 			timer.tic();
 			
 			return result;
-		}
-		
-		private final void drawHistogramPoints(final double tx, final double ty, final double tz) {
-			final int n = this.histogram.cardinality();
-			final double[] points = new double[n * 3];
-			final int[] argbs = new int[n];
-			
-			for (int rgb = 0x00000000, i = 0, j = 0; rgb <= 0x00FFFFFF; ++rgb) {
-				if (this.histogram.get(rgb)) {
-					points[i++] = ((rgb >> 16) & 0xFF) + tx;
-					points[i++] = ((rgb >> 8) & 0xFF) + ty;
-					points[i++] = ((rgb >> 0) & 0xFF) + tz;
-					argbs[j++] = 0xFF000000 | rgb;
-				}
-			}
-			
-			this.histogramGraphics.transformAndDrawPoints(points, argbs);
 		}
 		
 		private final void drawBox(final double tx, final double ty, final double tz) {
