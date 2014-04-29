@@ -128,7 +128,8 @@ public final class OrbiterMouseHandler extends MouseHandler {
 	public final void transform(final double[] locations) {
 		this.transform(locations, this.getCenterX(), this.getCenterY(), this.getCenterZ());
 	}
-	public final void transform(final double[] locations, final double centerX, final double centerY, final double centerZ) {
+	public final void transform(final double[] locations
+			, final double centerX, final double centerY, final double centerZ) {
 		transform(locations, this.getRoll(), this.getPitch(), this.getScale(), centerX, centerY, centerZ);
 	}
 	
@@ -136,8 +137,10 @@ public final class OrbiterMouseHandler extends MouseHandler {
 		this.inverseTransform(locations, this.getCenterX(), this.getCenterY(), this.getCenterZ());
 	}
 	
-	public final void inverseTransform(final double[] locations, final double centerX, final double centerY, final double centerZ) {
-		inverseTransform(locations, this.getRoll(), this.getPitch(), this.getScale(), centerX, centerY, centerZ);
+	public final void inverseTransform(final double[] locations
+			, final double centerX, final double centerY, final double centerZ) {
+		inverseTransform(locations, this.getRoll(), this.getPitch(), this.getScale()
+				, centerX, centerY, centerZ);
 	}
 	
 	/**
@@ -145,8 +148,14 @@ public final class OrbiterMouseHandler extends MouseHandler {
 	 */
 	private static final long serialVersionUID = -5856300863217835793L;
 	
-	public static final void transform(final double[] locations, final double roll, final double pitch, final double scale,
-			final double centerX, final double centerY, final double centerZ) {
+	public static final void transform(final double[] locations, final OrbiterParameters parameters) {
+		transform(locations, parameters.getRoll(), parameters.getPitch(), parameters.getScale()
+				, parameters.getCenterX(), parameters.getCenterY(), parameters.getCenterZ());
+	}
+	
+	public static final void transform(final double[] locations
+			, final double roll, final double pitch, final double scale
+			, final double centerX, final double centerY, final double centerZ) {
 		final int n = locations.length;
 		final double cosRoll = cos(roll);
 		final double sinRoll = sin(roll);
@@ -166,8 +175,14 @@ public final class OrbiterMouseHandler extends MouseHandler {
 		}
 	}
 	
-	public static final void inverseTransform(final double[] locations, final double roll, final double pitch, final double scale,
-			final double centerX, final double centerY, final double centerZ) {
+	public static final void inverseTransform(final double[] locations, final OrbiterParameters parameters) {
+		inverseTransform(locations, parameters.getRoll(), parameters.getPitch(), parameters.getScale()
+				, parameters.getCenterX(), parameters.getCenterY(), parameters.getCenterZ());
+	}
+	
+	public static final void inverseTransform(final double[] locations
+			, final double roll, final double pitch, final double scale
+			, final double centerX, final double centerY, final double centerZ) {
 		final int n = locations.length;
 		
 		for (int i = 0; i < n; i += 3) {
