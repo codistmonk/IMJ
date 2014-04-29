@@ -10,6 +10,8 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static pixel3d.PolygonTools.*;
 
+import imj2.tools.Image2DComponent.Painter;
+
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
@@ -36,7 +38,7 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeModel;
 
 import jgencode.primitivelists.DoubleList;
-import imj2.tools.Image2DComponent.Painter;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.TicToc;
@@ -297,7 +299,6 @@ public final class PaletteBasedSegmentationTest {
 		public HistogramView() {
 			this.canvas = new Canvas().setFormat(512, 512, BufferedImage.TYPE_INT_ARGB);
 			this.histogram = new BitSet(0x00FFFFFF);
-//			this.histogramRenderer = new OrthographicRenderer().setCanvas(this.canvas.getImage());
 			this.histogramRenderer = new TiledRenderer(OrthographicRenderer.FACTORY).setCanvas(this.canvas.getImage());
 			this.orbiter = new OrbiterMouseHandler(null).addTo(this);
 			this.histogramGraphics = new Graphics3D(this.histogramRenderer).setOrbiterParameters(this.orbiter.getParameters());
