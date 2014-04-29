@@ -9,6 +9,7 @@ import static java.lang.Math.sin;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
+import java.io.Serializable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -18,78 +19,74 @@ public final class OrbiterMouseHandler extends MouseHandler {
 	
 	private final Point mouse;
 	
-	private double centerX;
-	
-	private double centerY;
-	
-	private double centerZ;
-	
-	private double roll;
-	
-	private double pitch;
-	
-	private double scale;
+	private final OrbiterParameters parameters;
 	
 	public OrbiterMouseHandler(final AtomicBoolean sharedUpdateFlag) {
 		super(sharedUpdateFlag);
 		this.mouse = new Point();
-		this.scale = 1.0;
+		this.parameters = new OrbiterParameters();
+	}
+	
+	public final OrbiterParameters getParameters() {
+		return this.parameters;
 	}
 	
 	public final double getCenterX() {
-		return this.centerX;
+		return this.getParameters().getCenterX();
 	}
 	
 	public final OrbiterMouseHandler setCenterX(final double centerX) {
-		this.centerX = centerX;
+		this.getParameters().setCenterX(centerX);
 		
 		return this;
 	}
 	
 	public final double getCenterY() {
-		return this.centerY;
+		return this.getParameters().getCenterY();
 	}
 	
 	public final OrbiterMouseHandler setCenterY(final double centerY) {
-		this.centerY = centerY;
+		this.getParameters().setCenterY(centerY);
 		
 		return this;
 	}
 	
 	public final double getCenterZ() {
-		return this.centerZ;
+		return this.getParameters().getCenterZ();
 	}
 	
 	public final OrbiterMouseHandler setCenterZ(final double centerZ) {
-		this.centerZ = centerZ;
+		this.getParameters().setCenterZ(centerZ);
 		
 		return this;
 	}
 	
 	public final double getRoll() {
-		return this.roll;
+		return this.getParameters().getRoll();
 	}
 	
 	public final OrbiterMouseHandler setRoll(final double roll) {
-		this.roll = roll;
+		this.getParameters().setRoll(roll);
 		
 		return this;
 	}
 	
 	public final double getPitch() {
-		return this.pitch;
+		return this.getParameters().getPitch();
 	}
 	
-	public final void setPitch(final double pitch) {
-		this.pitch = pitch;
+	public final OrbiterMouseHandler setPitch(final double pitch) {
+		this.getParameters().setPitch(pitch);
+		
+		return this;
 	}
 	
 	public final double getScale() {
-		return this.scale;
+		return this.getParameters().getScale();
 	}
 	
 	public final OrbiterMouseHandler setScale(final double scale) {
-		this.scale = scale;
+		this.getParameters().setScale(scale);
 		
 		return this;
 	}
@@ -118,13 +115,13 @@ public final class OrbiterMouseHandler extends MouseHandler {
 	}
 	
 	public final void updateAngles(final double kRoll, final double kPitch) {
-		this.roll += kRoll * PI / 144.0;
-		this.pitch += kPitch * PI / 144.0;
+		this.getParameters().setRoll(this.getRoll() + kRoll * PI / 144.0);
+		this.getParameters().setPitch(this.getPitch() + kPitch * PI / 144.0);
 		this.getUpdateNeeded().set(true);
 	}
 	
 	public final void updateScale(final double kScale) {
-		this.scale *= kScale;
+		this.getParameters().setScale(this.getScale() * kScale);
 		this.getUpdateNeeded().set(true);
 	}
 	
@@ -183,6 +180,88 @@ public final class OrbiterMouseHandler extends MouseHandler {
 			locations[i + 1] = y6 / scale + centerY;
 			locations[i + 2] = z6 / scale + centerZ;
 		}
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-04-29)
+	 */
+	public static final class OrbiterParameters implements Serializable {
+		
+		private double centerX;
+		
+		private double centerY;
+		
+		private double centerZ;
+		
+		private double roll;
+		
+		private double pitch;
+		
+		private double scale = 1.0;
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -1350623906106716211L;
+		
+		public final double getCenterX() {
+			return this.centerX;
+		}
+		
+		public final OrbiterParameters setCenterX(final double centerX) {
+			this.centerX = centerX;
+			
+			return this;
+		}
+		
+		public final double getCenterY() {
+			return this.centerY;
+		}
+		
+		public final OrbiterParameters setCenterY(final double centerY) {
+			this.centerY = centerY;
+			
+			return this;
+		}
+		
+		public final double getCenterZ() {
+			return this.centerZ;
+		}
+		
+		public final OrbiterParameters setCenterZ(final double centerZ) {
+			this.centerZ = centerZ;
+			
+			return this;
+		}
+		
+		public final double getRoll() {
+			return this.roll;
+		}
+		
+		public final OrbiterParameters setRoll(final double roll) {
+			this.roll = roll;
+			
+			return this;
+		}
+		
+		public final double getPitch() {
+			return this.pitch;
+		}
+		
+		public final void setPitch(final double pitch) {
+			this.pitch = pitch;
+		}
+		
+		public final double getScale() {
+			return this.scale;
+		}
+		
+		public final OrbiterParameters setScale(final double scale) {
+			this.scale = scale;
+			
+			return this;
+		}
+		
 	}
 	
 }
