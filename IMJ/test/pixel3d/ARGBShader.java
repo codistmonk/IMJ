@@ -5,11 +5,11 @@ package pixel3d;
  */
 public final class ARGBShader implements PolygonTools.Processor {
 	
-	private final OrthographicRenderer renderer;
+	private final Renderer renderer;
 	
 	private final int argb;
 	
-	public ARGBShader(final OrthographicRenderer renderer, final int argb) {
+	public ARGBShader(final Renderer renderer, final int argb) {
 		this.argb = argb;
 		this.renderer = renderer;
 	}
