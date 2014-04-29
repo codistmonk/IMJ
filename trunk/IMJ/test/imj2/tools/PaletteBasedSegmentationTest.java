@@ -49,6 +49,7 @@ import pixel3d.OrbiterMouseHandler;
 import pixel3d.OrthographicRenderer;
 import pixel3d.OrbiterMouseHandler.OrbiterParameters;
 import pixel3d.Renderer;
+import pixel3d.TiledRenderer;
 
 /**
  * @author codistmonk (creation 2014-04-23)
@@ -296,7 +297,8 @@ public final class PaletteBasedSegmentationTest {
 		public HistogramView() {
 			this.canvas = new Canvas().setFormat(512, 512, BufferedImage.TYPE_INT_ARGB);
 			this.histogram = new BitSet(0x00FFFFFF);
-			this.histogramRenderer = new OrthographicRenderer(this.canvas.getImage());
+//			this.histogramRenderer = new OrthographicRenderer().setCanvas(this.canvas.getImage());
+			this.histogramRenderer = new TiledRenderer(OrthographicRenderer.FACTORY).setCanvas(this.canvas.getImage());
 			this.orbiter = new OrbiterMouseHandler(null).addTo(this);
 			this.histogramGraphics = new Graphics3D(this.histogramRenderer).setOrbiterParameters(this.orbiter.getParameters());
 			

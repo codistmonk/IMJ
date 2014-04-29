@@ -9,6 +9,8 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.io.Serializable;
 
+import net.sourceforge.aprog.tools.Factory.DefaultFactory;
+
 /**
  * @author codistmonk (creation 2014-04-27)
  */
@@ -16,7 +18,7 @@ public final class OrthographicRenderer implements Renderer {
 	
 	private final IntComparator comparator;
 	
-	private final BufferedImage canvas;
+	private BufferedImage canvas;
 	
 	private int[] indices;
 	
@@ -28,11 +30,7 @@ public final class OrthographicRenderer implements Renderer {
 	
 	private int pixelCount;
 	
-	public OrthographicRenderer(final BufferedImage canvas) {
-		if (canvas.getType() != BufferedImage.TYPE_INT_ARGB && canvas.getType() != BufferedImage.TYPE_INT_RGB) {
-			throw new IllegalArgumentException();
-		}
-		
+	public OrthographicRenderer() {
 		this.comparator = new IntComparator() {
 			
 			@Override
@@ -49,7 +47,6 @@ public final class OrthographicRenderer implements Renderer {
 			private static final long serialVersionUID = 1379706747335956894L;
 			
 		};
-		this.canvas = canvas;
 		this.indices = new int[1];
 		this.pixels = new int[1];
 		this.zValues = new float[1];
@@ -57,20 +54,28 @@ public final class OrthographicRenderer implements Renderer {
 	}
 	
 	@Override
-	public final Renderer setCanvas(final BufferedImage canvas) {
-		final int oldW = this.canvas.getWidth();
-		final int oldH = this.canvas.getHeight();
-		final int newW = canvas.getWidth();
-		final int newH = canvas.getHeight();
-		
-		if (oldW != newW || newH < oldH) {
-			this.clear();
+	public final OrthographicRenderer setCanvas(final BufferedImage canvas) {
+		if (canvas.getType() != BufferedImage.TYPE_INT_ARGB && canvas.getType() != BufferedImage.TYPE_INT_RGB) {
+			throw new IllegalArgumentException();
 		}
+		
+		if (this.canvas != null) {
+			final int oldW = this.canvas.getWidth();
+			final int oldH = this.canvas.getHeight();
+			final int newW = canvas.getWidth();
+			final int newH = canvas.getHeight();
+			
+			if (oldW != newW || newH < oldH) {
+				this.clear();
+			}
+		}
+		
+		this.canvas = canvas;
 		
 		return this;
 	}
 	
-	public final Renderer reserve(final int n) {
+	public final OrthographicRenderer reserve(final int n) {
 		if (this.pixels.length < n) {
 			this.indices = copyOf(this.indices, n);
 			this.pixels = copyOf(this.pixels, n);
@@ -93,7 +98,7 @@ public final class OrthographicRenderer implements Renderer {
 	}
 	
 	@Override
-	public final Renderer addPixel(final double x, final double y, final double z, final int argb) {
+	public final OrthographicRenderer addPixel(final double x, final double y, final double z, final int argb) {
 		final int w = this.canvas.getWidth();
 		final int h = this.canvas.getHeight();
 		
@@ -193,6 +198,8 @@ public final class OrthographicRenderer implements Renderer {
 	 * {@value}.
 	 */
 	public static final int B = 0x000000FF;
+	
+	public static final DefaultFactory<OrthographicRenderer> FACTORY = DefaultFactory.forClass(OrthographicRenderer.class);
 	
 	public static final void quickSort(final int[] values, final IntComparator comparator) {
 		quickSort(values, 0, values.length, comparator);
