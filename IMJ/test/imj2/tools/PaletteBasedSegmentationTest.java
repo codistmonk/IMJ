@@ -19,6 +19,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Map;
@@ -280,6 +281,8 @@ public final class PaletteBasedSegmentationTest {
 		
 		private final Canvas canvas;
 		
+		private final Canvas idCanvas;
+		
 		private final BitSet histogram;
 		
 		private double[] histogramPoints;
@@ -288,20 +291,77 @@ public final class PaletteBasedSegmentationTest {
 		
 		private final Renderer histogramRenderer;
 		
+		private final Renderer idRenderer;
+		
 		private final OrbiterMouseHandler orbiter;
 		
 		private final Graphics3D histogramGraphics;
+		
+		private final DoubleList userPoints;
 		
 		private BufferedImage oldImage;
 		
 		public HistogramView() {
 			this.canvas = new Canvas().setFormat(512, 512, BufferedImage.TYPE_INT_ARGB);
+			this.idCanvas = new Canvas().setFormat(this.canvas.getWidth(), this.canvas.getHeight(), BufferedImage.TYPE_INT_ARGB);
 			this.histogram = new BitSet(0x00FFFFFF);
 			this.histogramRenderer = new TiledRenderer(OrthographicRenderer.FACTORY).setCanvas(this.canvas.getImage());
+			this.idRenderer = new TiledRenderer(OrthographicRenderer.FACTORY).setCanvas(this.idCanvas.getImage());
 			this.orbiter = new OrbiterMouseHandler(null).addTo(this);
 			this.histogramGraphics = new Graphics3D(this.histogramRenderer).setOrbiterParameters(this.orbiter.getParameters());
+			this.userPoints = new DoubleList();
 			
 			this.setIcon(new ImageIcon(this.canvas.getImage()));
+			
+			new MouseHandler(this.orbiter.getUpdateNeeded()) {
+				
+				@Override
+				public final void mouseClicked(final MouseEvent event) {
+					if (event.getButton() == 1 && event.getClickCount() == 2) {
+						final double x0 = orbiter.getCenterX();
+						final double y0 = orbiter.getCenterY();
+						final double z0 = orbiter.getCenterZ();
+						final double tx = x0 - 128.0;
+						final double ty = y0 - 128.0;
+						final double tz = z0 - 128.0;
+						final double[] point = { event.getX(), (canvas.getHeight() - 1 - event.getY()), z0 };
+						
+						orbiter.inverseTransform(point);
+						
+						point[X] -= tx;
+						point[Y] -= ty;
+						point[Z] -= tz;
+						
+						userPoints.addAll(point);
+						
+						HistogramView.this.refresh();
+					}
+				}
+				
+				@Override
+				public final void mouseExited(final MouseEvent event) {
+					// TODO Auto-generated method stub
+					super.mouseExited(event);
+				}
+				
+				@Override
+				public final void mouseDragged(final MouseEvent event) {
+					// TODO Auto-generated method stub
+					super.mouseDragged(event);
+				}
+				
+				@Override
+				public final void mouseMoved(final MouseEvent event) {
+					// TODO Auto-generated method stub
+					super.mouseMoved(event);
+				}
+				
+				/**
+				 * {@value}.
+				 */
+				private static final long serialVersionUID = 2866844463835255393L;
+				
+			}.addTo(this);
 			
 			new MouseHandler(this.orbiter.getUpdateNeeded()) {
 				
@@ -332,7 +392,7 @@ public final class PaletteBasedSegmentationTest {
 			final double y0 = this.canvas.getHeight() / 2;
 			final double z0 = 0.0;
 			final double tx = x0 - 128.0;
-			final double ty = x0 - 128.0;
+			final double ty = y0 - 128.0;
 			final double tz = z0 - 128.0;
 			final TicToc timer = new TicToc();
 			final DoubleList times = new DoubleList();
@@ -375,11 +435,29 @@ public final class PaletteBasedSegmentationTest {
 			
 			this.histogramRenderer.clear();
 			
-			this.histogramGraphics.transformAndDrawPoints(this.histogramPoints.clone(), this.histogramARGBs);
+			this.histogramGraphics.setPointSize(0).transformAndDrawPoints(
+					this.histogramPoints.clone(), this.histogramARGBs);
 			
 			times.add(tocTic(timer));
 			
 			this.drawBox(tx, ty, tz);
+			
+			times.add(tocTic(timer));
+			
+			{
+				final double[] userPoints = this.userPoints.toArray();
+				final int n = userPoints.length;
+				
+				this.histogramGraphics.setPointSize(2);
+				
+				for (int i = 0; i < n; i += 3) {
+					final double x = userPoints[i + X];
+					final double y = userPoints[i + Y];
+					final double z = userPoints[i + Z];
+					
+					this.histogramGraphics.drawPoint(x + tx, y + ty, z + tz, 0xFFFFFF00);
+				}
+			}
 			
 			times.add(tocTic(timer));
 			
@@ -389,7 +467,9 @@ public final class PaletteBasedSegmentationTest {
 			
 			times.add(tocTic(timer));
 			
-			debugPrint(times);
+			if (false) {
+				debugPrint(times);
+			}
 			
 			this.repaint();
 		}
@@ -469,6 +549,8 @@ public final class PaletteBasedSegmentationTest {
 		
 		private OrbiterParameters orbiterParameters;
 		
+		private int pointSize;
+		
 		public Graphics3D(final Renderer renderer) {
 			this.renderer = renderer;
 			this.orbiterParameters = new OrbiterParameters();
@@ -478,34 +560,20 @@ public final class PaletteBasedSegmentationTest {
 			return this.orbiterParameters;
 		}
 		
-		public final Graphics3D setOrbiterParameters(OrbiterParameters orbiterParameters) {
+		public final Graphics3D setOrbiterParameters(final OrbiterParameters orbiterParameters) {
 			this.orbiterParameters = orbiterParameters;
 			
 			return this;
 		}
 		
-		public final double getCenterX() {
-			return this.getOrbiterParameters().getCenterX();
+		public final int getPointSize() {
+			return this.pointSize;
 		}
 		
-		public final double getCenterY() {
-			return this.getOrbiterParameters().getCenterY();
-		}
-		
-		public final double getCenterZ() {
-			return this.getOrbiterParameters().getCenterZ();
-		}
-		
-		public final double getRoll() {
-			return this.getOrbiterParameters().getRoll();
-		}
-		
-		public final double getPitch() {
-			return this.getOrbiterParameters().getPitch();
-		}
-		
-		public final double getScale() {
-			return this.getOrbiterParameters().getScale();
+		public final Graphics3D setPointSize(final int pointSize) {
+			this.pointSize = pointSize;
+			
+			return this;
 		}
 		
 		public final Graphics3D drawSegment(final double x1, final double y1, final double z1,
@@ -534,7 +602,11 @@ public final class PaletteBasedSegmentationTest {
 			this.transform(points);
 			
 			for (int i = 0, j = 0; i < points.length; i += 3, ++j) {
-				this.renderer.addPixel(points[i + X], points[i + Y], points[i + Z], argbs[j]);
+				for (int ty = -this.pointSize; ty <= this.pointSize; ++ty) {
+					for (int tx = -this.pointSize; tx <= this.pointSize; ++tx) {
+						this.renderer.addPixel(points[i + X] + tx, points[i + Y] + ty, points[i + Z], argbs[j]);
+					}
+				}
 			}
 			
 			return this;
@@ -545,9 +617,7 @@ public final class PaletteBasedSegmentationTest {
 		}
 		
 		public final Graphics3D transform(final double... points) {
-			OrbiterMouseHandler.transform(points,
-					this.getRoll(), this.getPitch(), this.getScale(),
-					this.getCenterX(), this.getCenterY(), this.getCenterZ());
+			OrbiterMouseHandler.transform(points, this.getOrbiterParameters());
 			
 			return this;
 		}
