@@ -334,6 +334,12 @@ public final class PaletteBasedSegmentationTest {
 			final double tx = x0 - 128.0;
 			final double ty = x0 - 128.0;
 			final double tz = z0 - 128.0;
+			final TicToc timer = new TicToc();
+			final DoubleList times = new DoubleList();
+			
+			this.histogramGraphics.getOrbiterParameters().setCenterX(x0).setCenterY(y0);
+			
+			timer.tic();
 			
 			if (this.oldImage != image) {
 				this.oldImage = image;
@@ -365,12 +371,7 @@ public final class PaletteBasedSegmentationTest {
 				}
 			}
 			
-			final TicToc timer = new TicToc();
-			final DoubleList times = new DoubleList();
-			
-			this.histogramGraphics.getOrbiterParameters().setCenterX(x0).setCenterY(y0);
-			
-			timer.tic();
+			times.add(tocTic(timer));
 			
 			this.histogramRenderer.clear();
 			
