@@ -115,8 +115,8 @@ public final class OrbiterMouseHandler extends MouseHandler {
 	}
 	
 	public final void updateAngles(final double kRoll, final double kPitch) {
-		this.getParameters().setRoll(this.getRoll() + kRoll * PI / 144.0);
-		this.getParameters().setPitch(this.getPitch() + kPitch * PI / 144.0);
+		this.getParameters().setRoll(this.getRoll() + kRoll * PI / 32.0);
+		this.getParameters().setPitch(this.getPitch() + kPitch * PI / 32.0);
 		this.getUpdateNeeded().set(true);
 	}
 	

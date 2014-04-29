@@ -2,6 +2,7 @@ package imj2.tools;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.abs;
+import static java.lang.Math.max;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.swing.SwingTools.verticalSplit;
@@ -352,20 +353,77 @@ public final class PaletteBasedSegmentationTest {
 					.setCenterX(this.canvas.getWidth() / 2)
 					.setCenterY(this.canvas.getHeight() / 2);
 			
+			final double tx = 128.0;
+			final double ty = 128.0;
+			final double tz = -128.0;
+			
 			for (int rgb = 0x00000000; rgb <= 0x00FFFFFF; ++rgb) {
 				if (this.histogram.get(rgb)) {
 					this.histogramGraphics.drawPoint(
-							((rgb >> 16) & 0xFF) + 128,
-							((rgb >> 8) & 0xFF) + 128,
-							((rgb >> 0) & 0xFF) - 128,
+							((rgb >> 16) & 0xFF) + tx,
+							((rgb >> 8) & 0xFF) + ty,
+							((rgb >> 0) & 0xFF) + tz,
 							0xFF000000 | rgb);
 				}
 			}
+			
+			this.drawBox(tx, ty, tz);
 			
 			this.canvas.clear(Color.GRAY);
 			this.histogramRenderer.render();
 			
 			this.repaint();
+		}
+		
+		private final void drawBox(final double tx, final double ty, final double tz) {
+			this.histogramGraphics.drawSegment(
+					0.0 + tx, 0.0 + ty, 0.0 + tz,
+					255.0 + tx, 0.0 + ty, 0.0 + tz,
+					0xFFFF0000);
+			this.histogramGraphics.drawSegment(
+					0.0 + tx, 0.0 + ty, 0.0 + tz,
+					0.0 + tx, 255.0 + ty, 0.0 + tz,
+					0xFF00FF00);
+			this.histogramGraphics.drawSegment(
+					0.0 + tx, 0.0 + ty, 0.0 + tz,
+					0.0 + tx, 0.0 + ty, 255.0 + tz,
+					0xFF0000FF);
+			this.histogramGraphics.drawSegment(
+					0.0 + tx, 255.0 + ty, 255.0 + tz,
+					255.0 + tx, 255.0 + ty, 255.0 + tz,
+					0xFFFFFFFF);
+			this.histogramGraphics.drawSegment(
+					255.0 + tx, 0.0 + ty, 255.0 + tz,
+					255.0 + tx, 255.0 + ty, 255.0 + tz,
+					0xFFFFFFFF);
+			this.histogramGraphics.drawSegment(
+					255.0 + tx, 255.0 + ty, 0.0 + tz,
+					255.0 + tx, 255.0 + ty, 255.0 + tz,
+					0xFFFFFFFF);
+			this.histogramGraphics.drawSegment(
+					0.0 + tx, 0.0 + ty, 255.0 + tz,
+					255.0 + tx, 0.0 + ty, 255.0 + tz,
+					0xFFFFFFFF);
+			this.histogramGraphics.drawSegment(
+					0.0 + tx, 0.0 + ty, 255.0 + tz,
+					0.0 + tx, 255.0 + ty, 255.0 + tz,
+					0xFFFFFFFF);
+			this.histogramGraphics.drawSegment(
+					0.0 + tx, 255.0 + ty, 0.0 + tz,
+					255.0 + tx, 255.0 + ty, 0.0 + tz,
+					0xFFFFFFFF);
+			this.histogramGraphics.drawSegment(
+					0.0 + tx, 255.0 + ty, 0.0 + tz,
+					0.0 + tx, 255.0 + ty, 255.0 + tz,
+					0xFFFFFFFF);
+			this.histogramGraphics.drawSegment(
+					255.0 + tx, 0.0 + ty, 0.0 + tz,
+					255.0 + tx, 255.0 + ty, 0.0 + tz,
+					0xFFFFFFFF);
+			this.histogramGraphics.drawSegment(
+					255.0 + tx, 0.0 + ty, 0.0 + tz,
+					255.0 + tx, 0.0 + ty, 255.0 + tz,
+					0xFFFFFFFF);
 		}
 		
 		/**
@@ -421,6 +479,28 @@ public final class PaletteBasedSegmentationTest {
 		
 		public final double getScale() {
 			return this.getOrbiterParameters().getScale();
+		}
+		
+		public final Graphics3D drawSegment(final double x1, final double y1, final double z1,
+				final double x2, final double y2, final double z2, final int argb) {
+			final double[] extremities = { x1, y1, z1, x2, y2, z2 };
+			
+			this.transform(extremities);
+			
+			final double dx = extremities[3 + X] - extremities[0 + X];
+			final double dy = extremities[3 + Y] - extremities[0 + Y];
+			final double dz = extremities[3 + Z] - extremities[0 + Z];
+			final int d = 1 + (int) max(abs(dx), abs(dy));
+			
+			for (int i = 0; i < d; ++i) {
+				this.renderer.addPixel(
+						extremities[0 + X] + i * dx / d,
+						extremities[0 + Y] + i * dy / d,
+						extremities[0 + Z] + i * dz / d,
+						argb);
+			}
+			
+			return this;
 		}
 		
 		public final Graphics3D drawPoint(final double x, final double y, final double z, final int argb) {
