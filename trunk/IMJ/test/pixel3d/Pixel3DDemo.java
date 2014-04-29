@@ -45,7 +45,7 @@ public final class Pixel3DDemo {
 		
 		imageView.getPainters().add(new Painter<SimpleImageView>() {
 			
-			private OrthographicRenderer renderer = new OrthographicRenderer(imageView.getBufferImage());
+			private Renderer renderer = new OrthographicRenderer(imageView.getBufferImage());
 			
 			@Override
 			public final void paint(final Graphics2D g, final SimpleImageView component,

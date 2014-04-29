@@ -36,9 +36,7 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeModel;
 
 import jgencode.primitivelists.DoubleList;
-
 import imj2.tools.Image2DComponent.Painter;
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.TicToc;
@@ -50,6 +48,7 @@ import pixel3d.MouseHandler;
 import pixel3d.OrbiterMouseHandler;
 import pixel3d.OrthographicRenderer;
 import pixel3d.OrbiterMouseHandler.OrbiterParameters;
+import pixel3d.Renderer;
 
 /**
  * @author codistmonk (creation 2014-04-23)
@@ -286,7 +285,7 @@ public final class PaletteBasedSegmentationTest {
 		
 		private int[] histogramARGBs;
 		
-		private final OrthographicRenderer histogramRenderer;
+		private final Renderer histogramRenderer;
 		
 		private final OrbiterMouseHandler orbiter;
 		
@@ -465,11 +464,11 @@ public final class PaletteBasedSegmentationTest {
 	 */
 	public static final class Graphics3D implements Serializable {
 		
-		private final OrthographicRenderer renderer;
+		private final Renderer renderer;
 		
 		private OrbiterParameters orbiterParameters;
 		
-		public Graphics3D(final OrthographicRenderer renderer) {
+		public Graphics3D(final Renderer renderer) {
 			this.renderer = renderer;
 			this.orbiterParameters = new OrbiterParameters();
 		}

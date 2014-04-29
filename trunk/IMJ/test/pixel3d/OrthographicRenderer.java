@@ -12,7 +12,7 @@ import java.io.Serializable;
 /**
  * @author codistmonk (creation 2014-04-27)
  */
-public final class OrthographicRenderer implements Serializable {
+public final class OrthographicRenderer implements Renderer {
 	
 	private final IntComparator comparator;
 	
@@ -56,7 +56,8 @@ public final class OrthographicRenderer implements Serializable {
 		this.colors = new int[1];
 	}
 	
-	public final OrthographicRenderer setCanvas(final BufferedImage canvas) {
+	@Override
+	public final Renderer setCanvas(final BufferedImage canvas) {
 		final int oldW = this.canvas.getWidth();
 		final int oldH = this.canvas.getHeight();
 		final int newW = canvas.getWidth();
@@ -69,7 +70,7 @@ public final class OrthographicRenderer implements Serializable {
 		return this;
 	}
 	
-	public final OrthographicRenderer reserve(final int n) {
+	public final Renderer reserve(final int n) {
 		if (this.pixels.length < n) {
 			this.indices = copyOf(this.indices, n);
 			this.pixels = copyOf(this.pixels, n);
@@ -86,11 +87,13 @@ public final class OrthographicRenderer implements Serializable {
 		}
 	}
 	
+	@Override
 	public final void clear() {
 		this.pixelCount = 0;
 	}
 	
-	public final OrthographicRenderer addPixel(final double x, final double y, final double z, final int argb) {
+	@Override
+	public final Renderer addPixel(final double x, final double y, final double z, final int argb) {
 		final int w = this.canvas.getWidth();
 		final int h = this.canvas.getHeight();
 		
@@ -112,6 +115,7 @@ public final class OrthographicRenderer implements Serializable {
 		return this;
 	}
 	
+	@Override
 	public final void render() {
 		final boolean debug = false;
 		final int n = this.pixelCount;
