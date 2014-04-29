@@ -9,12 +9,12 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.io.Serializable;
 
-import pixel3d.DualPivotQuicksort.IntComparator;
-
 /**
  * @author codistmonk (creation 2014-04-27)
  */
 public final class OrthographicRenderer implements Serializable {
+	
+	private final IntComparator comparator;
 	
 	private final BufferedImage canvas;
 	
@@ -33,6 +33,22 @@ public final class OrthographicRenderer implements Serializable {
 			throw new IllegalArgumentException();
 		}
 		
+		this.comparator = new IntComparator() {
+			
+			@Override
+			public final int compare(final int index1, final int index2) {
+				final float z1 = OrthographicRenderer.this.getZValue(index1);
+				final float z2 = OrthographicRenderer.this.getZValue(index2);
+				
+				return Float.compare(z1, z2);
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 1379706747335956894L;
+			
+		};
 		this.canvas = canvas;
 		this.indices = new int[1];
 		this.pixels = new int[1];
@@ -100,22 +116,7 @@ public final class OrthographicRenderer implements Serializable {
 		final boolean debug = false;
 		final int n = this.pixelCount;
 		
-		DualPivotQuicksort.sort(this.indices, 0, n - 1, new IntComparator() {
-
-			@Override
-			public final int compare(final int index1, final int index2) {
-				final float z1 = OrthographicRenderer.this.getZValue(index1);
-				final float z2 = OrthographicRenderer.this.getZValue(index2);
-				
-				return Float.compare(z1, z2);
-			}
-			
-			/**
-			 * {@value}.
-			 */
-			private static final long serialVersionUID = 1379706747335956894L;
-			
-		});
+		quickSort(this.indices, 0, n, this.comparator);
 		
 		if (debug) {
 			final int w = this.canvas.getWidth();
@@ -188,5 +189,45 @@ public final class OrthographicRenderer implements Serializable {
 	 * {@value}.
 	 */
 	public static final int B = 0x000000FF;
+	
+	public static final void quickSort(final int[] values, final IntComparator comparator) {
+		quickSort(values, 0, values.length, comparator);
+	}
+	
+	public static final void quickSort(final int[] values, final int start, final int end,
+			final IntComparator comparator) {
+		final int size = end - start;
+		
+		if (size < 2) {
+			return;
+		}
+		
+		final int pivot = values[start + size / 2];
+		int middle = start;
+		
+		for (int i = start; i < end; ++i) {
+			if (comparator.compare(values[i], pivot) < 0) {
+				swap(values, middle++, i);
+			}
+		}
+		
+		quickSort(values, start, middle, comparator);
+		quickSort(values, middle + 1, end, comparator);
+	}
+	
+	public static final void swap(final int[] values, final int i, final int j) {
+		final int value = values[i];
+		values[i] = values[j];
+		values[j] = value;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-04-29)
+	 */
+	public static abstract interface IntComparator extends Serializable {
+		
+		public abstract int compare(int value1, int value2);
+		
+	}
 	
 }
