@@ -3,6 +3,7 @@ package imj2.tools;
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
+import static java.util.Arrays.copyOfRange;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.swing.SwingTools.verticalSplit;
@@ -13,6 +14,7 @@ import imj2.tools.Image2DComponent.Painter;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -32,6 +34,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JSplitPane;
 import javax.swing.JTree;
+import javax.swing.SwingUtilities;
 import javax.swing.event.TreeModelEvent;
 import javax.swing.event.TreeModelListener;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -308,24 +311,13 @@ public final class PaletteBasedSegmentationTest {
 		private final int[] lastTouchedId;
 		
 		public HistogramView() {
-			this.canvas = new Canvas().setFormat(512, 512, BufferedImage.TYPE_INT_ARGB);
-			this.idCanvas = new Canvas().setFormat(this.canvas.getWidth(), this.canvas.getHeight(), BufferedImage.TYPE_INT_ARGB);
-			this.histogram = new BitSet(0x00FFFFFF);
-			this.histogramRenderer = new TiledRenderer(OrthographicRenderer.FACTORY).setCanvas(this.canvas.getImage());
-			this.idRenderer = new TiledRenderer(OrthographicRenderer.FACTORY).setCanvas(this.idCanvas.getImage());
-			this.orbiter = new OrbiterMouseHandler(null).addTo(this);
-			this.histogramGraphics = new Graphics3D(this.histogramRenderer).setOrbiterParameters(this.orbiter.getParameters());
-			this.idGraphics = new Graphics3D(this.idRenderer).setOrbiterParameters(this.orbiter.getParameters());
-			this.userPoints = new DoubleList();
-			this.idUnderMouse = new int[1];
-			this.lastTouchedId = new int[1];
-			
-			this.setIcon(new ImageIcon(this.canvas.getImage()));
-			
-			new MouseHandler(this.orbiter.getUpdateNeeded()) {
+			new MouseHandler(null) {
+				
+				private final Point lastMouseLocation = new Point();
 				
 				@Override
 				public final void mousePressed(final MouseEvent event) {
+					this.lastMouseLocation.setLocation(event.getPoint());
 					lastTouchedId[0] = idUnderMouse[0] = idCanvas.getImage().getRGB(event.getX(), event.getY()) & 0x00FFFFFF;
 					
 					HistogramView.this.refresh();
@@ -334,19 +326,7 @@ public final class PaletteBasedSegmentationTest {
 				@Override
 				public final void mouseClicked(final MouseEvent event) {
 					if (event.getButton() == 1 && event.getClickCount() == 2) {
-						final double x0 = orbiter.getCenterX();
-						final double y0 = orbiter.getCenterY();
-						final double z0 = orbiter.getCenterZ();
-						final double tx = x0 - 128.0;
-						final double ty = y0 - 128.0;
-						final double tz = z0 - 128.0;
-						final double[] point = { event.getX(), (canvas.getHeight() - 1 - event.getY()), z0 };
-						
-						orbiter.inverseTransform(point);
-						
-						point[X] -= tx;
-						point[Y] -= ty;
-						point[Z] -= tz;
+						final double[] point = this.getPoint(event, 0.0);
 						
 						userPoints.addAll(point);
 						idUnderMouse[0] = userPoints.size() / 3;
@@ -356,15 +336,17 @@ public final class PaletteBasedSegmentationTest {
 				}
 				
 				@Override
-				public final void mouseExited(final MouseEvent event) {
-					// TODO Auto-generated method stub
-					super.mouseExited(event);
-				}
-				
-				@Override
 				public final void mouseDragged(final MouseEvent event) {
-					// TODO Auto-generated method stub
-					super.mouseDragged(event);
+					if (0 < idUnderMouse[0]) {
+						final int offset = (idUnderMouse[0] - 1) * 3;
+						final double[] tmp = copyOfRange(userPoints.toArray(), offset, offset + 3);
+						
+						orbiter.transform(tmp);
+						
+						System.arraycopy(this.getPoint(event, tmp[Z]), 0, userPoints.toArray(), offset, 3);
+						
+						event.consume();
+					}
 				}
 				
 				@Override
@@ -374,6 +356,14 @@ public final class PaletteBasedSegmentationTest {
 					HistogramView.this.refresh();
 				}
 				
+				public final double[] getPoint(final MouseEvent event, final double z) {
+					final double[] result = { event.getX(), (canvas.getHeight() - 1 - event.getY()), z };
+					
+					orbiter.inverseTransform(result);
+					
+					return result;
+				}
+				
 				/**
 				 * {@value}.
 				 */
@@ -381,7 +371,9 @@ public final class PaletteBasedSegmentationTest {
 				
 			}.addTo(this);
 			
-			new MouseHandler(this.orbiter.getUpdateNeeded()) {
+			this.orbiter = new OrbiterMouseHandler(null).addTo(this);
+			
+			new MouseHandler(null) {
 				
 				@Override
 				public final void mouseWheelMoved(final MouseWheelEvent event) {
@@ -399,6 +391,19 @@ public final class PaletteBasedSegmentationTest {
 				private static final long serialVersionUID = 465287425693150361L;
 				
 			}.addTo(this);
+			
+			this.canvas = new Canvas().setFormat(512, 512, BufferedImage.TYPE_INT_ARGB);
+			this.idCanvas = new Canvas().setFormat(this.canvas.getWidth(), this.canvas.getHeight(), BufferedImage.TYPE_INT_ARGB);
+			this.histogram = new BitSet(0x00FFFFFF);
+			this.histogramRenderer = new TiledRenderer(OrthographicRenderer.FACTORY).setCanvas(this.canvas.getImage());
+			this.idRenderer = new TiledRenderer(OrthographicRenderer.FACTORY).setCanvas(this.idCanvas.getImage());
+			this.histogramGraphics = new Graphics3D(this.histogramRenderer).setOrbiterParameters(this.orbiter.getParameters());
+			this.idGraphics = new Graphics3D(this.idRenderer).setOrbiterParameters(this.orbiter.getParameters());
+			this.userPoints = new DoubleList();
+			this.idUnderMouse = new int[1];
+			this.lastTouchedId = new int[1];
+			
+			this.setIcon(new ImageIcon(this.canvas.getImage()));
 		}
 		
 		public final void refresh() {
@@ -481,8 +486,8 @@ public final class PaletteBasedSegmentationTest {
 					final double y = userPoints[i + Y];
 					final double z = userPoints[i + Z];
 					
-					this.histogramGraphics.drawPoint(x + tx, y + ty, z + tz, idUnderMouse[0] == id ? 0xFFFFFF00 : 0xFF0000FF);
-					this.idGraphics.drawPoint(x + tx, y + ty, z + tz, 0xFF000000 | id);
+					this.histogramGraphics.drawPoint(x, y, z, idUnderMouse[0] == id ? 0xFFFFFF00 : 0xFF0000FF);
+					this.idGraphics.drawPoint(x, y, z, 0xFF000000 | id);
 				}
 			}
 			
