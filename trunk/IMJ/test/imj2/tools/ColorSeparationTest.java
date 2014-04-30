@@ -73,7 +73,7 @@ public final class ColorSeparationTest {
 				final double[] points = histogramView.getUserPoints();
 				final int[] segments = histogramView.getUserSegments();
 				final int n = segments.length;
-				final MatrixBuilder<Double> matrixBuilder = PrimitiveMatrix.getBuilder(4, n / 2);
+				final MatrixBuilder<Double> matrixBuilder = PrimitiveMatrix.getBuilder(4, n / 2 + 1);
 				
 				for (int i = 0; i < n; i += 2) {
 					final int i1 = (segments[i + 0] - 1) * 3;
@@ -93,6 +93,8 @@ public final class ColorSeparationTest {
 					matrixBuilder.set(2, i / 2, dz);
 					matrixBuilder.set(3, i / 2, -(x1 * dx + y1 * dy + z1 * dz));
 				}
+				
+				matrixBuilder.set(3, n / 2, 1.0);
 				
 				final BasicMatrix m = matrixBuilder.build();
 				
