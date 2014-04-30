@@ -50,6 +50,11 @@ import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.TicToc;
 
 import org.junit.Test;
+import org.ojalgo.matrix.BasicMatrix;
+import org.ojalgo.matrix.MatrixBuilder;
+import org.ojalgo.matrix.MatrixFactory;
+import org.ojalgo.matrix.MatrixUtils;
+import org.ojalgo.matrix.PrimitiveMatrix;
 
 import pixel3d.MouseHandler;
 import pixel3d.OrbiterMouseHandler;
@@ -75,27 +80,17 @@ public final class PaletteBasedSegmentationTest {
 		
 		SwingTools.setCheckAWT(true);
 		
-		clustersEditor.getModel().addTreeModelListener(new TreeModelListener() {
+		clustersEditor.getModel().addTreeModelListener(new UpdaterTreeModelListener() {
 			
 			@Override
-			public final void treeNodesChanged(final TreeModelEvent event) {
+			public final void update(final TreeModelEvent event) {
 				imageView.refreshBuffer();
 			}
 			
-			@Override
-			public final void treeNodesInserted(final TreeModelEvent event) {
-				imageView.refreshBuffer();
-			}
-			
-			@Override
-			public final void treeNodesRemoved(final TreeModelEvent event) {
-				imageView.refreshBuffer();
-			}
-			
-			@Override
-			public final void treeStructureChanged(final TreeModelEvent event) {
-				imageView.refreshBuffer();
-			}
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = -568519306296632304L;
 			
 		});
 		
@@ -433,6 +428,14 @@ public final class PaletteBasedSegmentationTest {
 			this.setIcon(new ImageIcon(this.canvas.getImage()));
 		}
 		
+		public final double[] getUserPoints() {
+			return this.userPoints.toArray();
+		}
+		
+		public final int[] getUserSegments() {
+			return this.userSegments.toArray();
+		}
+		
 		public final void refresh() {
 			this.refresh(this.oldImage);
 		}
@@ -442,6 +445,41 @@ public final class PaletteBasedSegmentationTest {
 				this.oldImage = null;
 				
 				return;
+			}
+			
+			{
+				final double[] points = this.getUserPoints();
+				final int[] segments = this.getUserSegments();
+				final int n = segments.length;
+				final MatrixBuilder<Double> matrixBuilder = PrimitiveMatrix.getBuilder(4, n / 2 + 1);
+				
+				debugPrint(points.length, n, Arrays.toString(segments));
+				
+				for (int i = 0; i < n; i += 2) {
+					final int i1 = (segments[i + 0] - 1) * 3;
+					final int i2 = (segments[i + 1] - 1) * 3;
+					final double x1 = points[i1 + X];
+					final double y1 = points[i1 + Y];
+					final double z1 = points[i1 + Z];
+					final double x2 = points[i2 + X];
+					final double y2 = points[i2 + Y];
+					final double z2 = points[i2 + Z];
+					final double dx = x2 - x1;
+					final double dy = y2 - y1;
+					final double dz = z2 - z1;
+					
+					matrixBuilder.set(0, i / 2, dx);
+					matrixBuilder.set(1, i / 2, dy);
+					matrixBuilder.set(2, i / 2, dz);
+					matrixBuilder.set(3, i / 2, -(x1 * dx + y1 * dy + z1 * dz));
+				}
+				
+				matrixBuilder.set(3, n / 2, 1.0);
+				
+				final BasicMatrix m = matrixBuilder.build();
+				
+				debugPrint(m);
+				debugPrint(m.invert());
 			}
 			
 			final double x0 = this.canvas.getWidth() / 2;
@@ -706,6 +744,40 @@ public final class PaletteBasedSegmentationTest {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -1033925831595591034L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-04-23)
+	 */
+	public static abstract class UpdaterTreeModelListener implements TreeModelListener, Serializable {
+		
+		@Override
+		public final void treeNodesChanged(final TreeModelEvent event) {
+			this.update(event);
+		}
+		
+		@Override
+		public final void treeNodesInserted(final TreeModelEvent event) {
+			this.update(event);
+		}
+		
+		@Override
+		public final void treeNodesRemoved(final TreeModelEvent event) {
+			this.update(event);
+		}
+		
+		@Override
+		public final void treeStructureChanged(final TreeModelEvent event) {
+			this.update(event);
+		}
+		
+		public abstract void update(TreeModelEvent event);
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -1429045406856434520L;
 		
 	}
 	
