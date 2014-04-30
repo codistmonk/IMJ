@@ -297,9 +297,15 @@ public final class PaletteBasedSegmentationTest {
 		
 		private final Graphics3D histogramGraphics;
 		
+		private final Graphics3D idGraphics;
+		
 		private final DoubleList userPoints;
 		
 		private BufferedImage oldImage;
+		
+		private final int[] idUnderMouse;
+		
+		private final int[] lastTouchedId;
 		
 		public HistogramView() {
 			this.canvas = new Canvas().setFormat(512, 512, BufferedImage.TYPE_INT_ARGB);
@@ -309,11 +315,21 @@ public final class PaletteBasedSegmentationTest {
 			this.idRenderer = new TiledRenderer(OrthographicRenderer.FACTORY).setCanvas(this.idCanvas.getImage());
 			this.orbiter = new OrbiterMouseHandler(null).addTo(this);
 			this.histogramGraphics = new Graphics3D(this.histogramRenderer).setOrbiterParameters(this.orbiter.getParameters());
+			this.idGraphics = new Graphics3D(this.idRenderer).setOrbiterParameters(this.orbiter.getParameters());
 			this.userPoints = new DoubleList();
+			this.idUnderMouse = new int[1];
+			this.lastTouchedId = new int[1];
 			
 			this.setIcon(new ImageIcon(this.canvas.getImage()));
 			
 			new MouseHandler(this.orbiter.getUpdateNeeded()) {
+				
+				@Override
+				public final void mousePressed(final MouseEvent event) {
+					lastTouchedId[0] = idUnderMouse[0] = idCanvas.getImage().getRGB(event.getX(), event.getY()) & 0x00FFFFFF;
+					
+					HistogramView.this.refresh();
+				}
 				
 				@Override
 				public final void mouseClicked(final MouseEvent event) {
@@ -333,6 +349,7 @@ public final class PaletteBasedSegmentationTest {
 						point[Z] -= tz;
 						
 						userPoints.addAll(point);
+						idUnderMouse[0] = userPoints.size() / 3;
 						
 						HistogramView.this.refresh();
 					}
@@ -352,8 +369,9 @@ public final class PaletteBasedSegmentationTest {
 				
 				@Override
 				public final void mouseMoved(final MouseEvent event) {
-					// TODO Auto-generated method stub
-					super.mouseMoved(event);
+					idUnderMouse[0] = idCanvas.getImage().getRGB(event.getX(), event.getY()) & 0x00FFFFFF;
+					
+					HistogramView.this.refresh();
 				}
 				
 				/**
@@ -388,6 +406,12 @@ public final class PaletteBasedSegmentationTest {
 		}
 		
 		public final void refresh(final BufferedImage image) {
+			if (image == null) {
+				this.oldImage = null;
+				
+				return;
+			}
+			
 			final double x0 = this.canvas.getWidth() / 2;
 			final double y0 = this.canvas.getHeight() / 2;
 			final double z0 = 0.0;
@@ -434,6 +458,7 @@ public final class PaletteBasedSegmentationTest {
 			times.add(tocTic(timer));
 			
 			this.histogramRenderer.clear();
+			this.idRenderer.clear();
 			
 			this.histogramGraphics.setPointSize(0).transformAndDrawPoints(
 					this.histogramPoints.clone(), this.histogramARGBs);
@@ -449,21 +474,25 @@ public final class PaletteBasedSegmentationTest {
 				final int n = userPoints.length;
 				
 				this.histogramGraphics.setPointSize(2);
+				this.idGraphics.setPointSize(2);
 				
-				for (int i = 0; i < n; i += 3) {
+				for (int i = 0, id = 1; i < n; i += 3, ++id) {
 					final double x = userPoints[i + X];
 					final double y = userPoints[i + Y];
 					final double z = userPoints[i + Z];
 					
-					this.histogramGraphics.drawPoint(x + tx, y + ty, z + tz, 0xFFFFFF00);
+					this.histogramGraphics.drawPoint(x + tx, y + ty, z + tz, idUnderMouse[0] == id ? 0xFFFFFF00 : 0xFF0000FF);
+					this.idGraphics.drawPoint(x + tx, y + ty, z + tz, 0xFF000000 | id);
 				}
 			}
 			
 			times.add(tocTic(timer));
 			
 			this.canvas.clear(Color.GRAY);
+			this.idCanvas.clear(Color.BLACK);
 			
 			this.histogramRenderer.render();
+			this.idRenderer.render();
 			
 			times.add(tocTic(timer));
 			
