@@ -447,41 +447,6 @@ public final class PaletteBasedSegmentationTest {
 				return;
 			}
 			
-			{
-				final double[] points = this.getUserPoints();
-				final int[] segments = this.getUserSegments();
-				final int n = segments.length;
-				final MatrixBuilder<Double> matrixBuilder = PrimitiveMatrix.getBuilder(4, n / 2 + 1);
-				
-				debugPrint(points.length, n, Arrays.toString(segments));
-				
-				for (int i = 0; i < n; i += 2) {
-					final int i1 = (segments[i + 0] - 1) * 3;
-					final int i2 = (segments[i + 1] - 1) * 3;
-					final double x1 = points[i1 + X];
-					final double y1 = points[i1 + Y];
-					final double z1 = points[i1 + Z];
-					final double x2 = points[i2 + X];
-					final double y2 = points[i2 + Y];
-					final double z2 = points[i2 + Z];
-					final double dx = x2 - x1;
-					final double dy = y2 - y1;
-					final double dz = z2 - z1;
-					
-					matrixBuilder.set(0, i / 2, dx);
-					matrixBuilder.set(1, i / 2, dy);
-					matrixBuilder.set(2, i / 2, dz);
-					matrixBuilder.set(3, i / 2, -(x1 * dx + y1 * dy + z1 * dz));
-				}
-				
-				matrixBuilder.set(3, n / 2, 1.0);
-				
-				final BasicMatrix m = matrixBuilder.build();
-				
-				debugPrint(m);
-				debugPrint(m.invert());
-			}
-			
 			final double x0 = this.canvas.getWidth() / 2;
 			final double y0 = this.canvas.getHeight() / 2;
 			final double z0 = 0.0;
