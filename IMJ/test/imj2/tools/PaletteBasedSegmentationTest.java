@@ -10,20 +10,21 @@ import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.swing.SwingTools.verticalSplit;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
-import static pixel3d.PolygonTools.*;
+import static pixel3d.PolygonTools.X;
+import static pixel3d.PolygonTools.Y;
+import static pixel3d.PolygonTools.Z;
+
 import imj2.tools.Image2DComponent.Painter;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
-import java.awt.event.InputEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Map;
@@ -36,7 +37,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JSplitPane;
 import javax.swing.JTree;
-import javax.swing.SwingUtilities;
 import javax.swing.event.TreeModelEvent;
 import javax.swing.event.TreeModelListener;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -45,21 +45,19 @@ import javax.swing.tree.TreeModel;
 
 import jgencode.primitivelists.DoubleList;
 import jgencode.primitivelists.IntList;
+import net.sourceforge.aprog.events.EventManager;
+import net.sourceforge.aprog.events.EventManager.AbstractEvent;
+import net.sourceforge.aprog.events.EventManager.Event;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.TicToc;
 
 import org.junit.Test;
-import org.ojalgo.matrix.BasicMatrix;
-import org.ojalgo.matrix.MatrixBuilder;
-import org.ojalgo.matrix.MatrixFactory;
-import org.ojalgo.matrix.MatrixUtils;
-import org.ojalgo.matrix.PrimitiveMatrix;
 
 import pixel3d.MouseHandler;
 import pixel3d.OrbiterMouseHandler;
-import pixel3d.OrthographicRenderer;
 import pixel3d.OrbiterMouseHandler.OrbiterParameters;
+import pixel3d.OrthographicRenderer;
 import pixel3d.Renderer;
 import pixel3d.TiledRenderer;
 
@@ -356,6 +354,21 @@ public final class PaletteBasedSegmentationTest {
 						System.arraycopy(this.getPoint(event, tmp[Z]), 0, userPoints.toArray(), offset, 3);
 						
 						event.consume();
+						
+						{
+							boolean segmentsUpdated = false;
+							
+							for (final int id : userSegments.toArray()) {
+								if (id == idUnderMouse[0]) {
+									segmentsUpdated = true;
+									break;
+								}
+							}
+							
+							if (segmentsUpdated) {
+								EventManager.getInstance().dispatch(HistogramView.this.new SegmentsUpdatedEvent());
+							}
+						}
 					}
 				}
 				
@@ -382,6 +395,8 @@ public final class PaletteBasedSegmentationTest {
 					if (event.getButton() == 1 && (event.getModifiersEx() & SHIFT_DOWN_MASK) == SHIFT_DOWN_MASK
 							&& 0 < lastTouchedId[0] && 0 < idUnderMouse[0] && lastTouchedId[0] != idUnderMouse[0]) {
 						userSegments.addAll(lastTouchedId[0], idUnderMouse[0]);
+						
+						EventManager.getInstance().dispatch(HistogramView.this.new SegmentsUpdatedEvent());
 					}
 				}
 				
@@ -557,14 +572,6 @@ public final class PaletteBasedSegmentationTest {
 			this.repaint();
 		}
 		
-		public static final long tocTic(final TicToc timer) {
-			final long result = timer.toc();
-			
-			timer.tic();
-			
-			return result;
-		}
-		
 		private final void drawBox(final double tx, final double ty, final double tz) {
 			this.histogramGraphics.drawSegment(
 					0.0 + tx, 0.0 + ty, 0.0 + tz,
@@ -617,9 +624,33 @@ public final class PaletteBasedSegmentationTest {
 		}
 		
 		/**
+		 * @author codistmonk (creation 2014-04-30)
+		 */
+		public final class SegmentsUpdatedEvent extends AbstractEvent<HistogramView> {
+			
+			public SegmentsUpdatedEvent() {
+				super(HistogramView.this);
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 9008919825085028206L;
+			
+		}
+		
+		/**
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = 8150020673886684998L;
+		
+		public static final long tocTic(final TicToc timer) {
+			final long result = timer.toc();
+			
+			timer.tic();
+			
+			return result;
+		}
 		
 	}
 	
