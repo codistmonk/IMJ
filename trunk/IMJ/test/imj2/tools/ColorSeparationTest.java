@@ -5,6 +5,7 @@ import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.swing.SwingTools.verticalSplit;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.invoke;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
 import static pixel3d.PolygonTools.Z;
@@ -17,7 +18,11 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
+import java.lang.reflect.Method;
+import java.util.Arrays;
 
+import javax.swing.ComboBoxModel;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComboBox;
 import javax.swing.JSplitPane;
 
@@ -30,7 +35,10 @@ import net.sourceforge.aprog.tools.Tools;
 import org.junit.Test;
 import org.ojalgo.matrix.BasicMatrix;
 import org.ojalgo.matrix.MatrixBuilder;
+import org.ojalgo.matrix.MatrixUtils;
 import org.ojalgo.matrix.PrimitiveMatrix;
+import org.ojalgo.matrix.decomposition.QR;
+import org.ojalgo.matrix.decomposition.SingularValue;
 
 /**
  * @author codistmonk (creation 2014-04-30)
@@ -88,8 +96,31 @@ public final class ColorSeparationTest {
 				
 				final BasicMatrix m = matrixBuilder.build();
 				
-				debugPrint(m);
-				debugPrint(m.invert());
+				try {
+					final Method method = PrimitiveMatrix.class.getSuperclass().getDeclaredMethod("getComputedSingularValue");
+					
+					method.setAccessible(true);
+					
+					@SuppressWarnings("unchecked")
+					final BasicMatrix mi = (BasicMatrix) ((SingularValue<Double>) method.invoke(m)).getInverse();
+					@SuppressWarnings("unchecked")
+					final DefaultComboBoxModel<RGBTransformer> linearizers = (DefaultComboBoxModel<RGBTransformer>) linearizerSelector.getModel();
+					final int selectedIndex = linearizerSelector.getSelectedIndex();
+					
+					for (int i = 0; i < mi.getRowDim(); ++i) {
+						linearizers.insertElementAt(new Linearizer("" + i, row(mi, i)), i + 1);
+					}
+					
+					while (mi.getRowDim() + 1 < linearizers.getSize()) {
+						linearizers.removeElementAt(mi.getRowDim() + 1);
+					}
+					
+					linearizerSelector.setSelectedIndex(selectedIndex < linearizers.getSize() ? selectedIndex : 0);
+					
+					imageView.refreshBuffer();
+				} catch (final Exception exception) {
+					exception.printStackTrace();
+				}
 			}
 			
 		});
@@ -122,6 +153,17 @@ public final class ColorSeparationTest {
 		});
 		
 		show(splitPane, this.getClass().getSimpleName(), true);
+	}
+	
+	public static final double[] row(final BasicMatrix matrix, final int rowIndex) {
+		final int n = matrix.getColDim();
+		final double[] result = new double[n];
+		
+		for (int i = 0; i < n; ++i) {
+			result[i] = matrix.doubleValue(rowIndex, i);
+		}
+		
+		return result;
 	}
 	
 	/**
@@ -177,8 +219,9 @@ public final class ColorSeparationTest {
 		
 		@Override
 		public final int transform(final int rgb) {
-			return 0xFF000000 | (uint8(round(
-					this.statistics.getNormalizedValue(transform(this.hyperplane, rgb)) * 255.0) * 0x00010101));
+			final int gray8 = uint8(round(
+					this.statistics.getNormalizedValue(transform(this.hyperplane, rgb)) * 255.0));
+			return 0xFF000000 | (gray8 * 0x00010101);
 		}
 		
 		@Override
