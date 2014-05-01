@@ -2,12 +2,13 @@ package imj2.tools;
 
 import static java.lang.Math.round;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
+import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.swing.SwingTools.verticalSplit;
+import static net.sourceforge.aprog.tools.Tools.array;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
 import static pixel3d.PolygonTools.Z;
-
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.PaletteBasedSegmentationTest.HistogramView;
 import imj2.tools.PaletteBasedSegmentationTest.HistogramView.SegmentsUpdatedEvent;
@@ -18,6 +19,7 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.lang.reflect.Method;
+
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComboBox;
 import javax.swing.JSplitPane;
@@ -46,8 +48,8 @@ public final class ColorSeparationTest {
 		
 		final SimpleImageView imageView = new SimpleImageView();
 		final HistogramView histogramView = new HistogramView();
-		final JComboBox<? extends RGBTransformer> linearizerSelector = new JComboBox<>(Tools.array(RGBTransformer.Predefined.ID));
-		final JSplitPane splitPane = horizontalSplit(imageView, verticalSplit(linearizerSelector, histogramView));
+		final JComboBox<? extends RGBTransformer> linearizerSelector = new JComboBox<>(array(RGBTransformer.Predefined.ID));
+		final JSplitPane splitPane = horizontalSplit(imageView, verticalSplit(linearizerSelector, scrollable(histogramView)));
 		
 		SwingTools.setCheckAWT(true);
 		
