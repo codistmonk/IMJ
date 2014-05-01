@@ -4,11 +4,10 @@ import static java.lang.Math.round;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.swing.SwingTools.verticalSplit;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import static net.sourceforge.aprog.tools.Tools.invoke;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
 import static pixel3d.PolygonTools.Z;
+
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.PaletteBasedSegmentationTest.HistogramView;
 import imj2.tools.PaletteBasedSegmentationTest.HistogramView.SegmentsUpdatedEvent;
@@ -19,9 +18,6 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.lang.reflect.Method;
-import java.util.Arrays;
-
-import javax.swing.ComboBoxModel;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComboBox;
 import javax.swing.JSplitPane;
@@ -35,9 +31,7 @@ import net.sourceforge.aprog.tools.Tools;
 import org.junit.Test;
 import org.ojalgo.matrix.BasicMatrix;
 import org.ojalgo.matrix.MatrixBuilder;
-import org.ojalgo.matrix.MatrixUtils;
 import org.ojalgo.matrix.PrimitiveMatrix;
-import org.ojalgo.matrix.decomposition.QR;
 import org.ojalgo.matrix.decomposition.SingularValue;
 
 /**
@@ -70,18 +64,12 @@ public final class ColorSeparationTest {
 		final double ty = +128.0;
 		final double tz = -128.0;
 		
-		histogramView.userPoints.addAll(0.0 + tx, 0.0 + ty, 0.0 + tz
-				, 255.0 + tx, 0.0 + ty, 0.0 + tz
-				, 0.0 + tx, 255.0 + ty, 0.0 + tz
-				, 0.0 + tx, 0.0 + ty, 255.0 + tz);
-		histogramView.userSegments.addAll(1, 2, 1, 3, 1, 4);
-		
 		EventManager.getInstance().addListener(histogramView, SegmentsUpdatedEvent.class, new Object() {
 			
 			@Listener
 			public final void segmentsUpdated(final SegmentsUpdatedEvent event) {
-				final double[] points = histogramView.getUserPoints();
-				final int[] segments = histogramView.getUserSegments();
+				final double[] points = histogramView.getUserPoints().toArray();
+				final int[] segments = histogramView.getUserSegments().toArray();
 				final int n = segments.length / 2;
 				final MatrixBuilder<Double> matrixBuilder = PrimitiveMatrix.getBuilder(4, n + 1);
 				
@@ -169,6 +157,19 @@ public final class ColorSeparationTest {
 			private static final long serialVersionUID = 646058874106526093L;
 			
 		});
+		
+		histogramView.getUserPoints().addAll(128.0 + tx, 128.0 + ty, 128.0 + tz
+				, 0.0 + tx, 0.0 + ty, 0.0 + tz
+				, 255.0 + tx, 0.0 + ty, 0.0 + tz
+				, 255.0 + tx, 255.0 + ty, 0.0 + tz
+				, 0.0 + tx, 255.0 + ty, 0.0 + tz
+				, 0.0 + tx, 0.0 + ty, 255.0 + tz
+				, 255.0 + tx, 0.0 + ty, 255.0 + tz
+				, 255.0 + tx, 255.0 + ty, 255.0 + tz
+				, 0.0 + tx, 255.0 + ty, 255.0 + tz
+				);
+		histogramView.getUserSegments().addAll(1, 2, 1, 3, 1, 4, 1, 5, 1, 6, 1, 7, 1, 8, 1, 9);
+		EventManager.getInstance().dispatch(histogramView.new SegmentsUpdatedEvent());
 		
 		show(splitPane, this.getClass().getSimpleName(), true);
 	}

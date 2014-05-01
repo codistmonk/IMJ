@@ -298,9 +298,9 @@ public final class PaletteBasedSegmentationTest {
 		
 		private final Graphics3D idGraphics;
 		
-		final DoubleList userPoints;
+		private final DoubleList userPoints;
 		
-		final IntList userSegments;
+		private final IntList userSegments;
 		
 		private BufferedImage oldImage;
 		
@@ -443,12 +443,12 @@ public final class PaletteBasedSegmentationTest {
 			this.setIcon(new ImageIcon(this.canvas.getImage()));
 		}
 		
-		public final double[] getUserPoints() {
-			return this.userPoints.toArray();
+		public final DoubleList getUserPoints() {
+			return this.userPoints;
 		}
 		
-		public final int[] getUserSegments() {
-			return this.userSegments.toArray();
+		public final IntList getUserSegments() {
+			return this.userSegments;
 		}
 		
 		public final void refresh() {
