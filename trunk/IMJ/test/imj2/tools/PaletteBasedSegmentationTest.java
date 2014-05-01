@@ -1,5 +1,6 @@
 package imj2.tools;
 
+import static imj2.tools.IMJTools.a8gray888;
 import static imj2.tools.IMJTools.a8r8g8b8;
 import static imj2.tools.IMJTools.uint8;
 import static java.awt.event.InputEvent.SHIFT_DOWN_MASK;
@@ -38,6 +39,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import javax.swing.AbstractAction;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.ImageIcon;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -114,6 +116,20 @@ public final class PaletteBasedSegmentationTest {
 							, uint8(points[i + X] - tx), uint8(points[i + Y] - ty), uint8(points[i + Z] - tz));
 					getOrCreate((Map) clusters, rgb, Factory.DefaultFactory.TREE_SET_FACTORY).add(rgb);
 				}
+				
+				final DefaultComboBoxModel<RGBTransformer> transformers = (DefaultComboBoxModel<RGBTransformer>) transformerSelector.getModel();
+				final int selectedIndex = transformerSelector.getSelectedIndex();
+				
+				
+				while (2 < transformers.getSize()) {
+					transformers.removeElementAt(2);
+				}
+				
+				for (final Integer clusterRGB : clusters.keySet()) {
+					transformers.addElement(new RGBClusterLinearizer(clusters, clusterRGB));
+				}
+				
+				transformerSelector.setSelectedIndex(selectedIndex < transformers.getSize() ? selectedIndex : 0);
 				
 				imageView.refreshBuffer();
 			}
@@ -859,6 +875,65 @@ public final class PaletteBasedSegmentationTest {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = 7849106863112337513L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-05-01)
+	 */
+	public static final class RGBClusterLinearizer implements RGBTransformer {
+		
+		private final Map<Integer, Collection<Integer>> clusters;
+		
+		private final Integer clusterRGB;
+		
+		public RGBClusterLinearizer(final Map<Integer, Collection<Integer>> clusters, final Integer clusterRGB) {
+			this.clusters = clusters;
+			this.clusterRGB = clusterRGB;
+		}
+		
+		@Override
+		public final int transform(final int rgb) {
+			final Integer[] bestClusters = { this.clusterRGB, this.clusterRGB };
+			final double[] bestDistances = { Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY };
+			
+			for (final Map.Entry<Integer, Collection<Integer>> entry : this.clusters.entrySet()) {
+				for (final Integer prototype : entry.getValue()) {
+					final int distance = distance1(rgb, prototype);
+					
+					if (distance < bestDistances[0]) {
+						bestClusters[1] = bestClusters[0];
+						bestDistances[1] = bestDistances[0];
+						bestDistances[0] = distance;
+						bestClusters[0] = entry.getKey();
+					} else if (distance < bestDistances[1]) {
+						bestDistances[1] = distance;
+						bestClusters[1] = entry.getKey();
+					}
+				}
+			}
+			
+			if (bestClusters[0] != this.clusterRGB) {
+				return 0xFF000000;
+			}
+			
+			if (bestClusters[0] == bestClusters[1] || bestDistances[0] == 0.0) {
+				return 0xFFFFFFFF;
+			}
+			
+			return a8gray888(0xFF, uint8(
+					255.0 * (1.0 - 2.0 * bestDistances[0] / (bestDistances[0] + bestDistances[1]))));
+		}
+		
+		@Override
+		public final String toString() {
+			return Integer.toHexString(this.clusterRGB);
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 405532606002207460L;
 		
 	}
 	
