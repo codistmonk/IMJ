@@ -13,7 +13,6 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
 import static pixel3d.PolygonTools.Z;
-
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.PaletteBasedSegmentationTest.HistogramView;
 import imj2.tools.PaletteBasedSegmentationTest.HistogramView.SegmentsUpdatedEvent;
@@ -32,6 +31,7 @@ import javax.swing.JSplitPane;
 import net.sourceforge.aprog.events.EventManager;
 import net.sourceforge.aprog.events.EventManager.Event.Listener;
 import net.sourceforge.aprog.swing.SwingTools;
+import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
 
 import org.junit.Test;
@@ -216,6 +216,71 @@ public final class ColorSeparationTest {
 				}
 				
 			};
+			
+		}
+		
+		/**
+		 * @author codistmonk (creation 2014-05-02)
+		 */
+		public static final class Tools {
+			
+			private Tools() {
+				throw new IllegalInstantiationException();
+			}
+			
+			public static final void filter(final BufferedImage image, final RGBTransformer transformer, final BufferedImage target) {
+				final int w = target.getWidth();
+				final int h = target.getHeight();
+				
+				for (int y = 0; y < h; ++y) {
+					for (int x = 0; x < w; ++x) {
+						if (0 < (transformer.transform(image.getRGB(x, y)) & 0x00FFFFFF)) {
+							target.setRGB(x, y, 0xFFFFFFFF);
+						}
+					}
+				}
+			}
+			
+			public static final void transform(final BufferedImage image, final RGBTransformer transformer, final BufferedImage target) {
+				final int w = target.getWidth();
+				final int h = target.getHeight();
+				
+				for (int y = 0; y < h; ++y) {
+					for (int x = 0; x < w; ++x) {
+						target.setRGB(x, y, transformer.transform(image.getRGB(x, y)));
+					}
+				}
+			}
+			
+			public static final void drawSegmentContours(final BufferedImage labels, final int color, final BufferedImage target) {
+				final int w = target.getWidth();
+				final int h = target.getHeight();
+				final int right = w - 1;
+				final int bottom = h - 1;
+				
+				for (int x = 0; x < w; ++x) {
+					target.setRGB(x, 0, color);
+					target.setRGB(x, bottom, color);
+				}
+				
+				for (int y = 0; y < h; ++y) {
+					target.setRGB(0, y, color);
+					target.setRGB(right, y, color);
+				}
+				
+				for (int y = 1; y < bottom; ++y) {
+					for (int x = 1; x < right; ++x) {
+						final int label = labels.getRGB(x, y);
+						
+						if (labels.getRGB(x, y - 1) < label
+								|| labels.getRGB(x - 1, y) < label
+								|| labels.getRGB(x + 1, y) < label
+								|| labels.getRGB(x, y + 1) < label) {
+							target.setRGB(x, y, color);
+						}
+					}
+				}
+			}
 			
 		}
 		
