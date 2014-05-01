@@ -8,9 +8,11 @@ import static java.lang.Integer.parseInt;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.util.Arrays.copyOfRange;
+import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.show;
+import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
 import static net.sourceforge.aprog.swing.SwingTools.verticalSplit;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -18,7 +20,6 @@ import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
 import static pixel3d.PolygonTools.Z;
-
 import imj2.tools.ColorSeparationTest.RGBTransformer;
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.PaletteBasedSegmentationTest.HistogramView.PointsUpdatedEvent;
@@ -41,6 +42,7 @@ import java.util.TreeMap;
 import javax.swing.AbstractAction;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.ImageIcon;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -55,7 +57,6 @@ import javax.swing.tree.TreeModel;
 
 import jgencode.primitivelists.DoubleList;
 import jgencode.primitivelists.IntList;
-
 import net.sourceforge.aprog.events.EventManager;
 import net.sourceforge.aprog.events.EventManager.Event.Listener;
 import net.sourceforge.aprog.swing.SwingTools;
@@ -83,19 +84,25 @@ public final class PaletteBasedSegmentationTest {
 		
 		final SimpleImageView imageView = new SimpleImageView();
 		final HistogramView histogramView = new HistogramView();
-		final JComboBox<? extends RGBTransformer> transformerSelector = new JComboBox<>(array(RGBTransformer.Predefined.ID, new NearestNeighborRGBQuantizer()));
-		final JSplitPane splitPane = horizontalSplit(imageView, verticalSplit(transformerSelector, scrollable(histogramView)));
+		final JComboBox<? extends RGBTransformer> transformerSelector = new JComboBox<>(array(
+				RGBTransformer.Predefined.ID, new NearestNeighborRGBQuantizer()));
+		final JCheckBox segmentCheckBox = new JCheckBox("Segment");
+		final JSplitPane splitPane = horizontalSplit(imageView, verticalBox(
+				horizontalBox(transformerSelector, segmentCheckBox), scrollable(histogramView)));
 		
 		SwingTools.setCheckAWT(true);
 		
-		transformerSelector.addActionListener(new ActionListener() {
+		final ActionListener updateImageViewActionListener = new ActionListener() {
 			
 			@Override
 			public final void actionPerformed(final ActionEvent event) {
 				imageView.refreshBuffer();
 			}
 			
-		});
+		};
+		
+		transformerSelector.addActionListener(updateImageViewActionListener);
+		segmentCheckBox.addActionListener(updateImageViewActionListener);
 		
 		EventManager.getInstance().addListener(histogramView, PointsUpdatedEvent.class, new Serializable() {
 			
@@ -126,7 +133,7 @@ public final class PaletteBasedSegmentationTest {
 				}
 				
 				for (final Integer clusterRGB : clusters.keySet()) {
-					transformers.addElement(new RGBClusterLinearizer(clusters, clusterRGB));
+					transformers.addElement(new NearestNeighborRGBLinearizer(clusters, clusterRGB));
 				}
 				
 				transformerSelector.setSelectedIndex(selectedIndex < transformers.getSize() ? selectedIndex : 0);
@@ -143,19 +150,30 @@ public final class PaletteBasedSegmentationTest {
 		
 		imageView.getPainters().add(new Painter<SimpleImageView>() {
 			
+			private final Canvas labels = new Canvas();
+			
 			@Override
 			public final void paint(final Graphics2D g, final SimpleImageView component,
 					final int width, final int height) {
 				final RGBTransformer transformer = (RGBTransformer) transformerSelector.getSelectedItem();
 				final BufferedImage image = imageView.getImage();
 				final BufferedImage buffer = imageView.getBufferImage();
-				final int w = image.getWidth();
-				final int h = image.getHeight();
 				
-				for (int y = 0; y < h; ++y) {
-					for (int x = 0; x < w; ++x) {
-						buffer.setRGB(x, y, transformer.transform(image.getRGB(x, y)));
+				if (segmentCheckBox.isSelected()) {
+					imageView.getBufferGraphics().drawImage(image, 0, 0, null);
+					
+					this.labels.setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+					this.labels.clear(Color.BLACK);
+					
+					if (transformer instanceof NearestNeighborRGBLinearizer) {
+						RGBTransformer.Tools.filter(image, transformer, this.labels.getImage());
+					} else {
+						RGBTransformer.Tools.transform(image, transformer, this.labels.getImage());
 					}
+					
+					RGBTransformer.Tools.drawSegmentContours(this.labels.getImage(), 0xFF00FF00, buffer);
+				} else {
+					RGBTransformer.Tools.transform(image, transformer, buffer);
 				}
 				
 				histogramView.refresh(image);
@@ -881,13 +899,13 @@ public final class PaletteBasedSegmentationTest {
 	/**
 	 * @author codistmonk (creation 2014-05-01)
 	 */
-	public static final class RGBClusterLinearizer implements RGBTransformer {
+	public static final class NearestNeighborRGBLinearizer implements RGBTransformer {
 		
 		private final Map<Integer, Collection<Integer>> clusters;
 		
 		private final Integer clusterRGB;
 		
-		public RGBClusterLinearizer(final Map<Integer, Collection<Integer>> clusters, final Integer clusterRGB) {
+		public NearestNeighborRGBLinearizer(final Map<Integer, Collection<Integer>> clusters, final Integer clusterRGB) {
 			this.clusters = clusters;
 			this.clusterRGB = clusterRGB;
 		}
