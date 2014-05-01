@@ -29,6 +29,10 @@ public final class IMJTools extends IMJCoreTools {
 		throw new IllegalInstantiationException();
 	}
 	
+	public static final int a8gray888(final int alpha8, final int gray8) {
+		return (alpha8 << 24) | (gray8 * 0x00010101);
+	}
+	
 	public static final int a8r8g8b8(final int alpha8, final int red8, final int green8, final int blue8) {
 		return (alpha8 << 24) | (red8 << 16) | (green8 << 8) | (blue8 << 0);
 	}
