@@ -66,24 +66,34 @@ public final class ColorSeparationTest {
 			
 		});
 		
+		final double tx = +128.0;
+		final double ty = +128.0;
+		final double tz = -128.0;
+		
+		histogramView.userPoints.addAll(0.0 + tx, 0.0 + ty, 0.0 + tz
+				, 255.0 + tx, 0.0 + ty, 0.0 + tz
+				, 0.0 + tx, 255.0 + ty, 0.0 + tz
+				, 0.0 + tx, 0.0 + ty, 255.0 + tz);
+		histogramView.userSegments.addAll(1, 2, 1, 3, 1, 4);
+		
 		EventManager.getInstance().addListener(histogramView, SegmentsUpdatedEvent.class, new Object() {
 			
 			@Listener
 			public final void segmentsUpdated(final SegmentsUpdatedEvent event) {
 				final double[] points = histogramView.getUserPoints();
 				final int[] segments = histogramView.getUserSegments();
-				final int n = segments.length;
-				final MatrixBuilder<Double> matrixBuilder = PrimitiveMatrix.getBuilder(4, n / 2 + 1);
+				final int n = segments.length / 2;
+				final MatrixBuilder<Double> matrixBuilder = PrimitiveMatrix.getBuilder(4, n + 1);
 				
-				for (int i = 0; i < n; i += 2) {
+				for (int i = 0; i < 2 * n; i += 2) {
 					final int i1 = (segments[i + 0] - 1) * 3;
 					final int i2 = (segments[i + 1] - 1) * 3;
-					final double x1 = points[i1 + X];
-					final double y1 = points[i1 + Y];
-					final double z1 = points[i1 + Z];
-					final double x2 = points[i2 + X];
-					final double y2 = points[i2 + Y];
-					final double z2 = points[i2 + Z];
+					final double x1 = points[i1 + X] - tx;
+					final double y1 = points[i1 + Y] - ty;
+					final double z1 = points[i1 + Z] - tz;
+					final double x2 = points[i2 + X] - tx;
+					final double y2 = points[i2 + Y] - ty;
+					final double z2 = points[i2 + Z] - tz;
 					final double dx = x2 - x1;
 					final double dy = y2 - y1;
 					final double dz = z2 - z1;
@@ -91,10 +101,16 @@ public final class ColorSeparationTest {
 					matrixBuilder.set(0, i / 2, dx);
 					matrixBuilder.set(1, i / 2, dy);
 					matrixBuilder.set(2, i / 2, dz);
-					matrixBuilder.set(3, i / 2, -(x1 * dx + y1 * dy + z1 * dz));
 				}
 				
-				matrixBuilder.set(3, n / 2, 1.0);
+				{
+					final int i0 = (segments[0] - 1) * 3;
+					
+					matrixBuilder.set(0, n, -(points[i0 + X] - tx));
+					matrixBuilder.set(1, n, -(points[i0 + Y] - ty));
+					matrixBuilder.set(2, n, -(points[i0 + Z] - tz));
+					matrixBuilder.set(3, n, 1.0);
+				}
 				
 				final BasicMatrix m = matrixBuilder.build();
 				
@@ -109,12 +125,12 @@ public final class ColorSeparationTest {
 					final DefaultComboBoxModel<RGBTransformer> linearizers = (DefaultComboBoxModel<RGBTransformer>) linearizerSelector.getModel();
 					final int selectedIndex = linearizerSelector.getSelectedIndex();
 					
-					for (int i = 0; i < mi.getRowDim(); ++i) {
-						linearizers.insertElementAt(new Linearizer("" + i, row(mi, i)), i + 1);
+					while (1 < linearizers.getSize()) {
+						linearizers.removeElementAt(1);
 					}
 					
-					while (mi.getRowDim() + 1 < linearizers.getSize()) {
-						linearizers.removeElementAt(mi.getRowDim() + 1);
+					for (int i = 0; i < n; ++i) {
+						linearizers.addElement(new Linearizer2("" + i, row(mi, i), row(mi, n)));
 					}
 					
 					linearizerSelector.setSelectedIndex(selectedIndex < linearizers.getSize() ? selectedIndex : 0);
@@ -196,7 +212,7 @@ public final class ColorSeparationTest {
 	/**
 	 * @author codistmonk (creation 2014-04-30)
 	 */
-	public static final class Linearizer implements RGBTransformer {
+	public static final class RGBLinearizer implements RGBTransformer {
 		
 		private final String description;
 		
@@ -204,26 +220,27 @@ public final class ColorSeparationTest {
 		
 		private final Statistics statistics;
 		
-		public Linearizer(final String description, final double[] hyperplane) {
+		public RGBLinearizer(final String description, final double[] hyperplane) {
 			this.description = description;
 			this.hyperplane = hyperplane;
 			this.statistics = new Statistics();
 			
-			this.statistics.addValue(transform(hyperplane, 0x00000000));
-			this.statistics.addValue(transform(hyperplane, 0x000000FF));
-			this.statistics.addValue(transform(hyperplane, 0x0000FFFF));
-			this.statistics.addValue(transform(hyperplane, 0x0000FF00));
-			this.statistics.addValue(transform(hyperplane, 0x00FF0000));
-			this.statistics.addValue(transform(hyperplane, 0x00FF00FF));
-			this.statistics.addValue(transform(hyperplane, 0x00FFFFFF));
-			this.statistics.addValue(transform(hyperplane, 0x00FFFF00));
+			for (final int rgb : new int[] { 0x00000000, 0x000000FF, 0x0000FFFF, 0x0000FF00
+					, 0x00FF0000, 0x00FF00FF, 0x00FFFFFF, 0x00FFFF00 }) {
+				this.statistics.addValue(this.transformAndUnscale(rgb));
+			}
 		}
 		
 		@Override
 		public final int transform(final int rgb) {
 			final int gray8 = uint8(round(
-					this.statistics.getNormalizedValue(transform(this.hyperplane, rgb)) * 255.0));
+					this.statistics.getNormalizedValue(this.transformAndUnscale(rgb)) * 255.0));
+			
 			return 0xFF000000 | (gray8 * 0x00010101);
+		}
+		
+		private final double transformAndUnscale(final int rgb) {
+			return transform(this.hyperplane, rgb);
 		}
 		
 		@Override
@@ -238,7 +255,7 @@ public final class ColorSeparationTest {
 		
 		public static final double transform(final double[] hyperplane, final int rgb) {
 			return hyperplane[0] * red8(rgb) + hyperplane[1] * green8(rgb) + hyperplane[2] * blue8(rgb)
-					 + hyperplane[3];
+					+ hyperplane[3];
 		}
 		
 		public static final int red8(final int rgb) {
@@ -260,6 +277,55 @@ public final class ColorSeparationTest {
 		public static final int uint8(final long value) {
 			return (int) (value & 0xFF);
 		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-04-30)
+	 */
+	public static final class Linearizer2 implements RGBTransformer {
+		
+		private final String description;
+		
+		private final double[] hyperplane;
+		
+		private final double[] homogeneousHyperplane;
+		
+		private final Statistics statistics;
+		
+		public Linearizer2(final String description, final double[] hyperplane, final double[] homogeneousHyperplane) {
+			this.description = description;
+			this.hyperplane = hyperplane;
+			this.homogeneousHyperplane = homogeneousHyperplane;
+			this.statistics = new Statistics();
+			
+			for (final int rgb : new int[] { 0x00000000, 0x000000FF, 0x0000FFFF, 0x0000FF00
+					, 0x00FF0000, 0x00FF00FF, 0x00FFFFFF, 0x00FFFF00 }) {
+				this.statistics.addValue(this.transformAndUnscale(rgb));
+			}
+		}
+		
+		@Override
+		public final int transform(final int rgb) {
+			final int gray8 = RGBLinearizer.uint8(round(
+					this.statistics.getNormalizedValue(this.transformAndUnscale(rgb)) * 255.0));
+			
+			return 0xFF000000 | (gray8 * 0x00010101);
+		}
+		
+		private final double transformAndUnscale(final int rgb) {
+			return RGBLinearizer.transform(this.hyperplane, rgb) / RGBLinearizer.transform(this.homogeneousHyperplane, rgb);
+		}
+		
+		@Override
+		public final String toString() {
+			return this.description;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 6933631179568013440L;
 		
 	}
 	
