@@ -298,9 +298,9 @@ public final class PaletteBasedSegmentationTest {
 		
 		private final Graphics3D idGraphics;
 		
-		private final DoubleList userPoints;
+		final DoubleList userPoints;
 		
-		private final IntList userSegments;
+		final IntList userSegments;
 		
 		private BufferedImage oldImage;
 		
