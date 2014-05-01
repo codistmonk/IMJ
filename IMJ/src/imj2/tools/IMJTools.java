@@ -3,6 +3,7 @@ package imj2.tools;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
 import imj2.core.IMJCoreTools;
@@ -12,13 +13,12 @@ import imj2.tools.IMJTools.TileProcessor.Info;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
-import java.lang.reflect.Array;
 import java.util.Iterator;
 
-import net.sourceforge.aprog.tools.Factory;
-import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
+
+import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**
  * @author codistmonk (creation 2013-08-04)
@@ -29,24 +29,40 @@ public final class IMJTools extends IMJCoreTools {
 		throw new IllegalInstantiationException();
 	}
 	
-	public static final <T> T[] instances(final int n, final Factory<T> factory) {
-		final T element0 = factory.newInstance();
-		
-		try {
-			final T[] result = (T[]) Array.newInstance(element0.getClass(), n);
-			
-			if (0 < n) {
-				result[0] = element0;
-				
-				for (int i = 1; i < n; ++i) {
-					result[i] = factory.newInstance();
-				}
-			}
-			
-			return result;
-		} catch (final NegativeArraySizeException exception) {
-			throw unchecked(exception);
-		}
+	public static final int a8r8g8b8(final int alpha8, final int red8, final int green8, final int blue8) {
+		return (alpha8 << 24) | (red8 << 16) | (green8 << 8) | (blue8 << 0);
+	}
+	
+	public static final int alpha8(final int rgb) {
+		return uint8(rgb >> 24);
+	}
+	
+	public static final int red8(final int rgb) {
+		return uint8(rgb >> 16);
+	}
+	
+	public static final int green8(final int rgb) {
+		return uint8(rgb >> 8);
+	}
+	
+	public static final int blue8(final int rgb) {
+		return uint8(rgb >> 0);
+	}
+	
+	public static final int uint8(final int value) {
+		return value & 0xFF;
+	}
+	
+	public static final int uint8(final long value) {
+		return (int) (value & 0xFF);
+	}
+	
+	public static final int uint8(final float value) {
+		return (int) value & 0xFF;
+	}
+	
+	public static final int uint8(final double value) {
+		return (int) value & 0xFF;
 	}
 	
 	public static final long sum(final long... values) {

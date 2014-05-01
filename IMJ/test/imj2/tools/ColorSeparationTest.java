@@ -1,5 +1,9 @@
 package imj2.tools;
 
+import static imj2.tools.IMJTools.blue8;
+import static imj2.tools.IMJTools.green8;
+import static imj2.tools.IMJTools.red8;
+import static imj2.tools.IMJTools.uint8;
 import static java.lang.Math.round;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
@@ -9,6 +13,7 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
 import static pixel3d.PolygonTools.Z;
+
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.PaletteBasedSegmentationTest.HistogramView;
 import imj2.tools.PaletteBasedSegmentationTest.HistogramView.SegmentsUpdatedEvent;
@@ -28,7 +33,6 @@ import net.sourceforge.aprog.events.EventManager;
 import net.sourceforge.aprog.events.EventManager.Event.Listener;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
-import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 import org.ojalgo.matrix.BasicMatrix;
@@ -66,7 +70,7 @@ public final class ColorSeparationTest {
 		final double ty = +128.0;
 		final double tz = -128.0;
 		
-		EventManager.getInstance().addListener(histogramView, SegmentsUpdatedEvent.class, new Object() {
+		EventManager.getInstance().addListener(histogramView, SegmentsUpdatedEvent.class, new Serializable() {
 			
 			@Listener
 			public final void segmentsUpdated(final SegmentsUpdatedEvent event) {
@@ -130,6 +134,11 @@ public final class ColorSeparationTest {
 					exception.printStackTrace();
 				}
 			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = -1050256525039613825L;
 			
 		});
 		
@@ -261,26 +270,6 @@ public final class ColorSeparationTest {
 					+ hyperplane[3];
 		}
 		
-		public static final int red8(final int rgb) {
-			return uint8(rgb >> 16);
-		}
-		
-		public static final int green8(final int rgb) {
-			return uint8(rgb >> 8);
-		}
-		
-		public static final int blue8(final int rgb) {
-			return uint8(rgb >> 0);
-		}
-		
-		public static final int uint8(final int value) {
-			return value & 0xFF;
-		}
-		
-		public static final int uint8(final long value) {
-			return (int) (value & 0xFF);
-		}
-		
 	}
 	
 	/**
@@ -310,7 +299,7 @@ public final class ColorSeparationTest {
 		
 		@Override
 		public final int transform(final int rgb) {
-			final int gray8 = RGBLinearizer.uint8(round(
+			final int gray8 = uint8(round(
 					this.statistics.getNormalizedValue(this.transformAndUnscale(rgb)) * 255.0));
 			
 			return 0xFF000000 | (gray8 * 0x00010101);

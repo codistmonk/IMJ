@@ -1,25 +1,32 @@
 package imj2.tools;
 
+import static imj2.tools.IMJTools.a8r8g8b8;
+import static imj2.tools.IMJTools.uint8;
 import static java.awt.event.InputEvent.SHIFT_DOWN_MASK;
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.util.Arrays.copyOfRange;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
+import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.swing.SwingTools.verticalSplit;
+import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
 import static pixel3d.PolygonTools.Z;
 
+import imj2.tools.ColorSeparationTest.RGBTransformer;
 import imj2.tools.Image2DComponent.Painter;
+import imj2.tools.PaletteBasedSegmentationTest.HistogramView.PointsUpdatedEvent;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
@@ -32,6 +39,7 @@ import java.util.TreeMap;
 
 import javax.swing.AbstractAction;
 import javax.swing.ImageIcon;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
@@ -45,9 +53,9 @@ import javax.swing.tree.TreeModel;
 
 import jgencode.primitivelists.DoubleList;
 import jgencode.primitivelists.IntList;
+
 import net.sourceforge.aprog.events.EventManager;
-import net.sourceforge.aprog.events.EventManager.AbstractEvent;
-import net.sourceforge.aprog.events.EventManager.Event;
+import net.sourceforge.aprog.events.EventManager.Event.Listener;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.TicToc;
@@ -73,22 +81,47 @@ public final class PaletteBasedSegmentationTest {
 		
 		final SimpleImageView imageView = new SimpleImageView();
 		final HistogramView histogramView = new HistogramView();
-		final GenericTree clustersEditor = new GenericTree("Clusters");
-		final JSplitPane splitPane = horizontalSplit(imageView, verticalSplit(clustersEditor, histogramView));
+		final JComboBox<? extends RGBTransformer> transformerSelector = new JComboBox<>(array(RGBTransformer.Predefined.ID, new NearestNeighborRGBQuantizer()));
+		final JSplitPane splitPane = horizontalSplit(imageView, verticalSplit(transformerSelector, scrollable(histogramView)));
 		
 		SwingTools.setCheckAWT(true);
 		
-		clustersEditor.getModel().addTreeModelListener(new UpdaterTreeModelListener() {
+		transformerSelector.addActionListener(new ActionListener() {
 			
 			@Override
-			public final void update(final TreeModelEvent event) {
+			public final void actionPerformed(final ActionEvent event) {
+				imageView.refreshBuffer();
+			}
+			
+		});
+		
+		EventManager.getInstance().addListener(histogramView, PointsUpdatedEvent.class, new Serializable() {
+			
+			@Listener
+			public final void segmentsUpdated(final PointsUpdatedEvent event) {
+				final Map<Integer, Collection<Integer>> clusters = ((NearestNeighborRGBQuantizer) transformerSelector.getItemAt(1)).getClusters();
+				
+				clusters.clear();
+				
+				final double[] points = histogramView.getUserPoints().toArray();
+				final double tx = +128.0;
+				final double ty = +128.0;
+				final double tz = -128.0;
+				final int n = points.length;
+				
+				for (int i = 0; i < n; i += 3) {
+					final Integer rgb = a8r8g8b8(0xFF
+							, uint8(points[i + X] - tx), uint8(points[i + Y] - ty), uint8(points[i + Z] - tz));
+					getOrCreate((Map) clusters, rgb, Factory.DefaultFactory.TREE_SET_FACTORY).add(rgb);
+				}
+				
 				imageView.refreshBuffer();
 			}
 			
 			/**
 			 * {@value}.
 			 */
-			private static final long serialVersionUID = -568519306296632304L;
+			private static final long serialVersionUID = -7179884216164528584L;
 			
 		});
 		
@@ -97,10 +130,7 @@ public final class PaletteBasedSegmentationTest {
 			@Override
 			public final void paint(final Graphics2D g, final SimpleImageView component,
 					final int width, final int height) {
-				final Map<Integer, Collection<Integer>> clusters = getClusters(clustersEditor);
-				
-				debugPrint(clusters);
-				
+				final RGBTransformer transformer = (RGBTransformer) transformerSelector.getSelectedItem();
 				final BufferedImage image = imageView.getImage();
 				final BufferedImage buffer = imageView.getBufferImage();
 				final int w = image.getWidth();
@@ -108,22 +138,7 @@ public final class PaletteBasedSegmentationTest {
 				
 				for (int y = 0; y < h; ++y) {
 					for (int x = 0; x < w; ++x) {
-						final int rgb = image.getRGB(x, y);
-						int bestCluster = rgb;
-						int bestDistance = Integer.MAX_VALUE;
-						
-						for (final Map.Entry<Integer, Collection<Integer>> entry : clusters.entrySet()) {
-							for (final Integer prototype : entry.getValue()) {
-								final int distance = distance1(rgb, prototype);
-								
-								if (distance < bestDistance) {
-									bestDistance = distance;
-									bestCluster = entry.getKey();
-								}
-							}
-						}
-						
-						buffer.setRGB(x, y, bestCluster);
+						buffer.setRGB(x, y, transformer.transform(image.getRGB(x, y)));
 					}
 				}
 				
@@ -334,6 +349,8 @@ public final class PaletteBasedSegmentationTest {
 						userPoints.addAll(this.getPoint(event, 0.0));
 						idUnderMouse[0] = userPoints.size() / 3;
 						
+						EventManager.getInstance().dispatch(HistogramView.this.new PointsUpdatedEvent());
+						
 						this.maybeAddUserSegment(event);
 						
 						this.lastMouseLocation.setLocation(event.getPoint());
@@ -354,6 +371,8 @@ public final class PaletteBasedSegmentationTest {
 						System.arraycopy(this.getPoint(event, tmp[Z]), 0, userPoints.toArray(), offset, 3);
 						
 						event.consume();
+						
+						EventManager.getInstance().dispatch(HistogramView.this.new PointsUpdatedEvent());
 						
 						{
 							boolean segmentsUpdated = false;
@@ -624,13 +643,37 @@ public final class PaletteBasedSegmentationTest {
 		}
 		
 		/**
-		 * @author codistmonk (creation 2014-04-30)
+		 * @author codistmonk (creation 2014-05-01)
 		 */
-		public final class SegmentsUpdatedEvent extends AbstractEvent<HistogramView> {
+		public abstract class AbstractEvent extends EventManager.AbstractEvent<HistogramView> {
 			
-			public SegmentsUpdatedEvent() {
+			protected AbstractEvent() {
 				super(HistogramView.this);
 			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = -7134443307604095575L;
+			
+		}
+		
+		/**
+		 * @author codistmonk (creation 2014-05-01)
+		 */
+		public final class PointsUpdatedEvent extends AbstractEvent {
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 563741454550991000L;
+			
+		}
+		
+		/**
+		 * @author codistmonk (creation 2014-04-30)
+		 */
+		public final class SegmentsUpdatedEvent extends AbstractEvent {
 			
 			/**
 			 * {@value}.
@@ -774,6 +817,48 @@ public final class PaletteBasedSegmentationTest {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -1429045406856434520L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-05-01)
+	 */
+	public static final class NearestNeighborRGBQuantizer implements RGBTransformer {
+		
+		private final Map<Integer, Collection<Integer>> clusters = new TreeMap<>();
+		
+		public final Map<Integer, Collection<Integer>> getClusters() {
+			return this.clusters;
+		}
+		
+		@Override
+		public final int transform(final int rgb) {
+			int result = rgb;
+			int bestDistance = Integer.MAX_VALUE;
+			
+			for (final Map.Entry<Integer, Collection<Integer>> entry : this.clusters.entrySet()) {
+				for (final Integer prototype : entry.getValue()) {
+					final int distance = distance1(rgb, prototype);
+					
+					if (distance < bestDistance) {
+						bestDistance = distance;
+						result = entry.getKey();
+					}
+				}
+			}
+			
+			return result;
+		}
+		
+		@Override
+		public final String toString() {
+			return this.getClass().getSimpleName();
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 7849106863112337513L;
 		
 	}
 	

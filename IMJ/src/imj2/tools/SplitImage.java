@@ -4,6 +4,7 @@ import static imj2.core.IMJCoreTools.lockCacheKey;
 import static imj2.core.IMJCoreTools.unlockCacheKey;
 import static imj2.tools.MultifileImage.setIdAttributes;
 import static java.lang.Math.min;
+import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.invoke;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
@@ -116,7 +117,7 @@ public final class SplitImage {
 					public final void run() {
 						final TicToc timer = new TicToc();
 						final String taskName = "Processing " + imageId + " (" + image.getWidth() + "x" + image.getHeight() + ")";
-						final long[][] histogram = IMJTools.instances(8,
+						final long[][] histogram = instances(8,
 								new InvokerAsFactory<long[]>(Array.class, "newInstance", long.class, 64));
 						
 						System.out.println(taskName + " date: " + new Date(timer.tic()));
