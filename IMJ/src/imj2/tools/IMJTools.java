@@ -3,11 +3,13 @@ package imj2.tools;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
+import imj2.core.ConcreteImage2D;
 import imj2.core.IMJCoreTools;
+import imj2.core.Image;
 import imj2.core.Image2D;
+import imj2.core.LinearIntImage;
 import imj2.tools.IMJTools.TileProcessor.Info;
 
 import java.awt.Rectangle;
@@ -17,7 +19,6 @@ import java.util.Iterator;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
-
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**
@@ -27,6 +28,11 @@ public final class IMJTools extends IMJCoreTools {
 	
 	private IMJTools() {
 		throw new IllegalInstantiationException();
+	}
+	
+	public static final ConcreteImage2D<LinearIntImage> newC4U8ConcreteImage2D(final int width, final int height) {
+		return new ConcreteImage2D<LinearIntImage>(new LinearIntImage(
+				"test", (long) width * height, Image.PredefinedChannels.C4_U8), width, height);
 	}
 	
 	public static final int a8gray888(final int alpha8, final int gray8) {
