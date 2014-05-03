@@ -152,7 +152,7 @@ public final class InteractiveClassifier {
 									// TODO set top right vertical marker
 									markersDone.incrementAndGet();
 									
-									if (w <= x + s) {
+									if (h <= y + s) {
 										// TODO set bottom right vertical marker
 										markersDone.incrementAndGet();
 									}
