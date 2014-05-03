@@ -2,7 +2,7 @@ package imj2.tools;
 
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
-import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
 import imj2.core.ConcreteImage2D;
@@ -22,6 +22,7 @@ import java.util.Iterator;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
+
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**
