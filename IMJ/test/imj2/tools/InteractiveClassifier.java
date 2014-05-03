@@ -1,9 +1,13 @@
 package imj2.tools;
 
+import static java.lang.Math.abs;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.debugError;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-
+import imj2.core.Image.Channels;
 import imj2.core.Image.Monochannel;
+import imj2.core.Image2D;
 import imj2.core.LinearPackedGrayImage;
 import imj2.core.TiledImage2D;
 import imj2.tools.IMJTools.TileProcessor;
@@ -257,6 +261,72 @@ public final class InteractiveClassifier {
 	
 	public static final int ceiling(final int a, final int b) {
 		return (a + b - 1) / b;
+	}
+	
+	public static final int getHorizontalOffsetOfLargestGradient(final Image2D image, final int x, final int y, final int s) {
+		final int w = image.getWidth();
+		final int xStart = x + 1;
+		final int xEnd = min(w, x + s);
+		int largestGradient = getGradient(image, xStart, y);
+		int result = 1;
+		
+		for (int xx = xStart; xx < xEnd; ++xx) {
+			final int gradient = getGradient(image, xx, y);
+			
+			if (largestGradient < gradient) {
+				largestGradient = gradient;
+				result = xx - xStart;
+			}
+		}
+		
+		return result;
+	}
+	
+	public static final int getVerticalOffsetOfLargestGradient(final Image2D image, final int x, final int y, final int s) {
+		final int h = image.getHeight();
+		final int yStart = y + 1;
+		final int yEnd = min(h, y + s);
+		int largestGradient = getGradient(image, x, yStart);
+		int result = 1;
+		
+		for (int yy = yStart; yy < yEnd; ++yy) {
+			final int gradient = getGradient(image, x, yy);
+			
+			if (largestGradient < gradient) {
+				largestGradient = gradient;
+				result = yy - yStart;
+			}
+		}
+		
+		return result;
+	}
+	
+	public static final int getGradient(final Image2D image, final int x, final int y) {
+		final int pixelValue = image.getPixelValue(x, y);
+		final Channels channels = image.getChannels();
+		final int channelCount = channels.getChannelCount();
+		final int w = image.getWidth();
+		final int h = image.getHeight();
+		final int xStart = max(0, x - 1);
+		final int xEnd = min(w, x + 1);
+		final int yStart = max(0, y - 1);
+		final int yEnd = min(h, y + 1);
+		int result = 0;
+		
+		for (int yi = yStart; yi < yEnd; ++yi) {
+			for (int xi = xStart; xi < xEnd; ++xi) {
+				if (xi != x || yi != y) {
+					final int neighborValue = image.getPixelValue(xi, yi);
+					
+					for (int channel = 0; channel < channelCount; ++channel) {
+						result += abs(channels.getChannelValue(pixelValue, channel)
+								- channels.getChannelValue(neighborValue, channel));
+					}
+				}
+			}
+		}
+		
+		return result;
 	}
 	
 }

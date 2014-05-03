@@ -15,7 +15,7 @@ public final class LinearPackedGrayImage extends Image.Abstract {
 	
 	private final long shiftedPixelMask;
 	
-	private long[] data;
+	private final long[] data;
 	
 	public LinearPackedGrayImage(final String id, final long pixelCount, final Channels channels) {
 		if (1 != channels.getChannelCount()) {
