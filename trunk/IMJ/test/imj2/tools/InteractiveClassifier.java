@@ -33,7 +33,7 @@ public final class InteractiveClassifier {
 			
 //			final TiledImage2D image = new LociBackedImage("../Libraries/images/svs/SYS08_A10_7414-005.svs");
 			final TiledImage2D image = (TiledImage2D) new MultifileImage(
-					"../Libraries/images/jpg/SYS08_A10_7414-005", "SYS08_A10_7414-005_lod0", null).getLODImage(11);
+					"../Libraries/images/jpg/SYS08_A10_7414-005", "SYS08_A10_7414-005_lod0", null).getLODImage(5);
 			
 			debugPrint("Loading image done in", timer.toc(), "ms");
 			debugPrint(image.getWidth(), image.getHeight(), image.getPixelCount());
@@ -42,7 +42,7 @@ public final class InteractiveClassifier {
 			
 			final int w = image.getWidth();
 			final int h = image.getHeight();
-			final int s = 40;
+			final int s = 1000;
 			
 			/*
 			 * <-------------------w------------------->
@@ -59,7 +59,7 @@ public final class InteractiveClassifier {
 			final long horizontalMarkers = (1L + ceiling(w - s / 2, s)) * (2L + ceiling(h - s / 2, s));
 			final long verticalMarkers = (2L + ceiling(w - s / 2, s)) * (1L + ceiling(h - s / 2, s));
 			final LinearPackedGrayImage segmentation = new LinearPackedGrayImage(""
-					, horizontalMarkers + verticalMarkers, new Monochannel(Integer.highestOneBit(s - 1)));
+					, horizontalMarkers + verticalMarkers, new Monochannel(Long.SIZE - Long.numberOfLeadingZeros(s - 1L)));
 			
 			debugPrint(segmentation.getPixelCount());
 			
@@ -74,8 +74,15 @@ public final class InteractiveClassifier {
 					
 					debugPrint("tile:", info.getTileX(), info.getTileY());
 					
-					for (int y = s / 2; y < y1; y += s) {
-						for (int x = s / 2; x < x1; x += s) {
+					/*
+					 * y0 <= s/2 + k s
+					 * <- y0 - s/2 <= k s
+					 * <- (y0 - s/2)/s <= k
+					 * <- k = ceil(y0-s/2,s)
+					 */
+					
+					for (int y = s / 2 + s * ceiling(y0 - s / 2, s); y < y1; y += s) {
+						for (int x = s / 2 + s * ceiling(x0 - s / 2, s); x < x1; x += s) {
 							debugPrint("segment:", x, y);
 						}
 					}
