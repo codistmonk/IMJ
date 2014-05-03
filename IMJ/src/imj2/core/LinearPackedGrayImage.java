@@ -13,7 +13,7 @@ public final class LinearPackedGrayImage extends Image.Abstract {
 	
 	private final int pixelsPerDatum;
 	
-	final int shiftedPixelMask;
+	private final long shiftedPixelMask;
 	
 	private long[] data;
 	
@@ -27,7 +27,7 @@ public final class LinearPackedGrayImage extends Image.Abstract {
 		this.pixelCount = pixelCount;
 		final int channelBitCount = channels.getChannelBitCount();
 		this.pixelsPerDatum = Long.SIZE / channelBitCount;
-		this.shiftedPixelMask = (~0) >> (Long.SIZE - channelBitCount);
+		this.shiftedPixelMask = (~0L) >>> (Long.SIZE - channelBitCount);
 		this.data = new long[(int) ((pixelCount + this.pixelsPerDatum - 1) / this.pixelsPerDatum)];
 	}
 	
@@ -57,7 +57,7 @@ public final class LinearPackedGrayImage extends Image.Abstract {
 		final int pixelShift = (int) (pixelIndex % this.pixelsPerDatum) * this.getChannels().getChannelBitCount();
 		final long datum = this.data[datumIndex];
 		
-		return (int) ((datum >> pixelShift) & this.shiftedPixelMask);
+		return (int) ((datum >>> pixelShift) & this.shiftedPixelMask);
 	}
 	
 	@Override
@@ -66,7 +66,7 @@ public final class LinearPackedGrayImage extends Image.Abstract {
 		final int pixelShift = (int) (pixelIndex % this.pixelsPerDatum) * this.getChannels().getChannelBitCount();
 		final long datum = this.data[datumIndex];
 		
-		this.data[datumIndex] = (datum & ((~this.shiftedPixelMask) << pixelShift))
+		this.data[datumIndex] = (datum & ~(this.shiftedPixelMask << pixelShift))
 				| ((pixelValue & this.shiftedPixelMask) << pixelShift);
 	}
 	
