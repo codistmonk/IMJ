@@ -1,16 +1,19 @@
 package imj2.tools;
 
+import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
+import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-
 import imj2.core.Image.Monochannel;
 import imj2.core.LinearPackedGrayImage;
 import imj2.core.TiledImage2D;
 import imj2.tools.IMJTools.TileProcessor;
 
 import java.util.Date;
+import java.util.concurrent.atomic.AtomicLong;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-05-03)
@@ -42,7 +45,7 @@ public final class InteractiveClassifier {
 			
 			final int w = image.getWidth();
 			final int h = image.getHeight();
-			final int s = 1000;
+			final int s = 1282;
 			
 			/*
 			 * <-------------------w------------------->
@@ -56,12 +59,19 @@ public final class InteractiveClassifier {
 			 * numberOfMarkers = 1+ceiling((w-s/2)/s)
 			 */
 			
-			final long horizontalMarkers = (1L + ceiling(w - s / 2, s)) * (2L + ceiling(h - s / 2, s));
-			final long verticalMarkers = (2L + ceiling(w - s / 2, s)) * (1L + ceiling(h - s / 2, s));
-			final LinearPackedGrayImage segmentation = new LinearPackedGrayImage(""
+			final int markersPerRow = 1 + ceiling(w - s / 2, s);
+			final int rows = 2 + ceiling(h - s / 2, s);
+			final long horizontalMarkers = (long) markersPerRow * rows;
+			final int markersPerColumn = 2 + ceiling(w - s / 2, s);
+			final int columns = 1 + ceiling(h - s / 2, s);
+			final long verticalMarkers = (long) markersPerColumn * columns;
+			final LinearPackedGrayImage markers = new LinearPackedGrayImage(""
 					, horizontalMarkers + verticalMarkers, new Monochannel(Long.SIZE - Long.numberOfLeadingZeros(s - 1L)));
+			final AtomicLong markersDone = new AtomicLong();
 			
-			debugPrint(segmentation.getPixelCount());
+			debugPrint("markersPerRow:", markersPerRow, "rows:", rows
+					, "markersPerColumn:", markersPerColumn, "columns:", columns
+					, "markers:", markers.getPixelCount());
 			
 			IMJTools.forEachTileIn(image, new TileProcessor() {
 				
@@ -72,7 +82,7 @@ public final class InteractiveClassifier {
 					final int x1 = info.getTileX() + info.getActualTileWidth() - 1;
 					final int y1 = info.getTileY() + info.getActualTileHeight() - 1;
 					
-					debugPrint("tile:", info.getTileX(), info.getTileY());
+					debugPrint("tile:", info.getTileX(), info.getTileY(), info.getActualTileWidth(), info.getActualTileHeight());
 					
 					/*
 					 * y0 <= s/2 + k s
@@ -82,8 +92,43 @@ public final class InteractiveClassifier {
 					 */
 					
 					for (int y = s / 2 + s * ceiling(y0 - s / 2, s); y < y1; y += s) {
+						final int row = ceiling(y - s / 2, s);
+						
 						for (int x = s / 2 + s * ceiling(x0 - s / 2, s); x < x1; x += s) {
-							debugPrint("segment:", x, y);
+							final int column = ceiling(x - s / 2, s);
+							
+							debugPrint("segment:", x, y, row, column);
+							
+							if (y == s / 2) {
+								// TODO set top left horizontal marker
+								markersDone.incrementAndGet();
+								
+								if (w <= x + s) {
+									// TODO set top right horizontal marker
+									markersDone.incrementAndGet();
+								}
+							}
+							
+							// TODO set left horizontal marker
+							markersDone.incrementAndGet();
+							
+							if (w <= x + s) {
+								// TODO set right horizontal marker
+								markersDone.incrementAndGet();
+							}
+							
+							if (h <= y + s) {
+								// TODO set bottom left horizontal marker
+								markersDone.incrementAndGet();
+								
+								if (w <= x + s) {
+									// TODO set bottom right horizontal marker
+									markersDone.incrementAndGet();
+								}
+							}
+							
+							// TODO set vertical markers
+							markersDone.incrementAndGet();
 						}
 					}
 				}
@@ -101,6 +146,11 @@ public final class InteractiveClassifier {
 			});
 			
 			debugPrint("Analyzing image done in", timer.toc(), "ms");
+			
+			if (markersDone.get() != markers.getPixelCount()) {
+				System.err.println(debug(DEBUG_STACK_OFFSET
+						, "expectedMarkers:", markers.getPixelCount(), "actualMarkers:", markersDone.get()));
+			}
 		}
 	}
 	
