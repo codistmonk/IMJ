@@ -53,13 +53,13 @@ public final class InteractiveClassifier {
 			 * <---s/2--><-----s-----><-----s-----><-----s----->
 			 * *---------0---*--------0------*-----0-----------*
 			 * 
-			 * numberOf("*") = 1+ceiling((w-s/2)/s)
+			 * numberOfMarkers = 1+ceiling((w-s/2)/s)
 			 */
 			
-			final LinearPackedGrayImage segmentation = new LinearPackedGrayImage(
-					"", (1L + ceiling(w - s / 2, s)) * (2L + ceiling(h - s / 2, s))
-					+ (2L + ceiling(w - s / 2, s)) * (1L + ceiling(h - s / 2, s))
-					, new Monochannel(Integer.highestOneBit(s - 1)));
+			final long horizontalMarkers = (1L + ceiling(w - s / 2, s)) * (2L + ceiling(h - s / 2, s));
+			final long verticalMarkers = (2L + ceiling(w - s / 2, s)) * (1L + ceiling(h - s / 2, s));
+			final LinearPackedGrayImage segmentation = new LinearPackedGrayImage(""
+					, horizontalMarkers + verticalMarkers, new Monochannel(Integer.highestOneBit(s - 1)));
 			
 			debugPrint(segmentation.getPixelCount());
 			
@@ -67,8 +67,18 @@ public final class InteractiveClassifier {
 				
 				@Override
 				public final void pixel(final Info info) {
-					// TODO Auto-generated method stub
+					final int x0 = info.getTileX() + info.getPixelXInTile();
+					final int y0 = info.getTileY() + info.getPixelYInTile();
+					final int x1 = info.getTileX() + info.getActualTileWidth() - 1;
+					final int y1 = info.getTileY() + info.getActualTileHeight() - 1;
 					
+					debugPrint("tile:", info.getTileX(), info.getTileY());
+					
+					for (int y = s / 2; y < y1; y += s) {
+						for (int x = s / 2; x < x1; x += s) {
+							debugPrint("segment:", x, y);
+						}
+					}
 				}
 				
 				@Override
