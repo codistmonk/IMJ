@@ -32,7 +32,8 @@ public final class InteractiveClassifier {
 			debugPrint("Loading image started...", new Date(timer.tic()));
 			
 //			final TiledImage2D image = new LociBackedImage("../Libraries/images/svs/SYS08_A10_7414-005.svs");
-			final TiledImage2D image = new MultifileImage("../Libraries/images/jpg/SYS08_A10_7414-005", "SYS08_A10_7414-005_lod0", null);
+			final TiledImage2D image = (TiledImage2D) new MultifileImage(
+					"../Libraries/images/jpg/SYS08_A10_7414-005", "SYS08_A10_7414-005_lod0", null).getLODImage(11);
 			
 			debugPrint("Loading image done in", timer.toc(), "ms");
 			debugPrint(image.getWidth(), image.getHeight(), image.getPixelCount());
@@ -41,9 +42,24 @@ public final class InteractiveClassifier {
 			
 			final int w = image.getWidth();
 			final int h = image.getHeight();
-			final int s = 8;
+			final int s = 40;
+			
+			/*
+			 * <-------------------w------------------->
+			 * <---s/2--><-----s-----><-----s----->
+			 * *---------0---*--------0------*-----0---*
+			 * 
+			 * <-----------------------w----------------------->
+			 * <---s/2--><-----s-----><-----s-----><-----s----->
+			 * *---------0---*--------0------*-----0-----------*
+			 * 
+			 * numberOf("*") = 1+ceiling((w-s/2)/s)
+			 */
+			
 			final LinearPackedGrayImage segmentation = new LinearPackedGrayImage(
-					"", (2L + w / s - 1L) * (2L + h / s) + (2L + w / s) * (2L + h / s - 1L), new Monochannel(Integer.highestOneBit(s - 1)));
+					"", (1L + ceiling(w - s / 2, s)) * (2L + ceiling(h - s / 2, s))
+					+ (2L + ceiling(w - s / 2, s)) * (1L + ceiling(h - s / 2, s))
+					, new Monochannel(Integer.highestOneBit(s - 1)));
 			
 			debugPrint(segmentation.getPixelCount());
 			
@@ -69,6 +85,10 @@ public final class InteractiveClassifier {
 			
 			debugPrint("Analyzing image done in", timer.toc(), "ms");
 		}
+	}
+	
+	public static final int ceiling(final int a, final int b) {
+		return (a + b - 1) / b;
 	}
 	
 }
