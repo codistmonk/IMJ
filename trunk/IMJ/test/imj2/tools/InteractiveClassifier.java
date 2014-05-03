@@ -1,8 +1,8 @@
 package imj2.tools;
 
-import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
-import static net.sourceforge.aprog.tools.Tools.debug;
+import static net.sourceforge.aprog.tools.Tools.debugError;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+
 import imj2.core.Image.Monochannel;
 import imj2.core.LinearPackedGrayImage;
 import imj2.core.TiledImage2D;
@@ -13,7 +13,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-05-03)
@@ -177,8 +176,7 @@ public final class InteractiveClassifier {
 			debugPrint("Analyzing image done in", timer.toc(), "ms");
 			
 			if (markersDone.get() != markers.getPixelCount()) {
-				System.err.println(debug(DEBUG_STACK_OFFSET
-						, "expectedMarkers:", markers.getPixelCount(), "actualMarkers:", markersDone.get()));
+				debugError("expectedMarkers:", markers.getPixelCount(), "actualMarkers:", markersDone.get());
 			}
 		}
 	}
