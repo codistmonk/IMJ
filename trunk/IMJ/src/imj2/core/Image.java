@@ -56,6 +56,39 @@ public abstract interface Image extends Serializable {
 	}
 	
 	/**
+	 * @author codistmonk (creation 2014-05-03)
+	 */
+	public static final class Monochannel implements Channels {
+		
+		private final int bitCount;
+		
+		public Monochannel(final int bitCount) {
+			this.bitCount = bitCount;
+		}
+		
+		@Override
+		public final int getChannelCount() {
+			return 1;
+		}
+		
+		@Override
+		public final int getChannelBitCount() {
+			return this.bitCount;
+		}
+		
+		@Override
+		public final int getChannelValue(final int pixelValue, final int channelIndex) {
+			return PredefinedChannels.C1_U1.getChannelValue(pixelValue, channelIndex);
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -7375032451555035569L;
+		
+	}
+	
+	/**
 	 * @author codistmonk (creation 2013-08-04)
 	 */
 	public static enum PredefinedChannels implements Channels {

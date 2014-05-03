@@ -10,8 +10,11 @@ import imj2.core.IMJCoreTools;
 import imj2.core.Image;
 import imj2.core.Image2D;
 import imj2.core.LinearIntImage;
+import imj2.core.TiledImage2D;
 import imj2.tools.IMJTools.TileProcessor.Info;
 
+import java.awt.Component;
+import java.awt.Container;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
@@ -28,6 +31,24 @@ public final class IMJTools extends IMJCoreTools {
 	
 	private IMJTools() {
 		throw new IllegalInstantiationException();
+	}
+	
+	public static final <C extends Component> C findComponent(final Container parent, final Class<C> componentClass) {
+		if (componentClass.isInstance(parent)) {
+			return (C) parent;
+		}
+		
+		for (final Component child : parent.getComponents()) {
+			if (child instanceof Container) {
+				final C maybeResult = findComponent((Container) child, componentClass);
+				
+				if (maybeResult != null) {
+					return maybeResult;
+				}
+			}
+		}
+		
+		return null;
 	}
 	
 	public static final ConcreteImage2D<LinearIntImage> newC4U8ConcreteImage2D(final int width, final int height) {
@@ -248,27 +269,50 @@ public final class IMJTools extends IMJCoreTools {
 		};
 	}
 	
+	public static final void forEachTileIn(final TiledImage2D image, final TileProcessor process) {
+		forEachTile(image.getWidth(), image.getHeight(), image.getOptimalTileWidth(), image.getOptimalTileHeight(), process);
+	}
+	
 	public static final void forEachTile(final int imageWidth, final int imageHeight,
 			final int tileWidth, final int tileHeight, final TileProcessor process) {
-		try {
-			for (int tileY = 0; tileY < imageHeight; tileY += tileHeight) {
-				final int h = min(tileHeight, imageHeight - tileY);
+		for (int tileY = 0; tileY < imageHeight; tileY += tileHeight) {
+			final int h = min(tileHeight, imageHeight - tileY);
+			
+			for (int tileX = 0; tileX < imageWidth; tileX += tileWidth) {
+				final int w = min(tileWidth, imageWidth - tileX);
 				
-				for (int tileX = 0; tileX < imageWidth; tileX += tileWidth) {
-					final int w = min(tileWidth, imageWidth - tileX);
-					
-					for (int y = 0; y < h; ++y) {
-						for (int x = 0; x < w; ++x) {
-							process.pixel(new Info(tileX, tileY, w, h, x, y));
-						}
+				process.pixel(new Info(tileX, tileY, w, h, 0, 0));
+			}
+		}
+	}
+	
+	public static final void forEachPixelInEachTile(final int imageWidth, final int imageHeight,
+			final int tileWidth, final int tileHeight, final TileProcessor process) {
+		forEachTile(imageWidth, imageHeight, tileWidth, tileHeight, new TileProcessor() {
+			
+			@Override
+			public final void pixel(final Info info) {
+				final int w = info.getActualTileWidth();
+				final int h = info.getActualTileHeight();
+				
+				for (int y = 0; y < h; ++y) {
+					for (int x = 0; x < w; ++x) {
+						process.pixel(new Info(info.getTileX(), info.getTileY(), w, h, x, y));
 					}
-					
-					process.endOfTile();
 				}
 			}
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
+			
+			@Override
+			public final void endOfTile() {
+				process.endOfTile();
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 3431410834328760116L;
+			
+		});
 	}
 	
 	/**
