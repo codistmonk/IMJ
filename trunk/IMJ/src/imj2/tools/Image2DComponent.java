@@ -1,11 +1,11 @@
 package imj2.tools;
 
+import static imj2.tools.IMJTools.newC4U8ConcreteImage2D;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.synchronizedMap;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
 import imj2.core.ScaledImage2D;
@@ -13,12 +13,14 @@ import imj2.core.ScaledImage2D;
 import java.awt.Adjustable;
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
+import java.awt.Window;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 import java.awt.event.ComponentAdapter;
@@ -537,8 +539,12 @@ public final class Image2DComponent extends JComponent {
 	 */
 	private static final long serialVersionUID = 4189273248039238064L;
 	
-	public static final void show(final Image2D image) {
-		final Component[] component = { null };
+	public static final Window showDefaultImage() {
+		return show(newC4U8ConcreteImage2D(1, 1));
+	}
+	
+	public static final Window show(final Image2D image) {
+		final Image2DComponent[] component = { null };
 		
 		try {
 			SwingUtilities.invokeAndWait(new Runnable() {
@@ -546,6 +552,20 @@ public final class Image2DComponent extends JComponent {
 				@Override
 				public final void run() {
 					component[0] = new Image2DComponent(image);
+					component[0].setDropTarget(new DropTarget() {
+						
+						@Override
+						public final synchronized void drop(final DropTargetDropEvent event) {
+							component[0].setImage(new LociBackedImage(SwingTools.getFiles(event).get(0).toString()));
+							component[0].updateView();
+						}
+						
+						/**
+						 * {@value}.
+						 */
+						private static final long serialVersionUID = 1282630245529197515L;
+						
+					});
 				}
 				
 			});
@@ -553,7 +573,7 @@ public final class Image2DComponent extends JComponent {
 			throw unchecked(exception);
 		}
 		
-		SwingTools.show(component[0], image.getId(), true);
+		return SwingTools.show(component[0], image.getId(), false);
 	}
 	
 	/**
