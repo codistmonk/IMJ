@@ -62,8 +62,8 @@ public final class InteractiveClassifier {
 			final int markersPerRow = 1 + ceiling(w - s / 2, s);
 			final int rows = 2 + ceiling(h - s / 2, s);
 			final long horizontalMarkers = (long) markersPerRow * rows;
-			final int markersPerColumn = 2 + ceiling(w - s / 2, s);
-			final int columns = 1 + ceiling(h - s / 2, s);
+			final int markersPerColumn = 1 + ceiling(h - s / 2, s);
+			final int columns = 2 + ceiling(w - s / 2, s);
 			final long verticalMarkers = (long) markersPerColumn * columns;
 			final LinearPackedGrayImage markers = new LinearPackedGrayImage(""
 					, horizontalMarkers + verticalMarkers, new Monochannel(Long.SIZE - Long.numberOfLeadingZeros(s - 1L)));
@@ -99,36 +99,65 @@ public final class InteractiveClassifier {
 							
 							debugPrint("segment:", x, y, row, column);
 							
-							if (y == s / 2) {
-								// TODO set top left horizontal marker
+							{
+								if (y == s / 2) {
+									// TODO set top left horizontal marker
+									markersDone.incrementAndGet();
+									
+									if (w <= x + s) {
+										// TODO set top right horizontal marker
+										markersDone.incrementAndGet();
+									}
+								}
+								
+								// TODO set left horizontal marker
 								markersDone.incrementAndGet();
 								
 								if (w <= x + s) {
-									// TODO set top right horizontal marker
+									// TODO set right horizontal marker
 									markersDone.incrementAndGet();
+								}
+								
+								if (h <= y + s) {
+									// TODO set bottom left horizontal marker
+									markersDone.incrementAndGet();
+									
+									if (w <= x + s) {
+										// TODO set bottom right horizontal marker
+										markersDone.incrementAndGet();
+									}
 								}
 							}
 							
-							// TODO set left horizontal marker
-							markersDone.incrementAndGet();
-							
-							if (w <= x + s) {
-								// TODO set right horizontal marker
-								markersDone.incrementAndGet();
-							}
-							
-							if (h <= y + s) {
-								// TODO set bottom left horizontal marker
+							{
+								if (x == s / 2) {
+									// TODO set top left vertical marker
+									markersDone.incrementAndGet();
+									
+									if (h <= y + s) {
+										// TODO set bottom left vertical marker
+										markersDone.incrementAndGet();
+									}
+								}
+								
+								// TODO set top vertical marker
 								markersDone.incrementAndGet();
 								
-								if (w <= x + s) {
-									// TODO set bottom right horizontal marker
+								if (h <= y + s) {
+									// TODO set bottom vertical marker
 									markersDone.incrementAndGet();
 								}
+								
+								if (w <= x + s) {
+									// TODO set top right vertical marker
+									markersDone.incrementAndGet();
+									
+									if (w <= x + s) {
+										// TODO set bottom right vertical marker
+										markersDone.incrementAndGet();
+									}
+								}
 							}
-							
-							// TODO set vertical markers
-							markersDone.incrementAndGet();
 						}
 					}
 				}
