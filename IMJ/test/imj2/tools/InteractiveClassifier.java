@@ -65,8 +65,6 @@ public final class InteractiveClassifier {
 					this.delimitersBuilder.setDelimiters(this.delimiters
 							, box.x, box.y, box.x + box.width, box.y + box.height);
 					
-					g.setColor(Color.RED);
-					
 					final int tx = -component.getXInImage(0);
 					final int ty = -component.getYInImage(0);
 					
@@ -75,6 +73,18 @@ public final class InteractiveClassifier {
 						
 						@Override
 						public final void segment(final int x, final int y, final int row, final int column) {
+							final int northY = delimitersBuilder.getSegmentNorthY(delimiters, x, y, row, column);
+							final int westX = delimitersBuilder.getSegmentWestX(delimiters, x, y, row, column);
+							final int eastX = delimitersBuilder.getSegmentEastX(delimiters, x, y, row, column);
+							final int southY = delimitersBuilder.getSegmentSouthY(delimiters, x, y, row, column);
+							
+							g.setColor(Color.BLUE);
+							g.drawOval(x - 2 + tx, northY - 2 + ty, 4, 4);
+							g.drawOval(westX - 2 + tx, y - 2 + ty, 4, 4);
+							g.drawOval(eastX - 2 + tx, y - 2 + ty, 4, 4);
+							g.drawOval(x - 2 + tx, southY - 2 + ty, 4, 4);
+							
+							g.setColor(Color.RED);
 							g.drawOval(x - 2 + tx, y - 2 + ty, 4, 4);
 						}
 						
@@ -260,6 +270,38 @@ public final class InteractiveClassifier {
 					process.segment(x, y, row, column);
 				}
 			}
+		}
+		
+		public final int getSegmentNorthY(final LinearPackedGrayImage delimiters, final int x, final int y, final int row, final int column) {
+			if (row == 1) {
+				return 0;
+			}
+			
+			final long delimiterIndex = this.horizontalDelimiters + column * this.delimitersPerColumn + row - 1L;
+			
+			return y - this.s + delimiters.getPixelValue(delimiterIndex);
+		}
+		
+		public final int getSegmentWestX(final LinearPackedGrayImage delimiters, final int x, final int y, final int row, final int column) {
+			if (column == 1) {
+				return 0;
+			}
+			
+			final long delimiterIndex = row * this.delimitersPerRow + column - 1L;
+			
+			return x - this.s + delimiters.getPixelValue(delimiterIndex);
+		}
+		
+		public final int getSegmentEastX(final LinearPackedGrayImage delimiters, final int x, final int y, final int row, final int column) {
+			final long delimiterIndex = row * this.delimitersPerRow + column;
+			
+			return x + delimiters.getPixelValue(delimiterIndex);
+		}
+		
+		public final int getSegmentSouthY(final LinearPackedGrayImage delimiters, final int x, final int y, final int row, final int column) {
+			final long delimiterIndex = this.horizontalDelimiters + column * this.delimitersPerColumn + row;
+			
+			return y + delimiters.getPixelValue(delimiterIndex);
 		}
 		
 		public final void check(final LinearPackedGrayImage delimiters) {
