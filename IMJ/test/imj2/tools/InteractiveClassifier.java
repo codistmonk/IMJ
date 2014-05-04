@@ -314,6 +314,17 @@ public final class InteractiveClassifier {
 		}
 		
 		public final Point getSegmentNorthWest(final LinearPackedGrayImage delimiters, final int x, final int y, final int row, final int column) {
+			/*
+			 *  0--NNW-0-NNE--0
+			 *  |      |      |
+			 * WNW NW  N  NE ENE
+			 *  |      |      |
+			 *  0---W--0--E---0
+			 *  |      |      |
+			 * WSW SW  S  SE ESE
+			 *  |      |      |
+			 *  0--SSW-0-SSE--0
+			 */
 			final int[] north = { x, this.getSegmentNorthY(delimiters, x, y, row, column), 1 };
 			final int[] west = { this.getSegmentWestX(delimiters, x, y, row, column), y, 1 };
 			final int westNorthWestX = max(0, x - this.s);
@@ -328,10 +339,21 @@ public final class InteractiveClassifier {
 		}
 		
 		public final Point getSegmentNorthEast(final LinearPackedGrayImage delimiters, final int x, final int y, final int row, final int column) {
+			/*
+			 *  0--NNW-0-NNE--0
+			 *  |      |      |
+			 * WNW NW  N  NE ENE
+			 *  |      |      |
+			 *  0---W--0--E---0
+			 *  |      |      |
+			 * WSW SW  S  SE ESE
+			 *  |      |      |
+			 *  0--SSW-0-SSE--0
+			 */
 			final int[] north = { x, this.getSegmentNorthY(delimiters, x, y, row, column), 1 };
 			final int[] east = { this.getSegmentEastX(delimiters, x, y, row, column), y, 1 };
 			final int eastNorthEastX = min(this.w - 1, x + this.s);
-			final int[] eastNorthEast = { eastNorthEastX, this.getSegmentNorthY(delimiters, eastNorthEastX, east[Y], row, column - 1), 1 };
+			final int[] eastNorthEast = { eastNorthEastX, this.getSegmentNorthY(delimiters, eastNorthEastX, east[Y], row, column + 1), 1 };
 			final int northNorthEastY = max(0, y - this.s);
 			final int[] northNorthEast = { this.getSegmentEastX(delimiters, north[X], northNorthEastY, row - 1, column), northNorthEastY, 1 };
 			final int[] eastToNorthNorthEast = cross3(east, northNorthEast, new int[3]);
