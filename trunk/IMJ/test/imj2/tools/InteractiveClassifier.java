@@ -13,6 +13,7 @@ import imj2.core.TiledImage2D;
 import imj2.tools.IMJTools.TileProcessor;
 import imj2.tools.Image2DComponent.Painter;
 
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.Window;
@@ -63,6 +64,26 @@ public final class InteractiveClassifier {
 					
 					this.delimitersBuilder.setDelimiters(this.delimiters
 							, box.x, box.y, box.x + box.width, box.y + box.height);
+					
+					g.setColor(Color.RED);
+					
+					final int tx = -component.getXInImage(0);
+					final int ty = -component.getYInImage(0);
+					
+					this.delimitersBuilder.processSegments(box.x, box.y
+							, box.x + box.width, box.y + box.height, new SegmentProcessor() {
+						
+						@Override
+						public final void segment(final int x, final int y, final int row, final int column) {
+							g.drawOval(x - 2 + tx, y - 2 + ty, 4, 4);
+						}
+						
+						/**
+						 * {value}.
+						 */
+						private static final long serialVersionUID = 3851222531284298589L;
+						
+					});
 				}
 				
 				/**
@@ -203,7 +224,7 @@ public final class InteractiveClassifier {
 		
 		public final void setDelimiters(final LinearPackedGrayImage delimiters
 				, final int xStart, final int yStart, final int xEnd, final int yEnd) {
-			this.processSegments(delimiters, xStart, yStart, xEnd, yEnd, new SegmentProcessor() {
+			this.processSegments(xStart, yStart, xEnd, yEnd, new SegmentProcessor() {
 				
 				@Override
 				public final void segment(final int x, final int y, final int row, final int column) {
@@ -221,9 +242,8 @@ public final class InteractiveClassifier {
 			});
 		}
 		
-		public final void processSegments(final LinearPackedGrayImage delimiters
-				, final int xStart, final int yStart, final int xEnd, final int yEnd,
-				final SegmentProcessor process) {
+		public final void processSegments(final int xStart, final int yStart
+				, final int xEnd, final int yEnd, final SegmentProcessor process) {
 			/*
 			 * y0 <= s/2 + k s
 			 * <- y0 - s/2 <= k s
