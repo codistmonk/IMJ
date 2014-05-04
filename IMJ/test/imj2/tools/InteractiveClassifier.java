@@ -60,13 +60,11 @@ public final class InteractiveClassifier {
 					final Image2D image = component.getImage();
 					
 					if (this.delimitersBuilder == null || this.delimitersBuilder.getImage() != image) {
-						this.delimitersBuilder = new DelimitersBuilder(image, 128);
+						this.delimitersBuilder = new DelimitersBuilder(image, 16);
 						this.delimiters = this.delimitersBuilder.newEmptyDelimiters();
 					}
 					
 					final Rectangle box = component.getVisibleBoxInImage();
-					
-					debugPrint(box);
 					
 					this.delimitersBuilder.setDelimiters(this.delimiters
 							, box.x, box.y, box.x + box.width, box.y + box.height);
@@ -83,21 +81,21 @@ public final class InteractiveClassifier {
 							final int westX = delimitersBuilder.getSegmentWestX(delimiters, x, y, row, column);
 							final int eastX = delimitersBuilder.getSegmentEastX(delimiters, x, y, row, column);
 							final int southY = delimitersBuilder.getSegmentSouthY(delimiters, x, y, row, column);
+							final int r = 1;
 							
-							g.setColor(Color.GREEN);
-							g.drawOval(x - 2 + tx, northY - 2 + ty, 4, 4);
-							g.drawOval(westX - 2 + tx, y - 2 + ty, 4, 4);
-							g.drawOval(eastX - 2 + tx, y - 2 + ty, 4, 4);
-							g.drawOval(x - 2 + tx, southY - 2 + ty, 4, 4);
-							
-							g.setColor(Color.RED);
-							g.drawOval(x - 2 + tx, y - 2 + ty, 4, 4);
+							g.setColor(Color.CYAN);
+							g.drawOval(x - r + tx, y - r + ty, 2 * r, 2 * r);
 							
 							final Polygon polygon = segmentToPolygon(delimiters, delimitersBuilder, x, y, row, column);
-							
 							polygon.translate(tx, ty);
-							
+							g.setColor(Color.RED);
 							g.drawPolygon(polygon);
+							
+//							g.setColor(Color.GREEN);
+//							g.drawOval(x - r + tx, northY - r + ty, 2 * r, 2 * r);
+//							g.drawOval(westX - r + tx, y - r + ty, 2 * r, 2 * r);
+//							g.drawOval(eastX - r + tx, y - r + ty, 2 * r, 2 * r);
+//							g.drawOval(x - r + tx, southY - r + ty, 2 * r, 2 * r);
 						}
 						
 						/**
@@ -146,7 +144,9 @@ public final class InteractiveClassifier {
 		result.addPoint(x, delimitersBuilder.getSegmentNorthY(delimiters, x, y, row, column));
 		addTo(result, delimitersBuilder.getSegmentNorthWest(delimiters, x, y, row, column));
 		result.addPoint(delimitersBuilder.getSegmentWestX(delimiters, x, y, row, column), y);
+		addTo(result, delimitersBuilder.getSegmentSouthWest(delimiters, x, y, row, column));
 		result.addPoint(x, delimitersBuilder.getSegmentSouthY(delimiters, x, y, row, column));
+		addTo(result, delimitersBuilder.getSegmentSouthEast(delimiters, x, y, row, column));
 		result.addPoint(delimitersBuilder.getSegmentEastX(delimiters, x, y, row, column), y);
 		addTo(result, delimitersBuilder.getSegmentNorthEast(delimiters, x, y, row, column));
 		
@@ -313,17 +313,18 @@ public final class InteractiveClassifier {
 			return y - this.s + delimiters.getPixelValue(delimiterIndex);
 		}
 		
-		public final Point getSegmentNorthWest(final LinearPackedGrayImage delimiters, final int x, final int y, final int row, final int column) {
+		public final Point getSegmentNorthWest(final LinearPackedGrayImage delimiters
+				, final int x, final int y, final int row, final int column) {
 			/*
-			 *  0--NNW-0-NNE--0
-			 *  |      |      |
-			 * WNW NW  N  NE ENE
-			 *  |      |      |
-			 *  0---W--0--E---0
-			 *  |      |      |
-			 * WSW SW  S  SE ESE
-			 *  |      |      |
-			 *  0--SSW-0-SSE--0
+			 *  0--NNW--0--NNE--0
+			 *  |       |       |
+			 * WNW  NW  N  NE  ENE
+			 *  |       |       |
+			 *  0---W---0---E---0
+			 *  |       |       |
+			 * WSW  SW  S  SE  ESE
+			 *  |       |       |
+			 *  0--SSW--0--SSE--0
 			 */
 			final int[] north = { x, this.getSegmentNorthY(delimiters, x, y, row, column), 1 };
 			final int[] west = { this.getSegmentWestX(delimiters, x, y, row, column), y, 1 };
@@ -338,17 +339,18 @@ public final class InteractiveClassifier {
 			return unscale2(northWest);
 		}
 		
-		public final Point getSegmentNorthEast(final LinearPackedGrayImage delimiters, final int x, final int y, final int row, final int column) {
+		public final Point getSegmentNorthEast(final LinearPackedGrayImage delimiters
+				, final int x, final int y, final int row, final int column) {
 			/*
-			 *  0--NNW-0-NNE--0
-			 *  |      |      |
-			 * WNW NW  N  NE ENE
-			 *  |      |      |
-			 *  0---W--0--E---0
-			 *  |      |      |
-			 * WSW SW  S  SE ESE
-			 *  |      |      |
-			 *  0--SSW-0-SSE--0
+			 *  0--NNW--0--NNE--0
+			 *  |       |       |
+			 * WNW  NW  N  NE  ENE
+			 *  |       |       |
+			 *  0---W---0---E---0
+			 *  |       |       |
+			 * WSW  SW  S  SE  ESE
+			 *  |       |       |
+			 *  0--SSW--0--SSE--0
 			 */
 			final int[] north = { x, this.getSegmentNorthY(delimiters, x, y, row, column), 1 };
 			final int[] east = { this.getSegmentEastX(delimiters, x, y, row, column), y, 1 };
@@ -363,8 +365,55 @@ public final class InteractiveClassifier {
 			return unscale2(northEast);
 		}
 		
-		public static final Point unscale2(final int[] xyw) {
-			return new Point(xyw[X] / xyw[Z], xyw[Y] / xyw[Z]);
+		public final Point getSegmentSouthWest(final LinearPackedGrayImage delimiters
+				, final int x, final int y, final int row, final int column) {
+			/*
+			 *  0--NNW--0--NNE--0
+			 *  |       |       |
+			 * WNW  NW  N  NE  ENE
+			 *  |       |       |
+			 *  0---W---0---E---0
+			 *  |       |       |
+			 * WSW  SW  S  SE  ESE
+			 *  |       |       |
+			 *  0--SSW--0--SSE--0
+			 */
+			final int[] south = { x, this.getSegmentSouthY(delimiters, x, y, row, column), 1 };
+			final int[] west = { this.getSegmentWestX(delimiters, x, y, row, column), y, 1 };
+			final int westSouthWestX = max(0, x - this.s);
+			final int[] westSouthWest = { westSouthWestX, this.getSegmentSouthY(delimiters, westSouthWestX, west[Y], row, column - 1), 1 };
+			final int southSouthWestY = min(this.h - 1, y + this.s);
+			final int[] southSouthWest = { this.getSegmentWestX(delimiters, south[X], southSouthWestY, row + 1, column), southSouthWestY, 1 };
+			final int[] westToSouthSouthWest = cross3(west, southSouthWest, new int[3]);
+			final int[] southToWestSouthWest = cross3(south, westSouthWest, new int[3]);
+			final int[] southWest = cross3(westToSouthSouthWest, southToWestSouthWest, new int[3]);
+			
+			return unscale2(southWest);
+		}
+		
+		public final Point getSegmentSouthEast(final LinearPackedGrayImage delimiters, final int x, final int y, final int row, final int column) {
+			/*
+			 *  0--NNW--0--NNE--0
+			 *  |       |       |
+			 * WNW  NW  N  NE  ENE
+			 *  |       |       |
+			 *  0---W---0---E---0
+			 *  |       |       |
+			 * WSW  SW  S  SE  ESE
+			 *  |       |       |
+			 *  0--SSW--0--SSE--0
+			 */
+			final int[] south = { x, this.getSegmentSouthY(delimiters, x, y, row, column), 1 };
+			final int[] east = { this.getSegmentEastX(delimiters, x, y, row, column), y, 1 };
+			final int eastSouthEastX = min(this.w - 1, x + this.s);
+			final int[] eastSouthEast = { eastSouthEastX, this.getSegmentSouthY(delimiters, eastSouthEastX, east[Y], row, column + 1), 1 };
+			final int southSouthEastY = min(this.h - 1, y + this.s);
+			final int[] southSouthEast = { this.getSegmentEastX(delimiters, south[X], southSouthEastY, row + 1, column), southSouthEastY, 1 };
+			final int[] eastToSouthSouthEast = cross3(east, southSouthEast, new int[3]);
+			final int[] southToEastSouthEast = cross3(south, eastSouthEast, new int[3]);
+			final int[] southEast = cross3(eastToSouthSouthEast, southToEastSouthEast, new int[3]);
+			
+			return unscale2(southEast);
 		}
 		
 		public final int getSegmentWestX(final LinearPackedGrayImage delimiters, final int x, final int y, final int row, final int column) {
@@ -559,6 +608,10 @@ public final class InteractiveClassifier {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = 2680059399437526583L;
+		
+		public static final Point unscale2(final int[] xyw) {
+			return new Point(xyw[X] / xyw[Z], xyw[Y] / xyw[Z]);
+		}
 		
 		public static final int[] cross3(final int[] xyz1, final int[] xyz2, final int[] result) {
 			final int x = det(xyz1[Y], xyz1[Z], xyz2[Y], xyz2[Z]);
