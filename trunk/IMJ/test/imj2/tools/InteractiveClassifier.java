@@ -39,7 +39,7 @@ public final class InteractiveClassifier {
 			
 //			final TiledImage2D image = new LociBackedImage("../Libraries/images/svs/SYS08_A10_7414-005.svs");
 			final TiledImage2D image = (TiledImage2D) new MultifileImage(
-					"../Libraries/images/jpg/SYS08_A10_7414-005", "SYS08_A10_7414-005_lod0", null).getLODImage(5);
+					"../Libraries/images/jpg/SYS08_A10_7414-005", "SYS08_A10_7414-005_lod0", null).getLODImage(0);
 			
 			debugPrint("Loading image done in", timer.toc(), "ms");
 			debugPrint(image.getWidth(), image.getHeight(), image.getPixelCount());
@@ -48,7 +48,7 @@ public final class InteractiveClassifier {
 			
 			final int w = image.getWidth();
 			final int h = image.getHeight();
-			final int s = 1282;
+			final int s = 32;
 			
 			/*
 			 * <-------------------w------------------->
@@ -101,13 +101,12 @@ public final class InteractiveClassifier {
 						for (int x = s / 2 + s * ceiling(x0 - s / 2, s); x < x1; x += s) {
 							final int column = 1 + ceiling(x - s / 2, s);
 							
-							debugPrint("segment:", x, y, row, column);
+//							debugPrint("segment:", x, y, row, column);
 							
 							{
 								if (y == s / 2) {
 									{
 										final long markerIndex = (row - 1L) * markersPerRow + column - 1L;
-										debugPrint("horizontalMarker:", markerIndex);
 										
 										if (column == 1) {
 											markers.setPixelValue(markerIndex, 0);
@@ -115,22 +114,18 @@ public final class InteractiveClassifier {
 											markers.setPixelValue(markerIndex, getHorizontalOffsetOfLargestGradient(image, x - s, 0, s));
 										}
 										
-										debugPrint("value:", markers.getPixelValue(markerIndex));
 										markersDone.incrementAndGet();
 									}
 									
 									if (w <= x + s) {
 										final long markerIndex = (row - 1L) * markersPerRow + column;
-										debugPrint("horizontalMarker:", markerIndex);
 										markers.setPixelValue(markerIndex, w - 1 - x);
-										debugPrint("value:", markers.getPixelValue(markerIndex));
 										markersDone.incrementAndGet();
 									}
 								}
 								
 								{
 									final long markerIndex = row * markersPerRow + column - 1L;
-									debugPrint("horizontalMarker:", markerIndex);
 									
 									if (column == 1) {
 										markers.setPixelValue(markerIndex, 0);
@@ -138,22 +133,18 @@ public final class InteractiveClassifier {
 										markers.setPixelValue(markerIndex, getHorizontalOffsetOfLargestGradient(image, x - s, y, s));
 									}
 									
-									debugPrint("value:", markers.getPixelValue(markerIndex));
 									markersDone.incrementAndGet();
 								}
 								
 								if (w <= x + s) {
 									final long markerIndex = row * markersPerRow + column;
-									debugPrint("horizontalMarker:", markerIndex);
 									markers.setPixelValue(markerIndex, w - 1 - x);
-									debugPrint("value:", markers.getPixelValue(markerIndex));
 									markersDone.incrementAndGet();
 								}
 								
 								if (h <= y + s) {
 									{
 										final long markerIndex = (row + 1L) * markersPerRow + column - 1L;
-										debugPrint("horizontalMarker:", markerIndex);
 										
 										if (column == 1) {
 											markers.setPixelValue(markerIndex, 0);
@@ -161,15 +152,12 @@ public final class InteractiveClassifier {
 											markers.setPixelValue(markerIndex, getHorizontalOffsetOfLargestGradient(image, x - s, h - 1, s));
 										}
 										
-										debugPrint("value:", markers.getPixelValue(markerIndex));
 										markersDone.incrementAndGet();
 									}
 									
 									if (w <= x + s) {
 										final long markerIndex = (row + 1L) * markersPerRow + column;
-										debugPrint("horizontalMarker:", markerIndex);
 										markers.setPixelValue(markerIndex, w - 1 - x);
-										debugPrint("value:", markers.getPixelValue(markerIndex));
 										markersDone.incrementAndGet();
 									}
 								}
@@ -179,7 +167,6 @@ public final class InteractiveClassifier {
 								if (x == s / 2) {
 									{
 										final long markerIndex = horizontalMarkers + (column - 1L) * markersPerColumn + row - 1L;
-										debugPrint("verticalMarker:", markerIndex);
 										
 										if (row == 1) {
 											markers.setPixelValue(markerIndex, 0);
@@ -187,22 +174,18 @@ public final class InteractiveClassifier {
 											markers.setPixelValue(markerIndex, getHorizontalOffsetOfLargestGradient(image, 0, y - s, s));
 										}
 										
-										debugPrint("value:", markers.getPixelValue(markerIndex));
 										markersDone.incrementAndGet();
 									}
 									
 									if (h <= y + s) {
 										final long markerIndex = horizontalMarkers + (column - 1L) * markersPerColumn + row;
-										debugPrint("verticalMarker:", markerIndex);
 										markers.setPixelValue(markerIndex, h - 1 - y);
-										debugPrint("value:", markers.getPixelValue(markerIndex));
 										markersDone.incrementAndGet();
 									}
 								}
 								
 								{
 									final long markerIndex = horizontalMarkers + column * markersPerColumn + row - 1L;
-									debugPrint("verticalMarker:", markerIndex);
 									
 									if (row == 1) {
 										markers.setPixelValue(markerIndex, 0);
@@ -210,22 +193,18 @@ public final class InteractiveClassifier {
 										markers.setPixelValue(markerIndex, getVerticalOffsetOfLargestGradient(image, x, y - s, s));
 									}
 									
-									debugPrint("value:", markers.getPixelValue(markerIndex));
 									markersDone.incrementAndGet();
 								}
 								
 								if (h <= y + s) {
 									final long markerIndex = horizontalMarkers + column * markersPerColumn + row;
-									debugPrint("verticalMarker:", markerIndex);
 									markers.setPixelValue(markerIndex, h - 1 - y);
-									debugPrint("value:", markers.getPixelValue(markerIndex));
 									markersDone.incrementAndGet();
 								}
 								
 								if (w <= x + s) {
 									{
 										final long markerIndex = horizontalMarkers + (column + 1L) * markersPerColumn + row - 1L;
-										debugPrint("verticalMarker:", markerIndex);
 										
 										if (row == 1) {
 											markers.setPixelValue(markerIndex, 0);
@@ -233,15 +212,12 @@ public final class InteractiveClassifier {
 											markers.setPixelValue(markerIndex, getVerticalOffsetOfLargestGradient(image, w - 1, y - s, s));
 										}
 										
-										debugPrint("value:", markers.getPixelValue(markerIndex));
 										markersDone.incrementAndGet();
 									}
 									
 									if (h <= y + s) {
 										final long markerIndex = horizontalMarkers + (column + 1L) * markersPerColumn + row;
-										debugPrint("verticalMarker:", markerIndex);
 										markers.setPixelValue(markerIndex, h - 1 - y);
-										debugPrint("value:", markers.getPixelValue(markerIndex));
 										markersDone.incrementAndGet();
 									}
 								}
