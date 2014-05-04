@@ -68,8 +68,9 @@ public final class InteractiveClassifier {
 			final int markersPerColumn = 1 + ceiling(h - s / 2, s);
 			final int columns = 2 + ceiling(w - s / 2, s);
 			final long verticalMarkers = (long) markersPerColumn * columns;
+			final long allMarkers = horizontalMarkers + verticalMarkers;
 			final LinearPackedGrayImage markers = new LinearPackedGrayImage(""
-					, horizontalMarkers + verticalMarkers, new Monochannel(Long.SIZE - Long.numberOfLeadingZeros(s - 1L)));
+					, allMarkers, new Monochannel(Long.SIZE - Long.numberOfLeadingZeros(s - 1L)));
 			final AtomicLong markersDone = new AtomicLong();
 			
 			debugPrint("markersPerRow:", markersPerRow, "rows:", rows
@@ -105,18 +106,24 @@ public final class InteractiveClassifier {
 							{
 								if (y == s / 2) {
 									{
-										// TODO set top left horizontal marker
 										final long markerIndex = (row - 1L) * markersPerRow + column - 1L;
 										debugPrint("horizontalMarker:", markerIndex);
-										markers.setPixelValue(markerIndex, s / 2);
+										
+										if (column == 1) {
+											markers.setPixelValue(markerIndex, 0);
+										} else {
+											// TODO set top left horizontal marker
+											markers.setPixelValue(markerIndex, s / 2);
+										}
+										
 										debugPrint("value:", markers.getPixelValue(markerIndex));
 										markersDone.incrementAndGet();
 									}
 									
 									if (w <= x + s) {
-										// TODO set top right horizontal marker
 										final long markerIndex = (row - 1L) * markersPerRow + column;
 										debugPrint("horizontalMarker:", markerIndex);
+										// TODO set top right horizontal marker
 										markers.setPixelValue(markerIndex, s / 2);
 										debugPrint("value:", markers.getPixelValue(markerIndex));
 										markersDone.incrementAndGet();
@@ -124,18 +131,24 @@ public final class InteractiveClassifier {
 								}
 								
 								{
-									// TODO set left horizontal marker
 									final long markerIndex = row * markersPerRow + column - 1L;
 									debugPrint("horizontalMarker:", markerIndex);
-									markers.setPixelValue(markerIndex, s / 2);
+									
+									if (column == 1) {
+										markers.setPixelValue(markerIndex, 0);
+									} else {
+										// TODO set left horizontal marker
+										markers.setPixelValue(markerIndex, s / 2);
+									}
+									
 									debugPrint("value:", markers.getPixelValue(markerIndex));
 									markersDone.incrementAndGet();
 								}
 								
 								if (w <= x + s) {
-									// TODO set right horizontal marker
 									final long markerIndex = row * markersPerRow + column;
 									debugPrint("horizontalMarker:", markerIndex);
+									// TODO set right horizontal marker
 									markers.setPixelValue(markerIndex, s / 2);
 									debugPrint("value:", markers.getPixelValue(markerIndex));
 									markersDone.incrementAndGet();
@@ -143,18 +156,24 @@ public final class InteractiveClassifier {
 								
 								if (h <= y + s) {
 									{
-										// TODO set bottom left horizontal marker
 										final long markerIndex = (row + 1L) * markersPerRow + column - 1L;
 										debugPrint("horizontalMarker:", markerIndex);
-										markers.setPixelValue(markerIndex, s / 2);
+										
+										if (column == 1) {
+											markers.setPixelValue(markerIndex, 0);
+										} else {
+											// TODO set bottom left horizontal marker
+											markers.setPixelValue(markerIndex, s / 2);
+										}
+										
 										debugPrint("value:", markers.getPixelValue(markerIndex));
 										markersDone.incrementAndGet();
 									}
 									
 									if (w <= x + s) {
-										// TODO set bottom right horizontal marker
 										final long markerIndex = (row + 1L) * markersPerRow + column;
 										debugPrint("horizontalMarker:", markerIndex);
+										// TODO set bottom right horizontal marker
 										markers.setPixelValue(markerIndex, s / 2);
 										debugPrint("value:", markers.getPixelValue(markerIndex));
 										markersDone.incrementAndGet();
@@ -165,18 +184,24 @@ public final class InteractiveClassifier {
 							{
 								if (x == s / 2) {
 									{
-										// TODO set top left vertical marker
 										final long markerIndex = horizontalMarkers + (column - 1L) * markersPerColumn + row - 1L;
 										debugPrint("verticalMarker:", markerIndex);
-										markers.setPixelValue(markerIndex, s / 2);
+										
+										if (row == 1) {
+											markers.setPixelValue(markerIndex, 0);
+										} else {
+											// TODO set top left vertical marker
+											markers.setPixelValue(markerIndex, s / 2);
+										}
+										
 										debugPrint("value:", markers.getPixelValue(markerIndex));
 										markersDone.incrementAndGet();
 									}
 									
 									if (h <= y + s) {
-										// TODO set bottom left vertical marker
 										final long markerIndex = horizontalMarkers + (column - 1L) * markersPerColumn + row;
 										debugPrint("verticalMarker:", markerIndex);
+										// TODO set bottom left vertical marker
 										markers.setPixelValue(markerIndex, s / 2);
 										debugPrint("value:", markers.getPixelValue(markerIndex));
 										markersDone.incrementAndGet();
@@ -184,18 +209,24 @@ public final class InteractiveClassifier {
 								}
 								
 								{
-									// TODO set top vertical marker
 									final long markerIndex = horizontalMarkers + column * markersPerColumn + row - 1L;
 									debugPrint("verticalMarker:", markerIndex);
-									markers.setPixelValue(markerIndex, s / 2);
+									
+									if (row == 1) {
+										markers.setPixelValue(markerIndex, 0);
+									} else {
+										// TODO set top vertical marker
+										markers.setPixelValue(markerIndex, s / 2);
+									}
+									
 									debugPrint("value:", markers.getPixelValue(markerIndex));
 									markersDone.incrementAndGet();
 								}
 								
 								if (h <= y + s) {
-									// TODO set bottom vertical marker
 									final long markerIndex = horizontalMarkers + column * markersPerColumn + row;
 									debugPrint("verticalMarker:", markerIndex);
+									// TODO set bottom vertical marker
 									markers.setPixelValue(markerIndex, s / 2);
 									debugPrint("value:", markers.getPixelValue(markerIndex));
 									markersDone.incrementAndGet();
@@ -203,18 +234,24 @@ public final class InteractiveClassifier {
 								
 								if (w <= x + s) {
 									{
-										// TODO set top right vertical marker
 										final long markerIndex = horizontalMarkers + (column + 1L) * markersPerColumn + row - 1L;
 										debugPrint("verticalMarker:", markerIndex);
-										markers.setPixelValue(markerIndex, s / 2);
+										
+										if (row == 1) {
+											markers.setPixelValue(markerIndex, 0);
+										} else {
+											// TODO set top right vertical marker
+											markers.setPixelValue(markerIndex, s / 2);
+										}
+										
 										debugPrint("value:", markers.getPixelValue(markerIndex));
 										markersDone.incrementAndGet();
 									}
 									
 									if (h <= y + s) {
-										// TODO set bottom right vertical marker
 										final long markerIndex = horizontalMarkers + (column + 1L) * markersPerColumn + row;
 										debugPrint("verticalMarker:", markerIndex);
+										// TODO set bottom right vertical marker
 										markers.setPixelValue(markerIndex, s / 2);
 										debugPrint("value:", markers.getPixelValue(markerIndex));
 										markersDone.incrementAndGet();
@@ -246,8 +283,26 @@ public final class InteractiveClassifier {
 			{
 				long errors = 0L;
 				
-				for (long i = 0L; i < markers.getPixelCount(); ++i) {
-					if (markers.getPixelValue(i) == 0) {
+				for (long i = 0L; i < horizontalMarkers; ++i) {
+					final int markerValue = markers.getPixelValue(i);
+					
+					if (i % markersPerRow == 0) {
+						if (markerValue != 0) {
+							++errors;
+						}
+					} else if (markerValue == 0) {
+						++errors;
+					}
+				}
+				
+				for (long i = horizontalMarkers; i < allMarkers; ++i) {
+					final int markerValue = markers.getPixelValue(i);
+					
+					if ((i - horizontalMarkers) % markersPerColumn == 0) {
+						if (markerValue != 0) {
+							++errors;
+						}
+					} else if (markerValue == 0) {
 						++errors;
 					}
 				}
