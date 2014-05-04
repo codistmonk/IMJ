@@ -8,6 +8,7 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
 import static pixel3d.PolygonTools.Z;
+
 import imj2.core.Image.Channels;
 import imj2.core.Image.Monochannel;
 import imj2.core.Image2D;
@@ -23,10 +24,10 @@ import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.Window;
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicLong;
 
-import pixel3d.PolygonTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 
@@ -60,7 +61,7 @@ public final class InteractiveClassifier {
 					final Image2D image = component.getImage();
 					
 					if (this.delimitersBuilder == null || this.delimitersBuilder.getImage() != image) {
-						this.delimitersBuilder = new DelimitersBuilder(image, 16);
+						this.delimitersBuilder = new DelimitersBuilder(image, 8);
 						this.delimiters = this.delimitersBuilder.newEmptyDelimiters();
 					}
 					
@@ -388,7 +389,14 @@ public final class InteractiveClassifier {
 			final int[] southToWestSouthWest = cross3(south, westSouthWest, new int[3]);
 			final int[] southWest = cross3(westToSouthSouthWest, southToWestSouthWest, new int[3]);
 			
-			return unscale2(southWest);
+			try {
+				return unscale2(southWest);
+			} catch (final Exception exception) {
+				// XXX defect when segment point (x, y) is on bottom or right border
+				debugError(this.w, this.h, Arrays.toString(south), Arrays.toString(west), Arrays.toString(westSouthWest), Arrays.toString(southSouthWest), Arrays.toString(southWest));
+//				throw unchecked(exception);
+				return unscale2(southSouthWest);
+			}
 		}
 		
 		public final Point getSegmentSouthEast(final LinearPackedGrayImage delimiters, final int x, final int y, final int row, final int column) {
@@ -413,7 +421,14 @@ public final class InteractiveClassifier {
 			final int[] southToEastSouthEast = cross3(south, eastSouthEast, new int[3]);
 			final int[] southEast = cross3(eastToSouthSouthEast, southToEastSouthEast, new int[3]);
 			
-			return unscale2(southEast);
+			try {
+				return unscale2(southEast);
+			} catch (final Exception exception) {
+				// XXX defect when segment point (x, y) is on bottom or right border
+				debugError(this.w, this.h, Arrays.toString(south), Arrays.toString(east), Arrays.toString(eastSouthEast), Arrays.toString(southSouthEast), Arrays.toString(southEast));
+//				throw unchecked(exception);
+				return unscale2(southSouthEast);
+			}
 		}
 		
 		public final int getSegmentWestX(final LinearPackedGrayImage delimiters, final int x, final int y, final int row, final int column) {
