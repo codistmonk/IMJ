@@ -163,7 +163,7 @@ public final class InteractiveClassifier {
 			 * y0 <= s/2 + k s
 			 * <- y0 - s/2 <= k s
 			 * <- (y0 - s/2)/s <= k
-			 * <- k = ceil(y0-s/2,s)
+			 * <- k = ceiling(y0-s/2,s)
 			 */
 			
 			for (int y = this.s / 2 + this.s * ceiling(yStart - this.s / 2, this.s); y < yEnd; y += this.s) {
@@ -174,125 +174,8 @@ public final class InteractiveClassifier {
 					
 //					debugPrint("segment:", x, y, row, column);
 					
-					{
-						if (y == this.s / 2) {
-							{
-								final long delimiterIndex = (row - 1L) * this.delimitersPerRow + column - 1L;
-								
-								if (column == 1) {
-									delimiters.setPixelValue(delimiterIndex, 0);
-								} else {
-									delimiters.setPixelValue(delimiterIndex, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, 0, this.s));
-								}
-								
-								this.delimitersDone.incrementAndGet();
-							}
-							
-							if (this.w <= x + this.s) {
-								final long delimiterIndex = (row - 1L) * this.delimitersPerRow + column;
-								delimiters.setPixelValue(delimiterIndex, this.w - 1 - x);
-								this.delimitersDone.incrementAndGet();
-							}
-						}
-						
-						{
-							final long delimiterIndex = row * this.delimitersPerRow + column - 1L;
-							
-							if (column == 1) {
-								delimiters.setPixelValue(delimiterIndex, 0);
-							} else {
-								delimiters.setPixelValue(delimiterIndex, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, y, this.s));
-							}
-							
-							this.delimitersDone.incrementAndGet();
-						}
-						
-						if (this.w <= x + this.s) {
-							final long delimiterIndex = row * this.delimitersPerRow + column;
-							delimiters.setPixelValue(delimiterIndex, this.w - 1 - x);
-							this.delimitersDone.incrementAndGet();
-						}
-						
-						if (this.h <= y + this.s) {
-							{
-								final long delimiterIndex = (row + 1L) * this.delimitersPerRow + column - 1L;
-								
-								if (column == 1) {
-									delimiters.setPixelValue(delimiterIndex, 0);
-								} else {
-									delimiters.setPixelValue(delimiterIndex, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, this.h - 1, this.s));
-								}
-								
-								this.delimitersDone.incrementAndGet();
-							}
-							
-							if (this.w <= x + this.s) {
-								final long delimiterIndex = (row + 1L) * this.delimitersPerRow + column;
-								delimiters.setPixelValue(delimiterIndex, this.w - 1 - x);
-								this.delimitersDone.incrementAndGet();
-							}
-						}
-					}
-					
-					{
-						if (x == this.s / 2) {
-							{
-								final long delimiterIndex = this.horizontalDelimiters + (column - 1L) * this.delimitersPerColumn + row - 1L;
-								
-								if (row == 1) {
-									delimiters.setPixelValue(delimiterIndex, 0);
-								} else {
-									delimiters.setPixelValue(delimiterIndex, getHorizontalOffsetOfLargestGradient(this.image, 0, y - this.s, this.s));
-								}
-								
-								this.delimitersDone.incrementAndGet();
-							}
-							
-							if (this.h <= y + this.s) {
-								final long delimiterIndex = this.horizontalDelimiters + (column - 1L) * this.delimitersPerColumn + row;
-								delimiters.setPixelValue(delimiterIndex, this.h - 1 - y);
-								this.delimitersDone.incrementAndGet();
-							}
-						}
-						
-						{
-							final long delimiterIndex = this.horizontalDelimiters + column * this.delimitersPerColumn + row - 1L;
-							
-							if (row == 1) {
-								delimiters.setPixelValue(delimiterIndex, 0);
-							} else {
-								delimiters.setPixelValue(delimiterIndex, getVerticalOffsetOfLargestGradient(this.image, x, y - this.s, this.s));
-							}
-							
-							this.delimitersDone.incrementAndGet();
-						}
-						
-						if (this.h <= y + this.s) {
-							final long delimiterIndex = this.horizontalDelimiters + column * this.delimitersPerColumn + row;
-							delimiters.setPixelValue(delimiterIndex, this.h - 1 - y);
-							this.delimitersDone.incrementAndGet();
-						}
-						
-						if (this.w <= x + this.s) {
-							{
-								final long delimiterIndex = this.horizontalDelimiters + (column + 1L) * this.delimitersPerColumn + row - 1L;
-								
-								if (row == 1) {
-									delimiters.setPixelValue(delimiterIndex, 0);
-								} else {
-									delimiters.setPixelValue(delimiterIndex, getVerticalOffsetOfLargestGradient(this.image, this.w - 1, y - this.s, this.s));
-								}
-								
-								this.delimitersDone.incrementAndGet();
-							}
-							
-							if (this.h <= y + this.s) {
-								final long delimiterIndex = this.horizontalDelimiters + (column + 1L) * this.delimitersPerColumn + row;
-								delimiters.setPixelValue(delimiterIndex, this.h - 1 - y);
-								this.delimitersDone.incrementAndGet();
-							}
-						}
-					}
+					this.setHorizontalDelimiters(delimiters, y, row, x, column);
+					this.setVerticalDelimiters(delimiters, y, row, x, column);
 				}
 			}
 		}
@@ -331,6 +214,128 @@ public final class InteractiveClassifier {
 				
 				if (0 < errors) {
 					debugError("erroneousDelimiters:", errors);
+				}
+			}
+		}
+		
+		private final void setHorizontalDelimiters(final LinearPackedGrayImage delimiters
+				, final int y, final int row, final int x, final int column) {
+			if (y == this.s / 2) {
+				{
+					final long delimiterIndex = (row - 1L) * this.delimitersPerRow + column - 1L;
+					
+					if (column == 1) {
+						delimiters.setPixelValue(delimiterIndex, 0);
+					} else {
+						delimiters.setPixelValue(delimiterIndex, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, 0, this.s));
+					}
+					
+					this.delimitersDone.incrementAndGet();
+				}
+				
+				if (this.w <= x + this.s) {
+					final long delimiterIndex = (row - 1L) * this.delimitersPerRow + column;
+					delimiters.setPixelValue(delimiterIndex, this.w - 1 - x);
+					this.delimitersDone.incrementAndGet();
+				}
+			}
+			
+			{
+				final long delimiterIndex = row * this.delimitersPerRow + column - 1L;
+				
+				if (column == 1) {
+					delimiters.setPixelValue(delimiterIndex, 0);
+				} else {
+					delimiters.setPixelValue(delimiterIndex, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, y, this.s));
+				}
+				
+				this.delimitersDone.incrementAndGet();
+			}
+			
+			if (this.w <= x + this.s) {
+				final long delimiterIndex = row * this.delimitersPerRow + column;
+				delimiters.setPixelValue(delimiterIndex, this.w - 1 - x);
+				this.delimitersDone.incrementAndGet();
+			}
+			
+			if (this.h <= y + this.s) {
+				{
+					final long delimiterIndex = (row + 1L) * this.delimitersPerRow + column - 1L;
+					
+					if (column == 1) {
+						delimiters.setPixelValue(delimiterIndex, 0);
+					} else {
+						delimiters.setPixelValue(delimiterIndex, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, this.h - 1, this.s));
+					}
+					
+					this.delimitersDone.incrementAndGet();
+				}
+				
+				if (this.w <= x + this.s) {
+					final long delimiterIndex = (row + 1L) * this.delimitersPerRow + column;
+					delimiters.setPixelValue(delimiterIndex, this.w - 1 - x);
+					this.delimitersDone.incrementAndGet();
+				}
+			}
+		}
+		
+		private final void setVerticalDelimiters(final LinearPackedGrayImage delimiters
+				, final int y, final int row, final int x, final int column) {
+			if (x == this.s / 2) {
+				{
+					final long delimiterIndex = this.horizontalDelimiters + (column - 1L) * this.delimitersPerColumn + row - 1L;
+					
+					if (row == 1) {
+						delimiters.setPixelValue(delimiterIndex, 0);
+					} else {
+						delimiters.setPixelValue(delimiterIndex, getHorizontalOffsetOfLargestGradient(this.image, 0, y - this.s, this.s));
+					}
+					
+					this.delimitersDone.incrementAndGet();
+				}
+				
+				if (this.h <= y + this.s) {
+					final long delimiterIndex = this.horizontalDelimiters + (column - 1L) * this.delimitersPerColumn + row;
+					delimiters.setPixelValue(delimiterIndex, this.h - 1 - y);
+					this.delimitersDone.incrementAndGet();
+				}
+			}
+			
+			{
+				final long delimiterIndex = this.horizontalDelimiters + column * this.delimitersPerColumn + row - 1L;
+				
+				if (row == 1) {
+					delimiters.setPixelValue(delimiterIndex, 0);
+				} else {
+					delimiters.setPixelValue(delimiterIndex, getVerticalOffsetOfLargestGradient(this.image, x, y - this.s, this.s));
+				}
+				
+				this.delimitersDone.incrementAndGet();
+			}
+			
+			if (this.h <= y + this.s) {
+				final long delimiterIndex = this.horizontalDelimiters + column * this.delimitersPerColumn + row;
+				delimiters.setPixelValue(delimiterIndex, this.h - 1 - y);
+				this.delimitersDone.incrementAndGet();
+			}
+			
+			if (this.w <= x + this.s) {
+				{
+					final long delimiterIndex = this.horizontalDelimiters + (column + 1L) * this.delimitersPerColumn + row - 1L;
+					
+					if (row == 1) {
+						delimiters.setPixelValue(delimiterIndex, 0);
+					} else {
+						delimiters.setPixelValue(delimiterIndex, getVerticalOffsetOfLargestGradient(this.image, this.w - 1, y - this.s, this.s));
+					}
+					
+					this.delimitersDone.incrementAndGet();
+				}
+				
+				if (this.h <= y + this.s) {
+					final long delimiterIndex = this.horizontalDelimiters + (column + 1L) * this.delimitersPerColumn + row;
+					delimiters.setPixelValue(delimiterIndex, this.h - 1 - y);
+					this.delimitersDone.incrementAndGet();
 				}
 			}
 		}
