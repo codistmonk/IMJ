@@ -5,14 +5,17 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.debugError;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-
 import imj2.core.Image.Channels;
 import imj2.core.Image.Monochannel;
 import imj2.core.Image2D;
 import imj2.core.LinearPackedGrayImage;
 import imj2.core.TiledImage2D;
 import imj2.tools.IMJTools.TileProcessor;
+import imj2.tools.Image2DComponent.Painter;
 
+import java.awt.Graphics2D;
+import java.awt.Rectangle;
+import java.awt.Window;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicLong;
@@ -34,7 +37,43 @@ public final class InteractiveClassifier {
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) {
-		{
+		if (true) {
+			final Window window = Image2DComponent.showDefaultImage();
+			final Image2DComponent imageView = IMJTools.findComponent(window, Image2DComponent.class);
+			
+			imageView.getPainters().add(new Painter<Image2DComponent>() {
+				
+				private DelimitersBuilder delimitersBuilder;
+				
+				private LinearPackedGrayImage delimiters;
+				
+				@Override
+				public final void paint(final Graphics2D g, final Image2DComponent component
+						, final int width, final int height) {
+					final Image2D image = component.getImage();
+					
+					if (this.delimitersBuilder == null || this.delimitersBuilder.getImage() != image) {
+						this.delimitersBuilder = new DelimitersBuilder(image, 32);
+						this.delimiters = this.delimitersBuilder.newEmptyDelimiters();
+					}
+					
+					final Rectangle box = component.getVisibleBoxInImage();
+					
+					debugPrint(box);
+					
+					this.delimitersBuilder.setDelimiters(this.delimiters
+							, box.x, box.y, box.x + box.width, box.y + box.height);
+				}
+				
+				/**
+				 * {@value}.
+				 */
+				private static final long serialVersionUID = -7467299626996751246L;
+				
+			});
+		}
+		
+		if (false) {
 			final TicToc timer = new TicToc();
 			
 			debugPrint("Loading image started...", new Date(timer.tic()));
@@ -117,6 +156,10 @@ public final class InteractiveClassifier {
 			debugPrint("delimitersPerRow:", this.delimitersPerRow, "rows:", this.rows
 					, "delimitersPerColumn:", this.delimitersPerColumn, "columns:", this.columns
 					, "delimiters:", delimiters.getPixelCount());
+		}
+		
+		public final Image2D getImage() {
+			return this.image;
 		}
 		
 		public final LinearPackedGrayImage buildDelimitersFor(final TiledImage2D image) {
@@ -229,7 +272,7 @@ public final class InteractiveClassifier {
 						delimiters.setPixelValue(delimiterIndex, 0);
 					} else {
 						delimiters.setPixelValue(delimiterIndex
-								, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, 0, this.s));
+								, getHorizontalOffsetOfLargestGradient(this.getImage(), x - this.s, 0, this.s));
 					}
 					
 					this.delimitersDone.incrementAndGet();
@@ -249,7 +292,7 @@ public final class InteractiveClassifier {
 					delimiters.setPixelValue(delimiterIndex, 0);
 				} else {
 					delimiters.setPixelValue(delimiterIndex
-							, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, y, this.s));
+							, getHorizontalOffsetOfLargestGradient(this.getImage(), x - this.s, y, this.s));
 				}
 				
 				this.delimitersDone.incrementAndGet();
@@ -269,7 +312,7 @@ public final class InteractiveClassifier {
 						delimiters.setPixelValue(delimiterIndex, 0);
 					} else {
 						delimiters.setPixelValue(delimiterIndex
-								, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, this.h - 1, this.s));
+								, getHorizontalOffsetOfLargestGradient(this.getImage(), x - this.s, this.h - 1, this.s));
 					}
 					
 					this.delimitersDone.incrementAndGet();
@@ -293,7 +336,7 @@ public final class InteractiveClassifier {
 						delimiters.setPixelValue(delimiterIndex, 0);
 					} else {
 						delimiters.setPixelValue(delimiterIndex
-								, getHorizontalOffsetOfLargestGradient(this.image, 0, y - this.s, this.s));
+								, getHorizontalOffsetOfLargestGradient(this.getImage(), 0, y - this.s, this.s));
 					}
 					
 					this.delimitersDone.incrementAndGet();
@@ -313,7 +356,7 @@ public final class InteractiveClassifier {
 					delimiters.setPixelValue(delimiterIndex, 0);
 				} else {
 					delimiters.setPixelValue(delimiterIndex
-							, getVerticalOffsetOfLargestGradient(this.image, x, y - this.s, this.s));
+							, getVerticalOffsetOfLargestGradient(this.getImage(), x, y - this.s, this.s));
 				}
 				
 				this.delimitersDone.incrementAndGet();
@@ -333,7 +376,7 @@ public final class InteractiveClassifier {
 						delimiters.setPixelValue(delimiterIndex, 0);
 					} else {
 						delimiters.setPixelValue(delimiterIndex
-								, getVerticalOffsetOfLargestGradient(this.image, this.w - 1, y - this.s, this.s));
+								, getVerticalOffsetOfLargestGradient(this.getImage(), this.w - 1, y - this.s, this.s));
 					}
 					
 					this.delimitersDone.incrementAndGet();
