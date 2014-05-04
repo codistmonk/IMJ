@@ -48,18 +48,18 @@ public final class InteractiveClassifier {
 			
 			debugPrint("Analyzing image started...", new Date(timer.tic()));
 			
-			final MarkersBuilder markersBuilder = new MarkersBuilder(image, 32);
+			final DelimitersBuilder delimitersBuilder = new DelimitersBuilder(image, 32);
 			
-			markersBuilder.buildMarkersFor(image);
+			delimitersBuilder.buildDelimitersFor(image);
 			
-			debugPrint("Analizing image done in", timer.toc(), "ms");
+			debugPrint("Analyzing image done in", timer.toc(), "ms");
 		}
 	}
 	
 	/**
 	 * @author codistmonk (creation 2014-05-03)
 	 */
-	public static final class MarkersBuilder implements Serializable {
+	public static final class DelimitersBuilder implements Serializable {
 		
 		private final Image2D image;
 
@@ -69,23 +69,23 @@ public final class InteractiveClassifier {
 		
 		private final int s;
 
-		private final int markersPerRow;
+		private final int delimitersPerRow;
 
 		private final int rows;
 
-		private final long horizontalMarkers;
+		private final long horizontalDelimiters;
 
-		private final int markersPerColumn;
+		private final int delimitersPerColumn;
 
 		private final int columns;
 
-		private final long verticalMarkers;
+		private final long verticalDelimiters;
 
-		private final long allMarkers;
+		private final long allDelimiters;
 		
-		private final AtomicLong markersDone;
+		private final AtomicLong delimitersDone;
 		
-		public MarkersBuilder(final Image2D image, final int s) {
+		public DelimitersBuilder(final Image2D image, final int s) {
 			this.image = image;
 			
 			this.w = image.getWidth();
@@ -101,26 +101,26 @@ public final class InteractiveClassifier {
 			 * <---s/2--><-----s-----><-----s-----><-----s----->
 			 * *---------0---*--------0------*-----0-----------*
 			 * 
-			 * numberOfMarkers = 1+ceiling((w-s/2)/s)
+			 * numberOfDelimiters = 1+ceiling((w-s/2)/s)
 			 */
 			
-			this.markersPerRow = 1 + ceiling(this.w - s / 2, s);
+			this.delimitersPerRow = 1 + ceiling(this.w - s / 2, s);
 			this.rows = 2 + ceiling(this.h - s / 2, s);
-			this.horizontalMarkers = (long) this.markersPerRow * this.rows;
-			this.markersPerColumn = 1 + ceiling(this.h - s / 2, s);
+			this.horizontalDelimiters = (long) this.delimitersPerRow * this.rows;
+			this.delimitersPerColumn = 1 + ceiling(this.h - s / 2, s);
 			this.columns = 2 + ceiling(this.w - s / 2, s);
-			this.verticalMarkers = (long) this.markersPerColumn * this.columns;
-			this.allMarkers = this.horizontalMarkers + this.verticalMarkers;
-			final LinearPackedGrayImage markers = this.newEmptyMarkers();
-			this.markersDone = new AtomicLong();
+			this.verticalDelimiters = (long) this.delimitersPerColumn * this.columns;
+			this.allDelimiters = this.horizontalDelimiters + this.verticalDelimiters;
+			final LinearPackedGrayImage delimiters = this.newEmptyDelimiters();
+			this.delimitersDone = new AtomicLong();
 			
-			debugPrint("markersPerRow:", this.markersPerRow, "rows:", this.rows
-					, "markersPerColumn:", this.markersPerColumn, "columns:", this.columns
-					, "markers:", markers.getPixelCount());
+			debugPrint("delimitersPerRow:", this.delimitersPerRow, "rows:", this.rows
+					, "delimitersPerColumn:", this.delimitersPerColumn, "columns:", this.columns
+					, "delimiters:", delimiters.getPixelCount());
 		}
 		
-		public final LinearPackedGrayImage buildMarkersFor(final TiledImage2D image) {
-			final LinearPackedGrayImage result = this.newEmptyMarkers();
+		public final LinearPackedGrayImage buildDelimitersFor(final TiledImage2D image) {
+			final LinearPackedGrayImage result = this.newEmptyDelimiters();
 			
 			IMJTools.forEachTileIn(image, new TileProcessor() {
 				
@@ -133,7 +133,7 @@ public final class InteractiveClassifier {
 					final int xEnd = info.getTileX() + info.getActualTileWidth();
 					final int yEnd = info.getTileY() + info.getActualTileHeight();
 					
-					MarkersBuilder.this.setMarkers(result, xStart, yStart, xEnd, yEnd);
+					DelimitersBuilder.this.setDelimiters(result, xStart, yStart, xEnd, yEnd);
 				}
 				
 				@Override
@@ -153,12 +153,12 @@ public final class InteractiveClassifier {
 			return result;
 		}
 		
-		public final LinearPackedGrayImage newEmptyMarkers() {
+		public final LinearPackedGrayImage newEmptyDelimiters() {
 			return new LinearPackedGrayImage(""
-					, this.allMarkers, new Monochannel(Long.SIZE - Long.numberOfLeadingZeros(this.s - 1L)));
+					, this.allDelimiters, new Monochannel(Long.SIZE - Long.numberOfLeadingZeros(this.s - 1L)));
 		}
 		
-		public final void setMarkers(final LinearPackedGrayImage markers, final int xStart, final int yStart, final int xEnd, final int yEnd) {
+		public final void setDelimiters(final LinearPackedGrayImage delimiters, final int xStart, final int yStart, final int xEnd, final int yEnd) {
 			/*
 			 * y0 <= s/2 + k s
 			 * <- y0 - s/2 <= k s
@@ -177,59 +177,59 @@ public final class InteractiveClassifier {
 					{
 						if (y == this.s / 2) {
 							{
-								final long markerIndex = (row - 1L) * this.markersPerRow + column - 1L;
+								final long delimiterIndex = (row - 1L) * this.delimitersPerRow + column - 1L;
 								
 								if (column == 1) {
-									markers.setPixelValue(markerIndex, 0);
+									delimiters.setPixelValue(delimiterIndex, 0);
 								} else {
-									markers.setPixelValue(markerIndex, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, 0, this.s));
+									delimiters.setPixelValue(delimiterIndex, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, 0, this.s));
 								}
 								
-								this.markersDone.incrementAndGet();
+								this.delimitersDone.incrementAndGet();
 							}
 							
 							if (this.w <= x + this.s) {
-								final long markerIndex = (row - 1L) * this.markersPerRow + column;
-								markers.setPixelValue(markerIndex, this.w - 1 - x);
-								this.markersDone.incrementAndGet();
+								final long delimiterIndex = (row - 1L) * this.delimitersPerRow + column;
+								delimiters.setPixelValue(delimiterIndex, this.w - 1 - x);
+								this.delimitersDone.incrementAndGet();
 							}
 						}
 						
 						{
-							final long markerIndex = row * this.markersPerRow + column - 1L;
+							final long delimiterIndex = row * this.delimitersPerRow + column - 1L;
 							
 							if (column == 1) {
-								markers.setPixelValue(markerIndex, 0);
+								delimiters.setPixelValue(delimiterIndex, 0);
 							} else {
-								markers.setPixelValue(markerIndex, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, y, this.s));
+								delimiters.setPixelValue(delimiterIndex, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, y, this.s));
 							}
 							
-							this.markersDone.incrementAndGet();
+							this.delimitersDone.incrementAndGet();
 						}
 						
 						if (this.w <= x + this.s) {
-							final long markerIndex = row * this.markersPerRow + column;
-							markers.setPixelValue(markerIndex, this.w - 1 - x);
-							this.markersDone.incrementAndGet();
+							final long delimiterIndex = row * this.delimitersPerRow + column;
+							delimiters.setPixelValue(delimiterIndex, this.w - 1 - x);
+							this.delimitersDone.incrementAndGet();
 						}
 						
 						if (this.h <= y + this.s) {
 							{
-								final long markerIndex = (row + 1L) * this.markersPerRow + column - 1L;
+								final long delimiterIndex = (row + 1L) * this.delimitersPerRow + column - 1L;
 								
 								if (column == 1) {
-									markers.setPixelValue(markerIndex, 0);
+									delimiters.setPixelValue(delimiterIndex, 0);
 								} else {
-									markers.setPixelValue(markerIndex, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, this.h - 1, this.s));
+									delimiters.setPixelValue(delimiterIndex, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, this.h - 1, this.s));
 								}
 								
-								this.markersDone.incrementAndGet();
+								this.delimitersDone.incrementAndGet();
 							}
 							
 							if (this.w <= x + this.s) {
-								final long markerIndex = (row + 1L) * this.markersPerRow + column;
-								markers.setPixelValue(markerIndex, this.w - 1 - x);
-								this.markersDone.incrementAndGet();
+								final long delimiterIndex = (row + 1L) * this.delimitersPerRow + column;
+								delimiters.setPixelValue(delimiterIndex, this.w - 1 - x);
+								this.delimitersDone.incrementAndGet();
 							}
 						}
 					}
@@ -237,59 +237,59 @@ public final class InteractiveClassifier {
 					{
 						if (x == this.s / 2) {
 							{
-								final long markerIndex = this.horizontalMarkers + (column - 1L) * this.markersPerColumn + row - 1L;
+								final long delimiterIndex = this.horizontalDelimiters + (column - 1L) * this.delimitersPerColumn + row - 1L;
 								
 								if (row == 1) {
-									markers.setPixelValue(markerIndex, 0);
+									delimiters.setPixelValue(delimiterIndex, 0);
 								} else {
-									markers.setPixelValue(markerIndex, getHorizontalOffsetOfLargestGradient(this.image, 0, y - this.s, this.s));
+									delimiters.setPixelValue(delimiterIndex, getHorizontalOffsetOfLargestGradient(this.image, 0, y - this.s, this.s));
 								}
 								
-								this.markersDone.incrementAndGet();
+								this.delimitersDone.incrementAndGet();
 							}
 							
 							if (this.h <= y + this.s) {
-								final long markerIndex = this.horizontalMarkers + (column - 1L) * this.markersPerColumn + row;
-								markers.setPixelValue(markerIndex, this.h - 1 - y);
-								this.markersDone.incrementAndGet();
+								final long delimiterIndex = this.horizontalDelimiters + (column - 1L) * this.delimitersPerColumn + row;
+								delimiters.setPixelValue(delimiterIndex, this.h - 1 - y);
+								this.delimitersDone.incrementAndGet();
 							}
 						}
 						
 						{
-							final long markerIndex = this.horizontalMarkers + column * this.markersPerColumn + row - 1L;
+							final long delimiterIndex = this.horizontalDelimiters + column * this.delimitersPerColumn + row - 1L;
 							
 							if (row == 1) {
-								markers.setPixelValue(markerIndex, 0);
+								delimiters.setPixelValue(delimiterIndex, 0);
 							} else {
-								markers.setPixelValue(markerIndex, getVerticalOffsetOfLargestGradient(this.image, x, y - this.s, this.s));
+								delimiters.setPixelValue(delimiterIndex, getVerticalOffsetOfLargestGradient(this.image, x, y - this.s, this.s));
 							}
 							
-							this.markersDone.incrementAndGet();
+							this.delimitersDone.incrementAndGet();
 						}
 						
 						if (this.h <= y + this.s) {
-							final long markerIndex = this.horizontalMarkers + column * this.markersPerColumn + row;
-							markers.setPixelValue(markerIndex, this.h - 1 - y);
-							this.markersDone.incrementAndGet();
+							final long delimiterIndex = this.horizontalDelimiters + column * this.delimitersPerColumn + row;
+							delimiters.setPixelValue(delimiterIndex, this.h - 1 - y);
+							this.delimitersDone.incrementAndGet();
 						}
 						
 						if (this.w <= x + this.s) {
 							{
-								final long markerIndex = this.horizontalMarkers + (column + 1L) * this.markersPerColumn + row - 1L;
+								final long delimiterIndex = this.horizontalDelimiters + (column + 1L) * this.delimitersPerColumn + row - 1L;
 								
 								if (row == 1) {
-									markers.setPixelValue(markerIndex, 0);
+									delimiters.setPixelValue(delimiterIndex, 0);
 								} else {
-									markers.setPixelValue(markerIndex, getVerticalOffsetOfLargestGradient(this.image, this.w - 1, y - this.s, this.s));
+									delimiters.setPixelValue(delimiterIndex, getVerticalOffsetOfLargestGradient(this.image, this.w - 1, y - this.s, this.s));
 								}
 								
-								this.markersDone.incrementAndGet();
+								this.delimitersDone.incrementAndGet();
 							}
 							
 							if (this.h <= y + this.s) {
-								final long markerIndex = this.horizontalMarkers + (column + 1L) * this.markersPerColumn + row;
-								markers.setPixelValue(markerIndex, this.h - 1 - y);
-								this.markersDone.incrementAndGet();
+								final long delimiterIndex = this.horizontalDelimiters + (column + 1L) * this.delimitersPerColumn + row;
+								delimiters.setPixelValue(delimiterIndex, this.h - 1 - y);
+								this.delimitersDone.incrementAndGet();
 							}
 						}
 					}
@@ -297,40 +297,40 @@ public final class InteractiveClassifier {
 			}
 		}
 		
-		public final void check(final LinearPackedGrayImage markers) {
-			if (this.markersDone.get() != markers.getPixelCount()) {
-				debugError("expectedMarkers:", markers.getPixelCount(), "actualMarkers:", this.markersDone.get());
+		public final void check(final LinearPackedGrayImage delimiters) {
+			if (this.delimitersDone.get() != delimiters.getPixelCount()) {
+				debugError("expectedDelimiters:", delimiters.getPixelCount(), "actualDelimiters:", this.delimitersDone.get());
 			}
 			
 			{
 				long errors = 0L;
 				
-				for (long i = 0L; i < this.horizontalMarkers; ++i) {
-					final int markerValue = markers.getPixelValue(i);
+				for (long i = 0L; i < this.horizontalDelimiters; ++i) {
+					final int delimiterValue = delimiters.getPixelValue(i);
 					
-					if (i % this.markersPerRow == 0) {
-						if (markerValue != 0) {
+					if (i % this.delimitersPerRow == 0) {
+						if (delimiterValue != 0) {
 							++errors;
 						}
-					} else if (markerValue == 0) {
+					} else if (delimiterValue == 0) {
 						++errors;
 					}
 				}
 				
-				for (long i = this.horizontalMarkers; i < this.allMarkers; ++i) {
-					final int markerValue = markers.getPixelValue(i);
+				for (long i = this.horizontalDelimiters; i < this.allDelimiters; ++i) {
+					final int delimiterValue = delimiters.getPixelValue(i);
 					
-					if ((i - this.horizontalMarkers) % this.markersPerColumn == 0) {
-						if (markerValue != 0) {
+					if ((i - this.horizontalDelimiters) % this.delimitersPerColumn == 0) {
+						if (delimiterValue != 0) {
 							++errors;
 						}
-					} else if (markerValue == 0) {
+					} else if (delimiterValue == 0) {
 						++errors;
 					}
 				}
 				
 				if (0 < errors) {
-					debugError("erroneousMarkers:", errors);
+					debugError("erroneousDelimiters:", errors);
 				}
 			}
 		}
