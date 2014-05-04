@@ -203,6 +203,27 @@ public final class InteractiveClassifier {
 		
 		public final void setDelimiters(final LinearPackedGrayImage delimiters
 				, final int xStart, final int yStart, final int xEnd, final int yEnd) {
+			this.processSegments(delimiters, xStart, yStart, xEnd, yEnd, new SegmentProcessor() {
+				
+				@Override
+				public final void segment(final int x, final int y, final int row, final int column) {
+//					debugPrint("segment:", x, y, row, column);
+					
+					DelimitersBuilder.this.setHorizontalDelimiters(delimiters, y, row, x, column);
+					DelimitersBuilder.this.setVerticalDelimiters(delimiters, y, row, x, column);
+				}
+				
+				/**
+				 * {@value}.
+				 */
+				private static final long serialVersionUID = 7972837075735571744L;
+				
+			});
+		}
+		
+		public final void processSegments(final LinearPackedGrayImage delimiters
+				, final int xStart, final int yStart, final int xEnd, final int yEnd,
+				final SegmentProcessor process) {
 			/*
 			 * y0 <= s/2 + k s
 			 * <- y0 - s/2 <= k s
@@ -216,10 +237,7 @@ public final class InteractiveClassifier {
 				for (int x = this.s / 2 + this.s * ceiling(xStart - this.s / 2, this.s); x < xEnd; x += this.s) {
 					final int column = 1 + ceiling(x - this.s / 2, this.s);
 					
-//					debugPrint("segment:", x, y, row, column);
-					
-					this.setHorizontalDelimiters(delimiters, y, row, x, column);
-					this.setVerticalDelimiters(delimiters, y, row, x, column);
+					process.segment(x, y, row, column);
 				}
 			}
 		}
@@ -262,7 +280,7 @@ public final class InteractiveClassifier {
 			}
 		}
 		
-		private final void setHorizontalDelimiters(final LinearPackedGrayImage delimiters
+		final void setHorizontalDelimiters(final LinearPackedGrayImage delimiters
 				, final int y, final int row, final int x, final int column) {
 			if (y == this.s / 2) {
 				{
@@ -326,7 +344,7 @@ public final class InteractiveClassifier {
 			}
 		}
 		
-		private final void setVerticalDelimiters(final LinearPackedGrayImage delimiters
+		final void setVerticalDelimiters(final LinearPackedGrayImage delimiters
 				, final int y, final int row, final int x, final int column) {
 			if (x == this.s / 2) {
 				{
@@ -466,6 +484,15 @@ public final class InteractiveClassifier {
 			
 			return result;
 		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-05-04)
+	 */
+	public static abstract interface SegmentProcessor extends Serializable {
+		
+		public abstract void segment(int x, int y, int row, int column);
 		
 	}
 	
