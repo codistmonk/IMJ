@@ -15,6 +15,7 @@ import imj2.tools.Image2DComponent.Painter;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.Window;
 import java.io.Serializable;
@@ -78,7 +79,7 @@ public final class InteractiveClassifier {
 							final int eastX = delimitersBuilder.getSegmentEastX(delimiters, x, y, row, column);
 							final int southY = delimitersBuilder.getSegmentSouthY(delimiters, x, y, row, column);
 							
-							g.setColor(Color.BLUE);
+							g.setColor(Color.GREEN);
 							g.drawOval(x - 2 + tx, northY - 2 + ty, 4, 4);
 							g.drawOval(westX - 2 + tx, y - 2 + ty, 4, 4);
 							g.drawOval(eastX - 2 + tx, y - 2 + ty, 4, 4);
@@ -86,6 +87,12 @@ public final class InteractiveClassifier {
 							
 							g.setColor(Color.RED);
 							g.drawOval(x - 2 + tx, y - 2 + ty, 4, 4);
+							
+							final Polygon polygon = segmentToPolygon(delimiters, delimitersBuilder, x, y, row, column);
+							
+							polygon.translate(tx, ty);
+							
+							g.drawPolygon(polygon);
 						}
 						
 						/**
@@ -124,6 +131,19 @@ public final class InteractiveClassifier {
 			
 			debugPrint("Analyzing image done in", timer.toc(), "ms");
 		}
+	}
+	
+	public static final Polygon segmentToPolygon(
+			final LinearPackedGrayImage delimiters, final DelimitersBuilder delimitersBuilder
+			, final int x, final int y, final int row, final int column) {
+		final Polygon result = new Polygon();
+		
+		result.addPoint(x, delimitersBuilder.getSegmentNorthY(delimiters, x, y, row, column));
+		result.addPoint(delimitersBuilder.getSegmentWestX(delimiters, x, y, row, column), y);
+		result.addPoint(x, delimitersBuilder.getSegmentSouthY(delimiters, x, y, row, column));
+		result.addPoint(delimitersBuilder.getSegmentEastX(delimiters, x, y, row, column), y);
+		
+		return result;
 	}
 	
 	/**
