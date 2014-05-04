@@ -49,37 +49,10 @@ public final class InteractiveClassifier {
 			debugPrint("Analyzing image started...", new Date(timer.tic()));
 			
 			final MarkersBuilder markersBuilder = new MarkersBuilder(image, 32);
-			final LinearPackedGrayImage markers = markersBuilder.newEmptyMarkers();
 			
-			IMJTools.forEachTileIn(image, new TileProcessor() {
-				
-				@Override
-				public final void pixel(final Info info) {
-					debugPrint("tile:", info.getTileX(), info.getTileY(), info.getActualTileWidth(), info.getActualTileHeight());
-					
-					final int xStart = info.getTileX() + info.getPixelXInTile();
-					final int yStart = info.getTileY() + info.getPixelYInTile();
-					final int xEnd = info.getTileX() + info.getActualTileWidth();
-					final int yEnd = info.getTileY() + info.getActualTileHeight();
-					
-					markersBuilder.setMarkers(markers, xStart, yStart, xEnd, yEnd);
-				}
-				
-				@Override
-				public final void endOfTile() {
-					// NOP
-				}
-				
-				/**
-				 * {@value}.
-				 */
-				private static final long serialVersionUID = 8075249791734409997L;
-				
-			});
+			markersBuilder.buildMarkersFor(image);
 			
-			debugPrint("Analyzing image done in", timer.toc(), "ms");
-			
-			markersBuilder.check(markers);
+			debugPrint("Analizing image done in", timer.toc(), "ms");
 		}
 	}
 	
@@ -144,6 +117,40 @@ public final class InteractiveClassifier {
 			debugPrint("markersPerRow:", this.markersPerRow, "rows:", this.rows
 					, "markersPerColumn:", this.markersPerColumn, "columns:", this.columns
 					, "markers:", markers.getPixelCount());
+		}
+		
+		public final LinearPackedGrayImage buildMarkersFor(final TiledImage2D image) {
+			final LinearPackedGrayImage result = this.newEmptyMarkers();
+			
+			IMJTools.forEachTileIn(image, new TileProcessor() {
+				
+				@Override
+				public final void pixel(final Info info) {
+					debugPrint("tile:", info.getTileX(), info.getTileY(), info.getActualTileWidth(), info.getActualTileHeight());
+					
+					final int xStart = info.getTileX() + info.getPixelXInTile();
+					final int yStart = info.getTileY() + info.getPixelYInTile();
+					final int xEnd = info.getTileX() + info.getActualTileWidth();
+					final int yEnd = info.getTileY() + info.getActualTileHeight();
+					
+					MarkersBuilder.this.setMarkers(result, xStart, yStart, xEnd, yEnd);
+				}
+				
+				@Override
+				public final void endOfTile() {
+					// NOP
+				}
+				
+				/**
+				 * {@value}.
+				 */
+				private static final long serialVersionUID = 8075249791734409997L;
+				
+			});
+			
+			this.check(result);
+			
+			return result;
 		}
 		
 		public final LinearPackedGrayImage newEmptyMarkers() {
