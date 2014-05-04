@@ -5,6 +5,9 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.debugError;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static pixel3d.PolygonTools.X;
+import static pixel3d.PolygonTools.Y;
+import static pixel3d.PolygonTools.Z;
 import imj2.core.Image.Channels;
 import imj2.core.Image.Monochannel;
 import imj2.core.Image2D;
@@ -15,6 +18,7 @@ import imj2.tools.Image2DComponent.Painter;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.Window;
@@ -22,6 +26,7 @@ import java.io.Serializable;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicLong;
 
+import pixel3d.PolygonTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 
@@ -139,6 +144,8 @@ public final class InteractiveClassifier {
 		final Polygon result = new Polygon();
 		
 		result.addPoint(x, delimitersBuilder.getSegmentNorthY(delimiters, x, y, row, column));
+		final Point northWest = delimitersBuilder.getSegmentNorthWest(delimiters, x, y, row, column);
+		result.addPoint(northWest.x, northWest.y);
 		result.addPoint(delimitersBuilder.getSegmentWestX(delimiters, x, y, row, column), y);
 		result.addPoint(x, delimitersBuilder.getSegmentSouthY(delimiters, x, y, row, column));
 		result.addPoint(delimitersBuilder.getSegmentEastX(delimiters, x, y, row, column), y);
@@ -300,6 +307,36 @@ public final class InteractiveClassifier {
 			final long delimiterIndex = this.horizontalDelimiters + column * this.delimitersPerColumn + row - 1L;
 			
 			return y - this.s + delimiters.getPixelValue(delimiterIndex);
+		}
+		
+		public final Point getSegmentNorthWest(final LinearPackedGrayImage delimiters, final int x, final int y, final int row, final int column) {
+			final int[] north = { x, this.getSegmentNorthY(delimiters, x, y, row, column), 1 };
+			final int[] west = { this.getSegmentWestX(delimiters, x, y, row, column), y, 1 };
+			final int westNorthWestX = max(0, x - this.s);
+			final int[] westNorthWest = { westNorthWestX, this.getSegmentNorthY(delimiters, westNorthWestX, west[Y], row, column - 1), 1 };
+			final int northNorthWestY = max(0, y - this.s);
+			final int[] northNorthWest = { this.getSegmentWestX(delimiters, north[X], northNorthWestY, row - 1, column), northNorthWestY, 1 };
+			final int[] westToNorthNorthWest = cross3(west, northNorthWest, new int[3]);
+			final int[] northToWestNorthWest = cross3(north, westNorthWest, new int[3]);
+			final int[] northWest = cross3(westToNorthNorthWest, northToWestNorthWest, new int[3]);
+			
+			return new Point(northWest[X] / northWest[Z], northWest[Y] / northWest[Z]);
+		}
+		
+		final int[] cross3(final int[] xyz1, final int[] xyz2, final int[] result) {
+			final int x = det(xyz1[Y], xyz1[Z], xyz2[Y], xyz2[Z]);
+			final int y = -det(xyz1[X], xyz1[Z], xyz2[X], xyz2[Z]);
+			final int z = det(xyz1[X], xyz1[Y], xyz2[X], xyz2[Y]);
+			
+			result[X] = x;
+			result[Y] = y;
+			result[Z] = z;
+			
+			return result;
+		}
+		
+		final int det(final int a, final int b, final int c, final int d) {
+			return a * d - b * c;
 		}
 		
 		public final int getSegmentWestX(final LinearPackedGrayImage delimiters, final int x, final int y, final int row, final int column) {
