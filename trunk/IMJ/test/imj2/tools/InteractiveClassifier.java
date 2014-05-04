@@ -60,7 +60,7 @@ public final class InteractiveClassifier {
 					final Image2D image = component.getImage();
 					
 					if (this.delimitersBuilder == null || this.delimitersBuilder.getImage() != image) {
-						this.delimitersBuilder = new DelimitersBuilder(image, 32);
+						this.delimitersBuilder = new DelimitersBuilder(image, 128);
 						this.delimiters = this.delimitersBuilder.newEmptyDelimiters();
 					}
 					
@@ -144,13 +144,17 @@ public final class InteractiveClassifier {
 		final Polygon result = new Polygon();
 		
 		result.addPoint(x, delimitersBuilder.getSegmentNorthY(delimiters, x, y, row, column));
-		final Point northWest = delimitersBuilder.getSegmentNorthWest(delimiters, x, y, row, column);
-		result.addPoint(northWest.x, northWest.y);
+		addTo(result, delimitersBuilder.getSegmentNorthWest(delimiters, x, y, row, column));
 		result.addPoint(delimitersBuilder.getSegmentWestX(delimiters, x, y, row, column), y);
 		result.addPoint(x, delimitersBuilder.getSegmentSouthY(delimiters, x, y, row, column));
 		result.addPoint(delimitersBuilder.getSegmentEastX(delimiters, x, y, row, column), y);
+		addTo(result, delimitersBuilder.getSegmentNorthEast(delimiters, x, y, row, column));
 		
 		return result;
+	}
+	
+	public static final void addTo(final Polygon polygon, final Point point) {
+		polygon.addPoint(point.x, point.y);
 	}
 	
 	/**
@@ -320,23 +324,25 @@ public final class InteractiveClassifier {
 			final int[] northToWestNorthWest = cross3(north, westNorthWest, new int[3]);
 			final int[] northWest = cross3(westToNorthNorthWest, northToWestNorthWest, new int[3]);
 			
-			return new Point(northWest[X] / northWest[Z], northWest[Y] / northWest[Z]);
+			return unscale2(northWest);
 		}
 		
-		final int[] cross3(final int[] xyz1, final int[] xyz2, final int[] result) {
-			final int x = det(xyz1[Y], xyz1[Z], xyz2[Y], xyz2[Z]);
-			final int y = -det(xyz1[X], xyz1[Z], xyz2[X], xyz2[Z]);
-			final int z = det(xyz1[X], xyz1[Y], xyz2[X], xyz2[Y]);
+		public final Point getSegmentNorthEast(final LinearPackedGrayImage delimiters, final int x, final int y, final int row, final int column) {
+			final int[] north = { x, this.getSegmentNorthY(delimiters, x, y, row, column), 1 };
+			final int[] east = { this.getSegmentEastX(delimiters, x, y, row, column), y, 1 };
+			final int eastNorthEastX = min(this.w - 1, x + this.s);
+			final int[] eastNorthEast = { eastNorthEastX, this.getSegmentNorthY(delimiters, eastNorthEastX, east[Y], row, column - 1), 1 };
+			final int northNorthEastY = max(0, y - this.s);
+			final int[] northNorthEast = { this.getSegmentEastX(delimiters, north[X], northNorthEastY, row - 1, column), northNorthEastY, 1 };
+			final int[] eastToNorthNorthEast = cross3(east, northNorthEast, new int[3]);
+			final int[] northToEastNorthEast = cross3(north, eastNorthEast, new int[3]);
+			final int[] northEast = cross3(eastToNorthNorthEast, northToEastNorthEast, new int[3]);
 			
-			result[X] = x;
-			result[Y] = y;
-			result[Z] = z;
-			
-			return result;
+			return unscale2(northEast);
 		}
 		
-		final int det(final int a, final int b, final int c, final int d) {
-			return a * d - b * c;
+		public static final Point unscale2(final int[] xyw) {
+			return new Point(xyw[X] / xyw[Z], xyw[Y] / xyw[Z]);
 		}
 		
 		public final int getSegmentWestX(final LinearPackedGrayImage delimiters, final int x, final int y, final int row, final int column) {
@@ -531,6 +537,22 @@ public final class InteractiveClassifier {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = 2680059399437526583L;
+		
+		public static final int[] cross3(final int[] xyz1, final int[] xyz2, final int[] result) {
+			final int x = det(xyz1[Y], xyz1[Z], xyz2[Y], xyz2[Z]);
+			final int y = -det(xyz1[X], xyz1[Z], xyz2[X], xyz2[Z]);
+			final int z = det(xyz1[X], xyz1[Y], xyz2[X], xyz2[Y]);
+			
+			result[X] = x;
+			result[Y] = y;
+			result[Z] = z;
+			
+			return result;
+		}
+		
+		public static final int det(final int a, final int b, final int c, final int d) {
+			return a * d - b * c;
+		}
 		
 		public static final int ceiling(final int a, final int b) {
 			return (a + b - 1) / b;
