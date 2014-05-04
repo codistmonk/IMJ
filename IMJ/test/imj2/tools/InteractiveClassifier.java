@@ -158,7 +158,8 @@ public final class InteractiveClassifier {
 					, this.allDelimiters, new Monochannel(Long.SIZE - Long.numberOfLeadingZeros(this.s - 1L)));
 		}
 		
-		public final void setDelimiters(final LinearPackedGrayImage delimiters, final int xStart, final int yStart, final int xEnd, final int yEnd) {
+		public final void setDelimiters(final LinearPackedGrayImage delimiters
+				, final int xStart, final int yStart, final int xEnd, final int yEnd) {
 			/*
 			 * y0 <= s/2 + k s
 			 * <- y0 - s/2 <= k s
@@ -227,7 +228,8 @@ public final class InteractiveClassifier {
 					if (column == 1) {
 						delimiters.setPixelValue(delimiterIndex, 0);
 					} else {
-						delimiters.setPixelValue(delimiterIndex, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, 0, this.s));
+						delimiters.setPixelValue(delimiterIndex
+								, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, 0, this.s));
 					}
 					
 					this.delimitersDone.incrementAndGet();
@@ -246,7 +248,8 @@ public final class InteractiveClassifier {
 				if (column == 1) {
 					delimiters.setPixelValue(delimiterIndex, 0);
 				} else {
-					delimiters.setPixelValue(delimiterIndex, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, y, this.s));
+					delimiters.setPixelValue(delimiterIndex
+							, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, y, this.s));
 				}
 				
 				this.delimitersDone.incrementAndGet();
@@ -265,7 +268,8 @@ public final class InteractiveClassifier {
 					if (column == 1) {
 						delimiters.setPixelValue(delimiterIndex, 0);
 					} else {
-						delimiters.setPixelValue(delimiterIndex, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, this.h - 1, this.s));
+						delimiters.setPixelValue(delimiterIndex
+								, getHorizontalOffsetOfLargestGradient(this.image, x - this.s, this.h - 1, this.s));
 					}
 					
 					this.delimitersDone.incrementAndGet();
@@ -288,7 +292,8 @@ public final class InteractiveClassifier {
 					if (row == 1) {
 						delimiters.setPixelValue(delimiterIndex, 0);
 					} else {
-						delimiters.setPixelValue(delimiterIndex, getHorizontalOffsetOfLargestGradient(this.image, 0, y - this.s, this.s));
+						delimiters.setPixelValue(delimiterIndex
+								, getHorizontalOffsetOfLargestGradient(this.image, 0, y - this.s, this.s));
 					}
 					
 					this.delimitersDone.incrementAndGet();
@@ -307,7 +312,8 @@ public final class InteractiveClassifier {
 				if (row == 1) {
 					delimiters.setPixelValue(delimiterIndex, 0);
 				} else {
-					delimiters.setPixelValue(delimiterIndex, getVerticalOffsetOfLargestGradient(this.image, x, y - this.s, this.s));
+					delimiters.setPixelValue(delimiterIndex
+							, getVerticalOffsetOfLargestGradient(this.image, x, y - this.s, this.s));
 				}
 				
 				this.delimitersDone.incrementAndGet();
@@ -326,7 +332,8 @@ public final class InteractiveClassifier {
 					if (row == 1) {
 						delimiters.setPixelValue(delimiterIndex, 0);
 					} else {
-						delimiters.setPixelValue(delimiterIndex, getVerticalOffsetOfLargestGradient(this.image, this.w - 1, y - this.s, this.s));
+						delimiters.setPixelValue(delimiterIndex
+								, getVerticalOffsetOfLargestGradient(this.image, this.w - 1, y - this.s, this.s));
 					}
 					
 					this.delimitersDone.incrementAndGet();
@@ -349,7 +356,8 @@ public final class InteractiveClassifier {
 			return (a + b - 1) / b;
 		}
 		
-		public static final int getHorizontalOffsetOfLargestGradient(final Image2D image, final int x, final int y, final int s) {
+		public static final int getHorizontalOffsetOfLargestGradient(final Image2D image
+				, final int x, final int y, final int s) {
 			final int w = image.getWidth();
 			final int xStart = x + 1;
 			final int xEnd = min(w, x + s);
@@ -368,7 +376,8 @@ public final class InteractiveClassifier {
 			return result;
 		}
 		
-		public static final int getVerticalOffsetOfLargestGradient(final Image2D image, final int x, final int y, final int s) {
+		public static final int getVerticalOffsetOfLargestGradient(final Image2D image
+				, final int x, final int y, final int s) {
 			final int h = image.getHeight();
 			final int yStart = y + 1;
 			final int yEnd = min(h, y + s);
