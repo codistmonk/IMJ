@@ -135,6 +135,10 @@ public final class PaletteBasedSegmentationTest {
 					final double tz = -128.0;
 					final Collection<Integer>[] collections = new Collection[n / 3];
 					
+					for (int i = 0; i < n; i += 3) {
+						collections[i / 3] = set(i / 3);
+					}
+					
 					{
 						final int[] segments = histogramView.getUserSegments().toArray();
 						final int m = segments.length;
@@ -145,16 +149,7 @@ public final class PaletteBasedSegmentationTest {
 							final Collection<Integer> collection1 = collections[id1];
 							final Collection<Integer> collection2 = collections[id2];
 							
-							if (collection1 == null && collection2 == null) {
-								collections[id1] = set(id1, id2);
-								collections[id2] = collections[id1];
-							} else if (collection1 == null && collection2 != null) {
-								collections[id2].add(id1);
-								collections[id1] = collections[id2];
-							} else if (collection1 != null && collection2 == null) {
-								collections[id1].add(id2);
-								collections[id2] = collections[id1];
-							} else if (collection1 != collection2) {
+							if (collection1 != collection2) {
 								Collection<Integer> source = collection1;
 								Collection<Integer> target = collection2;
 								
