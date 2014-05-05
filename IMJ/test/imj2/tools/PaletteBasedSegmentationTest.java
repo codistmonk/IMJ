@@ -25,6 +25,7 @@ import static net.sourceforge.aprog.tools.Tools.set;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
 import static pixel3d.PolygonTools.Z;
+
 import imj2.tools.ColorSeparationTest.RGBTransformer;
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.PaletteBasedSegmentationTest.HistogramView.PointsUpdatedEvent;
@@ -42,11 +43,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -69,12 +67,12 @@ import javax.swing.tree.TreeModel;
 
 import jgencode.primitivelists.DoubleList;
 import jgencode.primitivelists.IntList;
+
 import net.sourceforge.aprog.events.EventManager;
 import net.sourceforge.aprog.events.EventManager.Event.Listener;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -91,7 +89,7 @@ import pixel3d.TiledRenderer;
 public final class PaletteBasedSegmentationTest {
 	
 	@Test
-	public final void test() {
+	public final void test() throws InterruptedException {
 		SwingTools.useSystemLookAndFeel();
 		SwingTools.setCheckAWT(false);
 		
@@ -142,6 +140,9 @@ public final class PaletteBasedSegmentationTest {
 					for (int i = 0; i < n; i += 3) {
 						collections[i / 3] = set(i / 3);
 					}
+					
+					// Exclude extra point used for color picking
+					collections[0].clear();
 					
 					{
 						final int[] segments = histogramView.getUserSegments().toArray();
@@ -199,12 +200,6 @@ public final class PaletteBasedSegmentationTest {
 							ids.clear();
 						}
 					}
-					
-//					for (int i = 0; i < n; i += 3) {
-//						final Integer rgb = a8r8g8b8(0xFF
-//								, uint8(points[i + X] - tx), uint8(points[i + Y] - ty), uint8(points[i + Z] - tz));
-//						getOrCreate((Map) clusters, rgb, Factory.DefaultFactory.TREE_SET_FACTORY).add(rgb);
-//					}
 				}
 				
 				final DefaultComboBoxModel<RGBTransformer> transformers = (DefaultComboBoxModel<RGBTransformer>) transformerSelector.getModel();
@@ -322,7 +317,9 @@ public final class PaletteBasedSegmentationTest {
 			
 		});
 		
-		show(splitPane, this.getClass().getSimpleName(), true);
+		show(splitPane, this.getClass().getSimpleName(), false);
+		
+		SwingTools.getAWTEventDispatchingThread().join();
 	}
 	
 	public static final int distance1(final int rgb1, final int rgb2) {
@@ -561,7 +558,7 @@ public final class PaletteBasedSegmentationTest {
 					
 					idUnderMouse[0] = idCanvas.getImage().getRGB(event.getX(), event.getY()) & 0x00FFFFFF;
 					
-					this.maybeAddUserSegment(event);
+					this.maybeAddOrDeleteUserSegment(event);
 					
 					this.lastMouseLocation.setLocation(event.getPoint());
 					
@@ -580,7 +577,7 @@ public final class PaletteBasedSegmentationTest {
 						
 						EventManager.getInstance().dispatch(HistogramView.this.new PointsUpdatedEvent());
 						
-						this.maybeAddUserSegment(event);
+						this.maybeAddOrDeleteUserSegment(event);
 						
 						this.lastMouseLocation.setLocation(event.getPoint());
 						lastTouchedId[0] = idUnderMouse[0];
@@ -639,10 +636,29 @@ public final class PaletteBasedSegmentationTest {
 					return result;
 				}
 				
-				private final void maybeAddUserSegment(final MouseEvent event) {
+				private final void maybeAddOrDeleteUserSegment(final MouseEvent event) {
+					final int id1 = lastTouchedId[0];
+					final int id2 = idUnderMouse[0];
+					
 					if (event.getButton() == 1 && (event.getModifiersEx() & SHIFT_DOWN_MASK) == SHIFT_DOWN_MASK
-							&& 0 < lastTouchedId[0] && 0 < idUnderMouse[0] && lastTouchedId[0] != idUnderMouse[0]) {
-						userSegments.addAll(lastTouchedId[0], idUnderMouse[0]);
+							&& 0 < id1 && 0 < id2 && id1 != id2) {
+						final IntList userSegments = HistogramView.this.getUserSegments();
+						final int n = userSegments.size();
+						
+						for (int i = 0; i < n; i += 2) {
+							final int existingId1 = userSegments.get(i);
+							final int existingId2 = userSegments.get(i + 1);
+							
+							if (existingId1 == id1 && existingId2 == id2 || existingId1 == id2 && existingId2 == id1) {
+								System.arraycopy(userSegments.toArray(), i + 2, userSegments.toArray(), i, n - i - 2);
+								userSegments.resize(n - 2);
+								EventManager.getInstance().dispatch(HistogramView.this.new SegmentsUpdatedEvent());
+								
+								return;
+							}
+						}
+						
+						userSegments.addAll(id1, id2);
 						
 						EventManager.getInstance().dispatch(HistogramView.this.new SegmentsUpdatedEvent());
 					}
