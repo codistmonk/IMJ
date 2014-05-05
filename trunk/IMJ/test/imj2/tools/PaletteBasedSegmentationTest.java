@@ -46,6 +46,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import javax.swing.AbstractAction;
 import javax.swing.DefaultComboBoxModel;
@@ -165,15 +166,42 @@ public final class PaletteBasedSegmentationTest {
 								}
 							}
 						}
-						
-						debugPrint(Arrays.deepToString(collections));
 					}
 					
-					for (int i = 0; i < n; i += 3) {
-						final Integer rgb = a8r8g8b8(0xFF
-								, uint8(points[i + X] - tx), uint8(points[i + Y] - ty), uint8(points[i + Z] - tz));
-						getOrCreate((Map) clusters, rgb, Factory.DefaultFactory.TREE_SET_FACTORY).add(rgb);
+					for (final Collection<Integer> ids : collections) {
+						if (!ids.isEmpty()) {
+							final TreeSet<Integer> prototypes = new TreeSet<>();
+							int clusterR = 0;
+							int clusterG = 0;
+							int clusterB = 0;
+							
+							for (final int id : ids) {
+								final int r = uint8(points[id * 3 + X] - tx);
+								final int g = uint8(points[id * 3 + Y] - ty);
+								final int b = uint8(points[id * 3 + Z] - tz);
+								
+								clusterR += r;
+								clusterG += g;
+								clusterB += b;
+								
+								final Integer rgb = a8r8g8b8(0xFF, r, g, b);
+								
+								prototypes.add(rgb);
+							}
+							
+							final Integer clusterRGB = a8r8g8b8(0xFF, clusterR / ids.size(), clusterG / ids.size(), clusterB / ids.size());
+							
+							clusters.put(clusterRGB, prototypes);
+							
+							ids.clear();
+						}
 					}
+					
+//					for (int i = 0; i < n; i += 3) {
+//						final Integer rgb = a8r8g8b8(0xFF
+//								, uint8(points[i + X] - tx), uint8(points[i + Y] - ty), uint8(points[i + Z] - tz));
+//						getOrCreate((Map) clusters, rgb, Factory.DefaultFactory.TREE_SET_FACTORY).add(rgb);
+//					}
 				}
 				
 				final DefaultComboBoxModel<RGBTransformer> transformers = (DefaultComboBoxModel<RGBTransformer>) transformerSelector.getModel();
