@@ -522,15 +522,13 @@ public final class PaletteBasedSegmentationTest {
 									final int id2 = userSegments.get(j + 1);
 									
 									if (idToRemove != id1 && idToRemove != id2) {
-										userSegments.set(i, id1);
-										userSegments.set(++i, id2);
+										userSegments.set(i, id1 < idToRemove ? id1 : id1 - 1);
+										userSegments.set(++i, id2 < idToRemove ? id2 : id2 - 1);
 										++i;
 									}
 								}
 								
 								userSegments.resize(i);
-								
-								EventManager.getInstance().dispatch(HistogramView.this.new SegmentsUpdatedEvent());
 							}
 							
 							{
@@ -541,10 +539,10 @@ public final class PaletteBasedSegmentationTest {
 								System.arraycopy(userPoints.toArray(), offset, userPoints.toArray(), offset - 3, n - offset);
 								
 								userPoints.resize(n - 3);
-								
-								EventManager.getInstance().dispatch(HistogramView.this.new PointsUpdatedEvent());
 							}
 							
+							EventManager.getInstance().dispatch(HistogramView.this.new SegmentsUpdatedEvent());
+							EventManager.getInstance().dispatch(HistogramView.this.new PointsUpdatedEvent());
 							HistogramView.this.refresh();
 						}
 						break;
