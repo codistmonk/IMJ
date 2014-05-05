@@ -2,6 +2,9 @@ package imj2.tools;
 
 import static imj2.tools.IMJTools.a8gray888;
 import static imj2.tools.IMJTools.a8r8g8b8;
+import static imj2.tools.IMJTools.blue8;
+import static imj2.tools.IMJTools.green8;
+import static imj2.tools.IMJTools.red8;
 import static imj2.tools.IMJTools.uint8;
 import static java.awt.event.InputEvent.SHIFT_DOWN_MASK;
 import static java.awt.event.KeyEvent.VK_BACK_SPACE;
@@ -226,6 +229,60 @@ public final class PaletteBasedSegmentationTest {
 			private static final long serialVersionUID = -7179884216164528584L;
 			
 		});
+		
+		histogramView.getUserPoints().addAll(Double.NaN, 0.0, 0.0);
+		
+		new MouseHandler(null) {
+			
+			@Override
+			public final void mouseClicked(final MouseEvent event) {
+				if (event.getButton() == 1 && event.getClickCount() == 2
+						&& !Double.isNaN(histogramView.getUserPoints().get(0 + X))) {
+					for (int i = X; i <= Z; ++i) {
+						histogramView.getUserPoints().add(histogramView.getUserPoints().get(0 + i));
+					}
+					
+					EventManager.getInstance().dispatch(histogramView.new PointsUpdatedEvent());
+					histogramView.refresh();
+				}
+			}
+			
+			@Override
+			public final void mouseExited(final MouseEvent event) {
+				histogramView.getUserPoints().set(0, Double.NaN);
+				histogramView.refresh();
+			}
+			
+			@Override
+			public final void mouseMoved(final MouseEvent event) {
+				final BufferedImage image = imageView.getImage();
+				
+				if (image == null) {
+					return;
+				}
+				
+				final int x = event.getX();
+				final int y = event.getY() - max(0, (imageView.getImageHolder().getHeight() - imageView.getImage().getHeight()) / 2);
+				
+				if (0 <= x && x < image.getWidth() && 0 <= y && y < image.getHeight()) {
+					final int rgb = image.getRGB(x, y);
+					final double tx = 128.0;
+					final double ty = 128.0;
+					final double tz = -128.0;
+					histogramView.getUserPoints().set(0 + X, red8(rgb) + tx);
+					histogramView.getUserPoints().set(0 + Y, green8(rgb) + ty);
+					histogramView.getUserPoints().set(0 + Z, blue8(rgb) + tz);
+				}
+				
+				histogramView.refresh();
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 1277776112136611973L;
+			
+		}.addTo(imageView.getImageHolder());
 		
 		imageView.getPainters().add(new Painter<SimpleImageView>() {
 			
