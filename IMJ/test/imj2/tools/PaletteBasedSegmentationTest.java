@@ -133,8 +133,7 @@ public final class PaletteBasedSegmentationTest {
 					final double tx = +128.0;
 					final double ty = +128.0;
 					final double tz = -128.0;
-					final Collection<Integer>[][] collections = new Collection[n / 3][];
-//					final List<Collection<Integer>[]> groups = new ArrayList<>();
+					final Collection<Integer>[] collections = new Collection[n / 3];
 					
 					{
 						final int[] segments = histogramView.getUserSegments().toArray();
@@ -143,21 +142,32 @@ public final class PaletteBasedSegmentationTest {
 						for (int i = 0; i < m; i += 2) {
 							final int id1 = segments[i] - 1;
 							final int id2 = segments[i + 1] - 1;
-							final Collection<Integer>[] collection1 = collections[id1];
-							final Collection<Integer>[] collection2 = collections[id2];
+							final Collection<Integer> collection1 = collections[id1];
+							final Collection<Integer> collection2 = collections[id2];
 							
 							if (collection1 == null && collection2 == null) {
-								collections[id1] = array(set(id1, id2));
+								collections[id1] = set(id1, id2);
 								collections[id2] = collections[id1];
 							} else if (collection1 == null && collection2 != null) {
-								collections[id2][0].add(id1);
+								collections[id2].add(id1);
 								collections[id1] = collections[id2];
 							} else if (collection1 != null && collection2 == null) {
-								collections[id1][0].add(id2);
+								collections[id1].add(id2);
 								collections[id2] = collections[id1];
-							} else {
-								collection1[0].addAll(collection2[0]);
-								collection2[0] = collection1[0];
+							} else if (collection1 != collection2) {
+								Collection<Integer> source = collection1;
+								Collection<Integer> target = collection2;
+								
+								if (collection1.size() < collection2.size()) {
+									target = collection1;
+									source = collection2;
+								}
+								
+								source.addAll(target);
+								
+								for (final Integer id : target) {
+									collections[id] = source;
+								}
 							}
 						}
 						
