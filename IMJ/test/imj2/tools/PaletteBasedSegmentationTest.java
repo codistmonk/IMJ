@@ -141,18 +141,20 @@ public final class PaletteBasedSegmentationTest {
 						final int m = segments.length;
 						
 						for (int i = 0; i < m; i += 2) {
-							final int id1 = segments[i];
-							final int id2 = segments[i + 1];
-							final Collection<Integer>[] collection1 = collections[id1 / 3];
-							final Collection<Integer>[] collection2 = collections[id2 / 3];
+							final int id1 = segments[i] - 1;
+							final int id2 = segments[i + 1] - 1;
+							final Collection<Integer>[] collection1 = collections[id1];
+							final Collection<Integer>[] collection2 = collections[id2];
 							
 							if (collection1 == null && collection2 == null) {
-								collections[id1 / 3] = array(set(id1, id2));
-								collections[id2 / 3] = collections[id1 / 3];
+								collections[id1] = array(set(id1, id2));
+								collections[id2] = collections[id1];
 							} else if (collection1 == null && collection2 != null) {
-								collections[id1 / 3] = collections[id2 / 3];
+								collections[id2][0].add(id1);
+								collections[id1] = collections[id2];
 							} else if (collection1 != null && collection2 == null) {
-								collections[id2 / 3] = collections[id1 / 3];
+								collections[id1][0].add(id2);
+								collections[id2] = collections[id1];
 							} else {
 								collection1[0].addAll(collection2[0]);
 								collection2[0] = collection1[0];
