@@ -373,6 +373,12 @@ public final class PaletteBasedSegmentationTest {
 						final int idToRemove = lastTouchedId[0];
 						
 						if (0 < idToRemove) {
+							lastTouchedId[0] = 0;
+							
+							if (idUnderMouse[0] == idToRemove) {
+								idUnderMouse[0] = 0;
+							}
+							
 							{
 								final int n = userSegments.size();
 								int i = 0;
@@ -398,6 +404,8 @@ public final class PaletteBasedSegmentationTest {
 								final int offset = idToRemove * 3;
 								
 								System.arraycopy(userPoints.toArray(), offset, userPoints.toArray(), offset - 3, n - offset);
+								
+								userPoints.resize(n - 3);
 								
 								EventManager.getInstance().dispatch(HistogramView.this.new PointsUpdatedEvent());
 							}
@@ -638,7 +646,8 @@ public final class PaletteBasedSegmentationTest {
 					final double y = userPoints[i + Y];
 					final double z = userPoints[i + Z];
 					
-					this.histogramGraphics.drawPoint(x, y, z, idUnderMouse[0] == id ? 0xFFFFFF00 : 0xFF0000FF);
+					this.histogramGraphics.drawPoint(x, y, z, idUnderMouse[0] == id ? 0xFFFFFF00
+							: lastTouchedId[0] == id ? 0xFF00FFFF : 0xFF0000FF);
 					this.idGraphics.drawPoint(x, y, z, 0xFF000000 | id);
 				}
 			}
