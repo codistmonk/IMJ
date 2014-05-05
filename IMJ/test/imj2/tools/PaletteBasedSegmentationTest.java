@@ -18,12 +18,14 @@ import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
+import static net.sourceforge.aprog.tools.Tools.set;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
 import static pixel3d.PolygonTools.Z;
 import imj2.tools.ColorSeparationTest.RGBTransformer;
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.PaletteBasedSegmentationTest.HistogramView.PointsUpdatedEvent;
+import imj2.tools.PaletteBasedSegmentationTest.HistogramView.SegmentsUpdatedEvent;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -37,8 +39,11 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -65,6 +70,7 @@ import net.sourceforge.aprog.events.EventManager.Event.Listener;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -107,29 +113,64 @@ public final class PaletteBasedSegmentationTest {
 		transformerSelector.addActionListener(updateImageViewActionListener);
 		segmentCheckBox.addActionListener(updateImageViewActionListener);
 		
-		EventManager.getInstance().addListener(histogramView, PointsUpdatedEvent.class, new Serializable() {
+		EventManager.getInstance().addListener(histogramView, HistogramView.AbstractEvent.class, new Serializable() {
 			
 			@Listener
-			public final void segmentsUpdated(final PointsUpdatedEvent event) {
+			public final void segmentsUpdated(final SegmentsUpdatedEvent event) {
+				this.pointsUpdated(null);
+			}
+			
+			@SuppressWarnings("unchecked")
+			@Listener
+			public final void pointsUpdated(final PointsUpdatedEvent event) {
 				final Map<Integer, Collection<Integer>> clusters = ((NearestNeighborRGBQuantizer) transformerSelector.getItemAt(1)).getClusters();
 				
-				clusters.clear();
-				
-				final double[] points = histogramView.getUserPoints().toArray();
-				final double tx = +128.0;
-				final double ty = +128.0;
-				final double tz = -128.0;
-				final int n = points.length;
-				
-				for (int i = 0; i < n; i += 3) {
-					final Integer rgb = a8r8g8b8(0xFF
-							, uint8(points[i + X] - tx), uint8(points[i + Y] - ty), uint8(points[i + Z] - tz));
-					getOrCreate((Map) clusters, rgb, Factory.DefaultFactory.TREE_SET_FACTORY).add(rgb);
+				{
+					clusters.clear();
+					
+					final double[] points = histogramView.getUserPoints().toArray();
+					final int n = points.length;
+					final double tx = +128.0;
+					final double ty = +128.0;
+					final double tz = -128.0;
+					final Collection<Integer>[][] collections = new Collection[n / 3][];
+//					final List<Collection<Integer>[]> groups = new ArrayList<>();
+					
+					{
+						final int[] segments = histogramView.getUserSegments().toArray();
+						final int m = segments.length;
+						
+						for (int i = 0; i < m; i += 2) {
+							final int id1 = segments[i];
+							final int id2 = segments[i + 1];
+							final Collection<Integer>[] collection1 = collections[id1 / 3];
+							final Collection<Integer>[] collection2 = collections[id2 / 3];
+							
+							if (collection1 == null && collection2 == null) {
+								collections[id1 / 3] = array(set(id1, id2));
+								collections[id2 / 3] = collections[id1 / 3];
+							} else if (collection1 == null && collection2 != null) {
+								collections[id1 / 3] = collections[id2 / 3];
+							} else if (collection1 != null && collection2 == null) {
+								collections[id2 / 3] = collections[id1 / 3];
+							} else {
+								collection1[0].addAll(collection2[0]);
+								collection2[0] = collection1[0];
+							}
+						}
+						
+						debugPrint(Arrays.deepToString(collections));
+					}
+					
+					for (int i = 0; i < n; i += 3) {
+						final Integer rgb = a8r8g8b8(0xFF
+								, uint8(points[i + X] - tx), uint8(points[i + Y] - ty), uint8(points[i + Z] - tz));
+						getOrCreate((Map) clusters, rgb, Factory.DefaultFactory.TREE_SET_FACTORY).add(rgb);
+					}
 				}
 				
 				final DefaultComboBoxModel<RGBTransformer> transformers = (DefaultComboBoxModel<RGBTransformer>) transformerSelector.getModel();
 				final int selectedIndex = transformerSelector.getSelectedIndex();
-				
 				
 				while (2 < transformers.getSize()) {
 					transformers.removeElementAt(2);
@@ -380,6 +421,7 @@ public final class PaletteBasedSegmentationTest {
 							}
 							
 							{
+								final IntList userSegments = HistogramView.this.getUserSegments();
 								final int n = userSegments.size();
 								int i = 0;
 								
@@ -400,6 +442,7 @@ public final class PaletteBasedSegmentationTest {
 							}
 							
 							{
+								final DoubleList userPoints = HistogramView.this.getUserPoints();
 								final int n = userPoints.size();
 								final int offset = idToRemove * 3;
 								
@@ -442,7 +485,7 @@ public final class PaletteBasedSegmentationTest {
 				@Override
 				public final void mouseClicked(final MouseEvent event) {
 					if (event.getButton() == 1 && event.getClickCount() == 2) {
-						userPoints.addAll(this.getPoint(event, 0.0));
+						HistogramView.this.getUserPoints().addAll(this.getPoint(event, 0.0));
 						idUnderMouse[0] = userPoints.size() / 3;
 						
 						EventManager.getInstance().dispatch(HistogramView.this.new PointsUpdatedEvent());
@@ -460,11 +503,11 @@ public final class PaletteBasedSegmentationTest {
 				public final void mouseDragged(final MouseEvent event) {
 					if (0 < idUnderMouse[0]) {
 						final int offset = (idUnderMouse[0] - 1) * 3;
-						final double[] tmp = copyOfRange(userPoints.toArray(), offset, offset + 3);
+						final double[] tmp = copyOfRange(HistogramView.this.getUserPoints().toArray(), offset, offset + 3);
 						
 						orbiter.transform(tmp);
 						
-						System.arraycopy(this.getPoint(event, tmp[Z]), 0, userPoints.toArray(), offset, 3);
+						System.arraycopy(this.getPoint(event, tmp[Z]), 0, HistogramView.this.getUserPoints().toArray(), offset, 3);
 						
 						event.consume();
 						
@@ -473,7 +516,7 @@ public final class PaletteBasedSegmentationTest {
 						{
 							boolean segmentsUpdated = false;
 							
-							for (final int id : userSegments.toArray()) {
+							for (final int id : HistogramView.this.getUserSegments().toArray()) {
 								if (id == idUnderMouse[0]) {
 									segmentsUpdated = true;
 									break;
