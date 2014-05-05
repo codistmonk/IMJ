@@ -4,6 +4,8 @@ import static imj2.tools.IMJTools.a8gray888;
 import static imj2.tools.IMJTools.a8r8g8b8;
 import static imj2.tools.IMJTools.uint8;
 import static java.awt.event.InputEvent.SHIFT_DOWN_MASK;
+import static java.awt.event.KeyEvent.VK_BACK_SPACE;
+import static java.awt.event.KeyEvent.VK_DELETE;
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
@@ -19,7 +21,6 @@ import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
 import static pixel3d.PolygonTools.Z;
-
 import imj2.tools.ColorSeparationTest.RGBTransformer;
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.PaletteBasedSegmentationTest.HistogramView.PointsUpdatedEvent;
@@ -29,6 +30,8 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
@@ -57,7 +60,6 @@ import javax.swing.tree.TreeModel;
 
 import jgencode.primitivelists.DoubleList;
 import jgencode.primitivelists.IntList;
-
 import net.sourceforge.aprog.events.EventManager;
 import net.sourceforge.aprog.events.EventManager.Event.Listener;
 import net.sourceforge.aprog.swing.SwingTools;
@@ -359,12 +361,63 @@ public final class PaletteBasedSegmentationTest {
 		private final int[] lastTouchedId;
 		
 		public HistogramView() {
+			this.setFocusable(true);
+			
+			this.addKeyListener(new KeyAdapter() {
+				
+				@Override
+				public final void keyPressed(final KeyEvent event) {
+					switch (event.getKeyCode()) {
+					case VK_DELETE:
+					case VK_BACK_SPACE:
+						final int idToRemove = lastTouchedId[0];
+						
+						if (0 < idToRemove) {
+							{
+								final int n = userSegments.size();
+								int i = 0;
+								
+								for (int j = 0; j < n; j += 2) {
+									final int id1 = userSegments.get(j);
+									final int id2 = userSegments.get(j + 1);
+									
+									if (idToRemove != id1 && idToRemove != id2) {
+										userSegments.set(i, id1);
+										userSegments.set(++i, id2);
+										++i;
+									}
+								}
+								
+								userSegments.resize(i);
+								
+								EventManager.getInstance().dispatch(HistogramView.this.new SegmentsUpdatedEvent());
+							}
+							
+							{
+								final int n = userPoints.size();
+								final int offset = idToRemove * 3;
+								
+								System.arraycopy(userPoints.toArray(), offset, userPoints.toArray(), offset - 3, n - offset);
+								
+								EventManager.getInstance().dispatch(HistogramView.this.new PointsUpdatedEvent());
+							}
+							
+							HistogramView.this.refresh();
+						}
+						break;
+					}
+				}
+				
+			});
+			
 			new MouseHandler(null) {
 				
 				private final Point lastMouseLocation = new Point();
 				
 				@Override
 				public final void mousePressed(final MouseEvent event) {
+					HistogramView.this.requestFocusInWindow();
+					
 					idUnderMouse[0] = idCanvas.getImage().getRGB(event.getX(), event.getY()) & 0x00FFFFFF;
 					
 					this.maybeAddUserSegment(event);
