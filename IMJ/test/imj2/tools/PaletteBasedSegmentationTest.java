@@ -12,6 +12,8 @@ import static java.awt.event.KeyEvent.VK_DELETE;
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
+import static java.lang.Math.round;
+import static java.lang.Math.sqrt;
 import static java.util.Arrays.copyOfRange;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
@@ -25,7 +27,6 @@ import static net.sourceforge.aprog.tools.Tools.set;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
 import static pixel3d.PolygonTools.Z;
-
 import imj2.tools.ColorSeparationTest.RGBTransformer;
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.PaletteBasedSegmentationTest.HistogramView.PointsUpdatedEvent;
@@ -67,7 +68,6 @@ import javax.swing.tree.TreeModel;
 
 import jgencode.primitivelists.DoubleList;
 import jgencode.primitivelists.IntList;
-
 import net.sourceforge.aprog.events.EventManager;
 import net.sourceforge.aprog.events.EventManager.Event.Listener;
 import net.sourceforge.aprog.swing.SwingTools;
@@ -330,6 +330,20 @@ public final class PaletteBasedSegmentationTest {
 		result += abs(((rgb1 >> 0) & 0xFF) - ((rgb2 >> 0) & 0xFF));
 		
 		return result;
+	}
+	
+	public static final int distance2(final int rgb1, final int rgb2) {
+		int result = 0;
+		
+		result += square(((rgb1 >> 16) & 0xFF) - ((rgb2 >> 16) & 0xFF));
+		result += square(((rgb1 >> 8) & 0xFF) - ((rgb2 >> 8) & 0xFF));
+		result += square(((rgb1 >> 0) & 0xFF) - ((rgb2 >> 0) & 0xFF));
+		
+		return (int) round(sqrt(result));
+	}
+	
+	public static final int square(final int value) {
+		return value * value;
 	}
 	
 	public static final Map<Integer, Collection<Integer>> getClusters(final GenericTree clustersEditor) {
@@ -1084,7 +1098,7 @@ public final class PaletteBasedSegmentationTest {
 			
 			for (final Map.Entry<Integer, Collection<Integer>> entry : this.clusters.entrySet()) {
 				for (final Integer prototype : entry.getValue()) {
-					final int distance = distance1(rgb, prototype);
+					final int distance = distance2(rgb, prototype);
 					
 					if (distance < bestDistance) {
 						bestDistance = distance;
@@ -1129,7 +1143,7 @@ public final class PaletteBasedSegmentationTest {
 			
 			for (final Map.Entry<Integer, Collection<Integer>> entry : this.clusters.entrySet()) {
 				for (final Integer prototype : entry.getValue()) {
-					final int distance = distance1(rgb, prototype);
+					final int distance = distance2(rgb, prototype);
 					
 					if (distance < bestDistances[0]) {
 						bestClusters[1] = bestClusters[0];
