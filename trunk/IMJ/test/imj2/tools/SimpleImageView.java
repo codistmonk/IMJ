@@ -1,13 +1,17 @@
 package imj2.tools;
 
 import static net.sourceforge.aprog.swing.SwingTools.getFiles;
+import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import imj2.tools.Image2DComponent.Painter;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetAdapter;
 import java.awt.dnd.DropTargetDropEvent;
@@ -21,7 +25,8 @@ import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
+
+import net.sourceforge.aprog.swing.SwingTools;
 
 /**
  * @author codistmonk (creation 2014-01-22)
@@ -46,7 +51,9 @@ public final class SimpleImageView extends JPanel {
 		
 		this.setPreferredSize(new Dimension(256, 256));
 		
-		this.add(new JScrollPane(this.imageHolder), BorderLayout.CENTER);
+		SwingTools.setCheckAWT(false);
+		this.add(scrollable(centered(this.imageHolder)), BorderLayout.CENTER);
+		SwingTools.setCheckAWT(true);
 		
 		this.setDropTarget(new DropTarget(this, new DropTargetAdapter() {
 			
@@ -128,5 +135,15 @@ public final class SimpleImageView extends JPanel {
 	 * {@value}.
 	 */
 	private static final long serialVersionUID = -7264772728114165458L;
+	
+	public static final JPanel centered(final Component component) {
+		SwingTools.checkAWT();
+		
+		final JPanel result = new JPanel(new GridBagLayout());
+		
+		result.add(component, new GridBagConstraints());
+		
+		return result;
+	}
 	
 }
