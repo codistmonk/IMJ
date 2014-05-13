@@ -1,5 +1,6 @@
 package pixel3d;
 
+import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
@@ -41,7 +42,21 @@ public final class PolygonTools {
 		return result;
 	}
 	
-	public static final void renderDisc(final Processor process, final double x, final double y, final double z, final double size) {
+	public static final void renderSegment(final Processor process
+			, final double x1, final double y1, final double z1
+			, final double x2, final double y2, final double z2) {
+		final double dx = x2 - x1;
+		final double dy = y2 - y1;
+		final double dz = z2 - z1;
+		final int d = 1 + (int) max(abs(dx), abs(dy));
+		
+		for (int i = 0; i < d; ++i) {
+			process.pixel(x1 + i * dx / d, y1 + i * dy / d, z1 + i * dz / d);
+		}
+	}
+	
+	public static final void renderDisc(final Processor process
+			, final double x, final double y, final double z, final double size) {
 		final double radius = size / 2.0;
 		final double radiusSquared = square(radius);
 		final int startY = (int) (y - radius);
