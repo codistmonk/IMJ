@@ -2,12 +2,16 @@ package pixel3d;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.lang.Math.sqrt;
+import static net.sourceforge.aprog.tools.MathTools.square;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.debug;
 
 import java.io.Serializable;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.MathTools;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-04-27)
@@ -37,7 +41,27 @@ public final class PolygonTools {
 		return result;
 	}
 	
-	public static final void render(final Processor processor, final double... vertices) {
+	public static final void renderDisc(final Processor process, final double x, final double y, final double z, final double size) {
+		final double radius = size / 2.0;
+		final double radiusSquared = square(radius);
+		final int startY = (int) (y - radius);
+		final int endY = (int) (startY + size);
+		
+		for (int yy = startY; yy < endY; ++yy) {
+			// (firstX - x)² + (yy - y)² = (size/2)²
+			// <- firstX - x = -sqrt((size/2)² - (yy - y)²) 
+			// <- firstX = x - sqrt((size/2)² - (yy - y)²) 
+			final double halfSpanX = sqrt(radiusSquared - square(yy - y));
+			final int firstX = (int) (x - halfSpanX);
+			final int endX = (int) (x + halfSpanX);
+			
+			for (int xx = firstX; xx < endX; ++xx) {
+				process.pixel(xx, yy, z);
+			}
+		}
+	}
+	
+	public static final void render(final Processor process, final double... vertices) {
 		//  Adapted from http://alienryderflex.com/polygon_fill/ (public-domain code by Darel Rex Finley, 2007)
 		
 		final int clipLeft = 0;
@@ -63,13 +87,13 @@ public final class PolygonTools {
 			final int nodeCount = buildNodeList(nodeX, nodeZ, y, vertices);
 			
 			sortNodes(nodeX, nodeZ, nodeCount);
-			fillPixelsBetweenNodePairs(nodeX, nodeZ, nodeCount, y, clipLeft, clipRight, processor);
+			fillPixelsBetweenNodePairs(nodeX, nodeZ, nodeCount, y, clipLeft, clipRight, process);
 		}
 	}
 	
 	public static final void fillPixelsBetweenNodePairs(final int[] nodeX,
 			final double[] nodeZ, final int nodeCount, final int y,
-			final int clipLeft, final int clipRight, final Processor processor) {
+			final int clipLeft, final int clipRight, final Processor process) {
 		// Fill the pixels between node pairs.
 		for (int i = 0; i < nodeCount; i += 2) {
 			int x1 = nodeX[i];
@@ -95,7 +119,7 @@ public final class PolygonTools {
 				final double dz = z2 - z1;
 				
 				for (int x = x1; x < x2; x++) {
-					processor.pixel(x, y, z1 + (x - x1) * dz / dx);
+					process.pixel(x, y, z1 + (x - x1) * dz / dx);
 				}
 			}
 		}
