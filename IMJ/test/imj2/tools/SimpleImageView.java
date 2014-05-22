@@ -101,25 +101,25 @@ public final class SimpleImageView extends JPanel {
 		return this.getBuffer().getGraphics();
 	}
 	
-	public final void setImage(final BufferedImage image) {
+	public final SimpleImageView setImage(final BufferedImage image) {
 		this.image = image;
 		this.getBuffer().setFormat(image.getWidth(), image.getHeight(),
 				this.getBufferType() != 0 ? this.getBufferType() : image.getType());
 		
 		this.getImageHolder().setIcon(new ImageIcon(this.getBuffer().getImage()));
 		
-		this.refreshBuffer();
+		return this.refreshBuffer();
 	}
 	
 	public final List<Painter<SimpleImageView>> getPainters() {
 		return this.painters;
 	}
 	
-	public final void refreshBuffer() {
+	public final SimpleImageView refreshBuffer() {
 		final Graphics2D g = this.getBuffer().getGraphics();
 		
 		if (g == null) {
-			return;
+			return this;
 		}
 		
 		g.drawImage(this.getImage(), 0, 0, null);
@@ -129,6 +129,8 @@ public final class SimpleImageView extends JPanel {
 		}
 		
 		this.repaint();
+		
+		return this;
 	}
 	
 	/**
