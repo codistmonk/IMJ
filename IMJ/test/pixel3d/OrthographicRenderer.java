@@ -9,6 +9,8 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.io.Serializable;
 
+import jgencode.primitivelists.IntList;
+
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 /**
@@ -205,8 +207,38 @@ public final class OrthographicRenderer implements Renderer {
 		quickSort(values, 0, values.length, comparator);
 	}
 	
-	public static final void quickSort(final int[] values, final int start, final int end,
-			final IntComparator comparator) {
+	public static final void quickSort(final int[] values, final int start0, final int end0, final IntComparator comparator, final IntList queue) {
+		queue.add(start0);
+		queue.add(end0);
+		
+		while (!queue.isEmpty()) {
+			final int start = queue.remove(0);
+			final int end = queue.remove(0);
+			final int size = end - start;
+			
+			if (size < 2) {
+				continue;
+			}
+			
+			final int pivot = values[start + size / 2];
+			int middle = start;
+			
+			for (int i = start; i < end; ++i) {
+				if (comparator.compare(values[i], pivot) < 0) {
+					swap(values, middle++, i);
+				}
+			}
+			
+			if (start < middle) {
+				queue.add(start);
+				queue.add(middle);
+				queue.add(middle + 1);
+				queue.add(end);
+			}
+		}
+	}
+	
+	public static final void quickSort(final int[] values, final int start, final int end, final IntComparator comparator) {
 		final int size = end - start;
 		
 		if (size < 2) {
@@ -220,6 +252,10 @@ public final class OrthographicRenderer implements Renderer {
 			if (comparator.compare(values[i], pivot) < 0) {
 				swap(values, middle++, i);
 			}
+		}
+		
+		if (middle <= start) {
+			return;
 		}
 		
 		quickSort(values, start, middle, comparator);
