@@ -104,6 +104,7 @@ public abstract class IMJCoreTools {
 	
 	public static final <I extends Image> I[] newParallelViews(final I image, final int n) {
 		try {
+			@SuppressWarnings("unchecked")
 			final I[] result = (I[]) Array.newInstance(image.getClass(), n);
 			
 			Arrays.fill(result, image);

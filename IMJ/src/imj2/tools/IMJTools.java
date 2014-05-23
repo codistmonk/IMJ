@@ -2,7 +2,6 @@ package imj2.tools;
 
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
-
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
 import imj2.core.ConcreteImage2D;
@@ -22,7 +21,6 @@ import java.util.Iterator;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
-
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**
@@ -34,6 +32,7 @@ public final class IMJTools extends IMJCoreTools {
 		throw new IllegalInstantiationException();
 	}
 	
+	@SuppressWarnings("unchecked")
 	public static final <C extends Component> C findComponent(final Container parent, final Class<C> componentClass) {
 		if (componentClass.isInstance(parent)) {
 			return (C) parent;
