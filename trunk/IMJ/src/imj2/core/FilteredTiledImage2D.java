@@ -38,7 +38,6 @@ public abstract class FilteredTiledImage2D extends TiledImage2D {
 		return this.source;
 	}
 	
-	@SuppressWarnings("unchecked")
 	public final Object getTileKey(final int tileX, final int tileY) {
 		return asList(this.getId(), tileX, tileY);
 	}
