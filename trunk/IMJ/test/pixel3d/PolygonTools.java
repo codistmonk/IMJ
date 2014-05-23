@@ -60,7 +60,7 @@ public final class PolygonTools {
 		final int startY = (int) (y - radius);
 		final int endY = (int) (startY + size);
 		
-		for (int yy = startY; yy < endY; ++yy) {
+		for (int yy = startY; yy <= endY; ++yy) {
 			// (firstX - x)² + (yy - y)² = (size/2)²
 			// <- firstX - x = -sqrt((size/2)² - (yy - y)²) 
 			// <- firstX = x - sqrt((size/2)² - (yy - y)²) 
@@ -68,7 +68,7 @@ public final class PolygonTools {
 			final int firstX = (int) (x - halfSpanX);
 			final int endX = (int) (x + halfSpanX);
 			
-			for (int xx = firstX; xx < endX; ++xx) {
+			for (int xx = firstX; xx <= endX; ++xx) {
 				process.pixel(xx, yy, z);
 			}
 		}
