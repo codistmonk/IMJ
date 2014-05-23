@@ -44,7 +44,13 @@ public final class OrthographicRenderer implements Renderer {
 				final float z1 = OrthographicRenderer.this.getZValue(index1);
 				final float z2 = OrthographicRenderer.this.getZValue(index2);
 				
-				return Float.compare(z1, z2);
+				int result = Float.compare(z1, z2);
+				
+				if (result == 0) {
+					result = index1 - index2;
+				}
+				
+				return result;
 			}
 			
 			/**
@@ -132,8 +138,7 @@ public final class OrthographicRenderer implements Renderer {
 		final boolean debug = false;
 		final int n = this.pixelCount;
 		
-		quicksort2(this.indices, 0, n, this.comparator);
-		Arrays.sort(this.indices);
+		dualPivotQuicksort(this.indices, 0, n, this.comparator);
 //		Arrays.sort(this.indices, 0, n, new Comparator<Integer>() {
 //			
 //			@Override
@@ -150,7 +155,7 @@ public final class OrthographicRenderer implements Renderer {
 			for (int i = 0; i + 1 < n; ++i) {
 				if (0 < this.comparator.compare(this.indices[i], this.indices[i + 1])) {
 					Tools.debugError(i, this.getZValue(this.indices[i]), this.getZValue(this.indices[i + 1]));
-					throw new IllegalStateException();
+//					throw new IllegalStateException();
 				}
 			}
 		}
@@ -243,18 +248,6 @@ public final class OrthographicRenderer implements Renderer {
 		
 	};
 	
-	static {
-		final int[] values = { 1, 2, 10, 11, 3, 12, 13, 14, 15 };
-		
-		Tools.debugPrint(Arrays.toString(values));
-		
-		quicksort(values, INT_COMPARATOR);
-		
-		Tools.debugPrint(Arrays.toString(values));
-		
-		checkSorted(values, INT_COMPARATOR);;
-	}
-	
 	public static final void checkSorted(final int[] values, final IntComparator comparator) {
 		final int n = values.length - 1;
 		
@@ -265,109 +258,8 @@ public final class OrthographicRenderer implements Renderer {
 		}
 	}
 	
-	public static final void quicksort(final int[] values, final IntComparator comparator) {
-		quicksort(values, 0, values.length, comparator);
-	}
-	
-	public static final void quicksort(final int[] values, final int start0, final int end0, final IntComparator comparator, final IntList queue) {
-		queue.add(start0);
-		queue.add(end0);
-		
-		while (!queue.isEmpty()) {
-			final int start = queue.remove(0);
-			final int end = queue.remove(0);
-			final int size = end - start;
-			
-			if (size < 2) {
-				continue;
-			}
-			
-			final int last = end - 1;
-			final int pivotIndex = start + size / 2;
-			final int pivot = values[pivotIndex];
-			int middle = start;
-			
-			swap(values, pivotIndex, last);
-			
-			for (int i = start; i < last; ++i) {
-				if (comparator.compare(values[i], pivot) < 0) {
-					swap(values, middle++, i);
-				}
-			}
-			
-			swap(values, middle, last);
-			
-//			if (start < middle) {
-				queue.add(start);
-				queue.add(middle);
-				queue.add(middle + 1);
-				queue.add(end);
-//			}
-		}
-	}
-	
-	public static final void quicksort(final int[] values, final int start, final int end, final IntComparator comparator) {
-		final int size = end - start;
-		
-		if (size < 2) {
-			return;
-		}
-		
-		final int last = end - 1;
-		final int pivotIndex = start + size / 2;
-		final int pivot = values[pivotIndex];
-		int middle = start;
-		
-		swap(values, pivotIndex, end - 1);
-		
-		for (int i = start; i < last; ++i) {
-			if (comparator.compare(values[i], pivot) < 0) {
-				swap(values, middle++, i);
-			}
-		}
-		
-		swap(values, middle, last);
-		
-		quicksort(values, start, middle, comparator);
-		quicksort(values, middle + 1, end, comparator);
-	}
-	
-	public static final void quicksort2(final int[] values, final int start0, final int end0, final IntComparator comparator) {
-		int start = start0;
-		int end = end0;
-		
-		while (true) {
-			final int size = end - start;
-			
-			if (size < 2) {
-				return;
-			}
-			
-			final int last = end - 1;
-			final int pivotIndex = start + size / 2;
-			final int pivot = values[pivotIndex];
-			int middle = start;
-			
-			swap(values, pivotIndex, end - 1);
-			
-			for (int i = start; i < last; ++i) {
-				if (comparator.compare(values[i], pivot) < 0) {
-					swap(values, middle++, i);
-				}
-			}
-			
-			swap(values, middle, last);
-			
-			quicksort2(values, start, middle, comparator);
-			
-			start = middle + 1;
-		}
-	}
-	
-	public static final void swap(final int[] values, final int i, final int j) {
-		final int value = values[i];
-		values[i] = values[j];
-		values[j] = value;
+	public static final void dualPivotQuicksort(final int[] values, final int start, final int end, final IntComparator comparator) {
+		DualPivotQuicksort.sort(values, start, end - 1, null, 0, 0, comparator);
 	}
 	
 	/**
