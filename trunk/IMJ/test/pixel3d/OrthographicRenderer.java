@@ -8,10 +8,12 @@ import static net.sourceforge.aprog.tools.Tools.debug;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Comparator;
 
 import jgencode.primitivelists.IntList;
-
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-04-27)
@@ -22,7 +24,9 @@ public final class OrthographicRenderer implements Renderer {
 	
 	private BufferedImage canvas;
 	
-	private int[] indices;
+//	private int[] indices;
+	
+	private Integer[] indices;
 	
 	private int[] pixels;
 	
@@ -49,7 +53,8 @@ public final class OrthographicRenderer implements Renderer {
 			private static final long serialVersionUID = 1379706747335956894L;
 			
 		};
-		this.indices = new int[1];
+//		this.indices = new int[1];
+		this.indices = new Integer[1];
 		this.pixels = new int[1];
 		this.zValues = new float[1];
 		this.colors = new int[1];
@@ -127,7 +132,27 @@ public final class OrthographicRenderer implements Renderer {
 		final boolean debug = false;
 		final int n = this.pixelCount;
 		
-		quickSort(this.indices, 0, n, this.comparator);
+//		quickSort(this.indices, 0, n - 1, this.comparator);
+		Arrays.sort(this.indices, 0, n, new Comparator<Integer>() {
+			
+			@Override
+			public final int compare(final Integer index1, final Integer index2) {
+				final float z1 = OrthographicRenderer.this.getZValue(index1);
+				final float z2 = OrthographicRenderer.this.getZValue(index2);
+				
+				return Float.compare(z1, z2);
+			}
+			
+		});
+		
+		{
+			for (int i = 0; i + 1 < n; ++i) {
+				if (0 < this.comparator.compare(this.indices[i], this.indices[i + 1])) {
+					Tools.debugError(i, this.getZValue(this.indices[i]), this.getZValue(this.indices[i + 1]));
+					throw new IllegalStateException();
+				}
+			}
+		}
 		
 		if (debug) {
 			final int w = this.canvas.getWidth();

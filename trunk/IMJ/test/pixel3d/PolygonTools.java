@@ -11,8 +11,6 @@ import static net.sourceforge.aprog.tools.Tools.debug;
 import java.io.Serializable;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.MathTools;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-04-27)
