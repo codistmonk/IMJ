@@ -162,7 +162,7 @@ public final class OrthographicRenderer implements Renderer {
 	/**
 	 * {@value}.
 	 */
-	public static final int A = 0x00FF0000;
+	public static final int A = 0xFF000000;
 	
 	/**
 	 * {@value}.
