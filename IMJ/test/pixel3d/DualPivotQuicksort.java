@@ -89,19 +89,19 @@ final class DualPivotQuicksort {
      * Sorts the specified range of the array using the given
      * workspace array slice if possible for merging
      *
-     * @param a the array to be sorted
+     * @param array the array to be sorted
      * @param left the index of the first element, inclusive, to be sorted
      * @param right the index of the last element, inclusive, to be sorted
      * @param work a workspace array (slice)
      * @param workBase origin of usable space in work array
-     * @param workLen usable size of work array
+     * @param workLength usable size of work array
      */
-    static final void sort(int[] a, final int left, int right
-    		, int[] work, int workBase, int workLen
+    static final void sort(final int[] array, final int left, int right
+    		, int[] work, int workBase, int workLength
     		, final IntComparator comparator) {
         // Use Quicksort on small arrays
         if (right - left < QUICKSORT_THRESHOLD) {
-            sort(a, left, right, true, comparator);
+            sort(array, left, right, true, comparator);
             return;
         }
 
@@ -115,21 +115,18 @@ final class DualPivotQuicksort {
 
         // Check if the array is nearly sorted
         for (int k = left; k < right; run[count] = k) {
-            if (comparator.compare(a[k], a[k + 1]) < 0) { // ascending
-                while (++k <= right && comparator.compare(a[k - 1], a[k]) <= 0);
-            } else if (comparator.compare(a[k], a[k + 1]) > 0) { // descending
-                while (++k <= right && comparator.compare(a[k - 1], a[k]) >= 0);
+            if (comparator.compare(array[k], array[k + 1]) < 0) { // ascending
+                while (++k <= right && comparator.compare(array[k - 1], array[k]) <= 0);
+            } else if (comparator.compare(array[k], array[k + 1]) > 0) { // descending
+                while (++k <= right && comparator.compare(array[k - 1], array[k]) >= 0);
                 
                 for (int lo = run[count] - 1, hi = k; ++lo < --hi; ) {
-                	swap(a, lo, hi);
-//                    final int t = a[lo];
-//                    a[lo] = a[hi];
-//                    a[hi] = t;
+                	swap(array, lo, hi);
                 }
             } else { // equal
-                for (int m = MAX_RUN_LENGTH; ++k <= right && comparator.compare(a[k - 1], a[k]) == 0; ) {
+                for (int m = MAX_RUN_LENGTH; ++k <= right && comparator.compare(array[k - 1], array[k]) == 0; ) {
                     if (--m == 0) {
-                        sort(a, left, right, true, comparator);
+                        sort(array, left, right, true, comparator);
                         return;
                     }
                 }
@@ -140,7 +137,7 @@ final class DualPivotQuicksort {
              * use Quicksort instead of merge sort.
              */
             if (++count == MAX_RUN_COUNT) {
-                sort(a, left, right, true, comparator);
+                sort(array, left, right, true, comparator);
                 return;
             }
         }
@@ -153,28 +150,29 @@ final class DualPivotQuicksort {
             return;
         }
 
+    	int[] a = array;
         // Determine alternation base for merge
-        byte odd = 0;
-        for (int n = 1; (n <<= 1) < count; odd ^= 1);
-
+        boolean odd = false;
+        for (int n = 1; (n <<= 1) < count; odd ^= true);
+        
         // Use or create temporary array b for merging
         int[] b;                 // temp array; alternates with a
-        int ao, bo;              // array offsets from 'left'
-        int blen = right - left; // space needed for b
-        if (work == null || workLen < blen || workBase + blen > work.length) {
-            work = new int[blen];
+        int aOffset, bOffset;              // array offsets from 'left'
+        int bLength = right - left; // space needed for b
+        if (work == null || workLength < bLength || workBase + bLength > work.length) {
+            work = new int[bLength];
             workBase = 0;
         }
-        if (odd == 0) {
-            System.arraycopy(a, left, work, workBase, blen);
+        if (!odd) {
+            System.arraycopy(a, left, work, workBase, bLength);
             b = a;
-            bo = 0;
+            bOffset = 0;
             a = work;
-            ao = workBase - left;
+            aOffset = workBase - left;
         } else {
             b = work;
-            ao = 0;
-            bo = workBase - left;
+            aOffset = 0;
+            bOffset = workBase - left;
         }
 
         // Merging
@@ -182,34 +180,42 @@ final class DualPivotQuicksort {
             for (int k = (last = 0) + 2; k <= count; k += 2) {
                 int hi = run[k], mi = run[k - 1];
                 for (int i = run[k - 2], p = i, q = mi; i < hi; ++i) {
-                    if (q >= hi || p < mi && comparator.compare(a[p + ao], a[q + ao]) <= 0) {
-                        b[i + bo] = a[p++ + ao];
+                    if (q >= hi || p < mi && comparator.compare(a[p + aOffset], a[q + aOffset]) <= 0) {
+                        b[i + bOffset] = a[p++ + aOffset];
                     } else {
-                        b[i + bo] = a[q++ + ao];
+                        b[i + bOffset] = a[q++ + aOffset];
                     }
                 }
                 run[++last] = hi;
             }
             if ((count & 1) != 0) {
                 for (int i = right, lo = run[count - 1]; --i >= lo;
-                    b[i + bo] = a[i + ao]
+                    b[i + bOffset] = a[i + aOffset]
                 );
                 run[++last] = right;
             }
-            int[] t = a; a = b; b = t;
-            int o = ao; ao = bo; bo = o;
+            {
+            	final int[] t = a;
+            	a = b;
+            	b = t;
+            }
+            {
+            	final int o = aOffset;
+            	aOffset = bOffset;
+            	bOffset = o;
+            }
         }
     }
 
     /**
      * Sorts the specified range of the array by Dual-Pivot Quicksort.
      *
-     * @param a the array to be sorted
+     * @param array the array to be sorted
      * @param left the index of the first element, inclusive, to be sorted
      * @param right the index of the last element, inclusive, to be sorted
      * @param leftmost indicates if this part is the leftmost in the range
      */
-    private static void sort(final int[] a, int left, int right, final boolean leftmost, final IntComparator comparator) {
+    private static void sort(final int[] array, int left, int right, final boolean leftmost, final IntComparator comparator) {
         int length = right - left + 1;
 
         // Use insertion sort on tiny arrays
@@ -221,14 +227,14 @@ final class DualPivotQuicksort {
                  * the leftmost part.
                  */
                 for (int i = left, j = i; i < right; j = ++i) {
-                    int ai = a[i + 1];
-                    while (comparator.compare(ai, a[j]) < 0) {
-                        a[j + 1] = a[j];
+                    int ai = array[i + 1];
+                    while (comparator.compare(ai, array[j]) < 0) {
+                        array[j + 1] = array[j];
                         if (j-- == left) {
                             break;
                         }
                     }
-                    a[j + 1] = ai;
+                    array[j + 1] = ai;
                 }
             } else {
                 /*
@@ -238,7 +244,7 @@ final class DualPivotQuicksort {
                     if (left >= right) {
                         return;
                     }
-                } while (comparator.compare(a[++left], a[left - 1]) >= 0);
+                } while (comparator.compare(array[++left], array[left - 1]) >= 0);
 
                 /*
                  * Every element from adjoining part plays the role
@@ -249,33 +255,33 @@ final class DualPivotQuicksort {
                  * than traditional implementation of insertion sort.
                  */
                 for (int k = left; ++left <= right; k = ++left) {
-                    int a1 = a[k], a2 = a[left];
+                    int a1 = array[k], a2 = array[left];
 
                     if (comparator.compare(a1, a2) < 0) {
-                        a2 = a1; a1 = a[left];
+                        a2 = a1; a1 = array[left];
                     }
-                    while (comparator.compare(a1, a[--k]) < 0) {
-                        a[k + 2] = a[k];
+                    while (comparator.compare(a1, array[--k]) < 0) {
+                        array[k + 2] = array[k];
                     }
-                    a[++k + 1] = a1;
+                    array[++k + 1] = a1;
 
-                    while (comparator.compare(a2, a[--k]) < 0) {
-                        a[k + 1] = a[k];
+                    while (comparator.compare(a2, array[--k]) < 0) {
+                        array[k + 1] = array[k];
                     }
-                    a[k + 1] = a2;
+                    array[k + 1] = a2;
                 }
-                int last = a[right];
+                int last = array[right];
 
-                while (comparator.compare(last, a[--right]) < 0) {
-                    a[right + 1] = a[right];
+                while (comparator.compare(last, array[--right]) < 0) {
+                    array[right + 1] = array[right];
                 }
-                a[right + 1] = last;
+                array[right + 1] = last;
             }
             return;
         }
 
         // Inexpensive approximation of length / 7
-        int seventh = (length >> 3) + (length >> 6) + 1;
+        final int seventh = (length >> 3) + (length >> 6) + 1;
 
         /*
          * Sort five evenly spaced elements around (and including) the
@@ -284,78 +290,27 @@ final class DualPivotQuicksort {
          * these elements was empirically determined to work well on
          * a wide variety of inputs.
          */
-        int e3 = (left + right) >>> 1; // The midpoint
-        int e2 = e3 - seventh;
-        int e1 = e2 - seventh;
-        int e4 = e3 + seventh;
-        int e5 = e4 + seventh;
+        final int e3 = (left + right) >>> 1; // The midpoint
+        final int e2 = e3 - seventh;
+        final int e1 = e2 - seventh;
+        final int e4 = e3 + seventh;
+        final int e5 = e4 + seventh;
 
-        // Sort these elements using insertion sort
-        if (comparator.compare(a[e2], a[e1]) < 0) {
-        	swap(a, e1, e2);
-        }
-
-        if (comparator.compare(a[e3], a[e2]) < 0) {
-        	final int t = a[e3];
-        	a[e3] = a[e2];
-        	a[e2] = t;
-        	
-			if (comparator.compare(t, a[e1]) < 0) {
-				a[e2] = a[e1];
-				a[e1] = t;
-			}
-        }
-        
-		if (comparator.compare(a[e4], a[e3]) < 0) {
-			final int t = a[e4];
-			a[e4] = a[e3];
-			a[e3] = t;
-			
-			if (comparator.compare(t, a[e2]) < 0) {
-				a[e3] = a[e2];
-				a[e2] = t;
-				
-				if (comparator.compare(t, a[e1]) < 0) {
-					a[e2] = a[e1];
-					a[e1] = t;
-				}
-			}
-		}
-		
-		if (comparator.compare(a[e5], a[e4]) < 0) {
-			final int t = a[e5];
-			a[e5] = a[e4];
-			a[e4] = t;
-			
-			if (comparator.compare(t, a[e3]) < 0) {
-				a[e4] = a[e3];
-				a[e3] = t;
-				
-				if (comparator.compare(t, a[e2]) < 0) {
-					a[e3] = a[e2];
-					a[e2] = t;
-					
-					if (comparator.compare(t, a[e1]) < 0) {
-						a[e2] = a[e1];
-						a[e1] = t;
-					}
-				}
-			}
-		}
+        insertionSort(array, e3, e2, e1, e4, e5, comparator);
 
         // Pointers
         int less  = left;  // The index of the first element of center part
         int great = right; // The index before the first element of right part
 
-        if (comparator.compare(a[e1], a[e2]) != 0 && comparator.compare(a[e2], a[e3]) != 0
-        		&& comparator.compare(a[e3], a[e4]) != 0 && comparator.compare(a[e4], a[e5]) != 0) {
+        if (comparator.compare(array[e1], array[e2]) != 0 && comparator.compare(array[e2], array[e3]) != 0
+        		&& comparator.compare(array[e3], array[e4]) != 0 && comparator.compare(array[e4], array[e5]) != 0) {
             /*
              * Use the second and fourth of the five sorted elements as pivots.
              * These values are inexpensive approximations of the first and
              * second terciles of the array. Note that pivot1 <= pivot2.
              */
-            final int pivot1 = a[e2];
-            final int pivot2 = a[e4];
+            final int pivot1 = array[e2];
+            final int pivot2 = array[e4];
 
             /*
              * The first and the last elements to be sorted are moved to the
@@ -363,15 +318,14 @@ final class DualPivotQuicksort {
              * is complete, the pivots are swapped back into their final
              * positions, and excluded from subsequent sorting.
              */
-            a[e2] = a[left];
-            a[e4] = a[right];
+            array[e2] = array[left];
+            array[e4] = array[right];
 
             /*
              * Skip elements, which are less or greater than pivot values.
              */
-            while (comparator.compare(a[++less], pivot1) < 0);
-//            while (a[--great] > pivot2);
-            while (comparator.compare(a[--great], pivot2) > 0);
+            while (comparator.compare(array[++less], pivot1) < 0);
+            while (comparator.compare(array[--great], pivot2) > 0);
 
             /*
              * Partitioning:
@@ -394,44 +348,44 @@ final class DualPivotQuicksort {
              */
             outer:
             for (int k = less - 1; ++k <= great; ) {
-                int ak = a[k];
+                int ak = array[k];
                 if (comparator.compare(ak, pivot1) < 0) { // Move a[k] to left part
-                    a[k] = a[less];
+                    array[k] = array[less];
                     /*
                      * Here and below we use "a[i] = b; i++;" instead
                      * of "a[i++] = b;" due to performance issue.
                      */
-                    a[less] = ak;
+                    array[less] = ak;
                     ++less;
                 } else if (comparator.compare(ak, pivot2) > 0) { // Move a[k] to right part
-                    while (comparator.compare(a[great], pivot2) > 0) {
+                    while (comparator.compare(array[great], pivot2) > 0) {
                         if (great-- == k) {
                             break outer;
                         }
                     }
-                    if (comparator.compare(a[great], pivot1) < 0) { // a[great] <= pivot2
-                        a[k] = a[less];
-                        a[less] = a[great];
+                    if (comparator.compare(array[great], pivot1) < 0) { // a[great] <= pivot2
+                        array[k] = array[less];
+                        array[less] = array[great];
                         ++less;
                     } else { // pivot1 <= a[great] <= pivot2
-                        a[k] = a[great];
+                        array[k] = array[great];
                     }
                     /*
                      * Here and below we use "a[i] = b; i--;" instead
                      * of "a[i--] = b;" due to performance issue.
                      */
-                    a[great] = ak;
+                    array[great] = ak;
                     --great;
                 }
             }
 
             // Swap pivots into their final positions
-            a[left]  = a[less  - 1]; a[less  - 1] = pivot1;
-            a[right] = a[great + 1]; a[great + 1] = pivot2;
+            array[left]  = array[less  - 1]; array[less  - 1] = pivot1;
+            array[right] = array[great + 1]; array[great + 1] = pivot2;
 
             // Sort left and right parts recursively, excluding known pivots
-            sort(a, left, less - 2, leftmost, comparator);
-            sort(a, great + 2, right, false, comparator);
+            sort(array, left, less - 2, leftmost, comparator);
+            sort(array, great + 2, right, false, comparator);
 
             /*
              * If center part is too large (comprises > 4/7 of the array),
@@ -441,11 +395,11 @@ final class DualPivotQuicksort {
                 /*
                  * Skip elements, which are equal to pivot values.
                  */
-                while (comparator.compare(a[less], pivot1) == 0) {
+                while (comparator.compare(array[less], pivot1) == 0) {
                     ++less;
                 }
 
-                while (comparator.compare(a[great], pivot2) == 0) {
+                while (comparator.compare(array[great], pivot2) == 0) {
                     --great;
                 }
 
@@ -470,19 +424,19 @@ final class DualPivotQuicksort {
                  */
                 outer:
                 for (int k = less - 1; ++k <= great; ) {
-                    int ak = a[k];
+                    int ak = array[k];
                     if (comparator.compare(ak, pivot1) == 0) { // Move a[k] to left part
-                        a[k] = a[less];
-                        a[less] = ak;
+                        array[k] = array[less];
+                        array[less] = ak;
                         ++less;
                     } else if (ak == pivot2) { // Move a[k] to right part
-                        while (comparator.compare(a[great], pivot2) == 0) {
+                        while (comparator.compare(array[great], pivot2) == 0) {
                             if (great-- == k) {
                                 break outer;
                             }
                         }
-                        if (comparator.compare(a[great], pivot1) == 0) { // a[great] < pivot2
-                            a[k] = a[less];
+                        if (comparator.compare(array[great], pivot1) == 0) { // a[great] < pivot2
+                            array[k] = array[less];
                             /*
                              * Even though a[great] equals to pivot1, the
                              * assignment a[less] = pivot1 may be incorrect,
@@ -491,26 +445,26 @@ final class DualPivotQuicksort {
                              * double sorting methods we have to use more
                              * accurate assignment a[less] = a[great].
                              */
-                            a[less] = pivot1;
+                            array[less] = pivot1;
                             ++less;
                         } else { // pivot1 < a[great] < pivot2
-                            a[k] = a[great];
+                            array[k] = array[great];
                         }
-                        a[great] = ak;
+                        array[great] = ak;
                         --great;
                     }
                 }
             }
 
             // Sort center part recursively
-            sort(a, less, great, false, comparator);
+            sort(array, less, great, false, comparator);
 
         } else { // Partitioning with one pivot
             /*
              * Use the third of the five sorted elements as pivot.
              * This value is inexpensive approximation of the median.
              */
-        	final int pivot = a[e3];
+        	final int pivot = array[e3];
 
             /*
              * Partitioning degenerates to the traditional 3-way
@@ -533,21 +487,21 @@ final class DualPivotQuicksort {
              * Pointer k is the first index of ?-part.
              */
             for (int k = less; k <= great; ++k) {
-                if (comparator.compare(a[k], pivot) == 0) {
+                if (comparator.compare(array[k], pivot) == 0) {
                     continue;
                 }
-                int ak = a[k];
+                int ak = array[k];
                 if (comparator.compare(ak, pivot) < 0) { // Move a[k] to left part
-                    a[k] = a[less];
-                    a[less] = ak;
+                    array[k] = array[less];
+                    array[less] = ak;
                     ++less;
                 } else { // a[k] > pivot - Move a[k] to right part
-                    while (comparator.compare(a[great], pivot) > 0) {
+                    while (comparator.compare(array[great], pivot) > 0) {
                         --great;
                     }
-                    if (comparator.compare(a[great], pivot) < 0) { // a[great] <= pivot
-                        a[k] = a[less];
-                        a[less] = a[great];
+                    if (comparator.compare(array[great], pivot) < 0) { // a[great] <= pivot
+                        array[k] = array[less];
+                        array[less] = array[great];
                         ++less;
                     } else { // a[great] == pivot
                         /*
@@ -558,9 +512,9 @@ final class DualPivotQuicksort {
                          * and double sorting methods we have to use
                          * more accurate assignment a[k] = a[great].
                          */
-                        a[k] = pivot;
+                        array[k] = pivot;
                     }
-                    a[great] = ak;
+                    array[great] = ak;
                     --great;
                 }
             }
@@ -570,9 +524,64 @@ final class DualPivotQuicksort {
              * All elements from center part are equal
              * and, therefore, already sorted.
              */
-            sort(a, left, less - 1, leftmost, comparator);
-            sort(a, great + 1, right, false, comparator);
+            sort(array, left, less - 1, leftmost, comparator);
+            sort(array, great + 1, right, false, comparator);
         }
     }
+    
+	private static final void insertionSort(final int[] array, final int e3, final int e2,
+			final int e1, final int e4, final int e5, final IntComparator comparator) {
+		if (comparator.compare(array[e2], array[e1]) < 0) {
+        	swap(array, e1, e2);
+        }
+
+        if (comparator.compare(array[e3], array[e2]) < 0) {
+        	final int t = array[e3];
+        	array[e3] = array[e2];
+        	array[e2] = t;
+        	
+			if (comparator.compare(t, array[e1]) < 0) {
+				array[e2] = array[e1];
+				array[e1] = t;
+			}
+        }
+        
+		if (comparator.compare(array[e4], array[e3]) < 0) {
+			final int t = array[e4];
+			array[e4] = array[e3];
+			array[e3] = t;
+			
+			if (comparator.compare(t, array[e2]) < 0) {
+				array[e3] = array[e2];
+				array[e2] = t;
+				
+				if (comparator.compare(t, array[e1]) < 0) {
+					array[e2] = array[e1];
+					array[e1] = t;
+				}
+			}
+		}
+		
+		if (comparator.compare(array[e5], array[e4]) < 0) {
+			final int t = array[e5];
+			array[e5] = array[e4];
+			array[e4] = t;
+			
+			if (comparator.compare(t, array[e3]) < 0) {
+				array[e4] = array[e3];
+				array[e3] = t;
+				
+				if (comparator.compare(t, array[e2]) < 0) {
+					array[e3] = array[e2];
+					array[e2] = t;
+					
+					if (comparator.compare(t, array[e1]) < 0) {
+						array[e2] = array[e1];
+						array[e1] = t;
+					}
+				}
+			}
+		}
+	}
 
 }
