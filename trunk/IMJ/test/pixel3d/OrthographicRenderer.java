@@ -2,19 +2,12 @@ package pixel3d;
 
 import static java.lang.Math.min;
 import static java.util.Arrays.copyOf;
-import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
-import static net.sourceforge.aprog.tools.Tools.debug;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.io.Serializable;
-import java.util.Arrays;
-import java.util.Comparator;
 
-import jgencode.primitivelists.IntList;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-04-27)
@@ -26,7 +19,6 @@ public final class OrthographicRenderer implements Renderer {
 	private BufferedImage canvas;
 	
 	private int[] indices;
-//	private Integer[] indices;
 	
 	private int[] pixels;
 	
@@ -60,7 +52,6 @@ public final class OrthographicRenderer implements Renderer {
 			
 		};
 		this.indices = new int[1];
-//		this.indices = new Integer[1];
 		this.pixels = new int[1];
 		this.zValues = new float[1];
 		this.colors = new int[1];
@@ -135,68 +126,19 @@ public final class OrthographicRenderer implements Renderer {
 	
 	@Override
 	public final void render() {
-		final boolean debug = false;
 		final int n = this.pixelCount;
 		
 		dualPivotQuicksort(this.indices, 0, n, this.comparator);
-//		Arrays.sort(this.indices, 0, n, new Comparator<Integer>() {
-//			
-//			@Override
-//			public final int compare(final Integer index1, final Integer index2) {
-//				final float z1 = OrthographicRenderer.this.getZValue(index1);
-//				final float z2 = OrthographicRenderer.this.getZValue(index2);
-//				
-//				return Float.compare(z1, z2);
-//			}
-//			
-//		});
 		
-		{
-			for (int i = 0; i + 1 < n; ++i) {
-				if (0 < this.comparator.compare(this.indices[i], this.indices[i + 1])) {
-					Tools.debugError(i, this.getZValue(this.indices[i]), this.getZValue(this.indices[i + 1]));
-//					throw new IllegalStateException();
-				}
-			}
-		}
+		final DataBuffer dataBuffer = this.canvas.getRaster().getDataBuffer();
 		
-		if (debug) {
-			final int w = this.canvas.getWidth();
-			double previousZ = Double.NEGATIVE_INFINITY;
+		for (int i = 0; i < n; ++i) {
+			final int index = this.indices[i];
+			final int pixel = this.pixels[index];
+			final int previousRGB = dataBuffer.getElem(pixel);
+			final int argb = this.colors[index];
 			
-			for (int i = 0; i < n; ++i) {
-				final int index = this.indices[i];
-				final int pixel = this.pixels[index];
-				final int x = pixel % w;
-				final int y = pixel / w;
-				final double z = this.zValues[index];
-				
-				if (z < previousZ) {
-					System.err.println(debug(DEBUG_STACK_OFFSET, previousZ, z));
-				}
-				
-				this.canvas.setRGB(x, y, (this.canvas.getRGB(x, y) & 0xFF00FFFF) | this.colors[index]);
-				previousZ = z;
-			}
-		} else {
-			final DataBuffer dataBuffer = this.canvas.getRaster().getDataBuffer();
-			
-			for (int i = 0; i < n; ++i) {
-				final int index = this.indices[i];
-				final int pixel = this.pixels[index];
-				final int previousRGB = dataBuffer.getElem(pixel);
-				final int previousRed = previousRGB & R;
-				final int previousGreen = previousRGB & G;
-				final int previousBlue = previousRGB & B;
-				final int rgb = this.colors[index];
-				final int alpha = (rgb >> 24) & 0xFF;
-				final int beta = 255 - alpha;
-				final int red = (((rgb & R) * alpha + previousRed * beta) / 255) & R;
-				final int green = (((rgb & G) * alpha + previousGreen * beta) / 255) & G;
-				final int blue = (((rgb & B) * alpha + previousBlue * beta) / 255) & B;
-				
-				dataBuffer.setElem(pixel, 0xFF000000 | red | green | blue);
-			}
+			dataBuffer.setElem(pixel, overlay(previousRGB, argb));
 		}
 	}
 	
@@ -234,20 +176,6 @@ public final class OrthographicRenderer implements Renderer {
 	
 	public static final DefaultFactory<OrthographicRenderer> FACTORY = DefaultFactory.forClass(OrthographicRenderer.class);
 	
-	public static final IntComparator INT_COMPARATOR = new IntComparator() {
-		
-		@Override
-		public final int compare(final int value1, final int value2) {
-			return value1 < value2 ? -1 : value1 == value2 ? 0 : 1;
-		}
-		
-		/**
-		 * {@value}.
-		 */
-		private static final long serialVersionUID = 2338544738825140920L;
-		
-	};
-	
 	public static final void checkSorted(final int[] values, final IntComparator comparator) {
 		final int n = values.length - 1;
 		
@@ -262,12 +190,41 @@ public final class OrthographicRenderer implements Renderer {
 		DualPivotQuicksort.sort(values, start, end - 1, null, 0, 0, comparator);
 	}
 	
+	public static final int overlay(final int previousRGB, final int argb) {
+		final int alpha = argb >>> 24;
+		final int beta = 255 - alpha;
+		final int red = (((argb & R) * alpha + (previousRGB & R) * beta) / 255) & R;
+		final int green = (((argb & G) * alpha + (previousRGB & G) * beta) / 255) & G;
+		final int blue = (((argb & B) * alpha + (previousRGB & B) * beta) / 255) & B;
+		
+		return 0xFF000000 | red | green | blue;
+	}
+	
 	/**
 	 * @author codistmonk (creation 2014-04-29)
 	 */
 	public static abstract interface IntComparator extends Serializable {
 		
 		public abstract int compare(int value1, int value2);
+		
+		/**
+		 * @author codistmonk (creation 2014-05-23)
+		 */
+		public static final class Default implements IntComparator {
+			
+			@Override
+			public final int compare(final int value1, final int value2) {
+				return value1 < value2 ? -1 : value1 == value2 ? 0 : 1;
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 2338544738825140920L;
+			
+			public static final Default INSTANCE = new Default();
+			
+		}
 		
 	}
 	
