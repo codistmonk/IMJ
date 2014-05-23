@@ -91,16 +91,16 @@ public final class PaletteBasedSegmentationTest {
 	@Test
 	public final void test() throws InterruptedException {
 		SwingTools.useSystemLookAndFeel();
-		SwingTools.setCheckAWT(false);
 		
 		final SimpleImageView imageView = new SimpleImageView();
 		final HistogramView histogramView = new HistogramView();
 		final JComboBox<? extends RGBTransformer> transformerSelector = new JComboBox<>(array(
 				RGBTransformer.Predefined.ID, new NearestNeighborRGBQuantizer()));
 		final JCheckBox segmentCheckBox = new JCheckBox("Segment");
+		
+		SwingTools.setCheckAWT(false);
 		final JSplitPane splitPane = horizontalSplit(imageView, verticalBox(
 				horizontalBox(transformerSelector, segmentCheckBox), scrollable(histogramView)));
-		
 		SwingTools.setCheckAWT(true);
 		
 		final ActionListener updateImageViewActionListener = new ActionListener() {
