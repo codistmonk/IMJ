@@ -62,7 +62,8 @@ public final class SVS2Zip {
 	public static final void main(final String[] commandLineArguments) throws Exception {
 		final TicToc timer = new TicToc();
 //		final String imageId = "../Libraries/images/svs/SYS08_A10_7414-005.svs";
-		final String imageId = "../Libraries/images/svs/16088.svs";
+//		final String imageId = "../Libraries/images/svs/16088.svs";
+		final String imageId = "../Libraries/images/svs/40267.svs";
 		final String baseName = baseName(new File(imageId).getName());
 		final ConsoleMonitor monitor = new ConsoleMonitor(5000L);
 		
