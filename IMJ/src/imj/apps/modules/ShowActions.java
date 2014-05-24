@@ -20,9 +20,11 @@ import static net.sourceforge.aprog.af.AFTools.fireUpdate;
 import static net.sourceforge.aprog.i18n.Messages.translate;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.MathTools.square;
+import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.list;
+
 import imj.Image;
 import imj.apps.modules.Annotations.Annotation;
 import imj.apps.modules.Annotations.Annotation.Region;
@@ -61,6 +63,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 
 import jgencode.primitivelists.IntList;
+
 import net.sourceforge.aprog.af.AFConstants;
 import net.sourceforge.aprog.af.AFMainFrame;
 import net.sourceforge.aprog.af.AbstractAFAction;
@@ -179,12 +182,6 @@ public final class ShowActions {
 		final int lastDotIndex = fileName.lastIndexOf('.');
 		
 		return lastDotIndex < 0 ? "" : fileName.substring(lastDotIndex + 1);
-	}
-	
-	public static final String baseName(final String fileName) {
-		final int lastDotIndex = fileName.lastIndexOf('.');
-		
-		return lastDotIndex < 0 ? fileName : fileName.substring(0, lastDotIndex);
 	}
 	
 	public static final String attribute(final String name, final Object value) {

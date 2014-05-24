@@ -4,12 +4,12 @@ import static java.awt.Color.WHITE;
 import static java.lang.Double.parseDouble;
 import static java.lang.Math.PI;
 import static java.lang.Math.sqrt;
+import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.set;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import imj.apps.modules.Annotations;
-import imj.apps.modules.ShowActions;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -48,7 +48,7 @@ public final class CellsCSV {
 		final String filePath = arguments.get("file", "");
 		final String outPath = arguments.get("out", "cells_mask.png");
 		final String imagePath = arguments.get("image", "");
-		final String xmlPath = arguments.get("xml", ShowActions.baseName(imagePath) + ".xml");
+		final String xmlPath = arguments.get("xml", baseName(imagePath) + ".xml");
 		final int lod = arguments.get("lod", 0)[0];
 		final IFormatReader reader = new ImageReader();
 		final Annotations annotations = Annotations.fromXML(xmlPath);

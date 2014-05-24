@@ -2,9 +2,8 @@ package imj.apps;
 
 import static java.lang.Double.parseDouble;
 import static java.lang.Math.sqrt;
+import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
-import imj.apps.modules.ShowActions;
 
 import java.io.File;
 import java.io.PrintStream;
@@ -36,7 +35,7 @@ public final class GenerateGroupStatistics {
 		final int keyIndex = arguments.get("key", 0)[0];
 		final Scanner scanner = new Scanner(new File(filePath));
 		final Map<String, Statistics[]> data = new LinkedHashMap<String, Statistics[]>();
-		final String outPath = ShowActions.baseName(filePath) + ".statistics.csv";
+		final String outPath = baseName(filePath) + ".statistics.csv";
 		
 		while (scanner.hasNext()) {
 			final String[] fields = scanner.nextLine().split("\\s+");

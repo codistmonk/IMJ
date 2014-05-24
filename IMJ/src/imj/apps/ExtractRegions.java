@@ -1,12 +1,13 @@
 package imj.apps;
 
 import static imj.IMJTools.loadAndTryToCache;
-import static imj.apps.modules.ShowActions.baseName;
 import static java.awt.image.BufferedImage.TYPE_3BYTE_BGR;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Arrays.asList;
+import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
+
 import imj.Image;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.Annotations.Annotation;

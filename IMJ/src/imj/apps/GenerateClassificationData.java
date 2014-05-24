@@ -2,7 +2,6 @@ package imj.apps;
 
 import static imj.IMJTools.loadAndTryToCache;
 import static imj.apps.Constants.EXCLUDED;
-import static imj.apps.modules.ShowActions.baseName;
 import static imj.database.IMJDatabaseTools.RGB;
 import static imj.database.IMJDatabaseTools.checkDatabase;
 import static imj.database.IMJDatabaseTools.getPreferredMetric;
@@ -12,11 +11,13 @@ import static imj.database.IMJDatabaseTools.newRGBSampler;
 import static imj.database.IMJDatabaseTools.reduceArbitrarily;
 import static imj.database.IMJDatabaseTools.updateNegativeGroups;
 import static java.util.concurrent.Executors.newFixedThreadPool;
+import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.readObject;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
+
 import imj.Image;
 import imj.apps.GenerateSampleDatabase.Configuration;
 import imj.apps.modules.Annotations;
@@ -43,6 +44,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
 import jgencode.primitivelists.IntList;
+
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools.Statistics;

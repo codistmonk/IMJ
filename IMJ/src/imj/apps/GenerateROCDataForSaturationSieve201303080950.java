@@ -2,8 +2,8 @@ package imj.apps;
 
 import static imj.apps.GenerateROCData.generateROCData;
 import static imj.apps.GenerateROCData.readClassIds;
-import static imj.apps.modules.ShowActions.baseName;
 import static java.lang.Math.min;
+import static net.sourceforge.aprog.tools.Tools.baseName;
 
 import java.util.List;
 
@@ -12,6 +12,7 @@ import imj.apps.GenerateROCData.ROCRowGenerator;
 import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.SaturationSieve201303080950;
 import imj.apps.modules.Sieve;
+
 import net.sourceforge.aprog.context.Context;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
