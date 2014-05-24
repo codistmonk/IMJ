@@ -4,10 +4,10 @@
 	<classpathentry kind="src" path="test"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/aprog.jar"/>
-	<classpathentry kind="lib" path="lib/loci_tools.jar" sourcepath="/Libraries/bioformats.zip"/>
 	<classpathentry kind="lib" path="lib/ojalgo-33.0.jar"/>
 	<classpathentry kind="lib" path="lib/jsch-0.1.50.jar" sourcepath="lib/jsch-0.1.50.zip"/>
 	<classpathentry kind="lib" path="lib/jgencode.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+	<classpathentry kind="lib" path="lib/bioformats_package.jar" sourcepath="/Libraries/bioformats-5.0.1-src.zip"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
