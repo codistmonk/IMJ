@@ -1,7 +1,6 @@
 package imj.database;
 
 import static imj.IMJTools.loadAndTryToCache;
-import static imj.apps.modules.ShowActions.baseName;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.BLUE;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.GREEN;
 import static imj.apps.modules.ViewFilter.Channel.Primitive.RED;
@@ -16,13 +15,15 @@ import static java.lang.Math.sqrt;
 import static java.util.Arrays.copyOf;
 import static java.util.Collections.shuffle;
 import static java.util.concurrent.Executors.newFixedThreadPool;
-import static junit.framework.Assert.assertNotNull;
+import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.list;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import imj.Image;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.Annotations.Annotation;

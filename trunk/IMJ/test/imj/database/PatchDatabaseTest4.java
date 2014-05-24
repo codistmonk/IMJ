@@ -2,7 +2,6 @@ package imj.database;
 
 import static imj.IMJTools.square;
 import static imj.IMJTools.unsigned;
-import static imj.apps.modules.ShowActions.baseName;
 import static imj.database.IMJDatabaseTools.RGB;
 import static imj.database.IMJDatabaseTools.checkDatabase;
 import static imj.database.IMJDatabaseTools.getPreferredMetric;
@@ -14,9 +13,11 @@ import static imj.database.IMJDatabaseTools.updateDatabase;
 import static imj.database.IMJDatabaseTools.updateNegativeGroups;
 import static java.util.Arrays.fill;
 import static java.util.Collections.singleton;
+import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
@@ -47,6 +48,7 @@ import java.util.concurrent.Future;
 import javax.imageio.ImageIO;
 
 import jgencode.primitivelists.IntList;
+
 import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.SystemProperties;
 import net.sourceforge.aprog.tools.TicToc;

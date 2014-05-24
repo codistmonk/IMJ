@@ -1,10 +1,11 @@
 package imj.apps;
 
-import static imj.apps.modules.ShowActions.baseName;
 import static java.lang.Double.parseDouble;
 import static java.lang.Math.max;
 import static java.util.Arrays.fill;
 import static java.util.Collections.sort;
+import static net.sourceforge.aprog.tools.Tools.baseName;
+
 import imj.apps.GenerateROCPlots.DataPointXY;
 
 import java.io.File;

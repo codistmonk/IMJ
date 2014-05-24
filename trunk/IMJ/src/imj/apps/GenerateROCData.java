@@ -1,8 +1,8 @@
 package imj.apps;
 
 import static imj.apps.ExtractRegions.loadLods;
-import static imj.apps.modules.ShowActions.baseName;
 import static java.util.Arrays.binarySearch;
+import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
 

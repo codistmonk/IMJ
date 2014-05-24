@@ -1,9 +1,10 @@
 package imj.apps;
 
 import static imj.apps.Constants.EXCLUDED;
-import static imj.apps.modules.ShowActions.baseName;
 import static java.lang.Math.sqrt;
+import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj.apps.modules.Annotations;
 import imj.apps.modules.Annotations.Annotation;
 import imj.apps.modules.Annotations.Annotation.Region;
@@ -15,6 +16,7 @@ import java.util.Map;
 
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
+
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools.Statistics;

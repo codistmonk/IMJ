@@ -1,12 +1,13 @@
 package imj.apps;
 
 import static imj.IMJTools.loadAndTryToCache;
-import static imj.apps.modules.ShowActions.baseName;
 import static imj.database.IMJDatabaseTools.RGB;
 import static imj.database.IMJDatabaseTools.checkDatabase;
 import static imj.database.IMJDatabaseTools.updateDatabase;
 import static java.util.Locale.ENGLISH;
+import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.usedMemory;
+
 import imj.apps.modules.RegionOfInterest;
 import imj.database.BinningQuantizer;
 import imj.database.LinearSampler;

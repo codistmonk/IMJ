@@ -1,14 +1,15 @@
 package imj.database;
 
 import static imj.IMJTools.unsigned;
-import static imj.apps.modules.ShowActions.baseName;
 import static imj.database.HistogramSampler.COUNT_QUANTIZATION_MASK;
 import static imj.database.IMJDatabaseTools.RGB;
 import static imj.database.IMJDatabaseTools.loadRegions;
 import static java.util.Collections.unmodifiableMap;
+import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj.Image;
 import imj.ImageWrangler;
 import imj.apps.modules.Annotations;
