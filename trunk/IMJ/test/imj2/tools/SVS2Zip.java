@@ -9,11 +9,15 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
 
 import java.awt.image.BufferedImage;
+import java.awt.image.RenderedImage;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -26,12 +30,14 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
 
 import loci.formats.ImageReader;
 import loci.formats.tiff.TiffCompression;
 import loci.formats.tiff.TiffParser;
-
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
@@ -97,10 +103,10 @@ public final class SVS2Zip {
 	
 	public static final void main(final String[] commandLineArguments) throws Exception {
 		final TicToc timer = new TicToc();
+//		final String imageId = "F:/sysimit/data/Pilot_Series_Final/SYS_BC_24_001.svs";
 //		final String imageId = "../Libraries/images/svs/SYS08_A10_7414-005.svs";
 //		final String imageId = "../Libraries/images/svs/16088.svs";
-//		final String imageId = "../Libraries/images/svs/40267.svs";
-		final String imageId = "F:/sysimit/data/Pilot_Series_Final/SYS_BC_24_001.svs";
+		final String imageId = "../Libraries/images/svs/40267.svs";
 		final String baseName = baseName(new File(imageId).getName());
 		final ConsoleMonitor monitor = new ConsoleMonitor(5000L);
 		
@@ -148,8 +154,12 @@ public final class SVS2Zip {
 					metadata.getDocumentElement().appendChild(subimage);
 				}
 				
+				final String outputFormat = "jpg";
+				
 				try (final ZipOutputStream output = new ZipOutputStream(
-						new BufferedOutputStream(new FileOutputStream(baseName + ".zip")))) {
+						new BufferedOutputStream(new FileOutputStream(baseName + ".zip")))
+					; final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(outputFormat)) {
+					imageWriter.setCompressionQuality(0.9F).setOutput(output);
 					
 					output.putNextEntry(new ZipEntry("metadata.xml"));
 					XMLTools.write(metadata, output, 0);
@@ -192,11 +202,9 @@ public final class SVS2Zip {
 									}
 								}
 								
-								final String outputFormat = "jpg";
-								
 								output.putNextEntry(new ZipEntry(baseName + "_svs" + svsIndex
 										+ "_" + tileX + "_" + tileY + "." + outputFormat));
-								ImageIO.write(awtImage, outputFormat, output);
+								imageWriter.write(awtImage);
 							}
 						}
 					}
@@ -252,6 +260,59 @@ public final class SVS2Zip {
 			
 			debugPrint("Testing done in", timer.toc(), "ms");
 		}
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-05-25)
+	 */
+	public static final class AutoCloseableImageWriter implements AutoCloseable, Serializable {
+		
+		private final ImageWriter writer;
+		
+		private final ImageWriteParam outputParameters;
+		
+		public AutoCloseableImageWriter(final String format) {
+			this.writer = ImageIO.getImageWritersByFormatName(format).next();
+			this.outputParameters = this.writer.getDefaultWriteParam();
+		}
+		
+		public final AutoCloseableImageWriter setCompressionQuality(final float quality) {
+			this.outputParameters.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+			this.outputParameters.setCompressionQuality(0.9F);
+			
+			return this;
+		}
+		
+		public AutoCloseableImageWriter setOutput(final OutputStream output) {
+			try {
+				this.writer.setOutput(ImageIO.createImageOutputStream(output));
+			} catch (final IOException exception) {
+				throw unchecked(exception);
+			}
+			
+			return this;
+		}
+		
+		public final AutoCloseableImageWriter write(final RenderedImage image) {
+			try {
+				this.writer.write(null, new IIOImage(image, null, null), this.outputParameters);
+			} catch (final IOException exception) {
+				throw unchecked(exception);
+			}
+			
+			return this;
+		}
+		
+		@Override
+		public final void close() throws Exception {
+			this.writer.dispose();
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -3450450668038280563L;
+		
 	}
 	
 }
