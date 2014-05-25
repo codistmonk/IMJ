@@ -38,6 +38,7 @@ import javax.imageio.ImageWriter;
 import loci.formats.ImageReader;
 import loci.formats.tiff.TiffCompression;
 import loci.formats.tiff.TiffParser;
+
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
@@ -105,8 +106,9 @@ public final class SVS2Zip {
 		final TicToc timer = new TicToc();
 //		final String imageId = "F:/sysimit/data/Pilot_Series_Final/SYS_BC_24_001.svs";
 //		final String imageId = "../Libraries/images/svs/SYS08_A10_7414-005.svs";
-//		final String imageId = "../Libraries/images/svs/16088.svs";
-		final String imageId = "../Libraries/images/svs/40267.svs";
+//		final String imageId = "../Libraries/images/svs/40267.svs";
+		final String imageId = "../Libraries/images/svs/16088.svs";
+//		final String baseName = baseName(imageId);
 		final String baseName = baseName(new File(imageId).getName());
 		final ConsoleMonitor monitor = new ConsoleMonitor(5000L);
 		
