@@ -4,8 +4,8 @@ import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.intRange;
-import static net.sourceforge.aprog.tools.Tools.invoke;
 import static net.sourceforge.aprog.tools.Tools.iterable;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
 
 import java.awt.image.BufferedImage;
@@ -14,11 +14,9 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.Reader;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -30,16 +28,14 @@ import java.util.zip.ZipOutputStream;
 
 import javax.imageio.ImageIO;
 
-import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
-import loci.formats.in.SVSReader;
+import loci.formats.tiff.TiffCompression;
 import loci.formats.tiff.TiffParser;
+
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
-import ome.xml.model.Image;
 
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipFile;
@@ -59,15 +55,57 @@ public final class SVS2Zip {
 		throw new IllegalInstantiationException();
 	}
 	
+	public static final Field accessible(final Field field) {
+		field.setAccessible(true);
+		
+		return field;
+	}
+	
+	public static final Field field(final Object object, final String fieldName) {
+		return field(object.getClass(), fieldName);
+	}
+	
+	public static final Field field(final Class<?> cls, final String fieldName) {
+		try {
+			try {
+				return accessible(cls.getDeclaredField(fieldName));
+			} catch (final NoSuchFieldException exception) {
+				return accessible(cls.getField(fieldName));
+			}
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final <T> T getFieldValue(final Object object, final String fieldName) {
+		try {
+			return (T) field(object, fieldName).get(object);
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final <T> T getFieldValue(final Class<?> cls, final String fieldName) {
+		try {
+			return (T) field(cls, fieldName).get(null);
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
 	public static final void main(final String[] commandLineArguments) throws Exception {
 		final TicToc timer = new TicToc();
 //		final String imageId = "../Libraries/images/svs/SYS08_A10_7414-005.svs";
 //		final String imageId = "../Libraries/images/svs/16088.svs";
-		final String imageId = "../Libraries/images/svs/40267.svs";
+//		final String imageId = "../Libraries/images/svs/40267.svs";
+		final String imageId = "F:/sysimit/data/Pilot_Series_Final/SYS_BC_24_001.svs";
 		final String baseName = baseName(new File(imageId).getName());
 		final ConsoleMonitor monitor = new ConsoleMonitor(5000L);
 		
 		((Logger) LoggerFactory.getLogger(TiffParser.class)).setLevel(Level.INFO);
+		((Logger) LoggerFactory.getLogger(TiffCompression.class)).setLevel(Level.INFO);
 		
 		if (true) {
 			try (final ImageReader image = new ImageReader()) {
@@ -77,14 +115,10 @@ public final class SVS2Zip {
 				
 				final Document metadata = parse("<image/>");
 				
-				{
-					final SVSReader svs = (SVSReader) image.getReader();
-					final Field pixelSize = SVSReader.class.getDeclaredField("pixelSize");
-					
-					pixelSize.setAccessible(true);
-					metadata.getDocumentElement().setAttribute("micronsPerPixel"
-							, "" + Array.getFloat(pixelSize.get(svs), 0));
-				}
+				metadata.getDocumentElement().setAttribute("micronsPerPixel"
+						, "" + Array.getFloat(getFieldValue(image.getReader(), "pixelSize"), 0));
+				
+				final String[] comments = getFieldValue(image.getReader(), "comments");
 				
 				for (final int svsIndex : intRange(image.getSeriesCount())) {
 					image.setSeries(svsIndex);
@@ -95,11 +129,21 @@ public final class SVS2Zip {
 					final int dy = image.getOptimalTileHeight();
 					final Element subimage = metadata.createElement("subimage");
 					
+					debugPrint(svsIndex, comments[svsIndex], w, h, dx, dy);
+					
 					subimage.setAttribute("id", "" + svsIndex);
 					subimage.setAttribute("width", "" + w);
 					subimage.setAttribute("height", "" + h);
 					subimage.setAttribute("tileWidth", "" + dx);
 					subimage.setAttribute("tileHeight", "" + dy);
+					
+					if (comments[svsIndex].startsWith("label ")) {
+						subimage.setAttribute("type", "svs_slide_label");
+					} else if (comments[svsIndex].startsWith("macro ")) {
+						subimage.setAttribute("type", "svs_slide_macro");
+					} else {
+						subimage.setAttribute("type", "svs_slide_lod");
+					}
 					
 					metadata.getDocumentElement().appendChild(subimage);
 				}
@@ -117,15 +161,12 @@ public final class SVS2Zip {
 						final int h = image.getSizeY();
 						final int dx = image.getOptimalTileWidth();
 						final int dy = image.getOptimalTileHeight();
-						
-						debugPrint(w, h, dx, dy);
-						
 						final int planeSize = dx * dy;
 						final byte[] buffer = new byte[planeSize * 3];
 						BufferedImage awtImage = new BufferedImage(dx, dy, BufferedImage.TYPE_3BYTE_BGR);
 						
 						for (int tileY = 0; tileY < h; tileY += dy) {
-							monitor.ping(tileY + "/" + h + "\r");
+							monitor.ping(svsIndex + " " + tileY + "/" + h + "\r");
 							
 							final int nextTileY = min(h, tileY + dy);
 							final int tileH = nextTileY - tileY;
