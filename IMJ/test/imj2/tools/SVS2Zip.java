@@ -10,10 +10,8 @@ import static net.sourceforge.aprog.xml.XMLTools.parse;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -26,10 +24,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
-import java.util.zip.ZipOutputStream;
-
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
@@ -44,7 +38,9 @@ import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.xml.XMLTools;
 
+import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -104,67 +100,43 @@ public final class SVS2Zip {
 	
 	public static final void main(final String[] commandLineArguments) throws Exception {
 		final TicToc timer = new TicToc();
-//		final String imageId = "F:/sysimit/data/Pilot_Series_Final/SYS_BC_24_001.svs";
-//		final String imageId = "../Libraries/images/svs/SYS08_A10_7414-005.svs";
-//		final String imageId = "../Libraries/images/svs/40267.svs";
-		final String imageId = "../Libraries/images/svs/16088.svs";
-//		final String baseName = baseName(imageId);
-		final String baseName = baseName(new File(imageId).getName());
 		final ConsoleMonitor monitor = new ConsoleMonitor(5000L);
+		final boolean keepLabel = false;
+		final boolean keepMacro = false;
 		
 		((Logger) LoggerFactory.getLogger(TiffParser.class)).setLevel(Level.INFO);
 		((Logger) LoggerFactory.getLogger(TiffCompression.class)).setLevel(Level.INFO);
 		
-		if (true) {
-			try (final ImageReader image = new ImageReader()) {
-				debugPrint("Processing...", new Date(timer.tic()));
-				
-				image.setId(imageId);
-				
-				final Document metadata = parse("<image/>");
-				
-				metadata.getDocumentElement().setAttribute("micronsPerPixel"
-						, "" + Array.getFloat(getFieldValue(image.getReader(), "pixelSize"), 0));
-				
-				final String[] comments = getFieldValue(image.getReader(), "comments");
-				
-				for (final int svsIndex : intRange(image.getSeriesCount())) {
-					image.setSeries(svsIndex);
+//		final String[] imageId = { "F:/sysimit/data/Pilot_Series_Final/SYS_BC_24_001.svs" };
+//		final String[] imageId = { "../Libraries/images/svs/SYS08_A10_7414-005.svs" };
+//		final String[] imageId = { "../Libraries/images/svs/40267.svs" };
+//		final String[] imageId = { "../Libraries/images/svs/16088.svs" };
+		final String[] imageIds = {
+				"../Libraries/images/svs/45656.svs"
+				, "../Libraries/images/svs/45657.svs"
+				, "../Libraries/images/svs/45659.svs"
+				, "../Libraries/images/svs/45660.svs"
+				, "../Libraries/images/svs/45662.svs"
+				, "../Libraries/images/svs/45668.svs"
+				, "../Libraries/images/svs/45683.svs"
+		};
+		
+		for (final String imageId : imageIds) {
+//			final String baseName = baseName(imageId);
+			final String baseName = baseName(new File(imageId).getName());
+			
+			if (true) {
+				try (final ImageReader image = new ImageReader()) {
+					debugPrint("Processing...", new Date(timer.tic()));
 					
-					final int w = image.getSizeX();
-					final int h = image.getSizeY();
-					final int dx = image.getOptimalTileWidth();
-					final int dy = image.getOptimalTileHeight();
-					final Element subimage = metadata.createElement("subimage");
+					image.setId(imageId);
 					
-					debugPrint(svsIndex, comments[svsIndex], w, h, dx, dy);
+					final Document metadata = parse("<image/>");
 					
-					subimage.setAttribute("id", "" + svsIndex);
-					subimage.setAttribute("width", "" + w);
-					subimage.setAttribute("height", "" + h);
-					subimage.setAttribute("tileWidth", "" + dx);
-					subimage.setAttribute("tileHeight", "" + dy);
+					metadata.getDocumentElement().setAttribute("micronsPerPixel"
+							, "" + Array.getFloat(getFieldValue(image.getReader(), "pixelSize"), 0));
 					
-					if (comments[svsIndex].startsWith("label ")) {
-						subimage.setAttribute("type", "svs_slide_label");
-					} else if (comments[svsIndex].startsWith("macro ")) {
-						subimage.setAttribute("type", "svs_slide_macro");
-					} else {
-						subimage.setAttribute("type", "svs_slide_lod");
-					}
-					
-					metadata.getDocumentElement().appendChild(subimage);
-				}
-				
-				final String outputFormat = "jpg";
-				
-				try (final ZipOutputStream output = new ZipOutputStream(
-						new BufferedOutputStream(new FileOutputStream(baseName + ".zip")))
-					; final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(outputFormat)) {
-					imageWriter.setCompressionQuality(0.9F).setOutput(output);
-					
-					output.putNextEntry(new ZipEntry("metadata.xml"));
-					XMLTools.write(metadata, output, 0);
+					final String[] comments = ((String[]) getFieldValue(image.getReader(), "comments")).clone();
 					
 					for (final int svsIndex : intRange(image.getSeriesCount())) {
 						image.setSeries(svsIndex);
@@ -173,95 +145,136 @@ public final class SVS2Zip {
 						final int h = image.getSizeY();
 						final int dx = image.getOptimalTileWidth();
 						final int dy = image.getOptimalTileHeight();
-						final int planeSize = dx * dy;
-						final byte[] buffer = new byte[planeSize * 3];
-						BufferedImage awtImage = new BufferedImage(dx, dy, BufferedImage.TYPE_3BYTE_BGR);
 						
-						for (int tileY = 0; tileY < h; tileY += dy) {
-							monitor.ping(svsIndex + " " + tileY + "/" + h + "\r");
+						debugPrint(svsIndex, comments[svsIndex], w, h, dx, dy);
+						
+						final Element subimage = metadata.createElement("subimage");
+						
+						if (comments[svsIndex].startsWith("label ")) {
+							if (keepLabel) {
+								subimage.setAttribute("type", "svs_slide_label");
+							} else {
+								comments[svsIndex] = null;
+								continue;
+							}
+						} else if (comments[svsIndex].startsWith("macro ")) {
+							if (keepMacro) {
+								subimage.setAttribute("type", "svs_slide_macro");
+							} else {
+								comments[svsIndex] = null;
+								continue;
+							}
+						} else {
+							subimage.setAttribute("type", "svs_slide_lod");
+						}
+						
+						subimage.setAttribute("id", "" + svsIndex);
+						subimage.setAttribute("width", "" + w);
+						subimage.setAttribute("height", "" + h);
+						subimage.setAttribute("tileWidth", "" + dx);
+						subimage.setAttribute("tileHeight", "" + dy);
+						
+						metadata.getDocumentElement().appendChild(subimage);
+					}
+					
+					final String outputFormat = "jpg";
+					final BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(
+							new FileOutputStream(baseName + ".zip"));
+					
+					try (final ArchiveOutputStream output = new ZipArchiveOutputStream(bufferedOutputStream)
+					; final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(outputFormat)) {
+						imageWriter.setCompressionQuality(1.0F).setOutput(output);
+						
+						output.putArchiveEntry(output.createArchiveEntry(new File(""), "metadata.xml"));
+						XMLTools.write(metadata, output, 0);
+						output.closeArchiveEntry();
+						
+						for (final int svsIndex : intRange(image.getSeriesCount())) {
+							if (comments[svsIndex] == null) {
+								continue;
+							}
 							
-							final int nextTileY = min(h, tileY + dy);
-							final int tileH = nextTileY - tileY;
+							image.setSeries(svsIndex);
 							
-							for (int tileX = 0; tileX < w; tileX += dx) {
-								final int nextTileX = min(w, tileX + dx);
-								final int tileW = nextTileX - tileX;
+							final int w = image.getSizeX();
+							final int h = image.getSizeY();
+							final int dx = image.getOptimalTileWidth();
+							final int dy = image.getOptimalTileHeight();
+							final byte[] buffer = new byte[dx * dy * 3];
+							BufferedImage awtImage = new BufferedImage(dx, dy, BufferedImage.TYPE_3BYTE_BGR);
+							
+							for (int tileY = 0; tileY < h; tileY += dy) {
+								monitor.ping(svsIndex + " " + tileY + "/" + h + "\r");
 								
-								image.openBytes(0, buffer, tileX, tileY, tileW, tileH);
+								final int nextTileY = min(h, tileY + dy);
+								final int tileH = nextTileY - tileY;
 								
-								if (tileW != awtImage.getWidth() || tileH != awtImage.getHeight()) {
-									awtImage = new BufferedImage(tileW, tileH, BufferedImage.TYPE_3BYTE_BGR);
-								}
-								
-								for (int y = tileY, r = planeSize * 0, g = planeSize * 1, b = planeSize * 2; y < nextTileY; ++y) {
-									for (int x = tileX; x < nextTileX; ++x, ++r, ++g, ++b) {
-										final int red = buffer[r] & 0xFF;
-										final int green = buffer[g] & 0xFF;
-										final int blue = buffer[b] & 0xFF;
-										final int rgb = IMJTools.a8r8g8b8(0xFF, red, green, blue);
-										
-										awtImage.setRGB(x - tileX, y - tileY, rgb);
+								for (int tileX = 0; tileX < w; tileX += dx) {
+									final int nextTileX = min(w, tileX + dx);
+									final int tileW = nextTileX - tileX;
+									final int planeSize = tileW * tileH;
+									
+									image.openBytes(0, buffer, tileX, tileY, tileW, tileH);
+									
+									if (tileW != awtImage.getWidth() || tileH != awtImage.getHeight()) {
+										awtImage = new BufferedImage(tileW, tileH, BufferedImage.TYPE_3BYTE_BGR);
 									}
+									
+									for (int y = tileY, r = planeSize * 0, g = planeSize * 1, b = planeSize * 2; y < nextTileY; ++y) {
+										for (int x = tileX; x < nextTileX; ++x, ++r, ++g, ++b) {
+											final int red = buffer[r] & 0xFF;
+											final int green = buffer[g] & 0xFF;
+											final int blue = buffer[b] & 0xFF;
+											final int rgb = IMJTools.a8r8g8b8(0xFF, red, green, blue);
+											
+											awtImage.setRGB(x - tileX, y - tileY, rgb);
+										}
+									}
+									
+									output.putArchiveEntry(output.createArchiveEntry(new File(""), baseName + "_svs" + svsIndex
+											+ "_" + tileX + "_" + tileY + "." + outputFormat));
+									imageWriter.write(awtImage);
+									output.closeArchiveEntry();
 								}
-								
-								output.putNextEntry(new ZipEntry(baseName + "_svs" + svsIndex
-										+ "_" + tileX + "_" + tileY + "." + outputFormat));
-								imageWriter.write(awtImage);
 							}
 						}
+					}
+					
+					monitor.pause();
+					
+					debugPrint("Processing done in", timer.toc(), "ms");
+				}
+			}
+			
+			{
+				debugPrint("Testing...", new Date(timer.tic()));
+				
+				try (final ZipFile input = new ZipFile(baseName + ".zip")) {
+					final Map<String, ZipArchiveEntry> map = new HashMap<>();
+					
+					for (final ZipArchiveEntry entry : iterable(input.getEntries())) {
+						map.put(entry.getName(), entry);
+					}
+					
+					final List<String> keys = new ArrayList<>(map.keySet());
+					
+					Collections.shuffle(keys);
+					
+					for (final String key : keys) {
+						final ZipArchiveEntry entry = map.get(key);
+						
+						monitor.ping(entry.getName() + "\r");
+						
+						final BufferedImage image = ImageIO.read(input.getInputStream(entry));
 					}
 				}
 				
 				monitor.pause();
 				
-				debugPrint("Processing done in", timer.toc(), "ms");
+				debugPrint("Testing done in", timer.toc(), "ms");
 			}
 		}
 		
-		if (true) {
-			debugPrint("Testing...", new Date(timer.tic()));
-			
-			try (final ZipInputStream input = new ZipInputStream(
-					new BufferedInputStream(new FileInputStream(baseName + ".zip")))) {
-				for (ZipEntry entry = input.getNextEntry(); entry != null; entry = input.getNextEntry()) {
-					monitor.ping(entry.getName() + "\r");
-					
-					final BufferedImage image = ImageIO.read(input);
-				}
-			}
-			
-			monitor.pause();
-			
-			debugPrint("Testing done in", timer.toc(), "ms");
-		}
-		
-		{
-			debugPrint("Testing...", new Date(timer.tic()));
-			
-			try (final ZipFile input = new ZipFile(baseName + ".zip")) {
-				final Map<String, ZipArchiveEntry> map = new HashMap<>();
-				
-				for (final ZipArchiveEntry entry : iterable(input.getEntries())) {
-					map.put(entry.getName(), entry);
-				}
-				
-				final List<String> keys = new ArrayList<>(map.keySet());
-				
-				Collections.shuffle(keys);
-				
-				for (final String key : keys) {
-					final ZipArchiveEntry entry = map.get(key);
-					
-					monitor.ping(entry.getName() + "\r");
-					
-					final BufferedImage image = ImageIO.read(input.getInputStream(entry));
-				}
-			}
-			
-			monitor.pause();
-			
-			debugPrint("Testing done in", timer.toc(), "ms");
-		}
 	}
 	
 	/**
