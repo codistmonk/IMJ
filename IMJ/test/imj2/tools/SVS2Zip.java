@@ -103,27 +103,39 @@ public final class SVS2Zip {
 		final ConsoleMonitor monitor = new ConsoleMonitor(5000L);
 		final boolean keepLabel = false;
 		final boolean keepMacro = false;
+		final int forcedTileSize = 512;
 		
 		((Logger) LoggerFactory.getLogger(TiffParser.class)).setLevel(Level.INFO);
 		((Logger) LoggerFactory.getLogger(TiffCompression.class)).setLevel(Level.INFO);
 		
-//		final String[] imageId = { "F:/sysimit/data/Pilot_Series_Final/SYS_BC_24_001.svs" };
-//		final String[] imageId = { "../Libraries/images/svs/SYS08_A10_7414-005.svs" };
-//		final String[] imageId = { "../Libraries/images/svs/40267.svs" };
-//		final String[] imageId = { "../Libraries/images/svs/16088.svs" };
-		final String[] imageIds = {
-				"../Libraries/images/svs/45656.svs"
-				, "../Libraries/images/svs/45657.svs"
-				, "../Libraries/images/svs/45659.svs"
-				, "../Libraries/images/svs/45660.svs"
-				, "../Libraries/images/svs/45662.svs"
-				, "../Libraries/images/svs/45668.svs"
-				, "../Libraries/images/svs/45683.svs"
-		};
+		final List<String> imageIdList = new ArrayList<>();
+		
+		{
+			for (final File file : new File("F:/sysimit/data/Pilot_Series_Final").listFiles()) {
+				if (file.getName().endsWith("_005.svs")) {
+					imageIdList.add(file.getPath());
+				}
+			}
+		}
+		
+		final String[] imageIds = imageIdList.toArray(new String[imageIdList.size()]);
+//		final String[] imageIds = { "../Libraries/images/svs/SYS08_A10_7414-005.svs" };
+//		final String[] imageIds = { "../Libraries/images/svs/16088.svs", "../Libraries/images/svs/40267.svs" };
+//		final String[] imageIds = {
+//				"../Libraries/images/svs/45656.svs"
+//				, "../Libraries/images/svs/45657.svs"
+//				, "../Libraries/images/svs/45659.svs"
+//				, "../Libraries/images/svs/45660.svs"
+//				, "../Libraries/images/svs/45662.svs"
+//				, "../Libraries/images/svs/45668.svs"
+//				, "../Libraries/images/svs/45683.svs"
+//		};
 		
 		for (final String imageId : imageIds) {
-//			final String baseName = baseName(imageId);
-			final String baseName = baseName(new File(imageId).getName());
+			debugPrint(imageId);
+			
+			final String baseName = baseName(imageId);
+//			final String baseName = baseName(new File(imageId).getName());
 			
 			if (true) {
 				try (final ImageReader image = new ImageReader()) {
@@ -143,8 +155,8 @@ public final class SVS2Zip {
 						
 						final int w = image.getSizeX();
 						final int h = image.getSizeY();
-						final int dx = image.getOptimalTileWidth();
-						final int dy = image.getOptimalTileHeight();
+						final int dx = forcedTileSize <= 0 ? image.getOptimalTileWidth() : min(forcedTileSize, w);
+						final int dy = forcedTileSize <= 0 ? image.getOptimalTileHeight() : min(forcedTileSize, h);
 						
 						debugPrint(svsIndex, comments[svsIndex], w, h, dx, dy);
 						
@@ -198,8 +210,8 @@ public final class SVS2Zip {
 							
 							final int w = image.getSizeX();
 							final int h = image.getSizeY();
-							final int dx = image.getOptimalTileWidth();
-							final int dy = image.getOptimalTileHeight();
+							final int dx = forcedTileSize <= 0 ? image.getOptimalTileWidth() : min(forcedTileSize, w);
+							final int dy = forcedTileSize <= 0 ? image.getOptimalTileHeight() : min(forcedTileSize, h);
 							final byte[] buffer = new byte[dx * dy * 3];
 							BufferedImage awtImage = new BufferedImage(dx, dy, BufferedImage.TYPE_3BYTE_BGR);
 							
