@@ -43,16 +43,16 @@ public final class AperioXML2IMJXML {
 	 */
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
-//		final String[] aperioXMLIds = {
-//				"../Libraries/images/svs/45656.xml"
-//				, "../Libraries/images/svs/45657.xml"
-//				, "../Libraries/images/svs/45659.xml"
-//				, "../Libraries/images/svs/45660.xml"
-//				, "../Libraries/images/svs/45662.xml"
-//				, "../Libraries/images/svs/45668.xml"
-//				, "../Libraries/images/svs/45683.xml"
-//		};
-		final File[] aperioXMLIds = new File("F:/sysimit/data/Pilot_Series_Final").listFiles(RegexFilter.newSuffixFilter("_005.xml"));
+		final File[] aperioXMLIds = {
+				new File("../Libraries/images/svs/45656.xml")
+				, new File("../Libraries/images/svs/45657.xml")
+				, new File("../Libraries/images/svs/45659.xml")
+				, new File("../Libraries/images/svs/45660.xml")
+				, new File("../Libraries/images/svs/45662.xml")
+				, new File("../Libraries/images/svs/45668.xml")
+				, new File("../Libraries/images/svs/45683.xml")
+		};
+//		final File[] aperioXMLIds = new File("F:/sysimit/data/Pilot_Series_Final").listFiles(RegexFilter.newSuffixFilter("_005.xml"));
 		final String author = arguments.get("author", "?");
 		final boolean compress = true;
 		
