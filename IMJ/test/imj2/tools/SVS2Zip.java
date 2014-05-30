@@ -243,7 +243,8 @@ public final class SVS2Zip {
 										}
 									}
 									
-									output.putArchiveEntry(output.createArchiveEntry(new File(""), baseName + "_svs" + svsIndex
+									output.putArchiveEntry(output.createArchiveEntry(new File("")
+											, new File(baseName).getName() + "_svs" + svsIndex
 											+ "_" + tileX + "_" + tileY + "." + outputFormat));
 									imageWriter.write(awtImage);
 									output.closeArchiveEntry();
