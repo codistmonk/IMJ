@@ -10,7 +10,6 @@ import static net.sourceforge.aprog.xml.XMLTools.parse;
 import static net.sourceforge.aprog.xml.XMLTools.write;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -26,7 +25,6 @@ import org.w3c.dom.Node;
 
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-05-28)
@@ -43,23 +41,23 @@ public final class AperioXML2IMJXML {
 	 */
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
-		final File[] aperioXMLIds = {
-				new File("../Libraries/images/svs/45656.xml")
-				, new File("../Libraries/images/svs/45657.xml")
-				, new File("../Libraries/images/svs/45659.xml")
-				, new File("../Libraries/images/svs/45660.xml")
-				, new File("../Libraries/images/svs/45662.xml")
-				, new File("../Libraries/images/svs/45668.xml")
-				, new File("../Libraries/images/svs/45683.xml")
-		};
-//		final File[] aperioXMLIds = new File("F:/sysimit/data/Pilot_Series_Final").listFiles(RegexFilter.newSuffixFilter("_005.xml"));
+//		final File[] aperioXMLIds = {
+//				new File("../Libraries/images/svs/45656.xml")
+//				, new File("../Libraries/images/svs/45657.xml")
+//				, new File("../Libraries/images/svs/45659.xml")
+//				, new File("../Libraries/images/svs/45660.xml")
+//				, new File("../Libraries/images/svs/45662.xml")
+//				, new File("../Libraries/images/svs/45668.xml")
+//				, new File("../Libraries/images/svs/45683.xml")
+//		};
+		final File[] aperioXMLFiles = new File("F:/sysimit/data/Pilot_Series_Final").listFiles(RegexFilter.newSuffixFilter("_005.xml"));
 		final String author = arguments.get("author", "?");
 		final boolean compress = true;
 		
-		for (final File aperioXMLId : aperioXMLIds) {
-			debugPrint(aperioXMLId);
+		for (final File aperioXMLFile : aperioXMLFiles) {
+			debugPrint(aperioXMLFile);
 			
-			final Document aperioXML = parse(getResourceAsStream(aperioXMLId.getPath()));
+			final Document aperioXML = parse(getResourceAsStream(aperioXMLFile.getPath()));
 			final Element aperioRoot = aperioXML.getDocumentElement();
 			final Document imjXML = parse("<annotations/>");
 			final Element imjRoot  = imjXML.getDocumentElement();
@@ -102,14 +100,16 @@ public final class AperioXML2IMJXML {
 			}
 			
 			{
-				final String baseName = baseName(aperioXMLId.getName());
+				final String baseName = baseName(aperioXMLFile.getName());
 				
 				new File(baseName).mkdir();
 				
 				if (compress) {
 					try {
-						write(imjXML, new GZIPOutputStream(new FileOutputStream(
-								new File(baseName, baseName + "_annotations.xml.gz"))), 1);
+						final GZIPOutputStream output = new GZIPOutputStream(new FileOutputStream(
+								new File(baseName, baseName + "_annotations.xml.gz")));
+						write(imjXML, output, 1);
+						output.close();
 					} catch (final IOException exception) {
 						throw unchecked(exception);
 					}

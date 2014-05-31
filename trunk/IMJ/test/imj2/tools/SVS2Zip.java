@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.ZipOutputStream;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -109,7 +110,8 @@ public final class SVS2Zip {
 		((Logger) LoggerFactory.getLogger(TiffParser.class)).setLevel(Level.INFO);
 		((Logger) LoggerFactory.getLogger(TiffCompression.class)).setLevel(Level.INFO);
 		
-		final File[] files = new File("F:/sysimit/data/Pilot_Series_Final").listFiles(RegexFilter.newSuffixFilter("_005.svs"));
+		final File[] files = new File("F:/sysimit/data/Pilot_Series_Final").listFiles(
+				RegexFilter.newSuffixFilter("_001.svs"));
 		
 		for (final File file : files) {
 			final String imageId = file.getPath();
@@ -175,9 +177,10 @@ public final class SVS2Zip {
 					final BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(
 							new FileOutputStream(baseName + ".zip"));
 					
-					try (final ArchiveOutputStream output = new ZipArchiveOutputStream(bufferedOutputStream)
+					try (final ZipArchiveOutputStream output = new ZipArchiveOutputStream(bufferedOutputStream)
 					; final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(outputFormat)) {
 						imageWriter.setCompressionQuality(1.0F).setOutput(output);
+						output.setLevel(ZipOutputStream.STORED);
 						
 						output.putArchiveEntry(output.createArchiveEntry(new File(""), "metadata.xml"));
 						XMLTools.write(metadata, output, 0);
