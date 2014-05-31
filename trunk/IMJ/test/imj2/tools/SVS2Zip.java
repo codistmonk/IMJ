@@ -7,6 +7,7 @@ import static net.sourceforge.aprog.tools.Tools.intRange;
 import static net.sourceforge.aprog.tools.Tools.iterable;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
+import imj2.tools.AperioXML2IMJXML.RegexFilter;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
@@ -24,6 +25,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
@@ -32,7 +34,6 @@ import javax.imageio.ImageWriter;
 import loci.formats.ImageReader;
 import loci.formats.tiff.TiffCompression;
 import loci.formats.tiff.TiffParser;
-
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
@@ -108,30 +109,11 @@ public final class SVS2Zip {
 		((Logger) LoggerFactory.getLogger(TiffParser.class)).setLevel(Level.INFO);
 		((Logger) LoggerFactory.getLogger(TiffCompression.class)).setLevel(Level.INFO);
 		
-		final List<String> imageIdList = new ArrayList<>();
+		final File[] files = new File("F:/sysimit/data/Pilot_Series_Final").listFiles(RegexFilter.newSuffixFilter("_005.svs"));
 		
-		{
-			for (final File file : new File("F:/sysimit/data/Pilot_Series_Final").listFiles()) {
-				if (file.getName().endsWith("_005.svs")) {
-					imageIdList.add(file.getPath());
-				}
-			}
-		}
-		
-		final String[] imageIds = imageIdList.toArray(new String[imageIdList.size()]);
-//		final String[] imageIds = { "../Libraries/images/svs/SYS08_A10_7414-005.svs" };
-//		final String[] imageIds = { "../Libraries/images/svs/16088.svs", "../Libraries/images/svs/40267.svs" };
-//		final String[] imageIds = {
-//				"../Libraries/images/svs/45656.svs"
-//				, "../Libraries/images/svs/45657.svs"
-//				, "../Libraries/images/svs/45659.svs"
-//				, "../Libraries/images/svs/45660.svs"
-//				, "../Libraries/images/svs/45662.svs"
-//				, "../Libraries/images/svs/45668.svs"
-//				, "../Libraries/images/svs/45683.svs"
-//		};
-		
-		for (final String imageId : imageIds) {
+		for (final File file : files) {
+			final String imageId = file.getPath();
+			
 			debugPrint(imageId);
 			
 			final String baseName = baseName(imageId);
