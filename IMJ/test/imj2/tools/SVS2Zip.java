@@ -7,6 +7,7 @@ import static net.sourceforge.aprog.tools.Tools.intRange;
 import static net.sourceforge.aprog.tools.Tools.iterable;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
+
 import imj2.tools.AperioXML2IMJXML.RegexFilter;
 
 import java.awt.image.BufferedImage;
@@ -35,12 +36,13 @@ import javax.imageio.ImageWriter;
 import loci.formats.ImageReader;
 import loci.formats.tiff.TiffCompression;
 import loci.formats.tiff.TiffParser;
+
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
 
-import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.compress.archivers.zip.ZipFile;
@@ -176,6 +178,7 @@ public final class SVS2Zip {
 					final String outputFormat = "jpg";
 					final BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(
 							new FileOutputStream(baseName + ".zip"));
+//							new FileOutputStream("tmp" + ".zip"));
 					
 					try (final ZipArchiveOutputStream output = new ZipArchiveOutputStream(bufferedOutputStream)
 					; final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(outputFormat)) {
@@ -185,18 +188,30 @@ public final class SVS2Zip {
 						output.putArchiveEntry(output.createArchiveEntry(new File(""), "metadata.xml"));
 						XMLTools.write(metadata, output, 0);
 						output.closeArchiveEntry();
+						final int[] svsIndices = intRange(image.getSeriesCount());
 						
-						for (final int svsIndex : intRange(image.getSeriesCount())) {
+						image.setSeries(0);
+						
+						for (int svsIndexIndex = 0; svsIndexIndex < svsIndices.length; ++svsIndexIndex) {
+							final int svsIndex = svsIndices[svsIndexIndex];
 							if (comments[svsIndex] == null) {
 								continue;
 							}
+							
+							final int higherW = image.getSizeX();
+							final int higherH = image.getSizeY();
 							
 							image.setSeries(svsIndex);
 							
 							final int w = image.getSizeX();
 							final int h = image.getSizeY();
+							final int scaleUp = (int) min((double) higherW / w, (double) higherH / h);
 							final int dx = forcedTileSize <= 0 ? image.getOptimalTileWidth() : min(forcedTileSize, w);
 							final int dy = forcedTileSize <= 0 ? image.getOptimalTileHeight() : min(forcedTileSize, h);
+							final int higherDx = min(higherW, dx * scaleUp);
+							final int higherDy = min(higherH, dy * scaleUp);
+							byte[] higherBuffer = null; // workaround for a defect in SVS reader
+							
 							final byte[] buffer = new byte[dx * dy * 3];
 							BufferedImage awtImage = new BufferedImage(dx, dy, BufferedImage.TYPE_3BYTE_BGR);
 							
@@ -211,20 +226,64 @@ public final class SVS2Zip {
 									final int tileW = nextTileX - tileX;
 									final int planeSize = tileW * tileH;
 									
-									image.openBytes(0, buffer, tileX, tileY, tileW, tileH);
-									
 									if (tileW != awtImage.getWidth() || tileH != awtImage.getHeight()) {
 										awtImage = new BufferedImage(tileW, tileH, BufferedImage.TYPE_3BYTE_BGR);
 									}
 									
-									for (int y = tileY, r = planeSize * 0, g = planeSize * 1, b = planeSize * 2; y < nextTileY; ++y) {
-										for (int x = tileX; x < nextTileX; ++x, ++r, ++g, ++b) {
-											final int red = buffer[r] & 0xFF;
-											final int green = buffer[g] & 0xFF;
-											final int blue = buffer[b] & 0xFF;
-											final int rgb = IMJTools.a8r8g8b8(0xFF, red, green, blue);
-											
-											awtImage.setRGB(x - tileX, y - tileY, rgb);
+									try {
+										image.openBytes(0, buffer, tileX, tileY, tileW, tileH);
+										
+										for (int y = tileY, r = planeSize * 0, g = planeSize * 1, b = planeSize * 2; y < nextTileY; ++y) {
+											for (int x = tileX; x < nextTileX; ++x, ++r, ++g, ++b) {
+												final int red = buffer[r] & 0xFF;
+												final int green = buffer[g] & 0xFF;
+												final int blue = buffer[b] & 0xFF;
+												final int rgb = IMJTools.a8r8g8b8(0xFF, red, green, blue);
+												
+												awtImage.setRGB(x - tileX, y - tileY, rgb);
+											}
+										}
+									} catch (final Exception exception) {
+										Tools.debugError(svsIndex, tileX, tileY, tileW, tileH);
+										
+										exception.printStackTrace();
+										
+										// At this point, if the call to openBytes() has failed
+										// then we try to compute each pixel of the tile from patches
+										// extracted from the higher resolution (previous) image
+										
+										if (higherBuffer == null) {
+											higherBuffer = new byte[higherDx * higherDy * 3];
+										}
+										
+										final int n = scaleUp * scaleUp;
+										final int higherTileW = tileW * scaleUp;
+										final int higherTileH = tileH * scaleUp;
+										final int higherPlaneSize = higherTileW * higherTileH;
+										final int higherTileX0 = tileX * scaleUp;
+										final int higherTileY0 = tileY * scaleUp;
+										
+										image.setSeries(svsIndices[svsIndex - 1]);
+										image.openBytes(0, higherBuffer, higherTileX0, higherTileY0, higherTileW, higherTileH);
+										image.setSeries(svsIndices[svsIndex]);
+										
+										for (int higherTileY = higherTileY0, y = tileY; higherTileY < higherTileY0 + higherTileH; higherTileY += scaleUp, ++y) {
+											for (int higherTileX = higherTileX0, x = tileX; higherTileX < higherTileX0 + higherTileW; higherTileX += scaleUp, ++x) {
+												final int[] rgb = new int[3];
+												
+												for (int yy = higherTileY; yy < higherTileY + scaleUp; ++yy) {
+													for (int xx = higherTileX; xx < higherTileX + scaleUp; ++xx) {
+														final int r = higherTileY * higherTileW + higherTileX;
+														final int g = r + higherPlaneSize;
+														final int b = g + higherPlaneSize;
+														rgb[0] += higherBuffer[r] & 0xFF;
+														rgb[1] += higherBuffer[g] & 0xFF;
+														rgb[2] += higherBuffer[b] & 0xFF;
+													}
+												}
+												
+												awtImage.setRGB(x, y, IMJTools.a8r8g8b8(0xFF, rgb[0] / n, rgb[1] / n, rgb[2] / n));
+											}
 										}
 									}
 									
