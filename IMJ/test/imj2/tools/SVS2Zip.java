@@ -8,8 +8,6 @@ import static net.sourceforge.aprog.tools.Tools.iterable;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
 
-import imj2.tools.AperioXML2IMJXML.RegexFilter;
-
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
 import java.io.BufferedOutputStream;
@@ -39,6 +37,7 @@ import loci.formats.tiff.TiffParser;
 
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.RegexFilter;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
