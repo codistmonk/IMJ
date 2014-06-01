@@ -181,7 +181,7 @@ public final class SVS2Zip {
 					
 					try (final ZipArchiveOutputStream output = new ZipArchiveOutputStream(bufferedOutputStream)
 					; final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(outputFormat)) {
-						imageWriter.setCompressionQuality(1.0F).setOutput(output);
+						imageWriter.setCompressionQuality(0.9F).setOutput(output);
 						output.setLevel(ZipOutputStream.STORED);
 						
 						output.putArchiveEntry(output.createArchiveEntry(new File(""), "metadata.xml"));
@@ -349,7 +349,7 @@ public final class SVS2Zip {
 		
 		public final AutoCloseableImageWriter setCompressionQuality(final float quality) {
 			this.outputParameters.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-			this.outputParameters.setCompressionQuality(0.9F);
+			this.outputParameters.setCompressionQuality(quality);
 			
 			return this;
 		}
