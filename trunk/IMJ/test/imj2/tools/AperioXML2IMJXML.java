@@ -11,20 +11,18 @@ import static net.sourceforge.aprog.xml.XMLTools.write;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FilenameFilter;
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
+
+import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
+import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.RegexFilter;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-
-import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
-import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**
  * @author codistmonk (creation 2014-05-28)
@@ -120,43 +118,4 @@ public final class AperioXML2IMJXML {
 		}
 	}
 	
-	/**
-	 * @author codistmonk (creation 2014-05-29)
-	 */
-	public static final class RegexFilter implements FilenameFilter, Serializable {
-		
-		private final Pattern pattern;
-		
-		public RegexFilter(final String regex) {
-			this.pattern = Pattern.compile(regex);
-		}
-		
-		public final Pattern getPattern() {
-			return this.pattern;
-		}
-		
-		@Override
-		public final boolean accept(final File directory, final String name) {
-			return this.getPattern().matcher(name).matches();
-		}
-		
-		/**
-		 * {@value}.
-		 */
-		private static final long serialVersionUID = 7931715226064553450L;
-		
-		public static final RegexFilter newPrefixFilter(final String prefix) {
-			return new RegexFilter(prefix + ".*");
-		}
-		
-		public static final RegexFilter newSuffixFilter(final String suffix) {
-			return new RegexFilter(".*" + suffix);
-		}
-		
-		public static final RegexFilter newExtensionFilter(final String extension) {
-			return newSuffixFilter(".\\." + extension);
-		}
-		
-	}
-
 }
