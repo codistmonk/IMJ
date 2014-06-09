@@ -48,13 +48,13 @@ public final class ColorSeparationTest {
 	@Test
 	public final void test() {
 		SwingTools.useSystemLookAndFeel();
-		SwingTools.setCheckAWT(false);
 		
 		final SimpleImageView imageView = new SimpleImageView();
 		final HistogramView histogramView = new HistogramView();
 		final JComboBox<? extends RGBTransformer> linearizerSelector = new JComboBox<>(array(RGBTransformer.Predefined.ID));
-		final JSplitPane splitPane = horizontalSplit(imageView, verticalSplit(linearizerSelector, scrollable(histogramView)));
 		
+		SwingTools.setCheckAWT(false);
+		final JSplitPane splitPane = horizontalSplit(imageView, verticalSplit(linearizerSelector, scrollable(histogramView)));
 		SwingTools.setCheckAWT(true);
 		
 		linearizerSelector.addActionListener(new ActionListener() {
