@@ -1,8 +1,12 @@
 package imj2.tools;
 
+import static imj2.tools.SimpleImageView.centered;
+import static java.lang.Math.ceil;
+import static java.lang.Math.min;
 import static net.sourceforge.aprog.swing.SwingTools.getFiles;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.show;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.awt.BorderLayout;
@@ -59,15 +63,14 @@ public final class SVSViewer {
 		
 		private final JPanel mainPanel;
 		
-		private final JComponent imageView;
+		private final ImageView imageView;
 		
 		public Context() {
 			this.reader = new ImageReader();
 			this.mainPanel = new JPanel(new BorderLayout());
-			this.mainPanel.setPreferredSize(new Dimension(512, 512));
 			this.imageView = this.new ImageView();
 			SwingTools.setCheckAWT(false);
-			this.mainPanel.add(scrollable(this.imageView), BorderLayout.CENTER);
+			this.mainPanel.add(scrollable(centered(this.imageView)), BorderLayout.CENTER);
 			SwingTools.setCheckAWT(true);
 			
 			this.mainPanel.setDropTarget(new DropTarget() {
@@ -94,8 +97,7 @@ public final class SVSViewer {
 			
 			try {
 				this.getReader().setId(path);
-				this.getImageView().setPreferredSize(
-						new Dimension(this.getReader().getSizeX(), this.getReader().getSizeY()));
+				this.getImageView().refresh().setScale(1.0);
 				this.getImageView().revalidate();
 				this.getMainPanel().repaint();
 			} catch (final Exception exception) {
@@ -111,7 +113,7 @@ public final class SVSViewer {
 			return this.mainPanel;
 		}
 		
-		public final JComponent getImageView() {
+		public final ImageView getImageView() {
 			return this.imageView;
 		}
 		
@@ -125,10 +127,17 @@ public final class SVSViewer {
 		 */
 		public final class ImageView extends JComponent {
 			
-			private final List<List<BufferedImage>> tiles;
+			private String path;
+			
+			private final List<Level> levels;
+			
+			private double scale;
 			
 			public ImageView() {
-				this.tiles = new ArrayList<>();
+				this.levels = new ArrayList<>();
+				this.scale = 1.0;
+				
+				this.setPreferredSize(new Dimension(512, 512));
 			}
 			
 			@Override
@@ -141,8 +150,78 @@ public final class SVSViewer {
 					
 					g.drawString(string, this.getWidth() / 2 - stringBounds.width / 2, this.getHeight() / 2 + stringBounds.height / 2);
 				} else {
+					final Level level = this.getLevels().get(0);
+					final int tileWidth = level.getTileWidth();
+					final int tileHeight = level.getTileHeight();
+					final Rectangle clipping = this.getVisibleRect();
+					final int topTileY = clipping.y / tileHeight;
+					final int topTileX = clipping.x / tileWidth;
+					g.drawRect(0, 0, this.getWidth(), this.getHeight());
+					debugPrint(this.getX(), this.getY(), this.getWidth(), this.getHeight());
+					debugPrint(clipping);
 					// TODO
 				}
+			}
+			
+			public final ImageView refresh() {
+				this.refreshLevels();
+				
+				return this;
+			}
+			
+			public final double[] getViewCenterXYInLevel0() {
+				final Rectangle clipping = this.getVisibleRect();
+				
+				return new double[] {
+					this.unscale(clipping.getCenterX())
+					, this.unscale(clipping.getCenterY())
+				};
+			}
+			
+			private final void refreshLevels() {
+				if (!Context.this.getImagePath().equals(this.path)) {
+					this.getLevels().clear();
+					
+					final int n = Context.this.getReader().getSeriesCount();
+					final int endLevel = 2 < n ? n - 2 : n;	
+					
+					for (int i = 0; i < endLevel; ++i) {
+						this.getLevels().add(this.new Level(i));
+					}
+				}
+			}
+			
+			public final double getScale() {
+				return this.scale;
+			}
+			
+			public final void setScale(final double scale) {
+				this.scale = scale;
+				
+				final Level level0 = this.getLevels().get(0);
+				
+				this.setPreferredSize(new Dimension(
+						this.scale(level0.getWidth()), this.scale(level0.getHeight())));
+			}
+			
+			public final int scale(final int value) {
+				return (int) (value * this.getScale());
+			}
+			
+			public final int unscale(final int value) {
+				return (int) (value / this.getScale());
+			}
+			
+			public final double scale(final double value) {
+				return value * this.getScale();
+			}
+			
+			public final double unscale(final double value) {
+				return value / this.getScale();
+			}
+			
+			public final List<Level> getLevels() {
+				return this.levels;
 			}
 			
 			/**
@@ -163,6 +242,18 @@ public final class SVSViewer {
 				
 				private final int tileHeight;
 				
+				private final int maximumHorizontalTileCount;
+				
+				private final int maximumVerticalTileCount;
+				
+				private final double scale;
+				
+				private final Grid<BufferedImage> tiles;
+				
+				private int leftTileX;
+				
+				private int topTileY;
+				
 				public Level(final int level) {
 					final IFormatReader reader = Context.this.getReader();
 					
@@ -172,6 +263,16 @@ public final class SVSViewer {
 					this.height = reader.getSizeY();
 					this.tileWidth = reader.getOptimalTileWidth();
 					this.tileHeight = reader.getOptimalTileHeight();
+					this.maximumHorizontalTileCount = (int) (ceil((double) this.width / this.tileWidth));
+					this.maximumVerticalTileCount = (int) (ceil((double) this.height / this.tileHeight));
+					if (level == 0) {
+						this.scale = 1.0;
+					} else {
+						final Level previousLevel = Context.this.getImageView().getLevels().get(level - 1);
+						this.scale = min((double) this.width / previousLevel.getWidth()
+								, (double) this.height / previousLevel.getHeight());
+					}
+					this.tiles = new Grid<>();
 				}
 				
 				public final int getWidth() {
@@ -188,6 +289,52 @@ public final class SVSViewer {
 				
 				public final int getTileHeight() {
 					return this.tileHeight;
+				}
+				
+				public final double getScale() {
+					return this.scale;
+				}
+				
+				public final Grid<BufferedImage> getTiles() {
+					return this.tiles;
+				}
+				
+				public final int scale(final int value) {
+					return (int) (value * this.getScale());
+				}
+				
+				public final int unscale(final int value) {
+					return (int) (value / this.getScale());
+				}
+				
+				public final double scale(final double value) {
+					return value * this.getScale();
+				}
+				
+				public final double unscale(final double value) {
+					return value / this.getScale();
+				}
+				
+				public final void updateTiles() {
+					final Rectangle clipping = ImageView.this.getVisibleRect();
+					final double[] viewCenterXYInLevel0 = ImageView.this.getViewCenterXYInLevel0();
+					final double x0 = viewCenterXYInLevel0[0];
+					final double y0 = viewCenterXYInLevel0[1];
+					
+					// Consider only the case when imageView.scale is close to this.scale
+					final int leftTileX = (int) (this.scale(x0) - clipping.getWidth() / 2.0) / this.getTileWidth();
+					final int topTileY = (int) (this.scale(y0) - clipping.getHeight() / 2.0) / this.getTileHeight();
+					final int horizontalTileCount = min(this.maximumHorizontalTileCount
+							, 1 + (int) ceil(clipping.getWidth() / this.getTileWidth()));
+					final int verticalTileCount = min(this.maximumVerticalTileCount
+							, 1 + (int) ceil(clipping.getHeight() / this.getTileHeight()));
+					
+					this.getTiles().shiftRight((leftTileX - this.leftTileX) / this.getTileWidth());
+					this.getTiles().shiftDown((topTileY - this.topTileY) / this.getTileHeight());
+					this.getTiles().setSize(verticalTileCount, horizontalTileCount);
+					
+					this.leftTileX = leftTileX;
+					this.topTileY = topTileY;
 				}
 				
 				/**
