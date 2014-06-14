@@ -1,5 +1,6 @@
 package imj2.tools;
 
+import static imj2.tools.IMJTools.awtImage;
 import static imj2.tools.SimpleImageView.centered;
 import static java.lang.Math.ceil;
 import static java.lang.Math.min;
@@ -59,14 +60,13 @@ public final class SVSViewer {
 		
 		private String imagePath;
 		
-		private final IFormatReader reader;
+		private LociBackedImage image;
 		
 		private final JPanel mainPanel;
 		
 		private final ImageView imageView;
 		
 		public Context() {
-			this.reader = new ImageReader();
 			this.mainPanel = new JPanel(new BorderLayout());
 			this.imageView = this.new ImageView();
 			SwingTools.setCheckAWT(false);
@@ -96,7 +96,7 @@ public final class SVSViewer {
 			this.imagePath = path;
 			
 			try {
-				this.getReader().setId(path);
+				this.image = new LociBackedImage(path);
 				this.getImageView().refresh().setScale(1.0);
 				this.getImageView().revalidate();
 				this.getMainPanel().repaint();
@@ -105,8 +105,8 @@ public final class SVSViewer {
 			}
 		}
 		
-		public final IFormatReader getReader() {
-			return this.reader;
+		public final LociBackedImage getImage() {
+			return this.image;
 		}
 		
 		public final JPanel getMainPanel() {
@@ -151,15 +151,21 @@ public final class SVSViewer {
 					g.drawString(string, this.getWidth() / 2 - stringBounds.width / 2, this.getHeight() / 2 + stringBounds.height / 2);
 				} else {
 					final Level level = this.getLevels().get(0);
+					final Grid<BufferedImage> tiles = level.getTiles();
 					final int tileWidth = level.getTileWidth();
 					final int tileHeight = level.getTileHeight();
-					final Rectangle clipping = this.getVisibleRect();
-					final int topTileY = clipping.y / tileHeight;
-					final int topTileX = clipping.x / tileWidth;
-					g.drawRect(0, 0, this.getWidth(), this.getHeight());
-					debugPrint(this.getX(), this.getY(), this.getWidth(), this.getHeight());
-					debugPrint(clipping);
-					// TODO
+					final int columnCount = tiles.getColumnCount();
+					final int rowCount = tiles.getRowCount();
+					
+					for (int tileY = level.getTopTileY(), rowIndex = 0; rowIndex < rowCount; tileY += tileHeight, ++rowIndex) {
+						for (int tileX = level.getLeftTileX(), columnIndex = 0; columnIndex < columnCount; tileX += tileWidth, ++columnIndex) {
+							g.drawImage(tiles.getElement(rowIndex, columnIndex), tileX, tileY, null);
+							g.drawRect(tileX, tileY, tileWidth - 1, tileHeight - 1);
+						}
+						
+					}
+					
+					g.drawRect(0, 0, this.getWidth() - 1, this.getHeight() - 1);
 				}
 			}
 			
@@ -182,7 +188,7 @@ public final class SVSViewer {
 				if (!Context.this.getImagePath().equals(this.path)) {
 					this.getLevels().clear();
 					
-					final int n = Context.this.getReader().getSeriesCount();
+					final int n = Context.this.getImage().getSeriesCount();
 					final int endLevel = 2 < n ? n - 2 : n;	
 					
 					for (int i = 0; i < endLevel; ++i) {
@@ -234,6 +240,8 @@ public final class SVSViewer {
 			 */
 			public final class Level implements Serializable {
 				
+				private final int level;
+				
 				private final int width;
 				
 				private final int height;
@@ -250,12 +258,15 @@ public final class SVSViewer {
 				
 				private final Grid<BufferedImage> tiles;
 				
+				private final byte[] buffer;
+				
 				private int leftTileX;
 				
 				private int topTileY;
 				
 				public Level(final int level) {
-					final IFormatReader reader = Context.this.getReader();
+					this.level = level;
+					final IFormatReader reader = Context.this.getImage().getReader();
 					
 					reader.setSeries(level);
 					
@@ -273,6 +284,11 @@ public final class SVSViewer {
 								, (double) this.height / previousLevel.getHeight());
 					}
 					this.tiles = new Grid<>();
+					this.buffer = new byte[this.tileWidth * this.tileHeight * 3];
+				}
+				
+				public final int getLevel() {
+					return this.level;
 				}
 				
 				public final int getWidth() {
@@ -299,6 +315,14 @@ public final class SVSViewer {
 					return this.tiles;
 				}
 				
+				public final int getLeftTileX() {
+					return this.leftTileX;
+				}
+				
+				public final int getTopTileY() {
+					return this.topTileY;
+				}
+				
 				public final int scale(final int value) {
 					return (int) (value * this.getScale());
 				}
@@ -322,19 +346,39 @@ public final class SVSViewer {
 					final double y0 = viewCenterXYInLevel0[1];
 					
 					// Consider only the case when imageView.scale is close to this.scale
-					final int leftTileX = (int) (this.scale(x0) - clipping.getWidth() / 2.0) / this.getTileWidth();
-					final int topTileY = (int) (this.scale(y0) - clipping.getHeight() / 2.0) / this.getTileHeight();
+					final int startTileX = ((int) (this.scale(x0) - clipping.getWidth() / 2.0) / this.getTileWidth()) * this.getTileWidth();
+					final int startTileY = ((int) (this.scale(y0) - clipping.getHeight() / 2.0) / this.getTileHeight()) * this.getTileHeight();
 					final int horizontalTileCount = min(this.maximumHorizontalTileCount
 							, 1 + (int) ceil(clipping.getWidth() / this.getTileWidth()));
 					final int verticalTileCount = min(this.maximumVerticalTileCount
 							, 1 + (int) ceil(clipping.getHeight() / this.getTileHeight()));
 					
-					this.getTiles().shiftRight((leftTileX - this.leftTileX) / this.getTileWidth());
-					this.getTiles().shiftDown((topTileY - this.topTileY) / this.getTileHeight());
+					this.getTiles().shiftRight((startTileX - this.leftTileX) / this.getTileWidth());
+					this.getTiles().shiftDown((startTileY - this.topTileY) / this.getTileHeight());
 					this.getTiles().setSize(verticalTileCount, horizontalTileCount);
 					
-					this.leftTileX = leftTileX;
-					this.topTileY = topTileY;
+					this.leftTileX = startTileX;
+					this.topTileY = startTileY;
+					final int endTileX = min(this.getWidth(), startTileX + horizontalTileCount * this.getTileWidth());
+					final int endTileY = min(this.getHeight(), startTileY + verticalTileCount * this.getTileHeight());
+					final LociBackedImage image = Context.this.getImage();
+					
+					image.setSeries(this.getLevel());
+					
+					debugPrint(startTileX, startTileY, horizontalTileCount, verticalTileCount);
+					
+					for (int tileY = startTileY, rowIndex = 0; tileY < endTileY; tileY += this.getTileHeight(), ++rowIndex) {
+						final int h = min(this.getHeight(), tileY + this.getTileHeight()) - tileY;
+						
+						for (int tileX = startTileX, columnIndex = 0; tileX < endTileX; tileX += this.getTileWidth(), ++columnIndex) {
+							final int w = min(this.getWidth(), tileX + this.getTileWidth()) - tileX;
+							
+							if (this.getTiles().getElement(rowIndex, columnIndex) == null) {
+								this.getTiles().setElement(rowIndex, columnIndex, awtImage(
+										image, tileX, tileY, w, h));
+							}
+						}
+					}
 				}
 				
 				/**
@@ -371,6 +415,12 @@ public final class SVSViewer {
 		
 		public final T getElement(final int rowIndex, final int columnIndex) {
 			return this.rows.get(rowIndex).get(columnIndex);
+		}
+		
+		public final Grid<T> setElement(final int rowIndex, final int columnIndex, final T element) {
+			this.rows.get(rowIndex).set(columnIndex, element);
+			
+			return this;
 		}
 		
 		public final Grid<T> setSize(final int rowCount, final int columnCount) {
@@ -429,7 +479,7 @@ public final class SVSViewer {
 				for (final List<T> row : this.rows) {
 					int destination = 0;
 					
-					for (int source = shift;
+					for (int source = -shift;
 							source < columnCount; ++destination, ++source) {
 						row.set(destination, row.get(source));
 					}
@@ -459,18 +509,18 @@ public final class SVSViewer {
 				}
 				
 				while (0 <= destination) {
-					this.rows.set(destination--, null);
+					Collections.fill(this.rows.get(destination--), null);
 				}
 			} else if (shift < 0) {
 				int destination = 0;
 				
-				for (int source = shift;
+				for (int source = -shift;
 						source < rowCount; ++destination, ++source) {
 					this.rows.set(destination, this.rows.get(source));
 				}
 				
 				while (destination < rowCount) {
-					this.rows.set(destination++, null);
+					Collections.fill(this.rows.get(destination++), null);
 				}
 			}
 			

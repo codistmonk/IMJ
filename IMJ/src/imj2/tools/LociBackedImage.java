@@ -20,7 +20,7 @@ import loci.formats.ImageReader;
  */
 public final class LociBackedImage extends TiledImage2D {
 	
-	private final IFormatReader lociImage;
+	private final IFormatReader reader;
 	
 	private final int bytesPerPixel;
 	
@@ -28,31 +28,40 @@ public final class LociBackedImage extends TiledImage2D {
 	
 	public LociBackedImage(final String id) {
 		super(id);
-		this.lociImage = new ImageReader();
+		this.reader = new ImageReader();
 		
 		try {
-			this.lociImage.setId(id);
+			this.reader.setId(id);
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
 		
-		this.bytesPerPixel = FormatTools.getBytesPerPixel(this.lociImage.getPixelType()) * this.lociImage.getRGBChannelCount();
+		this.bytesPerPixel = FormatTools.getBytesPerPixel(this.reader.getPixelType()) * this.reader.getRGBChannelCount();
 		
 		if (4 < this.bytesPerPixel) {
 			throw new IllegalArgumentException();
 		}
 		
-		if ("portable gray map".equals(this.lociImage.getFormat().toLowerCase(Locale.ENGLISH))) {
+		if ("portable gray map".equals(this.reader.getFormat().toLowerCase(Locale.ENGLISH))) {
 			// XXX This fixes a defect in Bio-Formats PPM loading, but is it always OK?
-			this.lociImage.getCoreMetadata()[0].interleaved = true;
+			this.reader.getCoreMetadata()[0].interleaved = true;
 		}
 		
-		this.setOptimalTileWidth(this.lociImage.getOptimalTileWidth());
-		this.setOptimalTileHeight(this.lociImage.getOptimalTileHeight());
+		this.setSeries(0);
 	}
 	
-	public final IFormatReader getLociImage() {
-		return this.lociImage;
+	public final IFormatReader getReader() {
+		return this.reader;
+	}
+	
+	public final int getSeriesCount() {
+		return this.getReader().getSeriesCount();
+	}
+	
+	public final void setSeries(final int series) {
+		this.getReader().setSeries(series);
+		this.setOptimalTileWidth(this.getReader().getOptimalTileWidth());
+		this.setOptimalTileHeight(this.getReader().getOptimalTileHeight());
 	}
 	
 	@Override
@@ -76,17 +85,17 @@ public final class LociBackedImage extends TiledImage2D {
 	
 	@Override
 	public final Channels getChannels() {
-		return IMJTools.predefinedChannelsFor(this.getLociImage());
+		return IMJTools.predefinedChannelsFor(this.getReader());
 	}
 	
 	@Override
 	public final int getWidth() {
-		return this.getLociImage().getSizeX();
+		return this.getReader().getSizeX();
 	}
 	
 	@Override
 	public final int getHeight() {
-		return this.getLociImage().getSizeY();
+		return this.getReader().getSizeY();
 	}
 	
 	@Override
@@ -102,13 +111,12 @@ public final class LociBackedImage extends TiledImage2D {
 		return result;
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	public final byte[] updateTile() {
 		final int tileWidth = this.getTileWidth();
 		final int tileHeight = this.getTileHeight();
 		
-		this.tile = cache(Arrays.asList(this.getId(), this.getTileX(), this.getTileY()), new Callable<byte[]>() {
+		this.tile = cache(Arrays.asList(this.getId(), this.getTileX(), this.getTileY(), this.getReader().getSeries()), new Callable<byte[]>() {
 			
 			@Override
 			public final byte[] call() throws Exception {
@@ -123,11 +131,11 @@ public final class LociBackedImage extends TiledImage2D {
 	@Override
 	protected final int getPixelValueFromTile(final int x, final int y, final int xInTile, final int yInTile) {
 		final int channelCount = this.getChannels().getChannelCount();
-		final int bytesPerChannel = FormatTools.getBytesPerPixel(this.lociImage.getPixelType());
+		final int bytesPerChannel = FormatTools.getBytesPerPixel(this.reader.getPixelType());
 		int result = 0;
 		
-		if (this.getLociImage().isIndexed()) {
-			if (!this.getLociImage().isInterleaved()) {
+		if (this.getReader().isIndexed()) {
+			if (!this.getReader().isInterleaved()) {
 				throw new IllegalArgumentException();
 			}
 			
@@ -136,10 +144,10 @@ public final class LociBackedImage extends TiledImage2D {
 			try {
 				switch (bytesPerChannel) {
 				case 1:
-					return packPixelValue(this.getLociImage().get8BitLookupTable(),
+					return packPixelValue(this.getReader().get8BitLookupTable(),
 							this.tile[pixelFirstByteIndex] & 0x000000FF);
 				case 2:
-					return packPixelValue(this.getLociImage().get16BitLookupTable(),
+					return packPixelValue(this.getReader().get16BitLookupTable(),
 							((this.tile[pixelFirstByteIndex] & 0x000000FF) << 8) | (this.tile[pixelFirstByteIndex + 1] & 0x000000FF));
 				default:
 					throw new IllegalArgumentException();
@@ -147,7 +155,7 @@ public final class LociBackedImage extends TiledImage2D {
 			} catch (final Exception exception) {
 				throw unchecked(exception);
 			}
-		} else if (this.getLociImage().isInterleaved()) {
+		} else if (this.getReader().isInterleaved()) {
 			final int pixelFirstByteIndex = (yInTile * this.getTileWidth() + xInTile) * bytesPerChannel * channelCount;
 			
 			for (int i = 0; i < channelCount; ++i) {
@@ -179,7 +187,7 @@ public final class LociBackedImage extends TiledImage2D {
 	
 	final byte[] updateTile(final byte[] tile) {
 		try {
-			this.getLociImage().openBytes(0, tile, this.getTileX(), this.getTileY(),
+			this.getReader().openBytes(0, tile, this.getTileX(), this.getTileY(),
 					this.getTileWidth(), this.getTileHeight());
 			
 			return tile;
