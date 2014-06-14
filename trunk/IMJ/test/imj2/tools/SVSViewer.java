@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -150,7 +151,7 @@ public final class SVSViewer {
 					
 					g.drawString(string, this.getWidth() / 2 - stringBounds.width / 2, this.getHeight() / 2 + stringBounds.height / 2);
 				} else {
-					final Level level = this.getLevels().get(0);
+					final Level level = this.getLevels().get(0).updateTiles();
 					final Grid<BufferedImage> tiles = level.getTiles();
 					final int tileWidth = level.getTileWidth();
 					final int tileHeight = level.getTileHeight();
@@ -258,8 +259,6 @@ public final class SVSViewer {
 				
 				private final Grid<BufferedImage> tiles;
 				
-				private final byte[] buffer;
-				
 				private int leftTileX;
 				
 				private int topTileY;
@@ -284,7 +283,6 @@ public final class SVSViewer {
 								, (double) this.height / previousLevel.getHeight());
 					}
 					this.tiles = new Grid<>();
-					this.buffer = new byte[this.tileWidth * this.tileHeight * 3];
 				}
 				
 				public final int getLevel() {
@@ -339,7 +337,7 @@ public final class SVSViewer {
 					return value / this.getScale();
 				}
 				
-				public final void updateTiles() {
+				public final Level updateTiles() {
 					final Rectangle clipping = ImageView.this.getVisibleRect();
 					final double[] viewCenterXYInLevel0 = ImageView.this.getViewCenterXYInLevel0();
 					final double x0 = viewCenterXYInLevel0[0];
@@ -379,6 +377,8 @@ public final class SVSViewer {
 							}
 						}
 					}
+					
+					return this;
 				}
 				
 				/**
@@ -505,7 +505,7 @@ public final class SVSViewer {
 				
 				for (int source = destination - shift;
 						0 <= source; --destination, --source) {
-					this.rows.set(destination, this.rows.get(source));
+					Collections.copy(this.rows.get(destination), this.rows.get(source));
 				}
 				
 				while (0 <= destination) {
@@ -516,7 +516,7 @@ public final class SVSViewer {
 				
 				for (int source = -shift;
 						source < rowCount; ++destination, ++source) {
-					this.rows.set(destination, this.rows.get(source));
+					Collections.copy(this.rows.get(destination), this.rows.get(source));
 				}
 				
 				while (destination < rowCount) {
@@ -525,6 +525,24 @@ public final class SVSViewer {
 			}
 			
 			return this;
+		}
+		
+		public final void debugPrintHashCodes() {
+			final int columnCount = this.getColumnCount();
+			
+			if (0 == columnCount) {
+				return;
+			}
+			
+			final int[] hashCodes = new int[columnCount];
+			
+			for (final List<T> row : this.rows) {
+				for (int i = 0; i < columnCount; ++i) {
+					hashCodes[i] = System.identityHashCode(row.get(i));
+				}
+				
+				Tools.getDebugOutput().println(Tools.debug(Tools.DEBUG_STACK_OFFSET + 1, Arrays.toString(hashCodes)));
+			}
 		}
 		
 		/**
