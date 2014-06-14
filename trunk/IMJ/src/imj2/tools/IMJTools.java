@@ -117,13 +117,16 @@ public final class IMJTools extends IMJCoreTools {
 	}
 	
 	public static final BufferedImage awtImage(final Image2D image) {
-		final int width = image.getWidth();
-		final int height = image.getHeight();
+		return awtImage(image, 0, 0, image.getWidth(), image.getHeight());
+	}
+	
+	public static final BufferedImage awtImage(final Image2D image
+			, final int left, final int top, final int width, final int height) {
 		final BufferedImage result = new BufferedImage(width, height, awtImageTypeFor(image));
 		
 		for (int y = 0; y < height; ++y) {
 			for (int x = 0; x < width; ++x) {
-				result.setRGB(x, y, image.getPixelValue(x, y));
+				result.setRGB(x, y, image.getPixelValue(left + x, top + y));
 			}
 		}
 		
