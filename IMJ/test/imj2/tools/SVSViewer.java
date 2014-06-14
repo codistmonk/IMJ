@@ -351,8 +351,8 @@ public final class SVSViewer {
 					final int verticalTileCount = min(this.maximumVerticalTileCount
 							, 1 + (int) ceil(clipping.getHeight() / this.getTileHeight()));
 					
-					this.getTiles().shiftRight((startTileX - this.leftTileX) / this.getTileWidth());
-					this.getTiles().shiftDown((startTileY - this.topTileY) / this.getTileHeight());
+					this.getTiles().shiftRight(-(startTileX - this.leftTileX) / this.getTileWidth());
+					this.getTiles().shiftDown(-(startTileY - this.topTileY) / this.getTileHeight());
 					this.getTiles().setSize(verticalTileCount, horizontalTileCount);
 					
 					this.leftTileX = startTileX;
@@ -542,6 +542,18 @@ public final class SVSViewer {
 				}
 				
 				Tools.getDebugOutput().println(Tools.debug(Tools.DEBUG_STACK_OFFSET + 1, Arrays.toString(hashCodes)));
+			}
+		}
+		
+		public final void debugPrint() {
+			final int columnCount = this.getColumnCount();
+			
+			if (0 == columnCount) {
+				return;
+			}
+			
+			for (final List<T> row : this.rows) {
+				Tools.getDebugOutput().println(Tools.debug(Tools.DEBUG_STACK_OFFSET + 1, row));
 			}
 		}
 		
