@@ -164,12 +164,7 @@ public final class IMJDatabaseTools {
 	
 	public static final Sampler newRGBSampler(final Class<? extends Sampler> samplerFactory,
 			final Image image, final Quantizer quantizer, final SampleProcessor processor) {
-		try {
-			return samplerFactory.getConstructor(Image.class, Quantizer.class, Channel[].class, SampleProcessor.class)
-					.newInstance(image, quantizer, RGB, processor);
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
+		return newSampler(samplerFactory, RGB, quantizer, image, processor);
 	}
 	
 	public static final Metric<Sample> getPreferredMetric(final Sampler sampler) {
@@ -197,6 +192,18 @@ public final class IMJDatabaseTools {
 		loadRegions(imageId, lod, imageRowCount, imageColumnCount, annotations, classes);
 		
 		final SampleProcessor processor = new Sample.ClassSetter(classes, database);
+		final Sampler sampler = newSampler(samplerFactory, channels, quantizer, image, processor);
+		
+		timer.tic();
+		segmenter.process(image, sampler);
+		gc();
+		debugPrint("time:", timer.toc());
+	}
+
+	public static Sampler newSampler(
+			final Class<? extends Sampler> samplerFactory,
+			final Channel[] channels, final Quantizer quantizer,
+			final Image image, final SampleProcessor processor) {
 		final Sampler sampler;
 		
 		try {
@@ -205,11 +212,7 @@ public final class IMJDatabaseTools {
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
-		
-		timer.tic();
-		segmenter.process(image, sampler);
-		gc();
-		debugPrint("time:", timer.toc());
+		return sampler;
 	}
 	
 	public static final void loadRegions(final String imageId, final int lod, final int imageRowCount,
