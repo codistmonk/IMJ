@@ -106,6 +106,8 @@ public final class GenerateSampleDatabase {
 		
 		private final String descriptorName;
 		
+		private final String protosuffix;
+		
 		private final String databaseSuffix;
 		
 		private final String confusionSuffix;
@@ -126,20 +128,20 @@ public final class GenerateSampleDatabase {
 			this.descriptorName = arguments.get("descriptor", "linear").toLowerCase(ENGLISH);
 			this.maximumGroupSize = arguments.get("maximumGroupSize", 0)[0];
 			
-			String suffix =  ".lod" + this.lod + ".q" + this.quantizationLevel + "." + this.segmenterName;
+			String protosuffix =  ".lod" + this.lod + ".q" + this.quantizationLevel + "." + this.segmenterName;
 			
 			if ("tiles".equals(this.segmenterName)) {
-				suffix += "_h" + this.tileRowCount + "w" + this.tileColumnCount + "dy" + this.verticalTileStride + "dx" + this.horizontalTileStride;
+				protosuffix += "_h" + this.tileRowCount + "w" + this.tileColumnCount + "dy" + this.verticalTileStride + "dx" + this.horizontalTileStride;
 			} else if ("seams".equals(this.segmenterName)) {
-				suffix += this.tileRowCount;
+				protosuffix += this.tileRowCount;
 			} else {
 				throw new IllegalArgumentException("Invalid segmenter: " + this.segmenterName);
 			}
 			
-			suffix += "." + this.descriptorName;
-			
-			this.databaseSuffix = suffix + ".jo";
-			this.confusionSuffix = suffix + ".mgs" + this.maximumGroupSize + ".jo";
+			protosuffix += "." + this.descriptorName;
+			this.protosuffix = protosuffix;
+			this.databaseSuffix = protosuffix + ".jo";
+			this.confusionSuffix = protosuffix + ".mgs" + this.maximumGroupSize + ".jo";
 			
 			if ("linear".equals(this.descriptorName)) {
 				this.samplerClass = LinearSampler.class;
@@ -184,6 +186,10 @@ public final class GenerateSampleDatabase {
 		
 		public final int getMaximumGroupSize() {
 			return this.maximumGroupSize;
+		}
+		
+		public final String getProtosuffix() {
+			return this.protosuffix;
 		}
 		
 		public final String getDatabaseSuffix() {

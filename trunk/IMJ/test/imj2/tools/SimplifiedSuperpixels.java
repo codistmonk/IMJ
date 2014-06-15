@@ -9,11 +9,14 @@ import static java.lang.Integer.parseInt;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+import static net.sourceforge.aprog.tools.Tools.writeAndClose;
 import static net.sourceforge.aprog.xml.XMLTools.getNode;
 import static net.sourceforge.aprog.xml.XMLTools.getNodes;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
 
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -28,6 +31,8 @@ import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import javax.imageio.ImageIO;
 
@@ -50,10 +55,11 @@ import imj.database.Sample;
 import imj.database.Sampler;
 import imj.database.BKSearch.BKDatabase;
 import imj.database.Segmenter;
-
+import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-06-15)
@@ -73,36 +79,43 @@ public final class SimplifiedSuperpixels {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final File file = new File(arguments.get("file", ""));
 		
+		debugPrint(configuration.getProtosuffix());
+		
 		if (file.isDirectory()) {
 			final List<Future<?>> tasks = new ArrayList<>();
 			
-			try {
+			try (final ZipOutputStream zipOutput = new ZipOutputStream(new FileOutputStream("data" + configuration.getProtosuffix().replace('.', '_') + ".zip"))) {
 				for (final File subfile : file.listFiles()) {
-					MultiThreadTools.getExecutor().submit(new Runnable() {
+					tasks.add(MultiThreadTools.getExecutor().submit(new Runnable() {
 						
 						@Override
 						public final void run() {
 							try {
-								process(configuration, arguments, subfile.getPath());
+								process(configuration, arguments, subfile.getPath(), zipOutput);
 							} catch (final IOException exception) {
 								throw unchecked(exception);
 							}
 						}
 						
-					});
+					}));
 				}
 				
 				MultiThreadTools.wait(tasks);
+				
+				zipOutput.putNextEntry(new ZipEntry("data.xml"));
+				writeAndClose(new FileInputStream(new File(file, "data.xml")), true, zipOutput, false);
+				zipOutput.closeEntry();
 			} finally {
 				MultiThreadTools.shutdownExecutor();
 			}
 		} else {
-			process(configuration, arguments, file.getPath());
+			process(configuration, arguments, file.getPath(), null);
 		}
 	}
 	
-	public static final void process(final Configuration configuration,
-			final CommandLineArgumentsParser arguments, final String imagePath)
+	public static final void process(final Configuration configuration
+			, final CommandLineArgumentsParser arguments, final String imagePath
+			, final ZipOutputStream zipOutput)
 			throws FileNotFoundException, IOException {
 		final TicToc timer = new TicToc();
 		final Matcher tmMatcher = PragueTextureSegmentation.TM_FILE_PATH.matcher(imagePath);
@@ -154,7 +167,6 @@ public final class SimplifiedSuperpixels {
 				debugPrint(sampleDatabase.getEntryCount());
 			}
 		}
-		
 		
 		final Sample.Collector collector = new Sample.Collector();
 		final Sampler sampler = newSampler(configuration.getSamplerClass(), channels, quantizer, image, collector);
@@ -222,11 +234,39 @@ public final class SimplifiedSuperpixels {
 		
 		debugPrint(outputPath);
 		
-		try (final OutputStream output = new FileOutputStream(outputPath)) {
-			ImageIO.write(result, "png", output);
+		if (zipOutput == null) {
+			debugPrint("Writing result to file...");
+			
+			try (final OutputStream output = new FileOutputStream(outputPath)) {
+				ImageIO.write(result, "png", output);
+			}
+		} else {
+			debugPrint("Writing result to buffer...");
+			final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+			
+			ImageIO.write(result, "png", buffer);
+			
+			buffer.flush();
+			
+			debugPrint("Writing result to archive...");
+			synchronized (zipOutput) {
+				zipOutput.putNextEntry(new ZipEntry(new File(outputPath).getName()));
+				zipOutput.write(buffer.toByteArray());
+				zipOutput.closeEntry();
+			}
 		}
 		
 		debugPrint("time:", timer.toc());
+	}
+	
+	public static final BufferedImage copyOf(final BufferedImage image, final int type) {
+		final BufferedImage result = new BufferedImage(image.getWidth(), image.getHeight(), type);
+		final Graphics2D g = result.createGraphics();
+		
+		g.drawImage(image, 0, 0, null);
+		g.dispose();
+		
+		return result;
 	}
 	
 	/**
@@ -253,7 +293,7 @@ public final class SimplifiedSuperpixels {
 				final List<Node> texturePaths = getNodes(texturesNode, "var[contains(@name, 'Train')]");
 				
 				for (int i = 0; i < textureIds.length; ++i) {
-					result.put(textureIds[i], texturePaths.get(i).getTextContent().replaceAll("\"", ""));
+					result.put("" + result.size(), texturePaths.get(i).getTextContent().replaceAll("\"", ""));
 				}
 			}
 			

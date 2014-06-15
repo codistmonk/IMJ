@@ -1,7 +1,13 @@
 package imj2.tools;
 
+import static imj2.tools.IMJTools.accessible;
+import static imj2.tools.IMJTools.field;
+
+import java.awt.Transparency;
+import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
+import java.awt.image.ComponentColorModel;
 import java.awt.image.DataBuffer;
 import java.awt.image.Raster;
 import java.awt.image.WritableRaster;
@@ -10,10 +16,11 @@ import java.io.Serializable;
 /**
  * @author codistmonk (creation 2014-06-15)
  */
-public final class SimpleGray8ColorModel extends ColorModel implements Serializable {
+public final class SimpleGray8ColorModel extends ComponentColorModel implements Serializable {
 	
 	public SimpleGray8ColorModel() {
-		super(8);
+		super(ColorSpace.getInstance(ColorSpace.CS_GRAY), new int[] { 8 } 
+				, false, false, Transparency.OPAQUE, DataBuffer.TYPE_BYTE);
 	}
 	
 	public final int getGray(final int pixel) {
@@ -57,9 +64,17 @@ public final class SimpleGray8ColorModel extends ColorModel implements Serializa
 	
 	public static BufferedImage newByteGrayAWTImage(final int width, final int height) {
 		final ColorModel colorModel = new SimpleGray8ColorModel();
+		final WritableRaster raster = colorModel.createCompatibleWritableRaster(width, height);
+		final BufferedImage result = new BufferedImage(colorModel, raster, false, null);
 		
-		return new BufferedImage(colorModel
-				, colorModel.createCompatibleWritableRaster(width, height), false, null);
+		try {
+			// XXX horrible hack to force image type
+			accessible(field(result, "imageType")).setInt(result, BufferedImage.TYPE_BYTE_GRAY);
+		} catch (final Exception exception) {
+			exception.printStackTrace();
+		}
+		
+		return result;
 	}
 	
 	/**

@@ -1,5 +1,6 @@
 package imj2.tools;
 
+import static imj2.tools.IMJTools.getFieldValue;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -17,7 +18,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.lang.reflect.Array;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -34,7 +34,6 @@ import javax.imageio.ImageWriter;
 import loci.formats.ImageReader;
 import loci.formats.tiff.TiffCompression;
 import loci.formats.tiff.TiffParser;
-
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.RegexFilter;
@@ -296,46 +295,6 @@ public final class SVS2Zip {
 			monitor.pause();
 			
 			debugPrint("Testing done in", timer.toc(), "ms");
-		}
-	}
-	
-	public static final Field accessible(final Field field) {
-		field.setAccessible(true);
-		
-		return field;
-	}
-	
-	public static final Field field(final Object object, final String fieldName) {
-		return field(object.getClass(), fieldName);
-	}
-	
-	public static final Field field(final Class<?> cls, final String fieldName) {
-		try {
-			try {
-				return accessible(cls.getDeclaredField(fieldName));
-			} catch (final NoSuchFieldException exception) {
-				return accessible(cls.getField(fieldName));
-			}
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
-	}
-	
-	@SuppressWarnings("unchecked")
-	public static final <T> T getFieldValue(final Object object, final String fieldName) {
-		try {
-			return (T) field(object, fieldName).get(object);
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
-	}
-	
-	@SuppressWarnings("unchecked")
-	public static final <T> T getFieldValue(final Class<?> cls, final String fieldName) {
-		try {
-			return (T) field(cls, fieldName).get(null);
-		} catch (final Exception exception) {
-			throw unchecked(exception);
 		}
 	}
 	
