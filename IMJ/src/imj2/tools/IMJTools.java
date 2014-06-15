@@ -2,6 +2,7 @@ package imj2.tools;
 
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
 import imj2.core.ConcreteImage2D;
@@ -17,6 +18,7 @@ import java.awt.Container;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
+import java.lang.reflect.Field;
 import java.util.Iterator;
 
 import loci.formats.FormatTools;
@@ -30,6 +32,46 @@ public final class IMJTools extends IMJCoreTools {
 	
 	private IMJTools() {
 		throw new IllegalInstantiationException();
+	}
+	
+	public static final Field accessible(final Field field) {
+		field.setAccessible(true);
+		
+		return field;
+	}
+	
+	public static final Field field(final Object object, final String fieldName) {
+		return field(object.getClass(), fieldName);
+	}
+	
+	public static final Field field(final Class<?> cls, final String fieldName) {
+		try {
+			try {
+				return accessible(cls.getDeclaredField(fieldName));
+			} catch (final NoSuchFieldException exception) {
+				return accessible(cls.getField(fieldName));
+			}
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final <T> T getFieldValue(final Object object, final String fieldName) {
+		try {
+			return (T) field(object, fieldName).get(object);
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final <T> T getFieldValue(final Class<?> cls, final String fieldName) {
+		try {
+			return (T) field(cls, fieldName).get(null);
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
 	}
 	
 	@SuppressWarnings("unchecked")
