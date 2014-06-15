@@ -50,10 +50,10 @@ import imj.database.Sample;
 import imj.database.Sampler;
 import imj.database.BKSearch.BKDatabase;
 import imj.database.Segmenter;
+
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-06-15)
@@ -159,7 +159,7 @@ public final class SimplifiedSuperpixels {
 		final Sample.Collector collector = new Sample.Collector();
 		final Sampler sampler = newSampler(configuration.getSamplerClass(), channels, quantizer, image, collector);
 		final BKDatabase<Sample> bkDatabase = newBKDatabase(sampleDatabase, getPreferredMetric(sampler));
-		final BufferedImage result = new BufferedImage(image.getColumnCount(), image.getRowCount(), BufferedImage.TYPE_BYTE_GRAY);
+		final BufferedImage result = SimpleGray8ColorModel.newByteGrayAWTImage(image.getColumnCount(), image.getRowCount());
 		final byte[] prediction = new byte[1];
 		
 		timer.tic();
@@ -194,7 +194,7 @@ public final class SimplifiedSuperpixels {
 						final int x = pixel % image.getColumnCount();
 						final int y = pixel / image.getColumnCount();
 						
-						result.getRaster().setDataElements(x, y, prediction);
+						result.setRGB(x, y, prediction[0]);
 						
 						return true;
 					}
