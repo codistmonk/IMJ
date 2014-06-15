@@ -12,9 +12,12 @@ import static net.sourceforge.aprog.xml.XMLTools.getNode;
 import static net.sourceforge.aprog.xml.XMLTools.getNodes;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,7 +25,10 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.imageio.ImageIO;
+
 import jgencode.primitivelists.IntList;
+import jgencode.primitivelists.IntList.Processor;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -40,7 +46,6 @@ import imj.database.Sample;
 import imj.database.Sampler;
 import imj.database.BKSearch.BKDatabase;
 import imj.database.Segmenter;
-
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
@@ -114,6 +119,8 @@ public final class SimplifiedSuperpixels {
 		final Sample.Collector collector = new Sample.Collector();
 		final Sampler sampler = newSampler(configuration.getSamplerClass(), channels, quantizer, image, collector);
 		final BKDatabase<Sample> bkDatabase = newBKDatabase(sampleDatabase, getPreferredMetric(sampler));
+		final BufferedImage result = new BufferedImage(image.getColumnCount(), image.getRowCount(), BufferedImage.TYPE_BYTE_GRAY);
+		final byte[] prediction = new byte[1];
 		
 		timer.tic();
 		
@@ -138,16 +145,46 @@ public final class SimplifiedSuperpixels {
 					throw new IllegalArgumentException("Invalid group: " + sample.getClasses());
 				}
 				
-				final String predicted = sample.getClasses().iterator().next();
+				prediction[0] = (byte) parseInt(sample.getClasses().iterator().next());
 				
-				// TODO create result image
+				this.pixels.forEach(new Processor() {
+					
+					@Override
+					public final boolean process(final int pixel) {
+						final int x = pixel % image.getColumnCount();
+						final int y = pixel / image.getColumnCount();
+						
+						result.getRaster().setDataElements(x, y, prediction);
+						
+						return true;
+					}
+					
+					/**
+					 * {@value}.
+					 */
+					private static final long serialVersionUID = -4667208741018178698L;
+					
+				});
 				
 				this.pixels.clear();
 			}
 			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 4448450281104902695L;
+			
 		});
 		
 		gc();
+		
+		final String outputPath = new File(imagePath).getName().replace("tm" + setIndex, "seg" + setIndex);
+		
+		debugPrint(outputPath);
+		
+		try (final OutputStream output = new FileOutputStream(outputPath)) {
+			ImageIO.write(result, "png", output);
+		}
 		
 		debugPrint("time:", timer.toc());
 	}
