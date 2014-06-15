@@ -14,6 +14,7 @@ import static net.sourceforge.aprog.xml.XMLTools.getNode;
 import static net.sourceforge.aprog.xml.XMLTools.getNodes;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
 
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
@@ -136,7 +137,12 @@ public final class SimplifiedSuperpixels {
 		
 		debugPrint(textureMap);
 		
-		final Image image = loadAndTryToCache(imagePath, configuration.getLod());
+		final Image image0 = loadAndTryToCache(imagePath, 0);
+		final int w0 = image0.getColumnCount();
+		final int h0 = image0.getRowCount();
+		final int lod = configuration.getLod();
+		final int scale = 1 << lod;
+		final Image image = loadAndTryToCache(imagePath, lod);
 		final Channel[] channels = RGB;
 		final PatchDatabase<Sample> sampleDatabase = new PatchDatabase<Sample>(Sample.class);
 		final Class<? extends Sampler> samplerFactory = configuration.getSamplerClass();
@@ -154,7 +160,7 @@ public final class SimplifiedSuperpixels {
 				
 				final Map<String, RegionOfInterest> classes = new HashMap<String, RegionOfInterest>();
 				
-				final Image texture = loadAndTryToCache(texturePath, configuration.getLod());
+				final Image texture = loadAndTryToCache(texturePath, lod);
 				
 				classes.put(entry.getKey(), new RegionOfInterest.UsingBitSet(
 						texture.getRowCount(), texture.getColumnCount(), true));
@@ -171,7 +177,8 @@ public final class SimplifiedSuperpixels {
 		final Sample.Collector collector = new Sample.Collector();
 		final Sampler sampler = newSampler(configuration.getSamplerClass(), channels, quantizer, image, collector);
 		final BKDatabase<Sample> bkDatabase = newBKDatabase(sampleDatabase, getPreferredMetric(sampler));
-		final BufferedImage result = SimpleGray8ColorModel.newByteGrayAWTImage(image.getColumnCount(), image.getRowCount());
+		final BufferedImage result = SimpleGray8ColorModel.newByteGrayAWTImage(w0, h0);
+		final Graphics2D resultGraphics = result.createGraphics();
 		final byte[] prediction = new byte[1];
 		
 		timer.tic();
@@ -199,6 +206,8 @@ public final class SimplifiedSuperpixels {
 				
 				prediction[0] = (byte) parseInt(sample.getClasses().iterator().next());
 				
+				resultGraphics.setColor(new Color(0xFF000000 | (0x00010101 * (prediction[0] & 0xFF))));
+				
 				this.pixels.forEach(new Processor() {
 					
 					@Override
@@ -206,7 +215,7 @@ public final class SimplifiedSuperpixels {
 						final int x = pixel % image.getColumnCount();
 						final int y = pixel / image.getColumnCount();
 						
-						result.setRGB(x, y, prediction[0]);
+						resultGraphics.fillRect(x << lod, y << lod, scale, scale);
 						
 						return true;
 					}
@@ -227,6 +236,8 @@ public final class SimplifiedSuperpixels {
 			private static final long serialVersionUID = 4448450281104902695L;
 			
 		});
+		
+		resultGraphics.dispose();
 		
 		gc();
 		
