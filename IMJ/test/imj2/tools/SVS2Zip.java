@@ -71,7 +71,7 @@ public final class SVS2Zip {
 		((Logger) LoggerFactory.getLogger(TiffCompression.class)).setLevel(Level.INFO);
 		
 		final File[] files = new File("E:/sysimit/data/Pilot_Series_Final").listFiles(
-				RegexFilter.newSuffixFilter("_004.svs"));
+				RegexFilter.newSuffixFilter("_00[4567]A.svs"));
 		
 		for (final File file : files) {
 			final String imageId = file.getPath();
@@ -87,8 +87,8 @@ public final class SVS2Zip {
 		
 		debugPrint(imageId);
 		
-		final String baseName = baseName(imageId);
-//			final String baseName = baseName(new File(imageId).getName());
+//		final String baseName = baseName(imageId);
+		final String baseName = baseName(new File(imageId).getName());
 		
 		if (true) {
 			try (final ImageReader image = new ImageReader()) {

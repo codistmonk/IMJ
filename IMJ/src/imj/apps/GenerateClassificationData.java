@@ -8,6 +8,7 @@ import static imj.database.IMJDatabaseTools.getPreferredMetric;
 import static imj.database.IMJDatabaseTools.loadRegions;
 import static imj.database.IMJDatabaseTools.newBKDatabase;
 import static imj.database.IMJDatabaseTools.newRGBSampler;
+import static imj.database.IMJDatabaseTools.newSampler;
 import static imj.database.IMJDatabaseTools.reduceArbitrarily;
 import static imj.database.IMJDatabaseTools.updateNegativeGroups;
 import static java.util.concurrent.Executors.newFixedThreadPool;
@@ -17,18 +18,21 @@ import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.readObject;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
-
 import imj.Image;
+import imj.apps.GenerateClassificationData.ExtendedConfusionTable;
 import imj.apps.GenerateSampleDatabase.Configuration;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.RegionOfInterest;
 import imj.apps.modules.ViewFilter.Channel;
 import imj.database.BKSearch.BKDatabase;
 import imj.database.BinningQuantizer;
+import imj.database.IMJDatabaseTools;
 import imj.database.PatchDatabase;
 import imj.database.Quantizer;
 import imj.database.Sample;
+import imj.database.Sample.Collector;
 import imj.database.Sampler;
+import imj.database.Sampler.SampleProcessor;
 
 import java.io.Serializable;
 import java.lang.ref.SoftReference;
@@ -44,7 +48,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
 import jgencode.primitivelists.IntList;
-
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
@@ -218,7 +221,7 @@ public final class GenerateClassificationData {
 		quantizer.initialize(image, null, channels, configuration.getQuantizationLevel());
 		
 		final Sample.Collector collector = new Sample.Collector();
-		final Sampler sampler = newRGBSampler(configuration.getSamplerClass(), image, quantizer, collector);
+		final Sampler sampler = newSampler(configuration.getSamplerClass(), channels, quantizer, image, collector);
 		final BKDatabase<Sample> bkDatabase = newBKDatabase(sampleDatabase, getPreferredMetric(sampler));
 		
 		gc();
@@ -238,85 +241,8 @@ public final class GenerateClassificationData {
 			result.put(key, new ExtendedConfusionTable());
 		}
 		
-		configuration.newSegmenter().process(image, new Sampler(image, quantizer, channels, collector) {
-			
-			private final IntList pixels = new IntList();
-			
-			@Override
-			public final void process(final int pixel) {
-				sampler.process(pixel);
-				
-				this.pixels.add(pixel);
-			}
-			
-			@Override
-			public final void finishPatch() {
-				sampler.finishPatch();
-				
-				final Sample sample = bkDatabase.findClosest(collector.getSample());
-				
-				if (1 != sample.getClasses().size()) {
-					throw new IllegalArgumentException("Invalid group: " + sample.getClasses());
-				}
-				
-				final String predicted = sample.getClasses().iterator().next();
-				
-				for (final Map.Entry<String, RegionOfInterest> entry : classes.entrySet()) {
-					final String actual = entry.getKey();
-					final RegionOfInterest groundTruth = classes.get(actual);
-					final ExtendedConfusionTable actualRow = result.get(actual);
-					
-					if (actual.equals(predicted)) {
-						// sample is positive
-						
-						this.pixels.forEach(new IntList.Processor() {
-							
-							@Override
-							public final boolean process(final int pixel) {
-								if (groundTruth.get(pixel)) {
-									actualRow.incrementTruePositive(predicted, 1L);
-								} else {
-									actualRow.incrementFalsePositive(null, 1L);
-								}
-								
-								return true;
-							}
-							
-							/**
-							 * {@value}.
-							 */
-							private static final long serialVersionUID = 5488637471567602143L;
-							
-						});
-					} else {
-						// sample is negative
-						
-						this.pixels.forEach(new IntList.Processor() {
-							
-							@Override
-							public final boolean process(final int pixel) {
-								if (groundTruth.get(pixel)) {
-									actualRow.incrementFalseNegative(predicted, 1L);
-								} else {
-									actualRow.incrementTrueNegative(null, 1L);
-								}
-								
-								return true;
-							}
-							
-							/**
-							 * {@value}.
-							 */
-							private static final long serialVersionUID = 7774800778023348632L;
-							
-						});
-					}
-				}
-				
-				this.pixels.clear();
-			}
-			
-		});
+		configuration.newSegmenter().process(image, new ConfusionUpdater(image, quantizer, channels, collector, collector,
+				result, classes, sampler, bkDatabase));
 		
 		return result;
 	}
@@ -390,6 +316,114 @@ public final class GenerateClassificationData {
 		}
 	}
 	
+	/**
+	 * @author codistmonk (creation 2014-06-15)
+	 */
+	public static final class ConfusionUpdater extends Sampler {
+		
+		private final Collector collector;
+		
+		private final Map<String, ExtendedConfusionTable> result;
+		
+		private final Map<String, RegionOfInterest> classes;
+		
+		private final Sampler sampler;
+		
+		private final BKDatabase<Sample> bkDatabase;
+		
+		private final IntList pixels;
+		
+		public ConfusionUpdater(final Image image, final Quantizer quantizer,
+				final Channel[] channels, final SampleProcessor processor,
+				final Collector collector,
+				final Map<String, ExtendedConfusionTable> result,
+				final Map<String, RegionOfInterest> classes, final Sampler sampler,
+				final BKDatabase<Sample> bkDatabase) {
+			super(image, quantizer, channels, processor);
+			this.collector = collector;
+			this.result = result;
+			this.classes = classes;
+			this.sampler = sampler;
+			this.bkDatabase = bkDatabase;
+			this.pixels = new IntList();
+		}
+
+		@Override
+		public final void process(final int pixel) {
+			this.sampler.process(pixel);
+			
+			this.pixels.add(pixel);
+		}
+
+		@Override
+		public final void finishPatch() {
+			this.sampler.finishPatch();
+			
+			final Sample sample = this.bkDatabase.findClosest(this.collector.getSample());
+			
+			if (1 != sample.getClasses().size()) {
+				throw new IllegalArgumentException("Invalid group: " + sample.getClasses());
+			}
+			
+			final String predicted = sample.getClasses().iterator().next();
+			
+			for (final Map.Entry<String, RegionOfInterest> entry : this.classes.entrySet()) {
+				final String actual = entry.getKey();
+				final RegionOfInterest groundTruth = this.classes.get(actual);
+				final ExtendedConfusionTable actualRow = this.result.get(actual);
+				
+				if (actual.equals(predicted)) {
+					// sample is positive
+					
+					this.pixels.forEach(new IntList.Processor() {
+						
+						@Override
+						public final boolean process(final int pixel) {
+							if (groundTruth.get(pixel)) {
+								actualRow.incrementTruePositive(predicted, 1L);
+							} else {
+								actualRow.incrementFalsePositive(null, 1L);
+							}
+							
+							return true;
+						}
+						
+						/**
+						 * {@value}.
+						 */
+						private static final long serialVersionUID = 5488637471567602143L;
+						
+					});
+				} else {
+					// sample is negative
+					
+					this.pixels.forEach(new IntList.Processor() {
+						
+						@Override
+						public final boolean process(final int pixel) {
+							if (groundTruth.get(pixel)) {
+								actualRow.incrementFalseNegative(predicted, 1L);
+							} else {
+								actualRow.incrementTrueNegative(null, 1L);
+							}
+							
+							return true;
+						}
+						
+						/**
+						 * {@value}.
+						 */
+						private static final long serialVersionUID = 7774800778023348632L;
+						
+					});
+				}
+			}
+			
+			this.pixels.clear();
+		}
+		
+	}
+
 	/**
 	 * @author codistmonk (creation 2013-06-04)
 	 */
