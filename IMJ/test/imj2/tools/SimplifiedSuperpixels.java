@@ -6,6 +6,7 @@ import static imj.database.IMJDatabaseTools.getPreferredMetric;
 import static imj.database.IMJDatabaseTools.newBKDatabase;
 import static imj.database.IMJDatabaseTools.newSampler;
 import static java.lang.Integer.parseInt;
+import static java.lang.Integer.toHexString;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
@@ -25,6 +26,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -217,6 +219,11 @@ public final class SimplifiedSuperpixels {
 						
 						resultGraphics.fillRect(x << lod, y << lod, scale, scale);
 						
+						if (textureMap.size() <= (result.getRGB(x, y) & 0xFF)) {
+							Tools.debugError(prediction[0] & 0xFF, toHexString(result.getRGB(x, y)));
+							throw new IllegalStateException();
+						}
+						
 						return true;
 					}
 					
@@ -242,6 +249,26 @@ public final class SimplifiedSuperpixels {
 		gc();
 		
 		final String outputPath = new File(imagePath).getName().replace("tm" + setIndex, "seg" + setIndex);
+		final int n = textureMap.size();
+		final double[][] confusionMatrix = new double[n][n]; 
+		final BufferedImage groundTruth = ImageIO.read(new File(imagePath.replace("tm" + setIndex + "_" + maskIndex + "_" + mosaicIndex, "gt" + setIndex + "_" + maskIndex)));
+		
+		debugPrint(n, textureMap);
+		
+		for (int y = 0; y < h0; ++y) {
+			for (int x = 0; x < w0; ++x) {
+				final double[] row = confusionMatrix[result.getRGB(x, y) & 0xFF];
+				++row[groundTruth.getRaster().getSample(x, y, 0) & 0xFF];
+			}
+		}
+		
+		synchronized (configuration) {
+			debugPrint(imagePath);
+			
+			for (final double[] row : confusionMatrix) {
+				debugPrint(Arrays.toString(row));
+			}
+		}
 		
 		debugPrint(outputPath);
 		

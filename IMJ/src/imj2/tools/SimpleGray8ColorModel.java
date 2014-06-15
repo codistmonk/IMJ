@@ -16,11 +16,13 @@ import java.io.Serializable;
 /**
  * @author codistmonk (creation 2014-06-15)
  */
-public final class SimpleGray8ColorModel extends ComponentColorModel implements Serializable {
+public final class SimpleGray8ColorModel extends ColorModel implements Serializable {
 	
 	public SimpleGray8ColorModel() {
-		super(ColorSpace.getInstance(ColorSpace.CS_GRAY), new int[] { 8 } 
-				, false, false, Transparency.OPAQUE, DataBuffer.TYPE_BYTE);
+		super(8, new int[] { 8 }, ColorSpace.getInstance(ColorSpace.CS_GRAY) 
+			, false, false, Transparency.OPAQUE, DataBuffer.TYPE_BYTE);
+//		super(ColorSpace.getInstance(ColorSpace.CS_GRAY), new int[] { 8 } 
+//				, false, false, Transparency.OPAQUE, DataBuffer.TYPE_BYTE);
 	}
 	
 	public final int getGray(final int pixel) {
