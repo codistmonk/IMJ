@@ -82,8 +82,8 @@ public final class SimplifiedSuperpixels {
 		
 		debugPrint(textureMap);
 		
-		final Image image = loadAndTryToCache(imagePath, 0);
 		final Configuration configuration = new Configuration(commandLineArguments);
+		final Image image = loadAndTryToCache(imagePath, configuration.getLod());
 		final Channel[] channels = RGB;
 		final PatchDatabase<Sample> sampleDatabase = new PatchDatabase<Sample>(Sample.class);
 		final Class<? extends Sampler> samplerFactory = configuration.getSamplerClass();
@@ -101,7 +101,7 @@ public final class SimplifiedSuperpixels {
 				
 				final Map<String, RegionOfInterest> classes = new HashMap<String, RegionOfInterest>();
 				
-				final Image texture = loadAndTryToCache(texturePath, 0);
+				final Image texture = loadAndTryToCache(texturePath, configuration.getLod());
 				
 				classes.put(entry.getKey(), new RegionOfInterest.UsingBitSet(
 						texture.getRowCount(), texture.getColumnCount(), true));
