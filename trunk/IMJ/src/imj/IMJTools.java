@@ -17,6 +17,7 @@ import imj.apps.modules.ViewFilter.Channel;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
 import java.util.Date;
@@ -137,6 +138,11 @@ public final class IMJTools {
 				// NOP
 			}
 			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 3281273044748210028L;
+			
 		});
 	}
 	
@@ -157,6 +163,11 @@ public final class IMJTools {
 			public final void finishPatch() {
 				// NOP
 			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 4757699295181586947L;
 			
 		});
 	}
@@ -894,7 +905,7 @@ public final class IMJTools {
 	/**
 	 * @author codistmonk (creation 2013-04-08)
 	 */
-	public static abstract interface PixelProcessor {
+	public static abstract interface PixelProcessor extends Serializable {
 		
 		public abstract void process(int pixel);
 		
