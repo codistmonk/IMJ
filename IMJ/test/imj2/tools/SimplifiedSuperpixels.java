@@ -8,6 +8,7 @@ import static imj.database.IMJDatabaseTools.newSampler;
 import static java.lang.Integer.parseInt;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.getNode;
 import static net.sourceforge.aprog.xml.XMLTools.getNodes;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
@@ -17,11 +18,14 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -49,6 +53,7 @@ import imj.database.Segmenter;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-06-15)
@@ -64,12 +69,47 @@ public final class SimplifiedSuperpixels {
 	 * <br>Must not be null
 	 */
 	public static final void main(final String[] commandLineArguments) throws Exception {
-		final TicToc timer = new TicToc();
+		final Configuration configuration = new Configuration(commandLineArguments);
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
-		final String imagePath = arguments.get("file", "");
+		final File file = new File(arguments.get("file", ""));
+		
+		if (file.isDirectory()) {
+			final List<Future<?>> tasks = new ArrayList<>();
+			
+			try {
+				for (final File subfile : file.listFiles()) {
+					MultiThreadTools.getExecutor().submit(new Runnable() {
+						
+						@Override
+						public final void run() {
+							try {
+								process(configuration, arguments, subfile.getPath());
+							} catch (final IOException exception) {
+								throw unchecked(exception);
+							}
+						}
+						
+					});
+				}
+				
+				MultiThreadTools.wait(tasks);
+			} finally {
+				MultiThreadTools.shutdownExecutor();
+			}
+		} else {
+			process(configuration, arguments, file.getPath());
+		}
+	}
+	
+	public static final void process(final Configuration configuration,
+			final CommandLineArgumentsParser arguments, final String imagePath)
+			throws FileNotFoundException, IOException {
+		final TicToc timer = new TicToc();
 		final Matcher tmMatcher = PragueTextureSegmentation.TM_FILE_PATH.matcher(imagePath);
 		
 		if (!tmMatcher.matches()) {
+			debugPrint("Ignoring", imagePath);
+			
 			return;
 		}
 		
@@ -78,11 +118,11 @@ public final class SimplifiedSuperpixels {
 		final int mosaicIndex = parseInt(tmMatcher.group(3));
 		final String root = new File(imagePath).getParent();
 		final String metadataPath = arguments.get("metadata", new File(root, "data.xml").getPath());
-		final Map<String, String> textureMap = PragueTextureSegmentation.getTextureMap(metadataPath, maskIndex, mosaicIndex);
+		final Map<String, String> textureMap = PragueTextureSegmentation.getTextureMap(
+				metadataPath, setIndex, maskIndex, mosaicIndex);
 		
 		debugPrint(textureMap);
 		
-		final Configuration configuration = new Configuration(commandLineArguments);
 		final Image image = loadAndTryToCache(imagePath, configuration.getLod());
 		final Channel[] channels = RGB;
 		final PatchDatabase<Sample> sampleDatabase = new PatchDatabase<Sample>(Sample.class);
@@ -200,17 +240,17 @@ public final class SimplifiedSuperpixels {
 		
 		public static final Pattern TM_FILE_PATH = Pattern.compile(".*tm([0-9]+)_([0-9]+)_([0-9]+)\\.png");
 		
-		public static final Map<String, String> getTextureMap(final String metadataPath,
-				final int maskIndex, final int mosaicIndex)
+		public static final Map<String, String> getTextureMap(final String metadataPath
+				, final int setIndex, final int maskIndex, final int mosaicIndex)
 				throws FileNotFoundException {
 			final Document metadata = parse(new FileInputStream(metadataPath));
-			final Node textureMaps = getNode(metadata, "//section[@name='TMMap_" + maskIndex + "_" + mosaicIndex + "']");
-			final Element textures = (Element) getNode(textureMaps, "var[contains(@name, 'Textures')]");
+			final Node texturesNode = getNode(metadata, "//section[@name='Set_" + setIndex + "']/section[@name='TMMap_" + maskIndex + "_" + mosaicIndex + "']");
+			final Element textures = (Element) getNode(texturesNode, "var[contains(@name, 'Textures')]");
 			final String[] textureIds = textures.getTextContent().replaceAll("[^0-9]", " ").trim().split(" +");
 			final Map<String, String> result = new LinkedHashMap<>();
 			
 			{
-				final List<Node> texturePaths = getNodes(textureMaps, "var[contains(@name, 'Train')]");
+				final List<Node> texturePaths = getNodes(texturesNode, "var[contains(@name, 'Train')]");
 				
 				for (int i = 0; i < textureIds.length; ++i) {
 					result.put(textureIds[i], texturePaths.get(i).getTextContent().replaceAll("\"", ""));
