@@ -7,6 +7,7 @@ import static imj.database.IMJDatabaseTools.newBKDatabase;
 import static imj.database.IMJDatabaseTools.newSampler;
 import static java.lang.Integer.parseInt;
 import static java.lang.Integer.toHexString;
+import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
@@ -61,10 +62,10 @@ import imj.database.Sample;
 import imj.database.Sampler;
 import imj.database.BKSearch.BKDatabase;
 import imj.database.Segmenter;
-
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
+import net.sourceforge.aprog.tools.Tee;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -92,14 +93,16 @@ public final class SimplifiedSuperpixels {
 		if (file.isDirectory()) {
 			final List<Future<?>> tasks = new ArrayList<>();
 			
-			try (final ZipOutputStream zipOutput = new ZipOutputStream(new FileOutputStream("data" + configuration.getProtosuffix().replace('.', '_') + ".zip"))) {
+			try (final ZipOutputStream zipOutput = new ZipOutputStream(new FileOutputStream(
+					"data" + configuration.getProtosuffix().replace('.', '_') + ".zip"))) {
 				for (final File subfile : file.listFiles()) {
 					tasks.add(MultiThreadTools.getExecutor().submit(new Runnable() {
 						
 						@Override
 						public final void run() {
 							try {
-								process(configuration, arguments, subfile.getPath(), zipOutput, globalConfusionMatrix);
+								process(configuration, arguments, subfile.getPath()
+										, zipOutput, globalConfusionMatrix);
 							} catch (final IOException exception) {
 								throw unchecked(exception);
 							}
@@ -113,14 +116,17 @@ public final class SimplifiedSuperpixels {
 				zipOutput.putNextEntry(new ZipEntry("data.xml"));
 				writeAndClose(new FileInputStream(new File(file, "data.xml")), true, zipOutput, false);
 				zipOutput.closeEntry();
+				
+				zipOutput.putNextEntry(new ZipEntry("results.txt"));
+				globalConfusionMatrix.printTo(new PrintStream(new Tee(zipOutput, System.out)));
+				zipOutput.closeEntry();
 			} finally {
 				MultiThreadTools.shutdownExecutor();
 			}
 		} else {
 			process(configuration, arguments, file.getPath(), null, globalConfusionMatrix);
+			globalConfusionMatrix.printTo(System.out);
 		}
-		
-		globalConfusionMatrix.printTo(System.out);
 	}
 	
 	public static final void process(final Configuration configuration
@@ -143,9 +149,6 @@ public final class SimplifiedSuperpixels {
 		final String metadataPath = arguments.get("metadata", new File(root, "data.xml").getPath());
 		final List<String[]> textureMap = PragueTextureSegmentation.getTextureMap(
 				metadataPath, setIndex, maskIndex, mosaicIndex);
-		
-		debugPrint(textureMap);
-		
 		final Image image0 = loadAndTryToCache(imagePath, 0);
 		final int w0 = image0.getColumnCount();
 		final int h0 = image0.getRowCount();
@@ -259,8 +262,6 @@ public final class SimplifiedSuperpixels {
 		final int n = textureMap.size();
 		final double[][] localConfusionMatrix = new double[n][n]; 
 		final BufferedImage groundTruth = ImageIO.read(new File(imagePath.replace("tm" + setIndex + "_" + maskIndex + "_" + mosaicIndex, "gt" + setIndex + "_" + maskIndex)));
-		
-		debugPrint(n, textureMap);
 		
 		for (int y = 0; y < h0; ++y) {
 			for (int x = 0; x < w0; ++x) {
@@ -381,23 +382,14 @@ public final class SimplifiedSuperpixels {
 				out.println(blanksBeforeExpectedDisplay + " ^");
 			}
 			
-			out.println("score: " + this.getScore());
+			out.println(this.getSummary());
 		}
 		
-		public final synchronized double getScore() {
-			final Statistics statistics = new Statistics();
+		public final synchronized Summary getSummary() {
+			final Summary result = new Summary();
 			final int n = this.getIdCount();
-			final double[] expectedPositives = new double[n];
-			double total = 0.0;
-			
-			for (final double[] counts : this.matrix) {
-				for (int i = 0; i < n; ++i) {
-					final double count = counts[i];
-					
-					expectedPositives[i] += count;
-					total += count;
-				}
-			}
+			final double[] expectedPositives = getExpectedPositives();
+			final double total = getTotal();
 			
 			for (int predictedId = 0; predictedId < n; ++predictedId) {
 				final double[] predictedCounts = this.matrix[predictedId];
@@ -412,13 +404,39 @@ public final class SimplifiedSuperpixels {
 					}
 				}
 				
-				final double truePositiveRate = truePositives / expectedPositives[0];
-				final double falsePositiveRate = falsePositives / (total - expectedPositives[0]);
+				final double truePositiveRate = truePositives / expectedPositives[predictedId];
+				final double falsePositiveRate = falsePositives / (total - expectedPositives[predictedId]);
 				
-				statistics.addValue((truePositiveRate + falsePositiveRate) / 2.0);
+				result.addDataPoint(falsePositiveRate, truePositiveRate);
 			}
 			
-			return statistics.getMean();
+			return result;
+		}
+		
+		public final synchronized double getTotal() {
+			final int n = this.getIdCount();
+			double total = 0.0;
+			
+			for (final double[] counts : this.matrix) {
+				for (int i = 0; i < n; ++i) {
+					total += counts[i];
+				}
+			}
+			return total;
+		}
+		
+		public final synchronized double[] getExpectedPositives() {
+			final int n = this.getIdCount();
+			final double[] expectedPositives = new double[n];
+			
+			for (final double[] counts : this.matrix) {
+				for (int i = 0; i < n; ++i) {
+					final double count = counts[i];
+					
+					expectedPositives[i] += count;
+				}
+			}
+			return expectedPositives;
 		}
 		
 		public final synchronized double getCount(final String predictedLabel, final String expectedLabel) {
@@ -429,7 +447,7 @@ public final class SimplifiedSuperpixels {
 			return this.ids.size();
 		}
 		
-		private final int identify(final String label) {
+		private final synchronized int identify(final String label) {
 			Integer result = this.ids.get(label);
 			
 			if (result == null) {
@@ -452,6 +470,53 @@ public final class SimplifiedSuperpixels {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -2013202182134371099L;
+		
+		/**
+		 * @author codistmonk (creation 2014-06-16)
+		 */
+		public static final class Summary implements Serializable {
+			
+			private final Statistics score = new Statistics();
+			
+			private final Statistics truePositiveRate = new Statistics();
+			
+			private final Statistics falsePositiveRate = new Statistics();
+			
+			public final void addDataPoint(final double falsePositiveRate, final double truePositiveRate) {
+				this.getFalsePositiveRate().addValue(falsePositiveRate);
+				this.getTruePositiveRate().addValue(truePositiveRate);
+				this.getScore().addValue((falsePositiveRate * -1.0 + truePositiveRate * 1.0 + 1.0) / 2.0);
+			}
+			
+			public final Statistics getScore() {
+				return this.score;
+			}
+			
+			public final Statistics getTruePositiveRate() {
+				return this.truePositiveRate;
+			}
+			
+			public final Statistics getFalsePositiveRate() {
+				return this.falsePositiveRate;
+			}
+			
+			@Override
+			public final String toString() {
+				return "fpr: " + getMeanAndStandardDeviation(this.getFalsePositiveRate()) + " "
+						+ "tpr: " + getMeanAndStandardDeviation(this.getTruePositiveRate()) + " "
+						+ "score: " + getMeanAndStandardDeviation(this.getScore());
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = -87083670392371721L;
+			
+			public static final String getMeanAndStandardDeviation(final Statistics statistics) {
+				return statistics.getMean() + " (" + sqrt(statistics.getVariance()) + ")";
+			}
+			
+		}
 		
 	}
 	
