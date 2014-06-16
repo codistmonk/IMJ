@@ -118,7 +118,9 @@ public final class SimplifiedSuperpixels {
 				zipOutput.closeEntry();
 				
 				zipOutput.putNextEntry(new ZipEntry("results.txt"));
-				globalConfusionMatrix.printTo(new PrintStream(new Tee(zipOutput, System.out)));
+				final PrintStream out = new PrintStream(new Tee(zipOutput, System.out));
+				globalConfusionMatrix.printTo(out);
+				out.println("summary" + configuration.getProtosuffix() + ": " + globalConfusionMatrix.getSummary());
 				zipOutput.closeEntry();
 			} finally {
 				MultiThreadTools.shutdownExecutor();
@@ -126,6 +128,7 @@ public final class SimplifiedSuperpixels {
 		} else {
 			process(configuration, arguments, file.getPath(), null, globalConfusionMatrix);
 			globalConfusionMatrix.printTo(System.out);
+			System.out.println("summary" + configuration.getProtosuffix() + ": " + globalConfusionMatrix.getSummary());
 		}
 	}
 	
@@ -381,8 +384,6 @@ public final class SimplifiedSuperpixels {
 				
 				out.println(blanksBeforeExpectedDisplay + " ^");
 			}
-			
-			out.println(this.getSummary());
 		}
 		
 		public final synchronized Summary getSummary() {
