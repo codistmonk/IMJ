@@ -7,6 +7,7 @@ import static imj.database.IMJDatabaseTools.newBKDatabase;
 import static imj.database.IMJDatabaseTools.newSampler;
 import static java.lang.Integer.parseInt;
 import static java.lang.Integer.toHexString;
+import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
@@ -25,6 +26,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -58,9 +61,10 @@ import imj.database.Sample;
 import imj.database.Sampler;
 import imj.database.BKSearch.BKDatabase;
 import imj.database.Segmenter;
-import net.sourceforge.aprog.swing.SwingTools;
+
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -81,6 +85,7 @@ public final class SimplifiedSuperpixels {
 		final Configuration configuration = new Configuration(commandLineArguments);
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final File file = new File(arguments.get("file", ""));
+		final ConfusionMatrix globalConfusionMatrix = new ConfusionMatrix();
 		
 		debugPrint(configuration.getProtosuffix());
 		
@@ -94,7 +99,7 @@ public final class SimplifiedSuperpixels {
 						@Override
 						public final void run() {
 							try {
-								process(configuration, arguments, subfile.getPath(), zipOutput);
+								process(configuration, arguments, subfile.getPath(), zipOutput, globalConfusionMatrix);
 							} catch (final IOException exception) {
 								throw unchecked(exception);
 							}
@@ -112,13 +117,15 @@ public final class SimplifiedSuperpixels {
 				MultiThreadTools.shutdownExecutor();
 			}
 		} else {
-			process(configuration, arguments, file.getPath(), null);
+			process(configuration, arguments, file.getPath(), null, globalConfusionMatrix);
 		}
+		
+		globalConfusionMatrix.printTo(System.out);
 	}
 	
 	public static final void process(final Configuration configuration
 			, final CommandLineArgumentsParser arguments, final String imagePath
-			, final ZipOutputStream zipOutput)
+			, final ZipOutputStream zipOutput, final ConfusionMatrix globalConfusionMatrix)
 			throws FileNotFoundException, IOException {
 		final TicToc timer = new TicToc();
 		final Matcher tmMatcher = PragueTextureSegmentation.TM_FILE_PATH.matcher(imagePath);
@@ -134,7 +141,7 @@ public final class SimplifiedSuperpixels {
 		final int mosaicIndex = parseInt(tmMatcher.group(3));
 		final String root = new File(imagePath).getParent();
 		final String metadataPath = arguments.get("metadata", new File(root, "data.xml").getPath());
-		final Map<String, String> textureMap = PragueTextureSegmentation.getTextureMap(
+		final List<String[]> textureMap = PragueTextureSegmentation.getTextureMap(
 				metadataPath, setIndex, maskIndex, mosaicIndex);
 		
 		debugPrint(textureMap);
@@ -155,8 +162,8 @@ public final class SimplifiedSuperpixels {
 		final Segmenter segmenter = configuration.newSegmenter();
 		
 		{
-			for (final Map.Entry<String, String> entry : textureMap.entrySet()) {
-				final String texturePath = new File(root, entry.getValue()).getPath();
+			for (int i = 0; i < textureMap.size(); ++i) {
+				final String texturePath = new File(root, textureMap.get(i)[1]).getPath();
 				
 				debugPrint(texturePath);
 				
@@ -164,7 +171,7 @@ public final class SimplifiedSuperpixels {
 				
 				final Image texture = loadAndTryToCache(texturePath, lod);
 				
-				classes.put(entry.getKey(), new RegionOfInterest.UsingBitSet(
+				classes.put("" + i, new RegionOfInterest.UsingBitSet(
 						texture.getRowCount(), texture.getColumnCount(), true));
 				
 				final Sampler collectorSampler = newSampler(samplerFactory, channels, quantizer, texture
@@ -250,22 +257,24 @@ public final class SimplifiedSuperpixels {
 		
 		final String outputPath = new File(imagePath).getName().replace("tm" + setIndex, "seg" + setIndex);
 		final int n = textureMap.size();
-		final double[][] confusionMatrix = new double[n][n]; 
+		final double[][] localConfusionMatrix = new double[n][n]; 
 		final BufferedImage groundTruth = ImageIO.read(new File(imagePath.replace("tm" + setIndex + "_" + maskIndex + "_" + mosaicIndex, "gt" + setIndex + "_" + maskIndex)));
 		
 		debugPrint(n, textureMap);
 		
 		for (int y = 0; y < h0; ++y) {
 			for (int x = 0; x < w0; ++x) {
-				final double[] row = confusionMatrix[result.getRGB(x, y) & 0xFF];
-				++row[groundTruth.getRaster().getSample(x, y, 0) & 0xFF];
+				final int actualIndex = result.getRaster().getSample(x, y, 0) & 0xFF;
+				final int expectedIndex = groundTruth.getRaster().getSample(x, y, 0) & 0xFF;
+				++localConfusionMatrix[actualIndex][expectedIndex];
+				globalConfusionMatrix.count(textureMap.get(actualIndex)[1], textureMap.get(expectedIndex)[1]);
 			}
 		}
 		
 		synchronized (configuration) {
 			debugPrint(imagePath);
 			
-			for (final double[] row : confusionMatrix) {
+			for (final double[] row : localConfusionMatrix) {
 				debugPrint(Arrays.toString(row));
 			}
 		}
@@ -318,25 +327,131 @@ public final class SimplifiedSuperpixels {
 		
 		public static final Pattern TM_FILE_PATH = Pattern.compile(".*tm([0-9]+)_([0-9]+)_([0-9]+)\\.png");
 		
-		public static final Map<String, String> getTextureMap(final String metadataPath
+		public static final List<String[]> getTextureMap(final String metadataPath
 				, final int setIndex, final int maskIndex, final int mosaicIndex)
 				throws FileNotFoundException {
 			final Document metadata = parse(new FileInputStream(metadataPath));
 			final Node texturesNode = getNode(metadata, "//section[@name='Set_" + setIndex + "']/section[@name='TMMap_" + maskIndex + "_" + mosaicIndex + "']");
 			final Element textures = (Element) getNode(texturesNode, "var[contains(@name, 'Textures')]");
 			final String[] textureIds = textures.getTextContent().replaceAll("[^0-9]", " ").trim().split(" +");
-			final Map<String, String> result = new LinkedHashMap<>();
+			final List<String[]> result = new ArrayList<>();
 			
 			{
 				final List<Node> texturePaths = getNodes(texturesNode, "var[contains(@name, 'Train')]");
 				
 				for (int i = 0; i < textureIds.length; ++i) {
-					result.put("" + result.size(), texturePaths.get(i).getTextContent().replaceAll("\"", ""));
+					result.add(array(textureIds[i], texturePaths.get(i).getTextContent().replaceAll("\"", "")));
 				}
 			}
 			
 			return result;
 		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-06-16)
+	 */
+	public static final class ConfusionMatrix implements Serializable {
+		
+		private final Map<String, Integer> ids = new LinkedHashMap<>();
+		
+		private double[][] matrix = new double[0][0];
+		
+		public final synchronized void count(final String predictedLabel, final String expectedLabel) {
+			final int predictedId = this.identify(predictedLabel);
+			final int exptectedId = this.identify(expectedLabel);
+			
+			++this.matrix[predictedId][exptectedId];
+		}
+		
+		public final synchronized void printTo(final PrintStream out) {
+			for (final Map.Entry<String, Integer> entry : this.ids.entrySet()) {
+				final Integer id = entry.getValue();
+				
+				out.println(entry.getKey() + " " + Arrays.toString(this.matrix[id]));
+				
+				String blanksBeforeExpectedDisplay = (entry.getKey() + " " + Arrays.toString(
+						Arrays.copyOf(this.matrix[id], id))).replaceAll(".", " ");
+				
+				if (id.equals(0)) {
+					blanksBeforeExpectedDisplay = blanksBeforeExpectedDisplay.substring(0, blanksBeforeExpectedDisplay.length() - 2);
+				}
+				
+				out.println(blanksBeforeExpectedDisplay + " ^");
+			}
+			
+			out.println("score: " + this.getScore());
+		}
+		
+		public final synchronized double getScore() {
+			final Statistics statistics = new Statistics();
+			final int n = this.getIdCount();
+			final double[] expectedPositives = new double[n];
+			double total = 0.0;
+			
+			for (final double[] counts : this.matrix) {
+				for (int i = 0; i < n; ++i) {
+					final double count = counts[i];
+					
+					expectedPositives[i] += count;
+					total += count;
+				}
+			}
+			
+			for (int predictedId = 0; predictedId < n; ++predictedId) {
+				final double[] predictedCounts = this.matrix[predictedId];
+				double truePositives = predictedCounts[predictedId];
+				double falsePositives = 0.0;
+				
+				for (int expectedId = 0; expectedId < n; ++expectedId) {
+					final double count = predictedCounts[expectedId];
+					
+					if (expectedId != predictedId) {
+						falsePositives += count;
+					}
+				}
+				
+				final double truePositiveRate = truePositives / expectedPositives[0];
+				final double falsePositiveRate = falsePositives / (total - expectedPositives[0]);
+				
+				statistics.addValue((truePositiveRate + falsePositiveRate) / 2.0);
+			}
+			
+			return statistics.getMean();
+		}
+		
+		public final synchronized double getCount(final String predictedLabel, final String expectedLabel) {
+			return this.matrix[this.ids.get(predictedLabel)][this.ids.get(expectedLabel)];
+		}
+		
+		public final synchronized int getIdCount() {
+			return this.ids.size();
+		}
+		
+		private final int identify(final String label) {
+			Integer result = this.ids.get(label);
+			
+			if (result == null) {
+				result = this.ids.size();
+				this.ids.put(label, result);
+				
+				final double[][] newMatrix = new double[result + 1][result + 1];
+				
+				for (int i = 0; i < result; ++i) {
+					System.arraycopy(this.matrix[i], 0, newMatrix[i], 0, result);
+				}
+				
+				this.matrix = newMatrix;
+			}
+			
+			return result;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -2013202182134371099L;
 		
 	}
 	
