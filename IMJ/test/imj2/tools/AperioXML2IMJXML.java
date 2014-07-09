@@ -44,7 +44,6 @@ public final class AperioXML2IMJXML {
 		final File[] aperioXMLFiles = root.listFiles(RegexFilter.newSuffixFilter(suffix));
 		final String author = arguments.get("author", "?");
 		final boolean compress = true;
-		final boolean useMnemonicAsDescription = true;
 		
 		for (final File aperioXMLFile : aperioXMLFiles) {
 			debugPrint(aperioXMLFile);
@@ -69,14 +68,8 @@ public final class AperioXML2IMJXML {
 				labelIds.put(description, labelId);
 				
 				imjLabel.setAttribute("labelId", labelId);
-				imjLabel.setAttribute("mnenmonic", mnemonic);
-				
-				if (useMnemonicAsDescription) {
-					imjLabel.setAttribute("description", mnemonic);
-				} else {
-					imjLabel.setAttribute("description", description);
-				}
-				
+				imjLabel.setAttribute("mnemonic", mnemonic);
+				imjLabel.setAttribute("description", description);
 				imjLabel.setAttribute("lineColor", ((Element) aperioAnnotation).getAttribute("LineColor"));
 				
 				debugPrint(labelId, mnemonic, description);
