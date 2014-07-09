@@ -39,18 +39,12 @@ public final class AperioXML2IMJXML {
 	 */
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
-//		final File[] aperioXMLIds = {
-//				new File("../Libraries/images/svs/45656.xml")
-//				, new File("../Libraries/images/svs/45657.xml")
-//				, new File("../Libraries/images/svs/45659.xml")
-//				, new File("../Libraries/images/svs/45660.xml")
-//				, new File("../Libraries/images/svs/45662.xml")
-//				, new File("../Libraries/images/svs/45668.xml")
-//				, new File("../Libraries/images/svs/45683.xml")
-//		};
-		final File[] aperioXMLFiles = new File("F:/sysimit/data/Pilot_Series_Final").listFiles(RegexFilter.newSuffixFilter("_005.xml"));
+		final File root = new File(arguments.get("root", ""));
+		final String suffix = arguments.get("suffix", ".xml");
+		final File[] aperioXMLFiles = root.listFiles(RegexFilter.newSuffixFilter(suffix));
 		final String author = arguments.get("author", "?");
 		final boolean compress = true;
+		final boolean useMnemonicAsDescription = true;
 		
 		for (final File aperioXMLFile : aperioXMLFiles) {
 			debugPrint(aperioXMLFile);
@@ -64,20 +58,28 @@ public final class AperioXML2IMJXML {
 			
 			final Element imjLabels = (Element) imjRoot.appendChild(imjXML.createElement("labels"));
 			final Element imjRegions = (Element) imjRoot.appendChild(imjXML.createElement("regions"));
-			final Map<String, Integer> labelIds = new HashMap<>();
+			final Map<String, String> labelIds = new HashMap<>();
 			
 			for (final Node aperioAnnotation : getNodes(aperioXML, "*//Annotation")) {
 				final Element imjLabel = (Element) imjLabels.appendChild(imjXML.createElement("label"));
-				final Integer labelId = labelIds.size();
+				final String mnemonic = ((Element) aperioAnnotation).getAttribute("Name");
+				final String labelId = Integer.toString(labelIds.size());
 				final String description = ((Element) getNode(aperioAnnotation, "*//Attribute[@Id=0]")).getAttribute("Name");
 				
 				labelIds.put(description, labelId);
 				
-				imjLabel.setAttribute("labelId", labelId.toString());
-				imjLabel.setAttribute("description", description);
+				imjLabel.setAttribute("labelId", labelId);
+				imjLabel.setAttribute("mnenmonic", mnemonic);
+				
+				if (useMnemonicAsDescription) {
+					imjLabel.setAttribute("description", mnemonic);
+				} else {
+					imjLabel.setAttribute("description", description);
+				}
+				
 				imjLabel.setAttribute("lineColor", ((Element) aperioAnnotation).getAttribute("LineColor"));
 				
-				debugPrint(description);
+				debugPrint(labelId, mnemonic, description);
 				
 				for (final Node aperioRegion : getNodes(aperioAnnotation, "*//Region")) {
 					final Element imjRegion = (Element) imjRegions.appendChild(imjXML.createElement("region"));
@@ -85,7 +87,7 @@ public final class AperioXML2IMJXML {
 					final Element imjRegionVertices = (Element) imjRegion.appendChild(imjXML.createElement("vertices"));
 					final Element imjRegionLabel = (Element) imjRegionLabels.appendChild(imjXML.createElement("label"));
 					
-					imjRegionLabel.setAttribute("labelId", labelId.toString());
+					imjRegionLabel.setAttribute("labelId", labelId);
 					imjRegionLabel.setAttribute("author", author);
 					
 					for (final Node aperioVertex : getNodes(aperioRegion, "*//Vertex")) {
