@@ -1,5 +1,7 @@
 package imj2.tools;
 
+import static java.lang.Integer.parseInt;
+import static java.lang.Math.max;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.xml.XMLTools.getNode;
 import static net.sourceforge.aprog.xml.XMLTools.getNodes;
@@ -60,38 +62,49 @@ public final class ExtractAnnotationsCategories {
 		final Map<String, Integer> labelIds = new LinkedHashMap<>();
 		
 		if (category != null) {
-			for (final Node node : getNodes(category, "label")) {
-				final Element label = (Element) node;
-				final int labelId = Integer.parseInt(label.getAttribute("labelId"));
-				
-				labelIds.put(computeLabelKey(label), labelId);
-			}
-			
-			debugPrint(labelIds);
+			getLabelIds(category, labelIds);
 		}
+		
+		debugPrint(labelIds);
 		
 		for (final Path compressedAnnotation : compressedAnnotations) {
 			try (final GZIPInputStream input = new GZIPInputStream(new FileInputStream(compressedAnnotation.toString()))) {
 				final Document annotations = parse(input);
 				
-				for (final Node node : getNodes(annotations, "annotations/labels/label")) {
-					final Element label = (Element) node;
-					final String key = computeLabelKey(label);
-					Integer labelId = labelIds.get(key);
-					
-					if (labelId == null) {
-						labelId = labelIds.size();
-						
-						labelIds.put(key, labelId);
-						category.appendChild(categories.adoptNode(label.cloneNode(true)));
-					}
-				}
+				collectLabels(annotations, categories, category, labelIds);
 			}
 		}
 		
 		debugPrint(labelIds);
 		
 		XMLTools.write(categories, categoriesFile, 0);
+	}
+
+	public static void getLabelIds(final Element category,
+			final Map<String, Integer> labelIds) {
+		for (final Node node : getNodes(category, "label")) {
+			final Element label = (Element) node;
+			final int labelId = Integer.parseInt(label.getAttribute("labelId"));
+			
+			labelIds.put(computeLabelKey(label), labelId);
+		}
+	}
+	
+	public static final void collectLabels(final Document annotations,
+			final Document categories, final Element category,
+			final Map<String, Integer> labelIds) {
+		for (final Node node : getNodes(annotations, "annotations/labels/label")) {
+			final Element label = (Element) node;
+			final String key = computeLabelKey(label);
+			Integer labelId = labelIds.get(key);
+			
+			if (labelId == null) {
+				labelId = labelIds.size();
+				
+				labelIds.put(key, labelId);
+				category.appendChild(categories.adoptNode(label.cloneNode(true)));
+			}
+		}
 	}
 	
 	public static final String computeLabelKey(final Element label) {
@@ -105,9 +118,20 @@ public final class ExtractAnnotationsCategories {
 			result = (Element) categories.getDocumentElement().appendChild(categories.createElement("category"));
 			
 			result.setAttribute("name", categoryName);
+			result.setAttribute("categoryId", Integer.toString(computeNewCategoryId(categories)));
 		}
 		
 		return result;
+	}
+	
+	public static final int computeNewCategoryId(final Document categories) {
+		int lastCategoryId = -1;
+		
+		for (final Node node : getNodes(categories, "categories/category")) {
+			lastCategoryId = max(lastCategoryId, parseInt(((Element) node).getAttribute("categoryId")));
+		}
+		
+		return lastCategoryId + 1;
 	}
 	
 	public static final Document parseOrCreateCategories(final File inputFile) {
