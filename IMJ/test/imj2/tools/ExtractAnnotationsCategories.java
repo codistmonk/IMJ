@@ -52,16 +52,17 @@ public final class ExtractAnnotationsCategories {
 	public static final void main(final String[] commandLineArguments) throws Exception {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final File root = new File(arguments.get("root", ""));
-		final File categoriesFile = new File(arguments.get("categories", "categories.xml"));
+		final String suffix = arguments.get("suffix", "\\.xml\\.gz");
+		final File categoriesCompressedFile = new File(arguments.get("categories", "categories.xml.gz"));
 		final String categoryName = arguments.get("category", "");
 		
 		if (categoryName.isEmpty()) {
 			throw new IllegalArgumentException();
 		}
 		
-		final Document categories = parseOrCreateCategories(categoriesFile);
+		final Document categories = parseOrCreateCategories(categoriesCompressedFile);
 		final Element category = getOrCreateCategory(categories, categoryName);
-		final Collection<Path> compressedAnnotations = deepCollect(root.toString(), RegexFilter.newExtensionFilter("xml.gz"));
+		final Collection<Path> compressedAnnotations = deepCollect(root.toString(), RegexFilter.newSuffixFilter(suffix));
 		final Map<String, Integer> labelIds = new LinkedHashMap<>();
 		final String categoryId = category.getAttribute("categoryId");
 		
@@ -81,9 +82,11 @@ public final class ExtractAnnotationsCategories {
 		
 		debugPrint(labelIds);
 		
-		debugPrint("Updating", categoriesFile);
+		debugPrint("Updating", categoriesCompressedFile);
 		
-		XMLTools.write(categories, categoriesFile, 0);
+		try (final OutputStream output = new GZIPOutputStream(new FileOutputStream(categoriesCompressedFile))) {
+			XMLTools.write(categories, output, 0);
+		}
 		
 		for (final Path compressedAnnotation : compressedAnnotations) {
 			debugPrint("Updating", compressedAnnotation);
@@ -163,12 +166,12 @@ public final class ExtractAnnotationsCategories {
 	public static final int getIntegerAttribute(final Node node, final String attributeName) {
 		final String attribute = ((Element) node).getAttribute(attributeName).trim();
 		
-		return attribute.isEmpty() ? 0 : Integer.parseInt(attribute);
+		return attribute.isEmpty() ? 0 : parseInt(attribute);
 	}
 	
-	public static final Document parseOrCreateCategories(final File inputFile) {
-		try {
-			final Document result = parse(new FileInputStream(inputFile));
+	public static final Document parseOrCreateCategories(final File compressedInputFile) {
+		try (final InputStream input = new GZIPInputStream(new FileInputStream(compressedInputFile))) {
+			final Document result = parse(input);
 			
 			if (!"categories".equals(result.getDocumentElement().getTagName())) {
 				throw new IllegalArgumentException();
