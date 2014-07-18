@@ -9,9 +9,11 @@ import static net.sourceforge.aprog.xml.XMLTools.parse;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -23,6 +25,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeSet;
 import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -60,14 +63,15 @@ public final class ExtractAnnotationsCategories {
 		final Element category = getOrCreateCategory(categories, categoryName);
 		final Collection<Path> compressedAnnotations = deepCollect(root.toString(), RegexFilter.newExtensionFilter("xml.gz"));
 		final Map<String, Integer> labelIds = new LinkedHashMap<>();
+		final String categoryId = category.getAttribute("categoryId");
 		
-		if (category != null) {
-			getLabelIds(category, labelIds);
-		}
+		getLabelIds(category, labelIds);
 		
-		debugPrint(labelIds);
+		debugPrint(categoryId, labelIds);
 		
 		for (final Path compressedAnnotation : compressedAnnotations) {
+			debugPrint("Analyzing", compressedAnnotation);
+			
 			try (final GZIPInputStream input = new GZIPInputStream(new FileInputStream(compressedAnnotation.toString()))) {
 				final Document annotations = parse(input);
 				
@@ -77,11 +81,32 @@ public final class ExtractAnnotationsCategories {
 		
 		debugPrint(labelIds);
 		
+		debugPrint("Updating", categoriesFile);
+		
 		XMLTools.write(categories, categoriesFile, 0);
+		
+		for (final Path compressedAnnotation : compressedAnnotations) {
+			debugPrint("Updating", compressedAnnotation);
+			
+			Document annotations = null;
+			
+			try (final InputStream input = new GZIPInputStream(new FileInputStream(compressedAnnotation.toString()))) {
+				annotations = parse(input);
+				
+				for (final Node node : getNodes(annotations, "//region/labels/label")) {
+					final Element label = (Element) node;
+					
+					label.setAttribute("categoryId", categoryId);
+				}
+			}
+			
+			try (final OutputStream output = new GZIPOutputStream(new FileOutputStream(compressedAnnotation.toFile()))) {
+				XMLTools.write(annotations, output, 0);
+			}
+		}
 	}
-
-	public static void getLabelIds(final Element category,
-			final Map<String, Integer> labelIds) {
+	
+	public static final void getLabelIds(final Element category, final Map<String, Integer> labelIds) {
 		for (final Node node : getNodes(category, "label")) {
 			final Element label = (Element) node;
 			final int labelId = Integer.parseInt(label.getAttribute("labelId"));
@@ -115,10 +140,11 @@ public final class ExtractAnnotationsCategories {
 		Element result = (Element) getNode(categories, "categories/category[@name='" + categoryName + "']");
 		
 		if (result == null) {
+			final int newCategoryId = computeNewCategoryId(categories);
 			result = (Element) categories.getDocumentElement().appendChild(categories.createElement("category"));
 			
 			result.setAttribute("name", categoryName);
-			result.setAttribute("categoryId", Integer.toString(computeNewCategoryId(categories)));
+			result.setAttribute("categoryId", Integer.toString(newCategoryId));
 		}
 		
 		return result;
@@ -128,10 +154,16 @@ public final class ExtractAnnotationsCategories {
 		int lastCategoryId = -1;
 		
 		for (final Node node : getNodes(categories, "categories/category")) {
-			lastCategoryId = max(lastCategoryId, parseInt(((Element) node).getAttribute("categoryId")));
+			lastCategoryId = max(lastCategoryId, getIntegerAttribute(node, "categoryId"));
 		}
 		
 		return lastCategoryId + 1;
+	}
+	
+	public static final int getIntegerAttribute(final Node node, final String attributeName) {
+		final String attribute = ((Element) node).getAttribute(attributeName).trim();
+		
+		return attribute.isEmpty() ? 0 : Integer.parseInt(attribute);
 	}
 	
 	public static final Document parseOrCreateCategories(final File inputFile) {
