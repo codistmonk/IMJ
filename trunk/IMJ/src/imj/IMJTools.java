@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import jgencode.primitivelists.IntList;
+import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.TicToc;
@@ -181,6 +182,7 @@ public final class IMJTools {
 		final RegionOfInterest done = new RegionOfInterest.UsingBitSet(imageRowCount, imageColumnCount, false);
 		final int lastRowIndex = imageRowCount - 1;
 		final int lastColumnIndex = imageColumnCount - 1;
+		final ConsoleMonitor monitor = new ConsoleMonitor(15000L);
 		
 		if (!processBarriers) {
 			for (int pixel = 0; pixel < pixelCount; ++pixel) {
@@ -192,7 +194,7 @@ public final class IMJTools {
 		
 		for (int i = 0; i < pixelCount; ++i) {
 			if (!done.get(i)) {
-				System.out.print(i + "/" + pixelCount + "\r");
+				monitor.ping(i + "/" + pixelCount + "\r");
 				
 				if (debug) {
 					debugPrint("NEW COMPONENT");
