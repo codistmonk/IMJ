@@ -29,8 +29,8 @@ import static pixel3d.PolygonTools.Y;
 import static pixel3d.PolygonTools.Z;
 import imj2.tools.ColorSeparationTest.RGBTransformer;
 import imj2.tools.Image2DComponent.Painter;
-import imj2.tools.PaletteBasedSegmentationTest.HistogramView.PointsUpdatedEvent;
-import imj2.tools.PaletteBasedSegmentationTest.HistogramView.SegmentsUpdatedEvent;
+import imj2.tools.PaletteBasedSegmentation.HistogramView.PointsUpdatedEvent;
+import imj2.tools.PaletteBasedSegmentation.HistogramView.SegmentsUpdatedEvent;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -73,9 +73,6 @@ import net.sourceforge.aprog.events.EventManager.Event.Listener;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.TicToc;
-
-import org.junit.Test;
-
 import pixel3d.MouseHandler;
 import pixel3d.OrbiterMouseHandler;
 import pixel3d.OrbiterMouseHandler.OrbiterParameters;
@@ -86,10 +83,9 @@ import pixel3d.TiledRenderer;
 /**
  * @author codistmonk (creation 2014-04-23)
  */
-public final class PaletteBasedSegmentationTest {
+public final class PaletteBasedSegmentation {
 	
-	@Test
-	public final void test() throws InterruptedException {
+	public static final void main(final String[] commandLineArguments) throws InterruptedException {
 		SwingTools.useSystemLookAndFeel();
 		
 		final SimpleImageView imageView = new SimpleImageView();
@@ -122,98 +118,21 @@ public final class PaletteBasedSegmentationTest {
 				this.pointsUpdated(null);
 			}
 			
-			@SuppressWarnings("unchecked")
 			@Listener
 			public final void pointsUpdated(final PointsUpdatedEvent event) {
 				final Map<Integer, Collection<Integer>> clusters = ((NearestNeighborRGBQuantizer) transformerSelector.getItemAt(1)).getClusters();
 				
 				{
-					clusters.clear();
-					
-					final double[] points = histogramView.getUserPoints().toArray();
-					final int n = points.length;
 					final double tx = +128.0;
 					final double ty = +128.0;
 					final double tz = -128.0;
-					final Collection<Integer>[] collections = new Collection[n / 3];
+					final double[] userPoints = histogramView.getUserPoints().toArray();
+					final Collection<Integer>[] groups = groupConnectedPoints(histogramView, userPoints);
 					
-					for (int i = 0; i < n; i += 3) {
-						collections[i / 3] = set(i / 3);
-					}
-					
-					// Exclude extra point used for color picking
-					collections[0].clear();
-					
-					{
-						final int[] segments = histogramView.getUserSegments().toArray();
-						final int m = segments.length;
-						
-						for (int i = 0; i < m; i += 2) {
-							final int id1 = segments[i] - 1;
-							final int id2 = segments[i + 1] - 1;
-							final Collection<Integer> collection1 = collections[id1];
-							final Collection<Integer> collection2 = collections[id2];
-							
-							if (collection1 != collection2) {
-								Collection<Integer> source = collection1;
-								Collection<Integer> target = collection2;
-								
-								if (collection1.size() < collection2.size()) {
-									target = collection1;
-									source = collection2;
-								}
-								
-								source.addAll(target);
-								
-								for (final Integer id : target) {
-									collections[id] = source;
-								}
-							}
-						}
-					}
-					
-					for (final Collection<Integer> ids : collections) {
-						if (!ids.isEmpty()) {
-							final TreeSet<Integer> prototypes = new TreeSet<>();
-							int clusterR = 0;
-							int clusterG = 0;
-							int clusterB = 0;
-							
-							for (final int id : ids) {
-								final int r = uint8(points[id * 3 + X] - tx);
-								final int g = uint8(points[id * 3 + Y] - ty);
-								final int b = uint8(points[id * 3 + Z] - tz);
-								
-								clusterR += r;
-								clusterG += g;
-								clusterB += b;
-								
-								final Integer rgb = a8r8g8b8(0xFF, r, g, b);
-								
-								prototypes.add(rgb);
-							}
-							
-							final Integer clusterRGB = a8r8g8b8(0xFF, clusterR / ids.size(), clusterG / ids.size(), clusterB / ids.size());
-							
-							clusters.put(clusterRGB, prototypes);
-							
-							ids.clear();
-						}
-					}
+					updateClusters(clusters, userPoints, tx, ty, tz, groups);
 				}
 				
-				final DefaultComboBoxModel<RGBTransformer> transformers = (DefaultComboBoxModel<RGBTransformer>) transformerSelector.getModel();
-				final int selectedIndex = transformerSelector.getSelectedIndex();
-				
-				while (2 < transformers.getSize()) {
-					transformers.removeElementAt(2);
-				}
-				
-				for (final Integer clusterRGB : clusters.keySet()) {
-					transformers.addElement(new NearestNeighborRGBLinearizer(clusters, clusterRGB));
-				}
-				
-				transformerSelector.setSelectedIndex(selectedIndex < transformers.getSize() ? selectedIndex : 0);
+				updateTransformerSelector(transformerSelector, clusters);
 				
 				imageView.refreshBuffer();
 			}
@@ -256,7 +175,7 @@ public final class PaletteBasedSegmentationTest {
 					return;
 				}
 				
-				final int x = event.getX();
+				final int x = event.getX() - max(0, (imageView.getImageHolder().getWidth() - imageView.getImage().getWidth()) / 2);
 				final int y = event.getY() - max(0, (imageView.getImageHolder().getHeight() - imageView.getImage().getHeight()) / 2);
 				
 				if (0 <= x && x < image.getWidth() && 0 <= y && y < image.getHeight()) {
@@ -317,9 +236,105 @@ public final class PaletteBasedSegmentationTest {
 			
 		});
 		
-		show(splitPane, this.getClass().getSimpleName(), false);
+		show(splitPane, PaletteBasedSegmentation.class.getSimpleName(), false);
 		
 		SwingTools.getAWTEventDispatchingThread().join();
+	}
+	
+	public static void updateTransformerSelector(
+			final JComboBox<? extends RGBTransformer> transformerSelector,
+			final Map<Integer, Collection<Integer>> clusters) {
+		@SuppressWarnings("unchecked")
+		final DefaultComboBoxModel<RGBTransformer> transformers = (DefaultComboBoxModel<RGBTransformer>) transformerSelector.getModel();
+		final int selectedIndex = transformerSelector.getSelectedIndex();
+		
+		while (2 < transformers.getSize()) {
+			transformers.removeElementAt(2);
+		}
+		
+		for (final Integer clusterRGB : clusters.keySet()) {
+			transformers.addElement(new NearestNeighborRGBLinearizer(clusters, clusterRGB));
+		}
+		
+		transformerSelector.setSelectedIndex(selectedIndex < transformers.getSize() ? selectedIndex : 0);
+	}
+	
+	public static final void updateClusters(final Map<Integer, Collection<Integer>> clusters,
+			final double[] userPoints, final double tx, final double ty, final double tz,
+			final Collection<Integer>[] groups) {
+		clusters.clear();
+		
+		for (final Collection<Integer> group : groups) {
+			if (!group.isEmpty()) {
+				final TreeSet<Integer> prototypes = new TreeSet<>();
+				int clusterR = 0;
+				int clusterG = 0;
+				int clusterB = 0;
+				
+				for (final int id : group) {
+					final int r = uint8(userPoints[id * 3 + X] - tx);
+					final int g = uint8(userPoints[id * 3 + Y] - ty);
+					final int b = uint8(userPoints[id * 3 + Z] - tz);
+					
+					clusterR += r;
+					clusterG += g;
+					clusterB += b;
+					
+					final Integer rgb = a8r8g8b8(0xFF, r, g, b);
+					
+					prototypes.add(rgb);
+				}
+				
+				final Integer clusterRGB = a8r8g8b8(0xFF, clusterR / group.size(), clusterG / group.size(), clusterB / group.size());
+				
+				clusters.put(clusterRGB, prototypes);
+				
+				group.clear();
+			}
+		}
+	}
+	
+	public static final Collection<Integer>[] groupConnectedPoints(
+			final HistogramView histogramView, final double[] userPoints) {
+		final int n = userPoints.length;
+		final Collection<Integer>[] result = new Collection[n / 3];
+		
+		for (int i = 0; i < n; i += 3) {
+			result[i / 3] = set(i / 3);
+		}
+		
+		// Exclude extra point used for color picking
+		result[0].clear();
+		
+		{
+			final int[] segments = histogramView.getUserSegments().toArray();
+			final int m = segments.length;
+			
+			for (int i = 0; i < m; i += 2) {
+				final int id1 = segments[i] - 1;
+				final int id2 = segments[i + 1] - 1;
+				final Collection<Integer> collection1 = result[id1];
+				final Collection<Integer> collection2 = result[id2];
+				
+				if (collection1 != collection2) {
+					Collection<Integer> source = collection1;
+					Collection<Integer> target = collection2;
+					
+					if (collection1.size() < collection2.size()) {
+						target = collection1;
+						source = collection2;
+					}
+					
+					source.addAll(target);
+					
+					for (final Integer id : target) {
+						result[id] = source;
+					}
+				}
+			}
+		}
+		
+		return result;
 	}
 	
 	public static final int distance1(final int rgb1, final int rgb2) {
