@@ -23,7 +23,9 @@ import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
+import static net.sourceforge.aprog.tools.Tools.readObject;
 import static net.sourceforge.aprog.tools.Tools.set;
+import static net.sourceforge.aprog.tools.Tools.writeObject;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
 import static pixel3d.PolygonTools.Z;
@@ -43,6 +45,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.Serializable;
 import java.util.BitSet;
 import java.util.Collection;
@@ -73,6 +76,7 @@ import net.sourceforge.aprog.events.EventManager.Event.Listener;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 import pixel3d.MouseHandler;
 import pixel3d.OrbiterMouseHandler;
 import pixel3d.OrbiterMouseHandler.OrbiterParameters;
@@ -85,6 +89,16 @@ import pixel3d.TiledRenderer;
  */
 public final class PaletteBasedSegmentation {
 	
+	/**
+	 * {@value}.
+	 */
+	public static final String HISTOGRAM_VIEW_CONTROL_DATA_FILE_NAME = "histogramViewControlData.jo";
+	
+	/**
+	 * {@value}.
+	 */
+	public static final String TRANSFORMER_SELECTOR_MODEL_FILE_NAME = "transformerSelectorModel.jo";
+	
 	public static final void main(final String[] commandLineArguments) throws InterruptedException {
 		SwingTools.useSystemLookAndFeel();
 		
@@ -92,6 +106,12 @@ public final class PaletteBasedSegmentation {
 		final HistogramView histogramView = new HistogramView();
 		final JComboBox<? extends RGBTransformer> transformerSelector = new JComboBox<>(array(
 				RGBTransformer.Predefined.ID, new NearestNeighborRGBQuantizer()));
+		
+		if (new File(HISTOGRAM_VIEW_CONTROL_DATA_FILE_NAME).exists() && new File(TRANSFORMER_SELECTOR_MODEL_FILE_NAME).exists()) {
+			histogramView.setControlData(readObject(HISTOGRAM_VIEW_CONTROL_DATA_FILE_NAME));
+			transformerSelector.setModel(readObject(TRANSFORMER_SELECTOR_MODEL_FILE_NAME));
+		}
+		
 		final JCheckBox segmentCheckBox = new JCheckBox("Segment");
 		
 		SwingTools.setCheckAWT(false);
@@ -133,6 +153,9 @@ public final class PaletteBasedSegmentation {
 				}
 				
 				updateTransformerSelector(transformerSelector, clusters);
+				
+				writeObject(histogramView.getControlData(), HISTOGRAM_VIEW_CONTROL_DATA_FILE_NAME);
+				writeObject((Serializable) transformerSelector.getModel(), TRANSFORMER_SELECTOR_MODEL_FILE_NAME);
 				
 				imageView.refreshBuffer();
 			}
@@ -509,11 +532,9 @@ public final class PaletteBasedSegmentation {
 		
 		private final Graphics3D idGraphics;
 		
-		private final DoubleList userPoints;
-		
-		private final IntList userSegments;
-		
 		private BufferedImage oldImage;
+		
+		private ControlData controlData;
 		
 		private final int[] idUnderMouse;
 		
@@ -602,7 +623,7 @@ public final class PaletteBasedSegmentation {
 				public final void mouseClicked(final MouseEvent event) {
 					if (event.getButton() == 1 && event.getClickCount() == 2) {
 						HistogramView.this.getUserPoints().addAll(this.getPoint(event, 0.0));
-						idUnderMouse[0] = userPoints.size() / 3;
+						idUnderMouse[0] = HistogramView.this.getControlData().getPoints().size() / 3;
 						
 						EventManager.getInstance().dispatch(HistogramView.this.new PointsUpdatedEvent());
 						
@@ -728,20 +749,29 @@ public final class PaletteBasedSegmentation {
 			this.idRenderer = new TiledRenderer(OrthographicRenderer.FACTORY).setCanvas(this.idCanvas.getImage());
 			this.histogramGraphics = new Graphics3D(this.histogramRenderer).setOrbiterParameters(this.orbiter.getParameters());
 			this.idGraphics = new Graphics3D(this.idRenderer).setOrbiterParameters(this.orbiter.getParameters());
-			this.userPoints = new DoubleList();
-			this.userSegments = new IntList();
+			this.controlData = new ControlData();
 			this.idUnderMouse = new int[1];
 			this.lastTouchedId = new int[1];
 			
 			this.setIcon(new ImageIcon(this.canvas.getImage()));
 		}
 		
+		public final ControlData getControlData() {
+			return this.controlData;
+		}
+		
+		public final void setControlData(final ControlData controlData) {
+			this.controlData = controlData;
+			
+			this.refresh();
+		}
+		
 		public final DoubleList getUserPoints() {
-			return this.userPoints;
+			return this.getControlData().getPoints();
 		}
 		
 		public final IntList getUserSegments() {
-			return this.userSegments;
+			return this.getControlData().getSegments();
 		}
 		
 		public final void refresh() {
@@ -812,8 +842,9 @@ public final class PaletteBasedSegmentation {
 			
 			times.add(tocTic(timer));
 			
+			final double[] userPoints = this.getControlData().getPoints().toArray();
+			
 			{
-				final double[] userPoints = this.userPoints.toArray();
 				final int n = userPoints.length;
 				
 				this.histogramGraphics.setPointSize(2);
@@ -831,8 +862,7 @@ public final class PaletteBasedSegmentation {
 			}
 			
 			{
-				final double[] userPoints = this.userPoints.toArray();
-				final int[] userSegments = this.userSegments.toArray();
+				final int[] userSegments = this.getControlData().getSegments().toArray();
 				final int n = userSegments.length;
 				
 				for (int i = 0; i < n; i += 2) {
@@ -968,6 +998,30 @@ public final class PaletteBasedSegmentation {
 			timer.tic();
 			
 			return result;
+		}
+		
+		/**
+		 * @author codistmonk (creation 2014-08-28)
+		 */
+		public static final class ControlData implements Serializable {
+			
+			private final DoubleList points = new DoubleList();
+			
+			private final IntList segments = new IntList();
+			
+			public final DoubleList getPoints() {
+				return this.points;
+			}
+			
+			public final IntList getSegments() {
+				return this.segments;
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = -1905690914007572124L;
+			
 		}
 		
 	}
