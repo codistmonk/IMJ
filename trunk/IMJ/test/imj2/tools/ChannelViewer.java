@@ -26,7 +26,7 @@ import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
 
 /**
- * @author codistmonk (creation 2014-08-03)
+ * @author codistmonk (creation 2014-09-03)
  */
 public final class ChannelViewer {
 	
@@ -126,7 +126,7 @@ public final class ChannelViewer {
 	}
 	
 	/**
-	 * @author codistmonk (creation 2014-08-03)
+	 * @author codistmonk (creation 2014-09-03)
 	 */
 	public static final class Multiplexer implements RGBTransformer {
 		
@@ -157,7 +157,7 @@ public final class ChannelViewer {
 	}
 	
 	/**
-	 * @author codistmonk (creation 2014-08-03)
+	 * @author codistmonk (creation 2014-09-03)
 	 */
 	public static final class Gray implements RGBTransformer {
 		
@@ -180,7 +180,7 @@ public final class ChannelViewer {
 	}
 	
 	/**
-	 * @author codistmonk (creation 2014-08-03)
+	 * @author codistmonk (creation 2014-09-03)
 	 */
 	public static enum Channel2Gray implements RGBTransformer {
 		
