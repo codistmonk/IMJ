@@ -20,7 +20,7 @@ import loci.formats.ImageReader;
  */
 public final class LociBackedImage extends TiledImage2D {
 	
-	private final IFormatReader reader;
+	private transient IFormatReader reader;
 	
 	private final int bytesPerPixel;
 	
@@ -28,29 +28,21 @@ public final class LociBackedImage extends TiledImage2D {
 	
 	public LociBackedImage(final String id) {
 		super(id);
-		this.reader = new ImageReader();
 		
-		try {
-			this.reader.setId(id);
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
+		this.setupReader();
 		
 		this.bytesPerPixel = FormatTools.getBytesPerPixel(this.reader.getPixelType()) * this.reader.getRGBChannelCount();
 		
 		if (4 < this.bytesPerPixel) {
 			throw new IllegalArgumentException();
 		}
-		
-		if ("portable gray map".equals(this.reader.getFormat().toLowerCase(Locale.ENGLISH))) {
-			// XXX This fixes a defect in Bio-Formats PPM loading, but is it always OK?
-			this.reader.getCoreMetadata()[0].interleaved = true;
-		}
-		
-		this.setSeries(0);
 	}
 	
 	public final IFormatReader getReader() {
+		if (this.reader == null) {
+			this.setupReader();
+		}
+		
 		return this.reader;
 	}
 	
@@ -200,10 +192,27 @@ public final class LociBackedImage extends TiledImage2D {
 		return new byte[tileWidth * tileHeight * this.bytesPerPixel];
 	}
 	
+	private final void setupReader() {
+		this.reader = new ImageReader();
+		
+		try {
+			this.reader.setId(this.getId());
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+		
+		if ("portable gray map".equals(this.reader.getFormat().toLowerCase(Locale.ENGLISH))) {
+			// XXX This fixes a defect in Bio-Formats PPM loading, but is it always OK?
+			this.reader.getCoreMetadata()[0].interleaved = true;
+		}
+		
+		this.setSeries(0);
+	}
+	
 	/**
 	 * {@value}.
 	 */
-	private static final long serialVersionUID = -2042409652657782660L;
+	private static final long serialVersionUID = -3770386453405162843L;
 	
 	public static final int packPixelValue(final byte[][] channelTables, final int colorIndex) {
 		int result = 0;
