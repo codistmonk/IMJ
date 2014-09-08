@@ -359,9 +359,11 @@ public final class SVSViewer {
 					this.topTileY = startTileY;
 					final int endTileX = min(this.getWidth(), startTileX + horizontalTileCount * this.getTileWidth());
 					final int endTileY = min(this.getHeight(), startTileY + verticalTileCount * this.getTileHeight());
-					final LociBackedImage image = Context.this.getImage();
+					LociBackedImage image = Context.this.getImage();
 					
-					image.setSeries(this.getLevel());
+					if (this.getLevel() != image.getSeriesIndex()) {
+						image = new LociBackedImage(imagePath, this.getLevel());
+					}
 					
 					debugPrint(startTileX, startTileY, horizontalTileCount, verticalTileCount);
 					
