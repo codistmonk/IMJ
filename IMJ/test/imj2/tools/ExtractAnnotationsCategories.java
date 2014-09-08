@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeSet;
@@ -34,6 +35,7 @@ import org.w3c.dom.Node;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.RegexFilter;
+import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
 
 /**
@@ -80,9 +82,16 @@ public final class ExtractAnnotationsCategories {
 			}
 		}
 		
+		fixDamagedLabelIds(labelIds);
+		
 		debugPrint(labelIds);
 		
 		debugPrint("Updating", categoriesCompressedFile);
+		
+		for (final Node node : getNodes(category, "label")) {
+			final Element label = (Element) node;
+			label.setAttribute("labelId", labelIds.get(computeLabelKey(label)).toString());
+		}
 		
 		try (final OutputStream output = new GZIPOutputStream(new FileOutputStream(categoriesCompressedFile))) {
 			XMLTools.write(categories, output, 0);
@@ -97,9 +106,11 @@ public final class ExtractAnnotationsCategories {
 				annotations = parse(input);
 				
 				for (final Node node : getNodes(annotations, "//region/labels/label")) {
-					final Element label = (Element) node;
+					final Element regionLabel = (Element) node;
+					final Element documentLabel = (Element) getNode(annotations, "/annotations/labels/label[@labelId=\"" + regionLabel.getAttribute("labelId") + "\"]");
 					
-					label.setAttribute("categoryId", categoryId);
+					regionLabel.setAttribute("categoryId", categoryId);
+					regionLabel.setAttribute("labelId", labelIds.get(computeLabelKey(documentLabel)).toString());
 				}
 			}
 			
@@ -107,6 +118,17 @@ public final class ExtractAnnotationsCategories {
 				XMLTools.write(annotations, output, 0);
 			}
 		}
+	}
+	
+	public static final void fixDamagedLabelIds(final Map<String, Integer> labelIds) {
+		final Map<String, Integer> tmp = new HashMap<>();
+		
+		for (final String key : labelIds.keySet()) {
+			tmp.put(key, tmp.size());
+		}
+		
+		labelIds.clear();
+		labelIds.putAll(tmp);
 	}
 	
 	public static final void getLabelIds(final Element category, final Map<String, Integer> labelIds) {
@@ -128,6 +150,8 @@ public final class ExtractAnnotationsCategories {
 			
 			if (labelId == null) {
 				labelId = labelIds.size();
+				
+				Tools.debugPrint(key, labelId);
 				
 				labelIds.put(key, labelId);
 				category.appendChild(categories.adoptNode(label.cloneNode(true)));
