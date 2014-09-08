@@ -315,12 +315,12 @@ public final class LociBackedImage extends TiledImage2D {
 		
 		@Override
 		public final int getWidth() {
-			return this.getSource().getWidth() >> this.getLOD();
+			return this.source0.getWidth() >> this.getLOD();
 		}
 		
 		@Override
 		public final int getHeight() {
-			return this.getSource().getHeight() >> this.getLOD();
+			return this.source0.getHeight() >> this.getLOD();
 		}
 		
 		@Override
