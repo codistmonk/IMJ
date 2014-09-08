@@ -12,7 +12,9 @@ import imj2.core.TiledImage2D;
 
 import java.awt.Dimension;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 import loci.formats.FormatTools;
@@ -36,6 +38,8 @@ public final class LociBackedImage extends TiledImage2D {
 	private transient byte[] tile;
 	
 	private final Dimension[] seriesDimensions;
+	
+	private final Map<Integer, Image2D> subsampleds;
 	
 	public LociBackedImage(final String id) {
 		this(id, 0);
@@ -62,6 +66,8 @@ public final class LociBackedImage extends TiledImage2D {
 		}
 		
 		this.reader.setSeries(seriesIndex);
+		
+		this.subsampleds = new HashMap<>();
 	}
 	
 	public final String getImageId() {
@@ -104,7 +110,7 @@ public final class LociBackedImage extends TiledImage2D {
 			return this;
 		}
 		
-		return new Subsampled(this, this.getSource(lod), lod).getLODImage(lod);
+		return this.subsampleds.compute(lod, (k, v) -> v != null ? v : new Subsampled(this, this.getSource(lod), lod).getLODImage(lod));
 	}
 	
 	@Override
