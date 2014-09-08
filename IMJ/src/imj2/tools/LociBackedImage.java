@@ -1,12 +1,16 @@
 package imj2.tools;
 
 import static imj2.core.IMJCoreTools.cache;
+import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+import imj2.core.ConcreteImage2D;
+import imj2.core.FilteredTiledImage2D;
 import imj2.core.Image;
 import imj2.core.Image2D;
-import imj2.core.SubsampledImage2D;
+import imj2.core.LinearIntImage;
 import imj2.core.TiledImage2D;
 
+import java.awt.Dimension;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.concurrent.Callable;
@@ -14,11 +18,16 @@ import java.util.concurrent.Callable;
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-08-07)
  */
 public final class LociBackedImage extends TiledImage2D {
+	
+	private final String imageId;
+	
+	private final int seriesIndex;
 	
 	private transient IFormatReader reader;
 	
@@ -26,8 +35,16 @@ public final class LociBackedImage extends TiledImage2D {
 	
 	private transient byte[] tile;
 	
+	private final Dimension[] seriesDimensions;
+	
 	public LociBackedImage(final String id) {
-		super(id);
+		this(id, 0);
+	}
+	
+	public LociBackedImage(final String id, final int seriesIndex) {
+		super(id + "_series" + seriesIndex);
+		this.imageId = id;
+		this.seriesIndex = seriesIndex;
 		
 		this.setupReader();
 		
@@ -36,6 +53,19 @@ public final class LociBackedImage extends TiledImage2D {
 		if (4 < this.bytesPerPixel) {
 			throw new IllegalArgumentException();
 		}
+		
+		this.seriesDimensions = new Dimension[this.getSeriesCount()];
+		
+		for (int i = this.getSeriesCount() - 1; 0 <= i; --i) {
+			this.reader.setSeries(i);
+			this.seriesDimensions[i] = new Dimension(this.reader.getSizeX(), this.reader.getSizeY());
+		}
+		
+		this.reader.setSeries(seriesIndex);
+	}
+	
+	public final String getImageId() {
+		return this.imageId;
 	}
 	
 	public final IFormatReader getReader() {
@@ -46,14 +76,16 @@ public final class LociBackedImage extends TiledImage2D {
 		return this.reader;
 	}
 	
+	public final int getSeriesIndex() {
+		return this.seriesIndex;
+	}
+	
 	public final int getSeriesCount() {
 		return this.getReader().getSeriesCount();
 	}
 	
-	public final void setSeries(final int series) {
-		this.getReader().setSeries(series);
-		this.setOptimalTileWidth(this.getReader().getOptimalTileWidth());
-		this.setOptimalTileHeight(this.getReader().getOptimalTileHeight());
+	public final Dimension getSeriesDimension(final int seriesIndex) {
+		return this.seriesDimensions[seriesIndex];
 	}
 	
 	@Override
@@ -72,7 +104,7 @@ public final class LociBackedImage extends TiledImage2D {
 			return this;
 		}
 		
-		return new SubsampledImage2D(this).getLODImage(lod);
+		return new Subsampled(this, this.getSource(lod), lod).getLODImage(lod);
 	}
 	
 	@Override
@@ -193,26 +225,54 @@ public final class LociBackedImage extends TiledImage2D {
 	}
 	
 	private final void setupReader() {
-		this.reader = new ImageReader();
+		this.reader = newImageReader(this.imageId);
 		
-		try {
-			this.reader.setId(this.getId());
-		} catch (final Exception exception) {
-			throw unchecked(exception);
+		this.reader.setSeries(this.seriesIndex);
+		
+		this.setOptimalTileDimensions(this.reader.getOptimalTileWidth(), this.reader.getOptimalTileHeight());
+	}
+	
+	private final LociBackedImage getSource(final int lod) {
+		final int w = this.getWidth() >> lod;
+		final int h = this.getHeight() >> lod;
+		final int n = this.getSeriesCount();
+		
+		for (int i = n - 1; 0 <= i; --i) {
+			final Dimension d = this.getSeriesDimension(i);
+			
+			Tools.debugPrint(i, d, w, h);
+			
+			if (w <= d.getWidth() && h <= d.getHeight()) {
+				return new LociBackedImage(this.getImageId(), i);
+			}
 		}
 		
-		if ("portable gray map".equals(this.reader.getFormat().toLowerCase(Locale.ENGLISH))) {
-			// XXX This fixes a defect in Bio-Formats PPM loading, but is it always OK?
-			this.reader.getCoreMetadata()[0].interleaved = true;
-		}
-		
-		this.setSeries(0);
+		throw new IllegalArgumentException();
 	}
 	
 	/**
 	 * {@value}.
 	 */
 	private static final long serialVersionUID = -3770386453405162843L;
+	
+	public static final IFormatReader newImageReader(final String id) {
+		final IFormatReader reader = new ImageReader();
+		
+		try {
+			reader.setId(id);
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+		
+		if ("portable gray map".equals(reader.getFormat().toLowerCase(Locale.ENGLISH))) {
+			// XXX This fixes a defect in Bio-Formats PPM loading, but is it always OK?
+			reader.getCoreMetadata()[0].interleaved = true;
+		}
+		
+		reader.setSeries(0);
+		
+		return reader;
+	}
 	
 	public static final int packPixelValue(final byte[][] channelTables, final int colorIndex) {
 		int result = 0;
@@ -232,6 +292,115 @@ public final class LociBackedImage extends TiledImage2D {
 		}
 		
 		return result;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-09-08)
+	 */
+	public static final class Subsampled extends FilteredTiledImage2D {
+		
+		private transient LociBackedImage source0;
+		
+		private final int lod;
+		
+		Subsampled(final LociBackedImage source0, final LociBackedImage source, final int lod) {
+			super(source.getId() + "_lod" + lod, source);
+			this.source0 = source0;
+			this.lod = lod;
+			
+			this.setOptimalTileDimensions(source.getOptimalTileWidth(), source.getOptimalTileHeight());
+			
+			Tools.debugPrint(this.getId(), this.getWidth(), this.getHeight(), source.getWidth(), source.getHeight());
+		}
+		
+		@Override
+		public final int getWidth() {
+			return this.getSource().getWidth() >> this.getLOD();
+		}
+		
+		@Override
+		public final int getHeight() {
+			return this.getSource().getHeight() >> this.getLOD();
+		}
+		
+		@Override
+		public final int getLOD() {
+			return this.lod;
+		}
+		
+		@Override
+		public final Image2D getLODImage(final int lod) {
+			return lod == this.getLOD() ? this : this.source0.getLODImage(lod);
+		}
+		
+		@Override
+		public final Subsampled[] newParallelViews(final int n) {
+			final Subsampled[] result = new Subsampled[n];
+			
+			result[0] = this;
+			
+			for (int i = 1; i < n; ++i) {
+				result[i] = new Subsampled(this.source0, (LociBackedImage) this.getSource(), this.getLOD());
+			}
+			
+			return result;
+		}
+		
+		@Override
+		public final Channels getChannels() {
+			return this.getSource().getChannels();
+		}
+		
+		@Override
+		protected final ConcreteImage2D<LinearIntImage> updateTile(
+				final int tileX, final int tileY, final ConcreteImage2D<LinearIntImage> tile) {
+			final Image2D source = this.getSource();
+			final DefaultColorModel color = new DefaultColorModel(source.getChannels());
+			final int stride = min(this.getSource().getWidth() / this.getWidth(), this.getSource().getHeight() / this.getHeight());
+			final int n = stride * stride;
+			
+			tile.forEachPixelInBox(tileX, tileY, tile.getWidth(), tile.getHeight(), new MonopatchProcess() {
+				
+				@Override
+				public final void pixel(final int x, final int y) {
+					int red = 0;
+					int green = 0;
+					int blue = 0;
+					int alpha = 0;
+					
+					for (int yy = y * stride; yy < (y + 1) * stride; ++yy) {
+						for (int xx = x * stride; xx < (x + 1) * stride; ++xx) {
+							final int rgba = source.getPixelValue(xx, yy);
+							red += color.red(rgba);
+							green += color.green(rgba);
+							blue += color.blue(rgba);
+							alpha += color.alpha(rgba);
+						}
+					}
+					
+					red /= n;
+					green /= n;
+					blue /= n;
+					alpha /= n;
+					
+					tile.setPixelValue(x - tileX, y - tileY, DefaultColorModel.argb(red, green, blue, alpha));
+				}
+				
+				/**
+				 * {@value}.
+				 */
+				private static final long serialVersionUID = 8092549882515884605L;
+				
+			});
+			
+			return tile;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -4860842602765514046L;
+		
 	}
 	
 }
