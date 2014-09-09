@@ -3,6 +3,7 @@ package imj2.tools;
 import static imj2.core.IMJCoreTools.cache;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj2.core.ConcreteImage2D;
 import imj2.core.FilteredTiledImage2D;
 import imj2.core.Image;
@@ -20,6 +21,7 @@ import java.util.concurrent.Callable;
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
+
 import net.sourceforge.aprog.tools.Tools;
 
 /**
@@ -115,7 +117,7 @@ public final class LociBackedImage extends TiledImage2D {
 	
 	@Override
 	public final Channels getChannels() {
-		return IMJTools.predefinedChannelsFor(this.getReader());
+		return predefinedChannelsFor(this.getReader());
 	}
 	
 	@Override
@@ -298,6 +300,33 @@ public final class LociBackedImage extends TiledImage2D {
 		}
 		
 		return result;
+	}
+	
+	public static final Channels predefinedChannelsFor(final IFormatReader lociImage) {
+		if (lociImage.isIndexed()) {
+			return PredefinedChannels.C3_U8;
+		}
+		
+		switch (lociImage.getRGBChannelCount()) {
+		case 1:
+			switch (FormatTools.getBytesPerPixel(lociImage.getPixelType()) * lociImage.getRGBChannelCount()) {
+			case 1:
+				return 1 == lociImage.getBitsPerPixel() ?
+						PredefinedChannels.C1_U1 : PredefinedChannels.C1_U8;
+			case 2:
+				return PredefinedChannels.C1_U16;
+			default:
+				return PredefinedChannels.C1_S32;
+			}
+		case 2:
+			return PredefinedChannels.C2_U16;
+		case 3:
+			return PredefinedChannels.C3_U8;
+		case 4:
+			return PredefinedChannels.C4_U8;
+		default:
+			throw new IllegalArgumentException();
+		}
 	}
 	
 	/**
