@@ -1,6 +1,7 @@
 package imj2.core;
 
 import static java.lang.Integer.parseInt;
+
 import imj2.tools.DefaultColorModel;
 
 import java.util.regex.Matcher;

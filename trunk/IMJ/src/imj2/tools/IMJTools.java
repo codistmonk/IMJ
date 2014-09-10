@@ -299,6 +299,7 @@ public final class IMJTools extends IMJCoreTools {
 				final int w = min(tileWidth, imageWidth - tileX);
 				
 				process.pixel(new Info(tileX, tileY, w, h, 0, 0));
+				process.endOfTile();
 			}
 		}
 	}
