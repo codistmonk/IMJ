@@ -5,9 +5,11 @@ import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 
+import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JTextArea;
@@ -18,9 +20,9 @@ import loci.common.services.ServiceFactory;
 import loci.formats.ImageReader;
 import loci.formats.ImageWriter;
 import loci.formats.services.OMEXMLService;
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-03-30)
@@ -128,25 +130,35 @@ public final class BatchConvert {
 			
 			final ImageReader reader = new ImageReader();
 			final ImageWriter writer = new ImageWriter();
+			final String outputFormat = "jpg";
+			final String extension = "." + outputFormat;
 			
 			try {
-				final OMEXMLService service = new ServiceFactory().getInstance(OMEXMLService.class);
-				
-				reader.setMetadataStore(service.createOMEXMLMetadata());
-				reader.setId(id);
-				
-				String outId = id.replaceFirst("\\..+$", ".png");
-				
-				if (!outId.endsWith(".png")) {
-					outId += ".png";
+				if (id.endsWith(".tiff")) {
+					final OMEXMLService service = new ServiceFactory().getInstance(OMEXMLService.class);
+					
+					reader.setMetadataStore(service.createOMEXMLMetadata());
+					reader.setId(id);
+					
+					String outId = id.replaceFirst("\\..+$", extension);
+					
+					if (!outId.endsWith(extension)) {
+						outId += extension;
+					}
+					
+					writer.setMetadataRetrieve(service.asRetrieve(reader.getMetadataStore()));
+					writer.setId(outId);
+					
+					this.message("Saving " + outId + "...");
+					
+					writer.saveBytes(0, reader.openBytes(0));
+				} else {
+					final BufferedImage image = ImageIO.read(new File(id));
+					final String outId = Tools.baseName(id) + extension;
+					
+					this.message("Saving " + outId + "...");
+					ImageIO.write(image, outputFormat, new File(outId));
 				}
-				
-				writer.setMetadataRetrieve(service.asRetrieve(reader.getMetadataStore()));
-				writer.setId(outId);
-				
-				this.message("Saving " + outId + "...");
-				
-				writer.saveBytes(0, reader.openBytes(0));
 			} catch (final Exception exception) {
 				this.message(exception.getLocalizedMessage());
 			} finally {
