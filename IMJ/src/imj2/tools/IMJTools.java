@@ -2,8 +2,8 @@ package imj2.tools;
 
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
+import static net.sourceforge.aprog.tools.Tools.invoke;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.core.Image.Channels;
 import imj2.core.Image.PredefinedChannels;
 import imj2.core.ConcreteImage2D;
@@ -31,6 +31,39 @@ public final class IMJTools extends IMJCoreTools {
 	
 	private IMJTools() {
 		throw new IllegalInstantiationException();
+	}
+	
+	public static final void toneDownBioFormatsLogger() {
+		try {
+			final Class<?> TIFF_PARSER_CLASS = classForName("loci.formats.tiff.TiffParser");
+			final Class<?> TIFF_COMPRESSION_CLASS = classForName("loci.formats.tiff.TiffCompression");
+			
+			final Class<?> loggerFactory = classForName("org.slf4j.LoggerFactory");
+			final Object logLevel = fieldValue(classForName("ch.qos.logback.classic.Level"), "INFO");
+			
+			invoke(invoke(loggerFactory, "getLogger", TIFF_PARSER_CLASS), "setLevel", logLevel);
+			invoke(invoke(loggerFactory, "getLogger", TIFF_COMPRESSION_CLASS), "setLevel", logLevel);
+		} catch (final Exception exception) {
+			exception.printStackTrace();
+		}
+	}
+	
+	public static final Class<?> classForName(final String className) {
+		try {
+			return Class.forName(className);
+		} catch (final ClassNotFoundException exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	public static final Object fieldValue(final Object objectOrClass, final String fieldName) {
+		final Class<?> cls = objectOrClass instanceof Class<?> ? (Class<?>) objectOrClass : objectOrClass.getClass();
+		
+		try {
+			return cls.getField(fieldName).get(objectOrClass);
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
 	}
 	
 	public static final Field accessible(final Field field) {
