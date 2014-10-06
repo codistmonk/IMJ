@@ -8,6 +8,7 @@ import static java.lang.Math.abs;
 import static java.lang.Math.ceil;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+
 import imj2.core.ConcreteImage2D;
 import imj2.core.Image;
 import imj2.core.Image2D;
@@ -74,9 +75,8 @@ public final class LabelROIs {
 				Tools.debugPrint(gradientImage.getWidth(), gradientImage.getHeight());
 				
 				final Partition2D segmentation = new Partition2D(imageWidth, imageHeight);
-				final int s = 32;
 				
-				segmentation.makeGrid(max(1, image.getWidth() / s), max(1, image.getHeight() / s), 2);
+				segmentation.makeGrid(32, 2);
 				
 				{
 					final BufferedImage awtImage = IMJTools.awtImage(image);
@@ -376,26 +376,47 @@ public final class LabelROIs {
 		}
 		
 		public final int split(final int dart1, final int dart2) {
-			final int next1 = this.split(dart1);
-			final int next2 = this.split(dart2);
+			final Point2D vertex = this.getVertex(this.split(dart1));
 			
-			final Point2D vertex = this.getVertex(this.manifold.getNext(dart1));
+			this.split(dart2);
 			
-			this.manifold.cutFace(dart1, dart2);
+			final int result = this.manifold.cutFace(dart1, dart2);
 			this.vertices.add(vertex);
 			
-			return next1;
+			return result;
 		}
 		
-		public final void makeGrid(final int horizontalStripes, final int verticalStripes, final int edgeSubdivisions) {
+		public final void makeGrid(final int step, final int edgeDivisions) {
 			if (this.manifold.getNext(this.manifold.getNext(this.getLeftDart())) != this.getRightDart()) {
 				throw new IllegalStateException();
 			}
 			
-			int newDart = this.split(this.getLeftDart(), this.getRightDart());
+			final Point2D bottomRight = this.getVertex(this.getRightDart());
+			final int imageWidth = (int) (bottomRight.getX() + 1.0);
+			final int imageHeight = (int) (bottomRight.getY() + 1.0);
 			
-			Tools.debugPrint(this.getVertex(this.getLeftDart()), this.getVertex(this.getBottomDart()), this.getVertex(this.getRightDart()), this.getVertex(this.getTopDart()));
-			Tools.debugPrint(this.getLeftDart(), this.manifold.getNext(this.getLeftDart()), newDart);
+			if (step < imageHeight) {
+				final int verticalDivisions = (imageHeight + step - 1) / step;
+				final List<Integer> darts = new ArrayList<>(verticalDivisions);
+				
+				int newDart = this.split(this.getLeftDart(), this.getRightDart());
+				
+				darts.add(0, newDart);
+				
+				for (int i = 2; i < verticalDivisions; ++i) {
+					newDart = this.split(this.getLeftDart(), this.manifold.getNext(newDart));
+					darts.add(0, newDart);
+				}
+				
+				final int yStep = imageHeight / verticalDivisions;
+				final int[] y = { yStep };
+				
+				darts.forEach(dart -> {
+					setY(this.getVertex(dart), y[0]);
+					setY(this.getVertex(opposite(dart)), y[0]);
+					y[0] = min(imageHeight - 1, y[0] + yStep);
+				});
+			}
 		}
 		
 		public final void forEach(final Traversor traversor, final DartProcessor processor) {
@@ -413,6 +434,14 @@ public final class LabelROIs {
 		
 		public static final float middle(final double a, final double b) {
 			return (float) ((a + b) / 2.0);
+		}
+		
+		public static final void setX(final Point2D point, final double x) {
+			point.setLocation(x, point.getY());
+		}
+		
+		public static final void setY(final Point2D point, final double y) {
+			point.setLocation(point.getX(), y);
 		}
 		
 	}
