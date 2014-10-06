@@ -1,4 +1,4 @@
-package imj2.tools;
+package imj2.draft;
 
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;

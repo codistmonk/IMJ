@@ -1,7 +1,6 @@
-package imj2.tools;
+package imj2.draft;
 
 import static net.sourceforge.aprog.xml.XMLTools.parse;
-
 import imj2.tools.SplitImage;
 
 import java.util.List;

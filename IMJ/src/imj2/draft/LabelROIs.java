@@ -1,4 +1,4 @@
-package imj2.tools;
+package imj2.draft;
 
 import static imj2.tools.IMJTools.blue8;
 import static imj2.tools.IMJTools.green8;
@@ -7,7 +7,6 @@ import static java.lang.Math.abs;
 import static java.lang.Math.ceil;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-
 import imj2.core.ConcreteImage2D;
 import imj2.core.Image;
 import imj2.core.Image2D;
@@ -15,6 +14,8 @@ import imj2.core.Image2D.MonopatchProcess;
 import imj2.core.LinearBooleanImage;
 import imj2.core.LinearIntImage;
 import imj2.core.SubsampledImage2D;
+import imj2.tools.IMJTools;
+import imj2.tools.LociBackedImage;
 
 import java.awt.Color;
 import java.awt.Graphics2D;

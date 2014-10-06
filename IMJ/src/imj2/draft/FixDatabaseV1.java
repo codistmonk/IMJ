@@ -1,8 +1,9 @@
-package imj2.tools;
+package imj2.draft;
 
 import static imj2.tools.MultifileImage.setIdAttributes;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
+import imj2.tools.MultifileImage;
 
 import java.io.File;
 import java.util.ArrayList;

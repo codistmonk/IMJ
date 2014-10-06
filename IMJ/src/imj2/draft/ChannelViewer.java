@@ -1,4 +1,4 @@
-package imj2.tools;
+package imj2.draft;
 
 import static imj2.tools.IMJTools.*;
 import static java.lang.Integer.parseInt;
@@ -6,8 +6,11 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.round;
 import static net.sourceforge.aprog.swing.SwingTools.show;
-
+import imj2.tools.ColorSeparationTest;
+import imj2.tools.Image2DComponent;
+import imj2.tools.SimpleImageView;
 import imj2.tools.ColorSeparationTest.RGBTransformer;
+import imj2.tools.ColorSeparationTest.RGBTransformer.Predefined;
 import imj2.tools.Image2DComponent.Painter;
 
 import java.awt.BorderLayout;

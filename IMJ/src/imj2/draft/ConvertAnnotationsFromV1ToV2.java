@@ -1,4 +1,4 @@
-package imj2.tools;
+package imj2.draft;
 
 import static java.util.Locale.ENGLISH;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
