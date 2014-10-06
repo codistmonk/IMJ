@@ -75,7 +75,7 @@ public final class LabelROIs {
 				
 				final Partition2D segmentation = new Partition2D(imageWidth, imageHeight);
 				
-				segmentation.makeGrid(32, 2);
+				segmentation.makeGrid(32, 3);
 				
 				{
 					final BufferedImage awtImage = IMJTools.awtImage(image);
@@ -405,7 +405,14 @@ public final class LabelROIs {
 				}
 			}
 			
-			// TODO edge divisions
+			this.manifold.forEach(Traversor.EDGE, dart -> {
+				for (int i = 1; i < edgeDivisions; ++i) {
+					// TODO adjust vertex location
+					this.cut(dart);
+				}
+				
+				return true;
+			});
 		}
 		
 		public final void forEach(final Traversor traversor, final DartProcessor processor) {
