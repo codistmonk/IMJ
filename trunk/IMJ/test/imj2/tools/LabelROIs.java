@@ -7,6 +7,7 @@ import static java.lang.Math.abs;
 import static java.lang.Math.ceil;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+
 import imj2.core.ConcreteImage2D;
 import imj2.core.Image;
 import imj2.core.Image2D;
@@ -15,35 +16,21 @@ import imj2.core.LinearBooleanImage;
 import imj2.core.LinearIntImage;
 import imj2.core.SubsampledImage2D;
 
-
-
-
-
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-
-
-
-
 import javax.imageio.ImageIO;
 
-import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
-
-
-
-
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -69,50 +56,52 @@ public final class LabelROIs {
 		final Document argumentsDocument = XMLTools.parse(Tools.getResourceAsStream(argumentsPath));
 		
 		XMLTools.getNodes(argumentsDocument, "arguments/reference").forEach(node -> {
-			final Image2D image = new SubsampledImage2D(new LociBackedImage(((Element) node).getAttribute("image"), 4));
-			final int imageWidth = image.getWidth();
-			final int imageHeight = image.getHeight();
-			
-			Tools.debugPrint(image.getId(), imageWidth, imageHeight);
-			
-			final Image2D gradientImage = computeGradient(image);
-			
-			Tools.debugPrint(gradientImage.getWidth(), gradientImage.getHeight());
-			
-			final Image2D segmentationMask = computeSegmentationMask(image, gradientImage, 12);
+			try {
+				final Image2D image = new SubsampledImage2D(new LociBackedImage(((Element) node).getAttribute("image"), 4));
+				final int imageWidth = image.getWidth();
+				final int imageHeight = image.getHeight();
+				
+				Tools.debugPrint(image.getId(), imageWidth, imageHeight);
+				
+				final Image2D gradientImage = computeGradient(image);
+				
+				Tools.debugPrint(gradientImage.getWidth(), gradientImage.getHeight());
+				
+				final SegmentationGrid segmentationGrid = new SegmentationGrid(gradientImage, 12);
+			} catch (final Exception exception) {
+				Tools.debugError(exception);
+			}
 		});
 		XMLTools.getNodes(argumentsDocument, "arguments/test").forEach(node -> {
-			final Image2D image = new SubsampledImage2D(new LociBackedImage(((Element) node).getAttribute("image"), 4)).getLODImage(2);
-			final int imageWidth = image.getWidth();
-			final int imageHeight = image.getHeight();
-			
-			Tools.debugPrint(image.getId(), imageWidth, imageHeight);
-			
-			final Image2D gradientImage = computeGradient(image);
-			
-			Tools.debugPrint(gradientImage.getWidth(), gradientImage.getHeight());
-			
-			final Image2D segmentationMask = computeSegmentationMask(image, gradientImage, 12);
-			
 			try {
+				final Image2D image = new SubsampledImage2D(new LociBackedImage(((Element) node).getAttribute("image"), 4)).getLODImage(2);
+				final int imageWidth = image.getWidth();
+				final int imageHeight = image.getHeight();
+				
+				Tools.debugPrint(image.getId(), imageWidth, imageHeight);
+				
+				final Image2D gradientImage = computeGradient(image);
+				
+				Tools.debugPrint(gradientImage.getWidth(), gradientImage.getHeight());
+				
+				final Image2D segmentationMask = computeSegmentationMask(image, gradientImage, 12);
+				
 				ImageIO.write(IMJTools.awtImage(image), "png", new File("image.png"));
 				ImageIO.write(IMJTools.awtImage(segmentationMask), "png", new File("segmentation.png"));
 				ImageIO.write(newSegmentationVisualization(image, segmentationMask), "png", new File("segmented.png"));
-			} catch (final IOException exception) {
-				exception.printStackTrace();
+			} catch (final Exception exception) {
+				Tools.debugError(exception);
 			}
 		});
 	}
-
-	public static BufferedImage newSegmentationVisualization(
-			final Image2D image,
-			final Image2D segmentationMask) {
+	
+	public static final BufferedImage newSegmentationVisualization(final Image2D image, final Image2D segmentationMask) {
 		final int imageWidth = image.getWidth();
 		final int imageHeight = image.getHeight();
-		final BufferedImage awtImage = IMJTools.awtImage(image);
+		final BufferedImage result = IMJTools.awtImage(image);
 		
 		{
-			final Graphics2D graphics = awtImage.createGraphics();
+			final Graphics2D graphics = result.createGraphics();
 			
 			graphics.setColor(Color.BLACK);
 			
@@ -125,11 +114,17 @@ public final class LabelROIs {
 					}
 				}
 				
+				/**
+				 * {@value}.
+				 */
+				private static final long serialVersionUID = 7131721130964203008L;
+				
 			});
 			
 			graphics.dispose();
 		}
-		return awtImage;
+		
+		return result;
 	}
 	
 	public static final Image2D computeSegmentationMask(final Image2D image, final Image2D gradientImage, final int stripeSize) {
