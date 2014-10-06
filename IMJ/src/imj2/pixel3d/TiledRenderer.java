@@ -1,4 +1,4 @@
-package pixel3d;
+package imj2.pixel3d;
 
 import static net.sourceforge.aprog.tools.Tools.instances;
 

@@ -1,5 +1,8 @@
 package imj2.draft;
 
+import static imj2.pixel3d.PolygonTools.X;
+import static imj2.pixel3d.PolygonTools.Y;
+import static imj2.pixel3d.PolygonTools.Z;
 import static imj2.tools.IMJTools.a8gray888;
 import static imj2.tools.IMJTools.a8r8g8b8;
 import static imj2.tools.IMJTools.blue8;
@@ -26,11 +29,14 @@ import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.readObject;
 import static net.sourceforge.aprog.tools.Tools.set;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
-import static pixel3d.PolygonTools.X;
-import static pixel3d.PolygonTools.Y;
-import static pixel3d.PolygonTools.Z;
 import imj2.draft.PaletteBasedSegmentation.HistogramView.PointsUpdatedEvent;
 import imj2.draft.PaletteBasedSegmentation.HistogramView.SegmentsUpdatedEvent;
+import imj2.pixel3d.MouseHandler;
+import imj2.pixel3d.OrbiterMouseHandler;
+import imj2.pixel3d.OrthographicRenderer;
+import imj2.pixel3d.Renderer;
+import imj2.pixel3d.TiledRenderer;
+import imj2.pixel3d.OrbiterMouseHandler.OrbiterParameters;
 import imj2.tools.Canvas;
 import imj2.tools.ColorSeparationTest;
 import imj2.tools.Image2DComponent;
@@ -82,12 +88,6 @@ import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
-import pixel3d.MouseHandler;
-import pixel3d.OrbiterMouseHandler;
-import pixel3d.OrbiterMouseHandler.OrbiterParameters;
-import pixel3d.OrthographicRenderer;
-import pixel3d.Renderer;
-import pixel3d.TiledRenderer;
 
 /**
  * @author codistmonk (creation 2014-04-23)

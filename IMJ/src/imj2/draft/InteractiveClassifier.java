@@ -1,13 +1,13 @@
 package imj2.draft;
 
+import static imj2.pixel3d.PolygonTools.X;
+import static imj2.pixel3d.PolygonTools.Y;
+import static imj2.pixel3d.PolygonTools.Z;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.debugError;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import static pixel3d.PolygonTools.X;
-import static pixel3d.PolygonTools.Y;
-import static pixel3d.PolygonTools.Z;
 import imj2.core.Image.Channels;
 import imj2.core.Image.Monochannel;
 import imj2.core.Image2D;

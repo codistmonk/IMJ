@@ -1,5 +1,8 @@
 package imj2.tools;
 
+import static imj2.pixel3d.PolygonTools.X;
+import static imj2.pixel3d.PolygonTools.Y;
+import static imj2.pixel3d.PolygonTools.Z;
 import static imj2.tools.IMJTools.blue8;
 import static imj2.tools.IMJTools.green8;
 import static imj2.tools.IMJTools.red8;
@@ -10,9 +13,6 @@ import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.swing.SwingTools.verticalSplit;
 import static net.sourceforge.aprog.tools.Tools.array;
-import static pixel3d.PolygonTools.X;
-import static pixel3d.PolygonTools.Y;
-import static pixel3d.PolygonTools.Z;
 import imj2.draft.PaletteBasedSegmentation.HistogramView;
 import imj2.draft.PaletteBasedSegmentation.HistogramView.SegmentsUpdatedEvent;
 import imj2.tools.Image2DComponent.Painter;
