@@ -23,9 +23,9 @@
  *
  */
 
-package pixel3d;
+package imj2.pixel3d;
 
-import pixel3d.OrthographicRenderer.IntComparator;
+import imj2.pixel3d.OrthographicRenderer.IntComparator;
 
 /**
  * This class implements the Dual-Pivot Quicksort algorithm by

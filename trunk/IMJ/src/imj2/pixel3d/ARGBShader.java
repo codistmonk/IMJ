@@ -1,4 +1,4 @@
-package pixel3d;
+package imj2.pixel3d;
 
 /**
  * @author codistmonk (creation 2014-04-28)

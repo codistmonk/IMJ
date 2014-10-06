@@ -1,4 +1,4 @@
-package pixel3d;
+package imj2.pixel3d;
 
 import java.awt.image.BufferedImage;
 import java.io.Serializable;

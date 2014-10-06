@@ -3,6 +3,7 @@ package imj2.draft;
 import static imj2.tools.IMJTools.blue8;
 import static imj2.tools.IMJTools.green8;
 import static imj2.tools.IMJTools.red8;
+import static imj2.topology.Manifold.opposite;
 import static java.lang.Math.abs;
 import static java.lang.Math.ceil;
 import static java.lang.Math.max;
@@ -16,6 +17,9 @@ import imj2.core.LinearIntImage;
 import imj2.core.SubsampledImage2D;
 import imj2.tools.IMJTools;
 import imj2.tools.LociBackedImage;
+import imj2.topology.Manifold;
+import imj2.topology.Manifold.DartProcessor;
+import imj2.topology.Manifold.Traversor;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -28,6 +32,7 @@ import java.util.List;
 
 import javax.imageio.ImageIO;
 
+import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
@@ -68,7 +73,20 @@ public final class LabelROIs {
 				
 				Tools.debugPrint(gradientImage.getWidth(), gradientImage.getHeight());
 				
-				final SegmentationGrid segmentationGrid = new SegmentationGrid(gradientImage, 12);
+				final Partition2D segmentation = new Partition2D(imageWidth, imageHeight);
+				final int s = 32;
+				
+				segmentation.makeGrid(max(1, image.getWidth() / s), max(1, image.getHeight() / s), 2);
+				
+				{
+					final BufferedImage awtImage = IMJTools.awtImage(image);
+					
+					draw(segmentation, awtImage, Color.RED);
+					
+					SwingTools.show(awtImage, image.getId(), false);
+				}
+			} catch (final NullPointerException | ArrayIndexOutOfBoundsException exception) {
+				exception.printStackTrace();
 			} catch (final Exception exception) {
 				Tools.debugError(exception);
 			}
@@ -94,6 +112,32 @@ public final class LabelROIs {
 				Tools.debugError(exception);
 			}
 		});
+	}
+
+	public static void draw(final Partition2D segmentation,
+			final BufferedImage awtImage, final Color color) {
+		final Graphics2D graphics = awtImage.createGraphics();
+		
+		graphics.setColor(color);
+		
+		segmentation.forEach(Traversor.EDGE, dart -> {
+			final Point2D edgeBegin = segmentation.getVertex(dart);
+			final Point2D edgeEnd = segmentation.getVertex(opposite(dart));
+			final int x1 = (int) edgeBegin.getX();
+			final int y1 = (int) edgeBegin.getY();
+			final int x2 = (int) edgeEnd.getX();
+			final int y2 = (int) edgeEnd.getY();
+			
+			graphics.setColor(color);
+			graphics.drawLine(x1, y1, x2, y2);
+			graphics.setColor(Color.BLUE);
+			graphics.drawOval(x1 - 2, y1 - 2, 5, 5);
+			graphics.drawOval(x2 - 2, y2 - 2, 5, 5);
+			
+			return true;
+		});
+		
+		graphics.dispose();
 	}
 	
 	public static final BufferedImage newSegmentationVisualization(final Image2D image, final Image2D segmentationMask) {
@@ -262,6 +306,114 @@ public final class LabelROIs {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -5230229435132305086L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-10-06)
+	 */
+	public static final class Partition2D implements Serializable {
+		
+		private final Manifold manifold;
+		
+		private final List<Point2D> vertices;
+		
+		public Partition2D(final int width, final int height) {
+			this.manifold = new Manifold();
+			this.vertices = new ArrayList<>();
+			
+			final int left = this.manifold.newEdge();
+			this.vertices.add(new Point2D.Float(0F, 0F));
+			final int bottom = this.manifold.newEdge();
+			this.vertices.add(new Point2D.Float(0F, height - 1F));
+			final int right = this.manifold.newEdge();
+			this.vertices.add(new Point2D.Float(width - 1F, height - 1F));
+			final int top = this.manifold.newEdge();
+			this.vertices.add(new Point2D.Float(width - 1F, 0F));
+			
+			this.manifold.setNext(left, bottom);
+			this.manifold.setNext(bottom, right);
+			this.manifold.setNext(right, top);
+			this.manifold.setNext(top, left);
+			this.manifold.setNext(opposite(left), opposite(top));
+			this.manifold.setNext(opposite(top), opposite(right));
+			this.manifold.setNext(opposite(right), opposite(bottom));
+			this.manifold.setNext(opposite(bottom), opposite(left));
+		}
+		
+		public final int getLeftDart() {
+			return 0;
+		}
+		
+		public final int getBottomDart() {
+			return 2;
+		}
+		
+		public final int getRightDart() {
+			return 4;
+		}
+		
+		public final int getTopDart() {
+			return 6;
+		}
+		
+		public final Point2D getVertex(final int dart) {
+			if ((dart & 1) == 0) {
+				return this.vertices.get(dart / 2);
+			}
+			
+			return this.getVertex(this.manifold.getNext(opposite(dart)));
+		}
+		
+		public final int split(final int dart) {
+			final Point2D edgeBegin = this.getVertex(dart);
+			final Point2D edgeEnd = this.getVertex(opposite(dart));
+			final int result = this.manifold.cutEdge(dart);
+			
+			this.vertices.add(midpoint(edgeBegin, edgeEnd));
+			
+			return result;
+		}
+		
+		public final int split(final int dart1, final int dart2) {
+			final int next1 = this.split(dart1);
+			final int next2 = this.split(dart2);
+			
+			final Point2D vertex = this.getVertex(this.manifold.getNext(dart1));
+			
+			this.manifold.cutFace(dart1, dart2);
+			this.vertices.add(vertex);
+			
+			return next1;
+		}
+		
+		public final void makeGrid(final int horizontalStripes, final int verticalStripes, final int edgeSubdivisions) {
+			if (this.manifold.getNext(this.manifold.getNext(this.getLeftDart())) != this.getRightDart()) {
+				throw new IllegalStateException();
+			}
+			
+			int newDart = this.split(this.getLeftDart(), this.getRightDart());
+			
+			Tools.debugPrint(this.getVertex(this.getLeftDart()), this.getVertex(this.getBottomDart()), this.getVertex(this.getRightDart()), this.getVertex(this.getTopDart()));
+			Tools.debugPrint(this.getLeftDart(), this.manifold.getNext(this.getLeftDart()), newDart);
+		}
+		
+		public final void forEach(final Traversor traversor, final DartProcessor processor) {
+			this.manifold.forEach(traversor, processor);
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 4651220208345159029L;
+		
+		public static final Point2D midpoint(final Point2D p1, final Point2D p2) {
+			return new Point2D.Float(middle(p1.getX(), p2.getX()), middle(p1.getY(), p2.getY()));
+		}
+		
+		public static final float middle(final double a, final double b) {
+			return (float) ((a + b) / 2.0);
+		}
 		
 	}
 	

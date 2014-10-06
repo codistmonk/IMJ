@@ -1,4 +1,4 @@
-package pixel3d;
+package imj2.pixel3d;
 
 import java.awt.Component;
 import java.awt.event.MouseAdapter;
