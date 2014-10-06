@@ -85,7 +85,7 @@ public final class LabelROIs {
 					
 					SwingTools.show(awtImage, image.getId(), false);
 				}
-			} catch (final NullPointerException | ArrayIndexOutOfBoundsException exception) {
+			} catch (final NullPointerException | IndexOutOfBoundsException exception) {
 				exception.printStackTrace();
 			} catch (final Exception exception) {
 				Tools.debugError(exception);
@@ -266,50 +266,6 @@ public final class LabelROIs {
 	}
 	
 	/**
-	 * @author codistmonk (creation 2014-10-05)
-	 */
-	public static final class SegmentationGrid implements Serializable {
-		
-		private final List<Point2D> vertices;
-		
-		private final int columnCount;
-		
-		private final int rowCount;
-		
-		public SegmentationGrid(final Image2D image, final int segmentationSize) {
-			this.vertices = new ArrayList<>();
-			final int imageWidth = image.getWidth();
-			final int imageHeight = image.getHeight();
-			this.columnCount = (int) ceil((double) imageWidth / segmentationSize);
-			this.rowCount = (int) ceil((double) imageHeight / segmentationSize);
-			
-			for (int row = 0; row < this.rowCount; ++row) {
-				final int y = min(imageHeight - 1, row * segmentationSize);
-				
-				for (int column = 0; column < this.columnCount; ++column) {
-					final int x = min(imageWidth - 1, column * segmentationSize);
-					
-					this.vertices.add(new Point2D.Float(x, y));
-				}
-			}
-		}
-		
-		public final int getColumnCount() {
-			return this.columnCount;
-		}
-		
-		public final int getRowCount() {
-			return this.rowCount;
-		}
-		
-		/**
-		 * {@value}.
-		 */
-		private static final long serialVersionUID = -5230229435132305086L;
-		
-	}
-	
-	/**
 	 * @author codistmonk (creation 2014-10-06)
 	 */
 	public static final class Partition2D implements Serializable {
@@ -365,7 +321,7 @@ public final class LabelROIs {
 			return this.getVertex(this.manifold.getNext(opposite(dart)));
 		}
 		
-		public final int split(final int dart) {
+		public final int cut(final int dart) {
 			final Point2D edgeBegin = this.getVertex(dart);
 			final Point2D edgeEnd = this.getVertex(opposite(dart));
 			final int result = this.manifold.cutEdge(dart);
@@ -375,10 +331,14 @@ public final class LabelROIs {
 			return result;
 		}
 		
-		public final int split(final int dart1, final int dart2) {
-			final Point2D vertex = this.getVertex(this.split(dart1));
+		public final int splitByCuttingBoth(final int dart1, final int dart2) {
+			this.cut(dart2);
 			
-			this.split(dart2);
+			return this.splitByCuttingFirst(dart1, dart2);
+		}
+		
+		public final int splitByCuttingFirst(final int dart1, final int dart2) {
+			final Point2D vertex = this.getVertex(this.cut(dart1));
 			
 			final int result = this.manifold.cutFace(dart1, dart2);
 			this.vertices.add(vertex);
@@ -394,28 +354,46 @@ public final class LabelROIs {
 			final Point2D bottomRight = this.getVertex(this.getRightDart());
 			final int imageWidth = (int) (bottomRight.getX() + 1.0);
 			final int imageHeight = (int) (bottomRight.getY() + 1.0);
+			final int verticalDivisions = (imageHeight + step - 1) / step;
+			final List<Integer> horizontalStrips = new ArrayList<>(verticalDivisions);
 			
 			if (step < imageHeight) {
-				final int verticalDivisions = (imageHeight + step - 1) / step;
-				final List<Integer> darts = new ArrayList<>(verticalDivisions);
+				int newDart = this.splitByCuttingBoth(this.getLeftDart(), this.getRightDart());
 				
-				int newDart = this.split(this.getLeftDart(), this.getRightDart());
-				
-				darts.add(0, newDart);
+				horizontalStrips.add(0, newDart);
 				
 				for (int i = 2; i < verticalDivisions; ++i) {
-					newDart = this.split(this.getLeftDart(), this.manifold.getNext(newDart));
-					darts.add(0, newDart);
+					newDart = this.splitByCuttingBoth(this.getLeftDart(), this.manifold.getNext(newDart));
+					horizontalStrips.add(0, newDart);
 				}
 				
 				final int yStep = imageHeight / verticalDivisions;
 				final int[] y = { yStep };
 				
-				darts.forEach(dart -> {
+				horizontalStrips.forEach(dart -> {
 					setY(this.getVertex(dart), y[0]);
 					setY(this.getVertex(opposite(dart)), y[0]);
 					y[0] = min(imageHeight - 1, y[0] + yStep);
 				});
+			}
+			
+			horizontalStrips.add(this.getBottomDart());
+			
+			final int horizontalDivisions = (imageWidth + step - 1) / step;
+			
+			if (1 < horizontalDivisions) {
+				boolean firstStrip = true;
+				
+				for (final Integer stripBottom : horizontalStrips) {
+					final int stripTop = this.manifold.getNext(this.manifold.getNext(stripBottom));
+					
+					if (firstStrip) {
+						this.cut(stripTop);
+						firstStrip = false;
+					}
+					
+					this.splitByCuttingFirst(stripBottom, stripTop);
+				}
 			}
 		}
 		
