@@ -13,16 +13,37 @@ import imj2.core.Image2D;
 import imj2.core.Image2D.MonopatchProcess;
 import imj2.core.LinearBooleanImage;
 import imj2.core.LinearIntImage;
+import imj2.core.SubsampledImage2D;
 
+
+
+
+
+import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.geom.Point2D;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+
+
+
+
+import javax.imageio.ImageIO;
+
+import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
+
+
+
+
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -48,23 +69,111 @@ public final class LabelROIs {
 		final Document argumentsDocument = XMLTools.parse(Tools.getResourceAsStream(argumentsPath));
 		
 		XMLTools.getNodes(argumentsDocument, "arguments/reference").forEach(node -> {
-				final Image2D image = new LociBackedImage(((Element) node).getAttribute("image"), 3);
-				final int imageWidth = image.getWidth();
-				final int imageHeight = image.getHeight();
-				
-				Tools.debugPrint(image.getId(), imageWidth, imageHeight);
-				
-				final Image2D gradientImage = computeGradient(image);
-				
-				Tools.debugPrint(gradientImage.getWidth(), gradientImage.getHeight());
-				
-				final Image2D segmentationMask = newConcreteC1U1Image2D(image.getId() + "_segmentation", image.getWidth(), image.getHeight());
-				final int s = 32;
-				
-				
+			final Image2D image = new SubsampledImage2D(new LociBackedImage(((Element) node).getAttribute("image"), 4));
+			final int imageWidth = image.getWidth();
+			final int imageHeight = image.getHeight();
+			
+			Tools.debugPrint(image.getId(), imageWidth, imageHeight);
+			
+			final Image2D gradientImage = computeGradient(image);
+			
+			Tools.debugPrint(gradientImage.getWidth(), gradientImage.getHeight());
+			
+			final Image2D segmentationMask = computeSegmentationMask(image, gradientImage, 12);
 		});
-		XMLTools.getNodes(argumentsDocument, "arguments/test").forEach(
-				node -> Tools.debugPrint(((Element) node).getAttribute("image")));
+		XMLTools.getNodes(argumentsDocument, "arguments/test").forEach(node -> {
+			final Image2D image = new SubsampledImage2D(new LociBackedImage(((Element) node).getAttribute("image"), 4)).getLODImage(2);
+			final int imageWidth = image.getWidth();
+			final int imageHeight = image.getHeight();
+			
+			Tools.debugPrint(image.getId(), imageWidth, imageHeight);
+			
+			final Image2D gradientImage = computeGradient(image);
+			
+			Tools.debugPrint(gradientImage.getWidth(), gradientImage.getHeight());
+			
+			final Image2D segmentationMask = computeSegmentationMask(image, gradientImage, 12);
+			
+			try {
+				ImageIO.write(IMJTools.awtImage(image), "png", new File("image.png"));
+				ImageIO.write(IMJTools.awtImage(segmentationMask), "png", new File("segmentation.png"));
+				ImageIO.write(newSegmentationVisualization(image, segmentationMask), "png", new File("segmented.png"));
+			} catch (final IOException exception) {
+				exception.printStackTrace();
+			}
+		});
+	}
+
+	public static BufferedImage newSegmentationVisualization(
+			final Image2D image,
+			final Image2D segmentationMask) {
+		final int imageWidth = image.getWidth();
+		final int imageHeight = image.getHeight();
+		final BufferedImage awtImage = IMJTools.awtImage(image);
+		
+		{
+			final Graphics2D graphics = awtImage.createGraphics();
+			
+			graphics.setColor(Color.BLACK);
+			
+			segmentationMask.forEachPixelInBox(0, 0, imageWidth, imageHeight, new MonopatchProcess() {
+				
+				@Override
+				public final void pixel(final int x, final int y) {
+					if (segmentationMask.getPixelValue(x, y) != 0) {
+						graphics.fillRect(x, y, 2, 2);
+					}
+				}
+				
+			});
+			
+			graphics.dispose();
+		}
+		return awtImage;
+	}
+	
+	public static final Image2D computeSegmentationMask(final Image2D image, final Image2D gradientImage, final int stripeSize) {
+		final int imageWidth = image.getWidth();
+		final int imageHeight = image.getHeight();
+		final Image2D result = newConcreteC1U1Image2D(image.getId() + "_segmentation", imageWidth, imageHeight);
+		
+		for (int stripeX = 0; stripeX < imageWidth; stripeX += stripeSize) {
+			int x = min(imageWidth - 1, stripeX + stripeSize / 2);
+			
+			for (int y = 0; y < imageHeight; ++y) {
+				int gradient = gradientImage.getPixelValue(x, y);
+				final int leftVariation = stripeX < x - 1 ? gradientImage.getPixelValue(x - 1, y) - gradient : 0;
+				final int rightVariation = x + 1 < min(imageWidth, stripeX + stripeSize) ? gradientImage.getPixelValue(x + 1, y) - gradient : 0;
+				
+				if (max(0, leftVariation) < rightVariation) {
+					++x;
+				} else if (max(0, rightVariation) < leftVariation) {
+					--x;
+				}
+				
+				result.setPixelValue(x, y, 1);
+			}
+		}
+		
+		for (int stripeY = 0; stripeY < imageHeight; stripeY += stripeSize) {
+			int y = min(imageHeight - 1, stripeY + stripeSize / 2);
+			
+			for (int x = 0; x < imageWidth; ++x) {
+				int gradient = gradientImage.getPixelValue(x, y);
+				final int topVariation = stripeY < y - 1 ? gradientImage.getPixelValue(x, y - 1) - gradient : 0;
+				final int bottomVariation = y + 1 < min(imageHeight, stripeY + stripeSize) ? gradientImage.getPixelValue(x, y + 1) - gradient : 0;
+				
+				if (max(0, topVariation) < bottomVariation) {
+					++y;
+				} else if (max(0, bottomVariation) < topVariation) {
+					--y;
+				}
+				
+				result.setPixelValue(x, y, 1);
+			}
+		}
+		
+		return result;
 	}
 
 	public static Image2D computeGradient(final Image2D image) {
