@@ -75,7 +75,7 @@ public final class LabelROIs {
 				
 				final Partition2D segmentation = new Partition2D(imageWidth, imageHeight);
 				
-				segmentation.makeGrid(32, 3);
+				segmentation.makeGrid(32, 4);
 				
 				{
 					final BufferedImage awtImage = IMJTools.awtImage(image);
@@ -317,7 +317,7 @@ public final class LabelROIs {
 				return this.vertices.get(dart / 2);
 			}
 			
-			return this.getVertex(this.manifold.getNext(opposite(dart)));
+			return this.getVertex(this.next(opposite(dart)));
 		}
 		
 		public final int cut(final int dart) {
@@ -346,7 +346,7 @@ public final class LabelROIs {
 		}
 		
 		public final void makeGrid(final int step, final int edgeDivisions) {
-			if (this.manifold.getNext(this.manifold.getNext(this.getLeftDart())) != this.getRightDart()) {
+			if (this.next(this.next(this.getLeftDart())) != this.getRightDart()) {
 				throw new IllegalStateException();
 			}
 			
@@ -367,7 +367,7 @@ public final class LabelROIs {
 				y -= step;
 				
 				for (int i = 2; i < verticalDivisions; ++i) {
-					newDart = this.splitByCuttingBoth(this.getLeftDart(), this.manifold.getNext(newDart));
+					newDart = this.splitByCuttingBoth(this.getLeftDart(), this.next(newDart));
 					
 					horizontalStrips.add(0, newDart);
 					
@@ -388,7 +388,7 @@ public final class LabelROIs {
 					boolean firstStrip = true;
 					
 					for (final Integer stripBottom : horizontalStrips) {
-						final int stripTop = this.manifold.getNext(this.manifold.getNext(stripBottom));
+						final int stripTop = this.next(this.next(stripBottom));
 						
 						if (firstStrip) {
 							this.cut(stripTop);
@@ -405,10 +405,13 @@ public final class LabelROIs {
 				}
 			}
 			
-			this.manifold.forEach(Traversor.EDGE, dart -> {
+			this.forEach(Traversor.EDGE, dart -> {
+				final Point2D edgeBegin = this.getVertex(dart);
+				final Point2D edgeEnd = this.getVertex(opposite(dart));
+				
 				for (int i = 1; i < edgeDivisions; ++i) {
-					// TODO adjust vertex location
-					this.cut(dart);
+					lerp(edgeBegin, edgeEnd, (double) (edgeDivisions - i) / edgeDivisions,
+							this.getVertex(this.cut(dart)));
 				}
 				
 				return true;
@@ -419,17 +422,31 @@ public final class LabelROIs {
 			this.manifold.forEach(traversor, processor);
 		}
 		
+		final int next(final int dart) {
+			return this.manifold.getNext(dart);
+		}
+		
 		/**
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = 4651220208345159029L;
 		
 		public static final Point2D midpoint(final Point2D p1, final Point2D p2) {
-			return new Point2D.Float(middle(p1.getX(), p2.getX()), middle(p1.getY(), p2.getY()));
+			return lerp(p1, p2, 0.5);
 		}
 		
-		public static final float middle(final double a, final double b) {
-			return (float) ((a + b) / 2.0);
+		public static final Point2D lerp(final Point2D first, final Point2D last, final double ratio) {
+			return lerp(first, last, ratio, new Point2D.Float());
+		}
+		
+		public static final Point2D lerp(final Point2D first, final Point2D last, final double ratio, final Point2D result) {
+			result.setLocation(lerp(first.getX(), last.getX(), ratio), lerp(first.getY(), last.getY(), ratio));
+			
+			return result;
+		}
+		
+		public static final float lerp(final double first, final double last, final double ratio) {
+			return (float) (first + ratio * (last - first));
 		}
 		
 		public static final void setX(final Point2D point, final double x) {
