@@ -1,4 +1,4 @@
-package imj2.tools;
+package imj2.draft;
 
 import static imj.IMJTools.loadAndTryToCache;
 import static imj.database.IMJDatabaseTools.RGB;
@@ -62,6 +62,8 @@ import imj.database.Sample;
 import imj.database.Sampler;
 import imj.database.BKSearch.BKDatabase;
 import imj.database.Segmenter;
+import imj2.tools.MultiThreadTools;
+import imj2.tools.SimpleGray8ColorModel;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools.Statistics;

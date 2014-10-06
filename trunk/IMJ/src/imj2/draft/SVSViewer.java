@@ -1,4 +1,4 @@
-package imj2.tools;
+package imj2.draft;
 
 import static imj2.tools.IMJTools.awtImage;
 import static imj2.tools.SimpleImageView.centered;
@@ -9,6 +9,7 @@ import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+import imj2.tools.LociBackedImage;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;

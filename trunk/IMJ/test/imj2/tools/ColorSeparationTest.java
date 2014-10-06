@@ -13,9 +13,9 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
 import static pixel3d.PolygonTools.Z;
+import imj2.draft.PaletteBasedSegmentation.HistogramView;
+import imj2.draft.PaletteBasedSegmentation.HistogramView.SegmentsUpdatedEvent;
 import imj2.tools.Image2DComponent.Painter;
-import imj2.tools.PaletteBasedSegmentation.HistogramView;
-import imj2.tools.PaletteBasedSegmentation.HistogramView.SegmentsUpdatedEvent;
 
 import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;

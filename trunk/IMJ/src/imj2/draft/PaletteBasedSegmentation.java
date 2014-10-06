@@ -1,4 +1,4 @@
-package imj2.tools;
+package imj2.draft;
 
 import static imj2.tools.IMJTools.a8gray888;
 import static imj2.tools.IMJTools.a8r8g8b8;
@@ -29,10 +29,15 @@ import static net.sourceforge.aprog.tools.Tools.writeObject;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
 import static pixel3d.PolygonTools.Z;
+import imj2.draft.PaletteBasedSegmentation.HistogramView.PointsUpdatedEvent;
+import imj2.draft.PaletteBasedSegmentation.HistogramView.SegmentsUpdatedEvent;
+import imj2.tools.Canvas;
+import imj2.tools.ColorSeparationTest;
+import imj2.tools.Image2DComponent;
+import imj2.tools.SimpleImageView;
 import imj2.tools.ColorSeparationTest.RGBTransformer;
+import imj2.tools.ColorSeparationTest.RGBTransformer.Predefined;
 import imj2.tools.Image2DComponent.Painter;
-import imj2.tools.PaletteBasedSegmentation.HistogramView.PointsUpdatedEvent;
-import imj2.tools.PaletteBasedSegmentation.HistogramView.SegmentsUpdatedEvent;
 
 import java.awt.Color;
 import java.awt.Graphics2D;

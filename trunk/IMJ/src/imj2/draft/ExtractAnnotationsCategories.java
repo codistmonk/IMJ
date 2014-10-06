@@ -1,4 +1,4 @@
-package imj2.tools;
+package imj2.draft;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.max;

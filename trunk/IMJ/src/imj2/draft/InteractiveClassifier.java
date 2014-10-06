@@ -1,4 +1,4 @@
-package imj2.tools;
+package imj2.draft;
 
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
@@ -8,13 +8,16 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
 import static pixel3d.PolygonTools.Z;
-
 import imj2.core.Image.Channels;
 import imj2.core.Image.Monochannel;
 import imj2.core.Image2D;
 import imj2.core.LinearPackedGrayImage;
 import imj2.core.TiledImage2D;
+import imj2.tools.IMJTools;
+import imj2.tools.Image2DComponent;
+import imj2.tools.MultifileImage;
 import imj2.tools.IMJTools.TileProcessor;
+import imj2.tools.IMJTools.TileProcessor.Info;
 import imj2.tools.Image2DComponent.Painter;
 
 import java.awt.Color;

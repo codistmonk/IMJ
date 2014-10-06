@@ -1,4 +1,4 @@
-package imj2.tools;
+package imj2.draft;
 
 import static imj2.tools.IMJTools.getFieldValue;
 import static java.lang.Math.min;
@@ -8,6 +8,7 @@ import static net.sourceforge.aprog.tools.Tools.intRange;
 import static net.sourceforge.aprog.tools.Tools.iterable;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
+import imj2.tools.IMJTools;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
