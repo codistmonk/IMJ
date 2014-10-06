@@ -5,7 +5,6 @@ import static imj2.tools.IMJTools.green8;
 import static imj2.tools.IMJTools.red8;
 import static imj2.topology.Manifold.opposite;
 import static java.lang.Math.abs;
-import static java.lang.Math.ceil;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -358,23 +357,24 @@ public final class LabelROIs {
 			final List<Integer> horizontalStrips = new ArrayList<>(verticalDivisions);
 			
 			if (step < imageHeight) {
+				int y = (verticalDivisions - 1) * step;
 				int newDart = this.splitByCuttingBoth(this.getLeftDart(), this.getRightDart());
 				
 				horizontalStrips.add(0, newDart);
 				
+				setY(this.getVertex(newDart), y);
+				setY(this.getVertex(opposite(newDart)), y);
+				y -= step;
+				
 				for (int i = 2; i < verticalDivisions; ++i) {
 					newDart = this.splitByCuttingBoth(this.getLeftDart(), this.manifold.getNext(newDart));
+					
 					horizontalStrips.add(0, newDart);
+					
+					setY(this.getVertex(newDart), y);
+					setY(this.getVertex(opposite(newDart)), y);
+					y -= step;
 				}
-				
-				final int yStep = imageHeight / verticalDivisions;
-				final int[] y = { yStep };
-				
-				horizontalStrips.forEach(dart -> {
-					setY(this.getVertex(dart), y[0]);
-					setY(this.getVertex(opposite(dart)), y[0]);
-					y[0] = min(imageHeight - 1, y[0] + yStep);
-				});
 			}
 			
 			horizontalStrips.add(this.getBottomDart());
@@ -382,19 +382,30 @@ public final class LabelROIs {
 			final int horizontalDivisions = (imageWidth + step - 1) / step;
 			
 			if (1 < horizontalDivisions) {
-				boolean firstStrip = true;
+				int x = (horizontalDivisions - 1) * step;
 				
-				for (final Integer stripBottom : horizontalStrips) {
-					final int stripTop = this.manifold.getNext(this.manifold.getNext(stripBottom));
+				for (int i = 1; i < horizontalDivisions; ++i) {
+					boolean firstStrip = true;
 					
-					if (firstStrip) {
-						this.cut(stripTop);
-						firstStrip = false;
+					for (final Integer stripBottom : horizontalStrips) {
+						final int stripTop = this.manifold.getNext(this.manifold.getNext(stripBottom));
+						
+						if (firstStrip) {
+							this.cut(stripTop);
+							firstStrip = false;
+						}
+						
+						final int newDart = this.splitByCuttingFirst(stripBottom, stripTop);
+						
+						setX(this.getVertex(newDart), x);
+						setX(this.getVertex(opposite(newDart)), x);
 					}
 					
-					this.splitByCuttingFirst(stripBottom, stripTop);
+					x -= step;
 				}
 			}
+			
+			// TODO edge divisions
 		}
 		
 		public final void forEach(final Traversor traversor, final DartProcessor processor) {
