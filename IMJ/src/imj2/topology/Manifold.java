@@ -27,6 +27,16 @@ public final class Manifold implements Serializable {
 		return result;
 	}
 	
+	public final int getPrevious(final int dart, final int iterations) {
+		int result = dart;
+		
+		for (int i = 0; i < iterations; ++i) {
+			result = this.getPrevious(result);
+		}
+		
+		return result;
+	}
+	
 	public final int getPrevious(final int dart) {
 		int result;
 		int next = dart;
@@ -41,6 +51,16 @@ public final class Manifold implements Serializable {
 	
 	public final int getNext(final int dart) {
 		return this.nexts.get(dart);
+	}
+	
+	public final int getNext(final int dart, final int iterations) {
+		int result = dart;
+		
+		for (int i = 0; i < iterations; ++i) {
+			result = this.getNext(result);
+		}
+		
+		return result;
 	}
 	
 	public final void setNext(final int dart, final int next) {
