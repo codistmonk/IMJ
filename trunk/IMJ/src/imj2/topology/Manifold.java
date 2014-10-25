@@ -79,16 +79,34 @@ public final class Manifold implements Serializable {
 		return this.getDartCount() / 2;
 	}
 	
+	/**
+	 * <pre>
+	 * *---dartPrev-->*---dart--->*---dartNext-->*
+	 * *<----dart-----*<--dart'---*<--dart'Prev--*
+	 * 
+	 *                     |
+	 *                     v
+	 * 
+	 * *---dartPrev-->*---dart--->*---newDart-->*---dartNext-->*
+	 * *<----dart-----*<--dart'---*<--newDart'--*<--dart'Prev--*
+	 * </pre>
+	 * 
+	 * @param dart
+	 * <br>Range: <code>[0 .. this.getDartCount() - 1]</code>
+	 * @return
+	 * <br><code>oldDartCount + 1</code>
+	 */
 	public final int cutEdge(final int dart) {
-		final int newDart = this.newEdge();
-		final int newDartOpposite = this.getOpposite(newDart);
+		final int dartNext = this.getNext(dart);
 		final int dartOpposite = this.getOpposite(dart);
 		final int previousOfDartOpposite = this.getPrevious(dartOpposite);
+		final int newDart = this.newEdge();
+		final int newDartOpposite = this.getOpposite(newDart);
 		
+		this.setNext(dart, newDart);
+		this.setNext(newDart, dartNext);
 		this.setNext(previousOfDartOpposite, newDartOpposite);
 		this.setNext(newDartOpposite, dartOpposite);
-		this.setNext(newDart, this.getNext(dart));
-		this.setNext(dart, newDart);
 		
 		assert this.isValid();
 		
