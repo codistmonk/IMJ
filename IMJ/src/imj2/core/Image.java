@@ -35,6 +35,8 @@ public abstract interface Image extends Serializable {
 		
 		public abstract int getChannelValue(int pixelValue, int channelIndex);
 		
+		public abstract int setChannelValue(int pixelValue, int channelIndex, int channelValue);
+		
 	}
 	
 	/**
@@ -81,6 +83,11 @@ public abstract interface Image extends Serializable {
 			return PredefinedChannels.C1_U1.getChannelValue(pixelValue, channelIndex);
 		}
 		
+		@Override
+		public final int setChannelValue(final int pixelValue, final int channelIndex, final int channelValue) {
+			return PredefinedChannels.C1_U1.setChannelValue(pixelValue, channelIndex, channelValue);
+		}
+		
 		/**
 		 * {@value}.
 		 */
@@ -110,6 +117,11 @@ public abstract interface Image extends Serializable {
 				return channelIndex == 0 ? pixelValue : 0;
 			}
 			
+			@Override
+			public final int setChannelValue(final int pixelValue, final int channelIndex, final int channelValue) {
+				return channelIndex == 0 ? channelValue : pixelValue;
+			}
+			
 		}, C1_U8 {
 			
 			@Override
@@ -125,6 +137,11 @@ public abstract interface Image extends Serializable {
 			@Override
 			public final int getChannelValue(final int pixelValue, final int channelIndex) {
 				return C1_U1.getChannelValue(pixelValue, channelIndex);
+			}
+			
+			@Override
+			public final int setChannelValue(final int pixelValue, final int channelIndex, final int channelValue) {
+				return C1_U1.setChannelValue(pixelValue, channelIndex, channelValue);
 			}
 			
 		}, C1_U16 {
@@ -144,6 +161,11 @@ public abstract interface Image extends Serializable {
 				return C1_U1.getChannelValue(pixelValue, channelIndex);
 			}
 			
+			@Override
+			public final int setChannelValue(final int pixelValue, final int channelIndex, final int channelValue) {
+				return C1_U1.setChannelValue(pixelValue, channelIndex, channelValue);
+			}
+			
 		}, C1_S32 {
 			
 			@Override
@@ -159,6 +181,11 @@ public abstract interface Image extends Serializable {
 			@Override
 			public final int getChannelValue(final int pixelValue, final int channelIndex) {
 				return C1_U1.getChannelValue(pixelValue, channelIndex);
+			}
+			
+			@Override
+			public final int setChannelValue(final int pixelValue, final int channelIndex, final int channelValue) {
+				return C1_U1.setChannelValue(pixelValue, channelIndex, channelValue);
 			}
 			
 		}, C2_U16 {
@@ -178,6 +205,11 @@ public abstract interface Image extends Serializable {
 				return this.defaultGetChannelValue(pixelValue, channelIndex);
 			}
 			
+			@Override
+			public final int setChannelValue(final int pixelValue, final int channelIndex, final int channelValue) {
+				return this.defaultSetChannelValue(pixelValue, channelIndex, channelValue);
+			}
+			
 		}, C3_U8 {
 			
 			@Override
@@ -193,6 +225,11 @@ public abstract interface Image extends Serializable {
 			@Override
 			public final int getChannelValue(final int pixelValue, final int channelIndex) {
 				return this.defaultGetChannelValue(pixelValue, channelIndex);
+			}
+			
+			@Override
+			public final int setChannelValue(final int pixelValue, final int channelIndex, final int channelValue) {
+				return this.defaultSetChannelValue(pixelValue, channelIndex, channelValue);
 			}
 			
 		}, C4_U8 {
@@ -212,6 +249,11 @@ public abstract interface Image extends Serializable {
 				return this.defaultGetChannelValue(pixelValue, channelIndex);
 			}
 			
+			@Override
+			public final int setChannelValue(final int pixelValue, final int channelIndex, final int channelValue) {
+				return this.defaultSetChannelValue(pixelValue, channelIndex, channelValue);
+			}
+			
 		};
 		
 		public final boolean isIndexValid(final int index) {
@@ -220,6 +262,14 @@ public abstract interface Image extends Serializable {
 		
 		protected final int defaultGetChannelValue(final int pixelValue, final int channelIndex) {
 			return this.isIndexValid(channelIndex) ? (pixelValue >> (this.getChannelBitCount() * channelIndex)) & bitmask(this.getChannelBitCount()) : 0;
+		}
+		
+		protected final int defaultSetChannelValue(final int pixelValue, final int channelIndex, final int channelValue) {
+			final int channelBitCount = this.getChannelBitCount();
+			final int bitmask = bitmask(channelBitCount);
+			final int shift = channelBitCount * channelIndex;
+			
+			return this.isIndexValid(channelIndex) ? (pixelValue & ((~bitmask) << shift)) | ((channelValue & bitmask) << shift) : pixelValue;
 		}
 		
 		public static final int bitmask(final int lowBitCount) {
