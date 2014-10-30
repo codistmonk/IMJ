@@ -269,7 +269,7 @@ public abstract interface Image extends Serializable {
 			final int bitmask = bitmask(channelBitCount);
 			final int shift = channelBitCount * channelIndex;
 			
-			return this.isIndexValid(channelIndex) ? (pixelValue & ((~bitmask) << shift)) | ((channelValue & bitmask) << shift) : pixelValue;
+			return this.isIndexValid(channelIndex) ? (pixelValue & ~(bitmask << shift)) | ((channelValue & bitmask) << shift) : pixelValue;
 		}
 		
 		public static final int bitmask(final int lowBitCount) {
