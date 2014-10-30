@@ -540,7 +540,7 @@ public final class Image2DComponent extends JComponent {
 	private static final long serialVersionUID = 4189273248039238064L;
 	
 	public static final Window showDefaultImage() {
-		return show(newC4U8ConcreteImage2D(1, 1));
+		return show(newC4U8ConcreteImage2D("(1x1)", 1, 1));
 	}
 	
 	public static final Window show(final Image2D image) {
