@@ -194,7 +194,8 @@ public final class IMJTools extends IMJCoreTools {
 	}
 	
 	public static final BufferedImage awtImage(final Image2D image) {
-		return awtImage(image, 0, 0, image.getWidth(), image.getHeight());
+		return image instanceof AwtBackedImage ? ((AwtBackedImage) image).getAwtImage()
+				: awtImage(image, 0, 0, image.getWidth(), image.getHeight());
 	}
 	
 	public static final BufferedImage awtImage(final Image2D image
