@@ -22,7 +22,10 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.Iterator;
 
+import jgencode.primitivelists.LongList;
+
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-08-04)
@@ -368,6 +371,58 @@ public final class IMJTools extends IMJCoreTools {
 			private static final long serialVersionUID = 3431410834328760116L;
 			
 		});
+	}
+	
+	public static final void forEachPixelInEachComponent4(final Image2D image, final Image2D.Process process) {
+		final LongList todo = new LongList();
+		final long pixelCount = image.getPixelCount();
+		final BigBitSet done = new BigBitSet(pixelCount);
+		final int width = image.getWidth();
+		final int height = image.getHeight();
+		
+		Tools.debugPrint(pixelCount);
+		
+		for (long pixel = 0L; pixel < pixelCount; ++pixel) {
+			if (!done.get(pixel)) {
+				schedule(pixel, todo, done);
+				
+				while (!todo.isEmpty()) {
+					final long p = todo.remove(0);
+					final int value = image.getPixelValue(p);
+					final int x = (int) (p % width);
+					final int y = (int) (p / width);
+					
+					process.pixel(x, y);
+					
+					if (0 < y) {
+						maybeSchedule(image, p - width, value, todo, done);
+					}
+					if (0 < x) {
+						maybeSchedule(image, p - 1, value, todo, done);
+					}
+					if (x + 1 < width) {
+						maybeSchedule(image, p + 1, value, todo, done);
+					}
+					if (y + 1 < height) {
+						maybeSchedule(image, p + width, value, todo, done);
+					}
+				}
+				
+				process.endOfPatch();
+			}
+		}
+	}
+	
+	public static final void schedule(final long pixel, final LongList todo, final BigBitSet done) {
+		done.set(pixel, true);
+		todo.add(pixel);
+	}
+	
+	private static final void maybeSchedule(final Image2D image, final long pixel,
+			final int value, final LongList todo, final BigBitSet done) {
+		if (!done.get(pixel) && value == image.getPixelValue(pixel)) {
+			schedule(pixel, todo, done);
+		}
 	}
 	
 	/**
