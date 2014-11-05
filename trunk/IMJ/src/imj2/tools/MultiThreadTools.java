@@ -4,6 +4,8 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -26,10 +28,33 @@ public final class MultiThreadTools {
 	
 	private static ExecutorService executor;
 	
+	private static long lastAccess;
+	
+	static final synchronized long getLastAccess() {
+		return lastAccess;
+	}
+	
 	public static final synchronized ExecutorService getExecutor() {
 		if (executor == null) {
 			executor = Executors.newFixedThreadPool(WORKER_COUNT);
+			
+			final Timer terminator = new Timer();
+			final long period = 2_000L;
+			
+			terminator.scheduleAtFixedRate(new TimerTask() {
+				
+				@Override
+				public final void run() {
+					if (period <= (System.currentTimeMillis() - getLastAccess())) {
+						shutdownExecutor();
+						terminator.cancel();
+					}
+				}
+				
+			}, period, period);
 		}
+		
+		lastAccess = System.currentTimeMillis();
 		
 		return executor;
 	}
@@ -37,6 +62,7 @@ public final class MultiThreadTools {
 	public static final synchronized void shutdownExecutor() {
 		if (executor != null) {
 			executor.shutdown();
+			executor = null;
 		}
 	}
 	
