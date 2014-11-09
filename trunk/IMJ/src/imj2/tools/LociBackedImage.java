@@ -31,6 +31,8 @@ public final class LociBackedImage extends TiledImage2D {
 	
 	private final String imageId;
 	
+	private int seriesCount;
+	
 	private final int seriesIndex;
 	
 	private transient IFormatReader reader;
@@ -50,6 +52,7 @@ public final class LociBackedImage extends TiledImage2D {
 	public LociBackedImage(final String id, final int seriesIndex) {
 		super(id + "_series" + seriesIndex);
 		this.imageId = id;
+		
 		this.seriesIndex = seriesIndex;
 		
 		this.setupReader();
@@ -89,7 +92,7 @@ public final class LociBackedImage extends TiledImage2D {
 	}
 	
 	public final int getSeriesCount() {
-		return this.getReader().getSeriesCount();
+		return this.seriesCount;
 	}
 	
 	public final Dimension getSeriesDimension(final int seriesIndex) {
@@ -112,7 +115,15 @@ public final class LociBackedImage extends TiledImage2D {
 			return this;
 		}
 		
-		return this.subsampleds.compute(lod, (k, v) -> v != null ? v : new Subsampled(this, this.getSource(lod), lod).getLODImage(lod));
+		return this.subsampleds.compute(lod, (k, v) -> {
+			if (v != null) {
+				return v;
+			}
+			
+			final LociBackedImage source = this.getSource(lod);
+			
+			return new Subsampled(this, source, lod).getLODImage(lod);
+		});
 	}
 	
 	@Override
@@ -235,6 +246,14 @@ public final class LociBackedImage extends TiledImage2D {
 	private final void setupReader() {
 		this.reader = newImageReader(this.imageId);
 		
+		for (this.seriesCount = 0; this.seriesCount < this.reader.getSeriesCount(); ++this.seriesCount) {
+			this.reader.setSeries(this.seriesCount);
+			
+			if (this.reader.getSeriesMetadata().isEmpty()) {
+				break;
+			}
+		}
+		
 		this.reader.setSeries(this.seriesIndex);
 		
 		this.setOptimalTileDimensions(this.reader.getOptimalTileWidth(), this.reader.getOptimalTileHeight());
@@ -344,8 +363,6 @@ public final class LociBackedImage extends TiledImage2D {
 			this.lod = lod;
 			
 			this.setOptimalTileDimensions(source.getOptimalTileWidth(), source.getOptimalTileHeight());
-			
-			Tools.debugPrint(this.getId(), this.getWidth(), this.getHeight(), source.getWidth(), source.getHeight());
 		}
 		
 		@Override
@@ -391,8 +408,8 @@ public final class LociBackedImage extends TiledImage2D {
 				final int tileX, final int tileY, final ConcreteImage2D<LinearIntImage> tile) {
 			final Image2D source = this.getSource();
 			final DefaultColorModel color = new DefaultColorModel(source.getChannels());
-			final int stride = min(this.getSource().getWidth() / this.getWidth(), this.getSource().getHeight() / this.getHeight());
-			final int n = stride * stride;
+			final double stride = min((double) this.getSource().getWidth() / this.getWidth(),
+					(double) this.getSource().getHeight() / this.getHeight());
 			
 			tile.forEachPixelInBox(tileX, tileY, tile.getWidth(), tile.getHeight(), new MonopatchProcess() {
 				
@@ -402,10 +419,11 @@ public final class LociBackedImage extends TiledImage2D {
 					int green = 0;
 					int blue = 0;
 					int alpha = 0;
+					int n = 0;
 					
-					for (int yy = y * stride; yy < (y + 1) * stride; ++yy) {
-						for (int xx = x * stride; xx < (x + 1) * stride; ++xx) {
-							final int rgba = source.getPixelValue(xx, yy);
+					for (double yy = y * stride; yy < (y + 1.0) * stride; ++yy) {
+						for (double xx = x * stride; xx < (x + 1.0) * stride; ++xx, ++n) {
+							final int rgba = source.getPixelValue((int) xx, (int) yy);
 							red += color.red(rgba);
 							green += color.green(rgba);
 							blue += color.blue(rgba);
