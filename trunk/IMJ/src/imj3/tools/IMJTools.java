@@ -3,13 +3,11 @@ package imj3.tools;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeSet;
 import java.util.function.Supplier;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -30,8 +28,12 @@ public final class IMJTools {
 	@SuppressWarnings("unchecked")
 	private static final WeakReference<Sentinel>[] sentinel = new WeakReference[1];
 	
-	@SuppressWarnings("unchecked")
 	public static final <T> T cache(final String key, final Supplier<T> supplier) {
+		return cache(key, supplier, false);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final <T> T cache(final String key, final Supplier<T> supplier, final boolean refresh) {
 		Reference<T> reference;
 		
 		synchronized (cache) {
@@ -45,10 +47,30 @@ public final class IMJTools {
 				if (sentinel[0] == null) {
 					new Sentinel(cache, references, sentinel);
 				}
+			} else if (refresh) {
+				reference = new Reference<T>(key, supplier);
+				cache.put(key, reference);
 			}
 		}
 		
 		return reference.getObject();
+	}
+	
+	public static final void uncache(final String key) {
+		synchronized (cache) {
+			cache.remove(key);
+			
+			for (final Iterator<Reference<?>> i = references.iterator(); i.hasNext();) {
+				if (key.equals(i.next().getKey())) {
+					i.remove();
+					return;
+				}
+			}
+		}
+	}
+	
+	public static final int quantize(final int value, final int q) {
+		return q * (value / q);
 	}
 	
 	/**

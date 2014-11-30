@@ -1,5 +1,10 @@
 package imj3.core;
 
+import static imj3.tools.IMJTools.cache;
+import static imj3.tools.IMJTools.quantize;
+
+import java.io.Serializable;
+
 /**
  * @author codistmonk (creation 2014-11-29)
  */
@@ -70,7 +75,67 @@ public abstract interface Image2D extends Image {
 	}
 	
 	public default Image2D getTileContaining(final int x, final int y) {
+		final int tileX = quantize(x, this.getOptimalTileWidth());
+		final int tileY = quantize(y, this.getOptimalTileHeight());
+		final TileHolder tileHolder = this.getTileHolder();
+		
+		if (tileHolder == null) {
+			return this.getTile(tileX, tileY);
+		}
+		
+		if (tileX == tileHolder.getX() && tileY == tileHolder.getY()) {
+			return tileHolder.getTile();
+		}
+		
+		final String tileKey = this.getId() + "_x" + tileX + "_y" + tileY;
+		
+		return tileHolder.setTile(tileX, tileY, cache(tileKey, () -> this.getTile(tileX, tileY))).getTile();
+	}
+	
+	public default Image2D getTile(final int tileX, final int tileY) {
 		return this;
+	}
+	
+	public default TileHolder getTileHolder() {
+		return null;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-30-11)
+	 */
+	public static final class TileHolder implements Serializable {
+		
+		private int x;
+		
+		private int y;
+		
+		private Image2D tile;
+		
+		public final int getX() {
+			return this.x;
+		}
+		
+		public final int getY() {
+			return this.y;
+		}
+		
+		public final Image2D getTile() {
+			return this.tile;
+		}
+		
+		public final TileHolder setTile(final int x, final int y, final Image2D tile) {
+			this.x = x;
+			this.y = y;
+			this.tile = tile;
+			
+			return this;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 2483266583077586699L;
+		
 	}
 	
 }
