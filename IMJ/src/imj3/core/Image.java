@@ -1,11 +1,16 @@
 package imj3.core;
 
 import java.io.Serializable;
+import java.util.Map;
 
 /**
  * @author codistmonk (creation 2014-11-29)
  */
 public abstract interface Image extends Serializable {
+	
+	public abstract Map<String, Object> getMetadata();
+	
+	public abstract String getId();
 	
 	public abstract long getPixelCount();
 	
