@@ -10,19 +10,43 @@ public abstract interface Image2D extends Image {
 	public abstract int getHeight();
 	
 	public default long getPixelValue(final int x, final int y) {
-		return this.getPixelValue(this.getPixel(x, y));
+		final Image2D tile = this.getTileContaining(x, y);
+		
+		return tile == this ? this.getPixelValue(this.getPixel(x, y))
+				: tile.getPixelValue(x % tile.getWidth(), y % tile.getHeight());
 	}
 	
 	public default long getPixelChannelValue(final int x, final int y, final int channelIndex) {
-		return this.getPixelChannelValue(this.getPixel(x, y), channelIndex);
+		final Image2D tile = this.getTileContaining(x, y);
+		
+		return tile == this ? this.getPixelChannelValue(this.getPixel(x, y), channelIndex)
+				: tile.getPixelChannelValue(
+						x % tile.getOptimalTileWidth(), y % tile.getOptimalTileHeight(), channelIndex);
 	}
 	
 	public default Image2D setPixelValue(final int x, final int y, final long value) {
-		return (Image2D) this.setPixelValue(this.getPixel(x, y), value);
+		final Image2D tile = this.getTileContaining(x, y);
+		
+		if (tile == this) {
+			this.setPixelValue(this.getPixel(x, y), value);
+		} else {
+			tile.setPixelValue(x % tile.getOptimalTileWidth(), y % tile.getOptimalTileHeight(), value);
+		}
+		
+		return this;
 	}
 	
 	public default Image2D setPixelChannelValue(final int x, final int y, final int channelIndex, final long channelValue) {
-		return (Image2D) this.setPixelChannelValue(this.getPixel(x, y), channelIndex, channelValue);
+		final Image2D tile = this.getTileContaining(x, y);
+		
+		if (tile == this) {
+			this.setPixelChannelValue(this.getPixel(x, y), channelIndex, channelValue);
+		} else {
+			tile.setPixelChannelValue(x % this.getOptimalTileWidth(), y % this.getOptimalTileHeight(),
+					channelIndex, channelValue);
+		}
+		
+		return this;
 	}
 	
 	public default long getPixel(final int x, final int y) {
@@ -43,6 +67,10 @@ public abstract interface Image2D extends Image {
 	
 	public default int getOptimalTileHeight() {
 		return this.getHeight();
+	}
+	
+	public default Image2D getTileContaining(final int x, final int y) {
+		return this;
 	}
 	
 }
