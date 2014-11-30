@@ -75,6 +75,90 @@ public abstract interface Channels extends Serializable {
 				return 8;
 			}
 			
+		}, C1_U1 {
+			
+			@Override
+			public final int getChannelCount() {
+				return 1;
+			}
+			
+			@Override
+			public final int getChannelBitCount() {
+				return 1;
+			}
+			
+		}, C1_U8 {
+			
+			@Override
+			public final int getChannelCount() {
+				return 1;
+			}
+			
+			@Override
+			public final int getChannelBitCount() {
+				return 8;
+			}
+			
+		}, C1_U16 {
+			
+			@Override
+			public final int getChannelCount() {
+				return 1;
+			}
+			
+			@Override
+			public final int getChannelBitCount() {
+				return 16;
+			}
+			
+		}, C1_S32 {
+			
+			@Override
+			public final int getChannelCount() {
+				return 1;
+			}
+			
+			@Override
+			public final int getChannelBitCount() {
+				return 32;
+			}
+			
+		}, C2_U16 {
+			
+			@Override
+			public final int getChannelCount() {
+				return 2;
+			}
+			
+			@Override
+			public final int getChannelBitCount() {
+				return 16;
+			}
+			
+		}, C3_U8 {
+			
+			@Override
+			public final int getChannelCount() {
+				return 3;
+			}
+			
+			@Override
+			public final int getChannelBitCount() {
+				return 8;
+			}
+			
+		}, C4_U8 {
+			
+			@Override
+			public final int getChannelCount() {
+				return 4;
+			}
+			
+			@Override
+			public final int getChannelBitCount() {
+				return 8;
+			}
+			
 		};
 		
 		public static final int alpha8(final long pixelValue) {
