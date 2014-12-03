@@ -4,8 +4,12 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.join;
+
+import imj2.core.Image2D;
 import imj2.draft.PaletteBasedSegmentation.NearestNeighborRGBQuantizer;
 import imj2.tools.ColorSeparationTest.RGBTransformer;
+import imj2.tools.AwtBackedImage;
+import imj2.tools.IMJTools;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -16,9 +20,12 @@ import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
 import javax.swing.ComboBoxModel;
@@ -48,6 +55,7 @@ public final class PaletteBasedHistograms {
 		final File paletteFile = new File(arguments.get("palette", "transformerSelectorModel.jo"));
 		final ComboBoxModel<? extends RGBTransformer> palette = Tools.readObject(paletteFile.getPath());
 		final Collection<Pair<String, Map<Integer, int[]>>> data = new ArrayList<>();
+		final Map<Integer, Map<Integer, AtomicInteger>> segmentSizes = new HashMap<>();
 		final TicToc timer = new TicToc();
 		
 		Tools.debugPrint(palette);
@@ -107,6 +115,8 @@ public final class PaletteBasedHistograms {
 					
 					data.add(new Pair<>(labelsName, computeHistogram(labels, mask)));
 					
+					updateSegmentSizes(segmentSizes, labelsName, labels);
+					
 					try {
 						if (!labelsFile.exists()) {
 							Tools.debugPrint("Writing", labelsFile);
@@ -133,7 +143,11 @@ public final class PaletteBasedHistograms {
 			
 			Tools.debugPrint(labels.size(), labels);
 			
-			try (final PrintStream out = new PrintStream(new File(root, "all_counts.csv"))) {
+			final File countsFile = new File(root, "counts.csv");
+			
+			Tools.debugPrint("Writing", countsFile);
+			
+			try (final PrintStream out = new PrintStream(countsFile)) {
 				out.println("fileName," + join(",", labels.stream().map(Integer::toHexString).toArray()));
 				
 				data.forEach(p -> {
@@ -148,7 +162,68 @@ public final class PaletteBasedHistograms {
 			} catch (final FileNotFoundException exception) {
 				exception.printStackTrace();
 			}
+			
+			final File segmentsFile = new File(root, "segments.txt");
+			
+			Tools.debugPrint("Writing", segmentsFile);
+			
+			try (final PrintStream out = new PrintStream(segmentsFile)) {
+				labels.forEach(label -> {
+					final Map<Integer, AtomicInteger> sizes = segmentSizes.get(label);
+					
+					if (sizes != null) {
+						final List<Map.Entry<Integer, AtomicInteger>> list = new ArrayList<>(sizes.entrySet());
+						
+						Collections.sort(list, (e1, e2) ->
+							Integer.compare(e2.getValue().get(), e1.getValue().get()));
+						
+						out.println(Integer.toHexString(label) + ":" + list);
+					}
+				});
+			} catch (final FileNotFoundException exception) {
+				exception.printStackTrace();
+			}
 		}
+	}
+	
+	public static final void updateSegmentSizes(
+			final Map<Integer, Map<Integer, AtomicInteger>> segmentSizes,
+			final String labelsName, final BufferedImage labels) {
+		IMJTools.forEachPixelInEachComponent4(new AwtBackedImage(labelsName, labels), new Image2D.Process() {
+			
+			private Integer label;
+			
+			private int pixelCount;
+			
+			@Override
+			public final void pixel(final int x, final int y) {
+				if (this.label == null) {
+					this.label = labels.getRGB(x, y);
+				}
+				
+				++this.pixelCount;
+			}
+			
+			@Override
+			public final void endOfPatch() {
+				if (this.label != 0) {
+					final int q = 4;
+					final int quantizedPatchSize = (this.pixelCount + q - 1) / q * q;
+					
+					segmentSizes.computeIfAbsent(this.label, l -> new HashMap<>())
+						.computeIfAbsent(quantizedPatchSize, k -> new AtomicInteger()).incrementAndGet();
+				}
+				
+				this.label = null;
+				this.pixelCount = 0;
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 4003095469554064893L;
+			
+		});
 	}
 	
 	public static final void outlineSegments(final BufferedImage labels,
