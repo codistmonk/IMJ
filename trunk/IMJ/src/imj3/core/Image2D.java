@@ -100,6 +100,32 @@ public abstract interface Image2D extends Image {
 		return null;
 	}
 	
+	public default Image2D forEachPixel(final Pixel2DProcessor process) {
+		final int w = this.getWidth();
+		final int h = this.getHeight();
+		
+		loop:
+		for (int y = 0; y < h; ++y) {
+			for (int x = 0; x < w; ++x) {
+				if (!process.pixel(x, y)) {
+					break loop;
+				}
+			}
+			
+		}
+		
+		return this;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-12-03)
+	 */
+	public static abstract interface Pixel2DProcessor extends Serializable {
+		
+		public abstract boolean pixel(int x, int y);
+		
+	}
+	
 	/**
 	 * @author codistmonk (creation 2014-30-11)
 	 */
