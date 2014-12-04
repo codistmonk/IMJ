@@ -110,7 +110,7 @@ public final class PaletteBasedHistograms {
 						
 						quantize(image, mask, quantizer, labels);
 						smootheLabels(labels, mask, 3, 3);
-						outlineSegments(labels, mask, image);
+						outlineSegments(labels, mask, image, 0xFF00FF00);
 					}
 					
 					data.add(new Pair<>(labelsName, computeHistogram(labels, mask)));
@@ -227,7 +227,7 @@ public final class PaletteBasedHistograms {
 	}
 	
 	public static final void outlineSegments(final BufferedImage labels,
-			final BufferedImage mask, final BufferedImage image) {
+			final BufferedImage mask, final BufferedImage image, final int color) {
 		final int imageWidth = image.getWidth();
 		final int imageHeight = image.getHeight();
 		
@@ -238,7 +238,7 @@ public final class PaletteBasedHistograms {
 				final int southLabel = y + 1 < imageHeight ? labels.getRGB(x, y + 1) : label;
 				
 				if (label != eastLabel || label != southLabel) {
-					image.setRGB(x, y, 0xFF00FF00);
+					image.setRGB(x, y, color);
 				}
 			}
 			
