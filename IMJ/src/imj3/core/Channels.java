@@ -161,6 +161,14 @@ public abstract interface Channels extends Serializable {
 			
 		};
 		
+		public static final int uint8(final long value) {
+			return (int) (value & 0xFF);
+		}
+		
+		public static final int a8r8g8b8(final int alpha8, final int red8, final int green8, final int blue8) {
+			return (alpha8 << 24) | (red8 << 16) | (green8 << 8) | (blue8 << 0);
+		}
+		
 		public static final int alpha8(final long pixelValue) {
 			return (int) A8R8G8B8.getChannelValue(pixelValue, 3);
 		}

@@ -1,8 +1,13 @@
 package imj3.tools;
 
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.imageio.ImageIO;
 
 import imj3.core.Channels;
 import imj3.core.Image2D;
@@ -20,8 +25,14 @@ public final class AwtImage2D implements Image2D {
 	
 	private final long pixelCount;
 	
+	private final Channels channels;
+	
 	public AwtImage2D(final String id, final int width, final int height) {
 		this(id, new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB));
+	}
+	
+	public AwtImage2D(final String id) {
+		this(id, awtRead(id));
 	}
 	
 	public AwtImage2D(final String id, final BufferedImage source) {
@@ -29,6 +40,7 @@ public final class AwtImage2D implements Image2D {
 		this.id = id;
 		this.source = source;
 		this.pixelCount = (long) source.getWidth() * source.getHeight();
+		this.channels = predefinedChannelsFor(source);
 	}
 	
 	@Override
@@ -52,7 +64,7 @@ public final class AwtImage2D implements Image2D {
 	
 	@Override
 	public final Channels getChannels() {
-		return Channels.Predefined.A8R8G8B8;
+		return this.channels;
 	}
 	
 	@Override
@@ -91,5 +103,29 @@ public final class AwtImage2D implements Image2D {
 	 * {@value}.
 	 */
 	private static final long serialVersionUID = 1768785762610491131L;
+	
+	public static final BufferedImage awtRead(final String path) {
+		try {
+			return ImageIO.read(new File(path));
+		} catch (final IOException exception) {
+			throw new UncheckedIOException(exception);
+		}
+	}
+	
+	public static final Channels predefinedChannelsFor(final BufferedImage awtImage) {
+		switch (awtImage.getType()) {
+		case BufferedImage.TYPE_BYTE_BINARY:
+			return 1 == awtImage.getColorModel().getPixelSize() ?
+					Channels.Predefined.C1_U1 : Channels.Predefined.C3_U8;
+		case BufferedImage.TYPE_USHORT_GRAY:
+			return Channels.Predefined.C1_U16;
+		case BufferedImage.TYPE_BYTE_GRAY:
+			return Channels.Predefined.C1_U8;
+		case BufferedImage.TYPE_3BYTE_BGR:
+			return Channels.Predefined.C3_U8;
+		default:
+			return Channels.Predefined.A8R8G8B8;
+		}
+	}
 	
 }
