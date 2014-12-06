@@ -78,8 +78,10 @@ public final class Labels2Cells {
 		
 		// TODO update the palette format so that next time we don't have to
 		//      hard code the cell types color prototypes
-		final int positiveKey = 0xFF562E27;
-		final int negativeKey = 0xFF9496B6;
+//		final int positiveKey = 0xFF562E27;
+//		final int negativeKey = 0xFF9496B6;
+		final int positiveKey = 0xFF8A6851;
+		final int negativeKey = 0xFFA0A5C4;
 		
 		labelCellSizes.put(positiveKey, 50);
 		labelCellSizes.put(negativeKey, 35);
