@@ -2,9 +2,9 @@ package imj3.draft;
 
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.cast;
-
+import imj2.draft.PaletteBasedHistograms;
 import imj2.pixel3d.MouseHandler;
-
+import imj2.tools.Canvas;
 import imj3.tools.AwtImage2D;
 
 import java.awt.BorderLayout;
@@ -17,6 +17,10 @@ import java.awt.Window;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.HierarchyEvent;
+import java.awt.event.HierarchyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
@@ -24,10 +28,14 @@ import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.prefs.Preferences;
 
 import javax.swing.ImageIcon;
@@ -41,6 +49,8 @@ import javax.swing.JTree;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.WindowConstants;
+import javax.swing.event.TreeModelEvent;
+import javax.swing.event.TreeModelListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
@@ -291,22 +301,25 @@ public final class VisualSegmentation {
 	
 	public static final void setView(final JFrame mainFrame, final Component[] view, final File file) {
 		final BufferedImage image = AwtImage2D.awtRead(file.getPath());
-		final JLabel newView = new JLabel(new ImageIcon(image));
+		final Canvas filtered = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		final JLabel newView = new JLabel(new ImageIcon(filtered.getImage()));
+		final JTree tree = getSharedProperty(mainFrame, "tree");
+		final DefaultTreeModel treeModel = (DefaultTreeModel) tree.getModel();
 		
 		new MouseHandler(null) {
 			
 			@Override
 			public final void mouseClicked(final MouseEvent event) {
 				if (event.getClickCount() == 2) {
-					final JTree tree = getSharedProperty(mainFrame, "tree");
 					final TreePath selectionPath = tree.getSelectionPath();
 					
 					if (selectionPath != null) {
-						final PalettePrototype node = cast(PalettePrototype.class, selectionPath.getLastPathComponent());
+						final PalettePrototype node = cast(PalettePrototype.class,
+								selectionPath.getLastPathComponent());
 						
 						if (node != null) {
-							node.setUserObject(new Color(image.getRGB(event.getX(), event.getY())));
-							tree.repaint();
+							tree.getModel().valueForPathChanged(selectionPath,
+									new Color(image.getRGB(event.getX(), event.getY())));
 						}
 					}
 				}
@@ -319,7 +332,137 @@ public final class VisualSegmentation {
 			
 		}.addTo(newView);
 		
+		final Semaphore modelChanged = new Semaphore(1);
+		final Thread updater = new Thread() {
+			
+			@Override
+			public final void run() {
+				while (!this.isInterrupted()) {
+					try {
+						Tools.debugPrint();
+						modelChanged.acquire();
+						modelChanged.drainPermits();
+						Tools.debugPrint();
+					} catch (final InterruptedException exception) {
+						break;
+					}
+					
+					filtered.getGraphics().drawImage(image, 0, 0, null);
+					
+					final List<Color> prototypes = new ArrayList<>();
+					final List<PaletteCluster> clusters = new ArrayList<>();
+					
+					{
+						final PaletteCluster current[] = { null };
+						
+						forEachNodeIn((DefaultMutableTreeNode) treeModel.getRoot(), node -> {
+							final PaletteCluster cluster = cast(PaletteCluster.class, node);
+							
+							if (cluster != null) {
+								current[0] = cluster;
+							} else {
+								final PalettePrototype prototype = cast(PalettePrototype.class, node);
+								
+								if (prototype != null) {
+									prototypes.add((Color) prototype.getUserObject());
+									clusters.add(current[0]);
+								}
+							}
+							
+							return true;
+						});
+						
+						Tools.debugPrint(prototypes);
+						Tools.debugPrint(clusters);
+					}
+					
+					PaletteBasedHistograms.forEachPixelIn(image, (x, y) -> {
+						// TODO
+						return true;
+					});
+					
+					newView.repaint();
+					
+					Tools.debugPrint(this.isInterrupted());
+				}
+			}
+			
+		};
+		
+		updater.start();
+		
+		tree.getModel().addTreeModelListener(new TreeModelListener() {
+			
+			@Override
+			public final void treeStructureChanged(final TreeModelEvent event) {
+				this.modelChanged(event);
+			}
+			
+			@Override
+			public final void treeNodesRemoved(final TreeModelEvent event) {
+				this.modelChanged(event);
+			}
+			
+			@Override
+			public final void treeNodesInserted(final TreeModelEvent event) {
+				this.modelChanged(event);
+			}
+			
+			@Override
+			public final void treeNodesChanged(final TreeModelEvent event) {
+				this.modelChanged(event);
+			}
+			
+			private final void modelChanged(final TreeModelEvent event) {
+				modelChanged.release();
+				tree.repaint();
+			}
+			
+		});
+		
+		newView.addHierarchyListener(new HierarchyListener() {
+			
+			@Override
+			public final void hierarchyChanged(final HierarchyEvent event) {
+				if ((event.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && !newView.isShowing()) {
+					updater.interrupt();
+				}
+			}
+			
+		});
+		
 		setView(mainFrame, view, scrollable(center(newView)), file.getName());
+	}
+	
+	public static final <N extends DefaultMutableTreeNode> boolean forEachNodeIn(final N root, final NodeProcessor<N> process) {
+		final int n = root.getChildCount();
+		
+		if (n == 0) {
+			return process.node(root);
+		}
+		
+		if (!process.node(root)) {
+			return false;
+		}
+		
+		for (int i = 0; i < n; ++i) {
+			if (!forEachNodeIn((N) root.getChildAt(i), process)) {
+				return false;
+			}
+		}
+		
+		return true;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-12-06)
+	 *
+	 * @param <N>
+	 */
+	public static abstract interface NodeProcessor<N extends DefaultMutableTreeNode> {
+		
+		public abstract boolean node(N node);
+		
 	}
 	
 	public static final JPanel center(final Component component) {
