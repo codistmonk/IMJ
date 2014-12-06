@@ -409,8 +409,6 @@ public final class VisualSegmentation {
 					PaletteBasedHistograms.outlineSegments(labels.getImage(), null, filtered.getImage(), 0xFF00FF00);
 					
 					newView.repaint();
-					
-					Tools.debugPrint(this.isInterrupted());
 				}
 			}
 			
