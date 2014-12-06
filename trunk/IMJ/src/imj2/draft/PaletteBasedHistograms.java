@@ -232,7 +232,7 @@ public final class PaletteBasedHistograms {
 		final int imageHeight = image.getHeight();
 		
 		forEachPixelIn(labels, (x, y) -> {
-			if ((mask.getRGB(x, y) & 1) != 0) {
+			if (mask == null || (mask.getRGB(x, y) & 1) != 0) {
 				final int label = labels.getRGB(x, y);
 				final int eastLabel = x + 1 < imageWidth ? labels.getRGB(x + 1, y) : label;
 				final int southLabel = y + 1 < imageHeight ? labels.getRGB(x, y + 1) : label;

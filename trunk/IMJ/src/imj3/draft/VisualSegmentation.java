@@ -1,10 +1,16 @@
 package imj3.draft;
 
+import static imj2.tools.IMJTools.blue8;
+import static imj2.tools.IMJTools.green8;
+import static imj2.tools.IMJTools.red8;
+import static java.lang.Math.abs;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.cast;
+
 import imj2.draft.PaletteBasedHistograms;
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
+
 import imj3.tools.AwtImage2D;
 
 import java.awt.BorderLayout;
@@ -17,8 +23,6 @@ import java.awt.Window;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.HierarchyListener;
 import java.awt.event.MouseAdapter;
@@ -35,7 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.prefs.Preferences;
 
 import javax.swing.ImageIcon;
@@ -57,7 +60,6 @@ import javax.swing.tree.TreePath;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Pair;
 import net.sourceforge.aprog.tools.Tools;
 
 /**
@@ -191,49 +193,53 @@ public final class VisualSegmentation {
 			
 			private final JPopupMenu prototypePopup;
 			
-			private final PaletteNode[] currentNode;
+			private final TreePath[] currentPath;
 			
 			{
 				this.rootPopup = new JPopupMenu();
 				this.clusterPopup = new JPopupMenu();
 				this.prototypePopup = new JPopupMenu();
-				this.currentNode = new PaletteNode[1];
+				this.currentPath = new TreePath[1];
 				
 				this.rootPopup.add(newItem("Add cluster", e -> {
-					final PaletteNode newNode = new PaletteCluster();
+					final PaletteNode currentNode = (PaletteNode) this.currentPath[0].getLastPathComponent();
+					final PaletteNode newNode = new PaletteCluster().setName("cluster").setLabel(1);
 					
-					newNode.setUserObject(new Pair<>("cluster", 1));
-					
-					treeModel.insertNodeInto(newNode, this.currentNode[0], this.currentNode[0].getChildCount());
+					treeModel.insertNodeInto(newNode, currentNode, currentNode.getChildCount());
 				}));
 				this.clusterPopup.add(newItem("Set cluster name", e -> {
-					final Pair<String, Integer> pair = (Pair<String, Integer>) this.currentNode[0].getUserObject();
-					final String newValue = JOptionPane.showInputDialog(result, "Cluster name:", pair.getFirst());
+					final PaletteCluster currentNode = (PaletteCluster) this.currentPath[0].getLastPathComponent();
+					final String newValue = JOptionPane.showInputDialog(result, "Cluster name:", currentNode.getName());
 					
 					if (newValue != null) {
-						this.currentNode[0].setUserObject(new Pair<>(newValue, pair.getSecond()));
+						currentNode.setName(newValue);
+						treeModel.valueForPathChanged(this.currentPath[0], new Object());
 					}
 				}));
-				this.clusterPopup.add(newItem("Set patch size", e -> {
-					final Pair<String, Integer> pair = (Pair<String, Integer>) this.currentNode[0].getUserObject();
-					final String newValue = JOptionPane.showInputDialog(result, "Patch size:", pair.getSecond());
+				this.clusterPopup.add(newItem("Set cluster label", e -> {
+					final PaletteCluster currentNode = (PaletteCluster) this.currentPath[0].getLastPathComponent();
+					final String newValue = JOptionPane.showInputDialog(result, "Label:", currentNode.getLabel());
 					
 					if (newValue != null) {
-						this.currentNode[0].setUserObject(new Pair<>(pair.getFirst(), Integer.parseInt(newValue)));
+						currentNode.setLabel(Integer.parseInt(newValue));
+						treeModel.valueForPathChanged(this.currentPath[0], new Object());
 					}
 				}));
 				this.clusterPopup.add(newItem("Add prototype", e -> {
+					final PaletteCluster currentNode = (PaletteCluster) this.currentPath[0].getLastPathComponent();
 					final PaletteNode newNode = new PalettePrototype();
 					
 					newNode.setUserObject(new Color(0));
 					
-					treeModel.insertNodeInto(newNode, this.currentNode[0], this.currentNode[0].getChildCount());
+					treeModel.insertNodeInto(newNode, currentNode, currentNode.getChildCount());
 				}));
 				this.clusterPopup.add(newItem("Remove cluster", e -> {
-					treeModel.removeNodeFromParent(this.currentNode[0]);
+					final PaletteCluster currentNode = (PaletteCluster) this.currentPath[0].getLastPathComponent();
+					treeModel.removeNodeFromParent(currentNode);
 				}));
 				this.prototypePopup.add(newItem("Remove prototype", e -> {
-					treeModel.removeNodeFromParent(this.currentNode[0]);
+					final PalettePrototype currentNode = (PalettePrototype) this.currentPath[0].getLastPathComponent();
+					treeModel.removeNodeFromParent(currentNode);
 				}));
 			}
 			
@@ -255,10 +261,10 @@ public final class VisualSegmentation {
 			private final void mouseUsed(final MouseEvent event) {
 				if (event.isPopupTrigger()) {
 					final TreePath path = result.getPathForLocation(event.getX(), event.getY());
+					this.currentPath[0] = path;
 					
 					if (path != null) {
 						final Object node = path.getLastPathComponent();
-						this.currentNode[0] = cast(PaletteNode.class, node);
 						JPopupMenu popup = null;
 						
 						if (node instanceof PaletteRoot) {
@@ -301,6 +307,7 @@ public final class VisualSegmentation {
 	
 	public static final void setView(final JFrame mainFrame, final Component[] view, final File file) {
 		final BufferedImage image = AwtImage2D.awtRead(file.getPath());
+		final Canvas labels = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
 		final Canvas filtered = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
 		final JLabel newView = new JLabel(new ImageIcon(filtered.getImage()));
 		final JTree tree = getSharedProperty(mainFrame, "tree");
@@ -339,10 +346,8 @@ public final class VisualSegmentation {
 			public final void run() {
 				while (!this.isInterrupted()) {
 					try {
-						Tools.debugPrint();
 						modelChanged.acquire();
 						modelChanged.drainPermits();
-						Tools.debugPrint();
 					} catch (final InterruptedException exception) {
 						break;
 					}
@@ -371,15 +376,37 @@ public final class VisualSegmentation {
 							
 							return true;
 						});
-						
-						Tools.debugPrint(prototypes);
-						Tools.debugPrint(clusters);
 					}
 					
+					final int k = clusters.size();
+					
+					labels.getGraphics().setColor(new Color(0, true));
+					labels.getGraphics().fillRect(0, 0, labels.getWidth(), labels.getHeight());
+					
 					PaletteBasedHistograms.forEachPixelIn(image, (x, y) -> {
-						// TODO
+						int bestDistance = Integer.MAX_VALUE;
+						PaletteCluster cluster = null;
+						
+						for (int i = 0; i < k; ++i) {
+							final Color c = prototypes.get(i);
+							final int rgb = image.getRGB(x, y);
+							int distance = abs(red8(rgb) - c.getRed())
+									+ abs(green8(rgb) - c.getGreen()) + abs(blue8(rgb) - c.getBlue());
+							
+							if (distance < bestDistance) {
+								bestDistance = distance;
+								cluster = clusters.get(i);
+							}
+						}
+						
+						if (cluster != null) {
+							labels.getImage().setRGB(x, y, cluster.getLabel());
+						}
+						
 						return true;
 					});
+					
+					PaletteBasedHistograms.outlineSegments(labels.getImage(), null, filtered.getImage(), 0xFF00FF00);
 					
 					newView.repaint();
 					
@@ -504,6 +531,35 @@ public final class VisualSegmentation {
 	 * @author codistmonk (creation 2014-12-05)
 	 */
 	public static final class PaletteCluster extends PaletteNode {
+		
+		private String name;
+		
+		private int label;
+		
+		public final String getName() {
+			return this.name;
+		}
+		
+		public final PaletteCluster setName(final String name) {
+			this.name = name;
+			
+			return this;
+		}
+		
+		public final int getLabel() {
+			return this.label;
+		}
+		
+		public final PaletteCluster setLabel(final int label) {
+			this.label = label;
+			
+			return this;
+		}
+		
+		@Override
+		public final String toString() {
+			return this.getName() + " " + Integer.toHexString(this.getLabel());
+		}
 		
 		/**
 		 * {@value}.
