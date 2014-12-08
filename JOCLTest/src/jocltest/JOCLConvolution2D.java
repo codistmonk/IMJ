@@ -1,12 +1,17 @@
 package jocltest;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
+import static jocltest.JOCLConvolution2D.Denormalize.denormalizeTo;
+import static net.sourceforge.aprog.tools.Tools.ignore;
 import imj.cl.CLContext;
 import imj.cl.CLKernel;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Arrays;
 
 import javax.imageio.ImageIO;
@@ -46,14 +51,18 @@ public final class JOCLConvolution2D {
             + "	const int x = s * (gid % (inputWidth / s));\n"
             + "	const int y = s * (gid / (inputWidth / s));\n"
             + "	const int half = cs / 2;\n"
-            + "	const int left = max(0, x - half);\n"
-            + "	const int right = min(x - half + cs, inputWidth) - 1;\n"
-            + "	const int top = max(0, y - half);\n"
-            + "	const int bottom = min(y - half + cs, inputHeight) - 1;\n"
-            + "	const int cleft = left - (x - half);\n"
-            + "	const int cright = (x - half + cs - 1) - right;\n"
-            + "	const int ctop = top - (y - half);\n"
-            + "	const int cbottom = (y - half + cs - 1) - bottom;\n"
+            + "	const int virtualLeft = x + 1 - half;\n"
+            + "	const int virtualRight = virtualLeft + cs;\n"
+            + "	const int virtualTop = y + 1 - half;\n"
+            + "	const int virtualBottom = virtualTop + cs;\n"
+            + "	const int left = max(0, virtualLeft);\n"
+            + "	const int right = min(virtualRight, inputWidth) - 1;\n"
+            + "	const int top = max(0, virtualTop);\n"
+            + "	const int bottom = min(virtualBottom, inputHeight) - 1;\n"
+            + "	const int cleft = left - virtualLeft;\n"
+            + "	const int cright = (virtualRight - 1) - right;\n"
+            + "	const int ctop = top - virtualTop;\n"
+            + "	const int cbottom = (virtualBottom - 1) - bottom;\n"
             + "	output[gid] = 0;\n"
             + "	for (int yy = top, cy = ctop; yy <= bottom; ++yy, ++cy)\n"
             + "	{\n"
@@ -125,19 +134,159 @@ public final class JOCLConvolution2D {
 		Tools.debugPrint();
 		
 		final BufferedImage outputImage = new BufferedImage(outputWidth, outputHeight, BufferedImage.TYPE_INT_ARGB);
-		final Statistics statistics = new Statistics();
-		
-		for (int pixel = 0; pixel < outputPixelCount; ++pixel) {
-			statistics.addValue(output[pixel]);
-		}
+		final ToInt toInt = denormalizeTo(0, 255).using(output);
 		
 		for (int pixel = 0; pixel < outputPixelCount; ++pixel) {
 			outputImage.setRGB(pixel % outputWidth, pixel / outputWidth, 0xFF000000 |
-					(0x00010101 * (int) (255.0 * statistics.getNormalizedValue(output[pixel]))));
+					(0x00010101 * toInt.convert(output[pixel])));
 		}
 		
 		Tools.debugPrint("Writing", outputFile);
 		ImageIO.write(outputImage, "png", outputFile);
 	}
-
+	
+	/**
+	 * @author codistmonk (creation 2014-12-08)
+	 */
+	public static abstract class ToInt implements Serializable {
+		
+		private final int minimum;
+		
+		private final int maximum;
+		
+		protected ToInt(final int minimum, final int maximum) {
+			this.minimum = minimum;
+			this.maximum = maximum;
+		}
+		
+		public final int getMinimum() {
+			return this.minimum;
+		}
+		
+		public final int getMaximum() {
+			return this.maximum;
+		}
+		
+		public abstract ToInt using(float... values);
+		
+		public abstract int convert(float value);
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 1139958071040795451L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-12-08)
+	 */	
+	public static final class Clamp extends ToInt {
+		
+		public Clamp(final int minimum, final int maximum) {
+			super(minimum, maximum);
+		}
+		
+		@Override
+		public final Clamp using(final float... values) {
+			ignore(values);
+			
+			return this;
+		}
+		
+		@Override
+		public final int convert(final float value) {
+			return max(this.getMinimum(), min((int) value, this.getMaximum()));
+		}
+		
+		public static final int clamp(final float value, final int minimum, final int maximum) {
+			return max(minimum, min((int) value, maximum));
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 4832188313241788893L;
+		
+		public static final Clamp clampTo(final int minimum, final int maximum) {
+			return new Clamp(minimum, maximum);
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-12-08)
+	 */	
+	public static final class ClampFrom01 extends ToInt {
+		
+		private final float amplitude;
+		
+		public ClampFrom01(final int minimum, final int maximum) {
+			super(minimum, maximum);
+			this.amplitude = maximum - minimum;
+		}
+		
+		@Override
+		public final ClampFrom01 using(final float... values) {
+			ignore(values);
+			
+			return this;
+		}
+		
+		@Override
+		public final int convert(final float value) {
+			return Clamp.clamp(this.getMinimum() + value * this.amplitude, this.getMinimum(), this.getMaximum());
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -4747349293163739327L;
+		
+		public static final ClampFrom01 clampFrom01To(final int minimum, final int maximum) {
+			return new ClampFrom01(minimum, maximum);
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-12-08)
+	 */	
+	public static final class Denormalize extends ToInt {
+		
+		private final Statistics statistics;
+		
+		private final int amplitude;
+		
+		public Denormalize(final int minimum, final int maximum) {
+			super(minimum, maximum);
+			this.statistics = new Statistics();
+			this.amplitude = maximum - minimum;
+		}
+		
+		@Override
+		public final Denormalize using(final float... values) {
+			for (final float value : values) {
+				this.statistics.addValue(value);
+			}
+			
+			return this;
+		}
+		
+		@Override
+		public final int convert(final float value) {
+			return (int) (this.getMinimum() + this.statistics.getNormalizedValue(value) * this.amplitude);
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -5809444469110819941L;
+		
+		public static final Denormalize denormalizeTo(final int minimum, final int maximum) {
+			return new Denormalize(minimum, maximum);
+		}
+		
+	}
+	
 }
