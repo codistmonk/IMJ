@@ -2,9 +2,9 @@ package jocltest;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-import static java.lang.Math.sqrt;
 import static jocltest.JOCLConvolution2D.Denormalize.denormalizeTo;
 import static net.sourceforge.aprog.tools.Tools.ignore;
+
 import imj.cl.CLContext;
 import imj.cl.CLKernel;
 
@@ -12,8 +12,6 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.Arrays;
-
 import javax.imageio.ImageIO;
 
 import org.jocl.CL;
@@ -43,9 +41,9 @@ public final class JOCLConvolution2D {
             + "             __global float * output)"
             + "{\n"
             + "	const int gid = get_global_id(0);\n"
-            + "	const int inputWidth = inputDimensions[0];\n"
-            + "	const int inputHeight = inputDimensions[1];\n"
-            + "	const int inputChannels = inputDimensions[2];\n"
+            + "	const int inputChannels = inputDimensions[0];\n"
+            + "	const int inputWidth = inputDimensions[1];\n"
+            + "	const int inputHeight = inputDimensions[2];\n"
             + "	const int s = *step;\n"
             + "	const int convolutionCount = convolutionsDimensions[0];\n"
             + "	const int convolutionWidth = convolutionsDimensions[1];\n"
@@ -65,9 +63,10 @@ public final class JOCLConvolution2D {
             + "	const int cright = (virtualRight - 1) - right;\n"
             + "	const int ctop = top - virtualTop;\n"
             + "	const int cbottom = (virtualBottom - 1) - bottom;\n"
+            + "	const int outputPlaneSize = (inputWidth / s) * (inputHeight / s);\n"
             + "	for (int o = 0; o < convolutionCount; ++o)\n"
             + "	{\n"
-            + "		output[gid * convolutionCount + o] = 0;\n"
+            + "		output[outputPlaneSize * o + gid] = 0;\n"
             + "	}\n"
             + "	for (int yy = top, cy = ctop; yy <= bottom; ++yy, ++cy)\n"
             + "	{\n"
@@ -80,7 +79,7 @@ public final class JOCLConvolution2D {
             + "				const float inputValue = input[inputOffset + c];\n"
             + "				for (int o = 0; o < convolutionCount; ++o)\n"
             + "				{\n"
-            + "					output[gid * convolutionCount + o] += inputValue * convolutions[o * convolutionSize + convolutionOffset + c];\n"
+            + "					output[outputPlaneSize * o + gid] += inputValue * convolutions[o * convolutionSize + convolutionOffset + c];\n"
             + "				}\n"
             + "			}\n"
             + "		}\n"
@@ -103,14 +102,22 @@ public final class JOCLConvolution2D {
 		final int imageWidth = image.getWidth();
 		final int imageHeight = image.getHeight();
 		final int pixelCount = imageWidth * imageHeight;
-		final float[] input = new float[pixelCount * 3];
+		final int channelCount = 3;
+		final float[] input = new float[pixelCount * channelCount];
 		final int step = 2;
-		final float[] convolutionKernel = {
+		final float[] convolutions = {
+				1F, 0F, 0F, 1F, 0F, 0F,
+				1F, 0F, 0F, 1F, 0F, 0F,
+				
 				0F, 1F, 0F, 0F, 1F, 0F,
-				0F, 1F, 0F, 0F, 1F, 0F
+				0F, 1F, 0F, 0F, 1F, 0F,
+				
+				0F, 0F, 1F, 0F, 0F, 1F,
+				0F, 0F, 1F, 0F, 0F, 1F
 		};
-		final int convolutionSize = (int) sqrt(convolutionKernel.length / 3);
-		Tools.debugPrint(pixelCount, convolutionSize);
+		final int convolutionSize = 2;
+		final int convolutionCount = convolutions.length / (convolutionSize * convolutionSize * channelCount);
+		Tools.debugPrint(pixelCount, convolutionSize, convolutionCount);
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
 			final int rgb = image.getRGB(pixel % imageWidth, pixel / imageWidth);
@@ -127,29 +134,34 @@ public final class JOCLConvolution2D {
 		final int outputWidth = imageWidth / step;
 		final int outputHeight = imageHeight / step;
 		final int outputPixelCount = outputWidth * outputHeight;
-		final float[] output = new float[outputPixelCount];
+		final float[] output = new float[outputPixelCount * convolutionCount];
 		
 		kernel.setArg(0, context.createInputBuffer(input));
-		kernel.setArg(1, context.createInputBuffer(imageWidth, imageHeight, 3));
+		kernel.setArg(1, context.createInputBuffer(channelCount, imageWidth, imageHeight));
 		kernel.setArg(2, context.createInputBuffer(step));
-		kernel.setArg(3, context.createInputBuffer(convolutionKernel));
-		kernel.setArg(4, context.createInputBuffer(1, convolutionSize, convolutionSize));
-		kernel.setArg(5, context.createOutputBuffer(Sizeof.cl_float, outputPixelCount));
+		kernel.setArg(3, context.createInputBuffer(convolutions));
+		kernel.setArg(4, context.createInputBuffer(convolutionCount, convolutionSize, convolutionSize));
+		kernel.setArg(5, context.createOutputBuffer(Sizeof.cl_float, output.length));
 		
 		Tools.debugPrint();
 		
-		kernel.enqueueNDRange(output.length);
+		kernel.enqueueNDRange(output.length / convolutionCount);
 		kernel.enqueueReadArg(5, output);
 		
 		context.release();
 		Tools.debugPrint();
 		
 		final BufferedImage outputImage = new BufferedImage(outputWidth, outputHeight, BufferedImage.TYPE_INT_ARGB);
-		final ToInt toInt = denormalizeTo(0, 255).using(output);
+		final ToInt<?> toRed = denormalizeTo(0, 255).using(output, outputPixelCount * 0, outputPixelCount * 1);
+		final ToInt<?> toGreen = denormalizeTo(0, 255).using(output, outputPixelCount * 1, outputPixelCount * 2);
+		final ToInt<?> toBlue = denormalizeTo(0, 255).using(output, outputPixelCount * 2, outputPixelCount * 3);
 		
 		for (int pixel = 0; pixel < outputPixelCount; ++pixel) {
-			outputImage.setRGB(pixel % outputWidth, pixel / outputWidth, 0xFF000000 |
-					(0x00010101 * toInt.convert(output[pixel])));
+			outputImage.setRGB(pixel % outputWidth, pixel / outputWidth,
+					0xFF000000
+					| (toRed.convert(output[pixel + outputPixelCount * 0]) << 16)
+					| (toGreen.convert(output[pixel + outputPixelCount * 1]) << 8)
+					| (toBlue.convert(output[pixel + outputPixelCount * 2]) << 0));
 		}
 		
 		Tools.debugPrint("Writing", outputFile);
@@ -159,7 +171,7 @@ public final class JOCLConvolution2D {
 	/**
 	 * @author codistmonk (creation 2014-12-08)
 	 */
-	public static abstract class ToInt implements Serializable {
+	public static abstract class ToInt<S extends ToInt<?>> implements Serializable {
 		
 		private final int minimum;
 		
@@ -178,7 +190,11 @@ public final class JOCLConvolution2D {
 			return this.maximum;
 		}
 		
-		public abstract ToInt using(float... values);
+		public abstract S using(float[] values, int begin, int end);
+		
+		public final S using(final float... values) {
+			return this.using(values, 0, values.length);
+		}
 		
 		public abstract int convert(float value);
 		
@@ -192,15 +208,17 @@ public final class JOCLConvolution2D {
 	/**
 	 * @author codistmonk (creation 2014-12-08)
 	 */	
-	public static final class Clamp extends ToInt {
+	public static final class Clamp extends ToInt<Clamp> {
 		
 		public Clamp(final int minimum, final int maximum) {
 			super(minimum, maximum);
 		}
 		
 		@Override
-		public final Clamp using(final float... values) {
+		public final Clamp using(final float[] values, final int begin, final int end) {
 			ignore(values);
+			ignore(begin);
+			ignore(end);
 			
 			return this;
 		}
@@ -228,7 +246,7 @@ public final class JOCLConvolution2D {
 	/**
 	 * @author codistmonk (creation 2014-12-08)
 	 */	
-	public static final class ClampFrom01 extends ToInt {
+	public static final class ClampFrom01 extends ToInt<ClampFrom01> {
 		
 		private final float amplitude;
 		
@@ -238,8 +256,10 @@ public final class JOCLConvolution2D {
 		}
 		
 		@Override
-		public final ClampFrom01 using(final float... values) {
+		public final ClampFrom01 using(final float[] values, final int begin, final int end) {
 			ignore(values);
+			ignore(begin);
+			ignore(end);
 			
 			return this;
 		}
@@ -263,7 +283,7 @@ public final class JOCLConvolution2D {
 	/**
 	 * @author codistmonk (creation 2014-12-08)
 	 */	
-	public static final class Denormalize extends ToInt {
+	public static final class Denormalize extends ToInt<Denormalize> {
 		
 		private final Statistics statistics;
 		
@@ -276,12 +296,10 @@ public final class JOCLConvolution2D {
 		}
 		
 		@Override
-		public final Denormalize using(final float... values) {
-			for (final float value : values) {
-				this.statistics.addValue(value);
+		public final Denormalize using(final float[] values, final int begin, final int end) {
+			for (int i = begin; i < end; ++i) {
+				this.statistics.addValue(values[i]);
 			}
-			
-			Tools.debugPrint(statistics.getAmplitude());
 			
 			return this;
 		}
