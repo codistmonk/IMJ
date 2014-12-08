@@ -36,10 +36,10 @@ public final class JOCLConvolution2D {
     public static final String PROGRAM_SOURCE =
             "__kernel void "
             + "convolution2D(__global const float * input,"
-            + "             __constant const int * inputDimensions,"
-            + "             __constant const int * step,"
-            + "             __constant const float * convolutions,"
-            + "             __constant const int * convolutionsDimensions,"
+            + "             __global const int * inputDimensions,"
+            + "             __global const int * step,"
+            + "             __global const float * convolutions,"
+            + "             __global const int * convolutionsDimensions,"
             + "             __global float * output)"
             + "{\n"
             + "	const int gid = get_global_id(0);\n"
@@ -65,7 +65,10 @@ public final class JOCLConvolution2D {
             + "	const int cright = (virtualRight - 1) - right;\n"
             + "	const int ctop = top - virtualTop;\n"
             + "	const int cbottom = (virtualBottom - 1) - bottom;\n"
-            + "	output[gid] = 0;\n"
+            + "	for (int o = 0; o < convolutionCount; ++o)\n"
+            + "	{\n"
+            + "		output[gid * convolutionCount + o] = 0;\n"
+            + "	}\n"
             + "	for (int yy = top, cy = ctop; yy <= bottom; ++yy, ++cy)\n"
             + "	{\n"
             + "		for (int xx = left, cx = cleft; xx <= right; ++xx, ++cx)\n"
@@ -75,7 +78,8 @@ public final class JOCLConvolution2D {
             + "			for (int c = 0; c < inputChannels; ++c)\n"
             + "			{\n"
             + "				const float inputValue = input[inputOffset + c];\n"
-            + "				for (int o = 0; o < convolutionCount; ++o) {\n"
+            + "				for (int o = 0; o < convolutionCount; ++o)\n"
+            + "				{\n"
             + "					output[gid * convolutionCount + o] += inputValue * convolutions[o * convolutionSize + convolutionOffset + c];\n"
             + "				}\n"
             + "			}\n"
@@ -276,6 +280,8 @@ public final class JOCLConvolution2D {
 			for (final float value : values) {
 				this.statistics.addValue(value);
 			}
+			
+			Tools.debugPrint(statistics.getAmplitude());
 			
 			return this;
 		}
