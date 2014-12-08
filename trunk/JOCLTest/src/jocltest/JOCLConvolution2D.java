@@ -44,6 +44,7 @@ public final class JOCLConvolution2D {
             + "	const int inputChannels = inputDimensions[0];\n"
             + "	const int inputWidth = inputDimensions[1];\n"
             + "	const int inputHeight = inputDimensions[2];\n"
+            + "	const int inputPlaneSize = inputWidth * inputHeight;\n"
             + "	const int s = *step;\n"
             + "	const int convolutionCount = convolutionsDimensions[0];\n"
             + "	const int convolutionWidth = convolutionsDimensions[1];\n"
@@ -72,11 +73,11 @@ public final class JOCLConvolution2D {
             + "	{\n"
             + "		for (int xx = left, cx = cleft; xx <= right; ++xx, ++cx)\n"
             + "		{\n"
-            + "			const int inputOffset = (yy * inputWidth + xx) * inputChannels;\n"
+            + "			const int inputOffset = (yy * inputWidth + xx);\n"
             + "			const int convolutionOffset = (cy * convolutionWidth + cx) * inputChannels;\n"
             + "			for (int c = 0; c < inputChannels; ++c)\n"
             + "			{\n"
-            + "				const float inputValue = input[inputOffset + c];\n"
+            + "				const float inputValue = input[inputPlaneSize * c + inputOffset];\n"
             + "				for (int o = 0; o < convolutionCount; ++o)\n"
             + "				{\n"
             + "					output[outputPlaneSize * o + gid] += inputValue * convolutions[o * convolutionSize + convolutionOffset + c];\n"
@@ -121,9 +122,9 @@ public final class JOCLConvolution2D {
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
 			final int rgb = image.getRGB(pixel % imageWidth, pixel / imageWidth);
-			input[pixel * 3 + 0] = (rgb >> 16) & 0xFF;
-			input[pixel * 3 + 1] = (rgb >> 8) & 0xFF;
-			input[pixel * 3 + 2] = (rgb >> 0) & 0xFF;
+			input[pixelCount * 0 + pixel] = (rgb >> 16) & 0xFF;
+			input[pixelCount * 1 + pixel] = (rgb >> 8) & 0xFF;
+			input[pixelCount * 2 + pixel] = (rgb >> 0) & 0xFF;
 		}
 		
 		CL.setExceptionsEnabled(true);
