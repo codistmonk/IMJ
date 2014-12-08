@@ -38,8 +38,8 @@ public final class JOCLConvolution2D {
             + "convolution2D(__global const float * input,"
             + "             __constant const int * inputDimensions,"
             + "             __constant const int * step,"
-            + "             __constant const float * convolutionKernel,"
-            + "             __constant const int * convolutionSize,"
+            + "             __constant const float * convolutions,"
+            + "             __constant const int * convolutionsDimensions,"
             + "             __global float * output)"
             + "{\n"
             + "	const int gid = get_global_id(0);\n"
@@ -47,14 +47,16 @@ public final class JOCLConvolution2D {
             + "	const int inputHeight = inputDimensions[1];\n"
             + "	const int inputChannels = inputDimensions[2];\n"
             + "	const int s = *step;\n"
-            + "	const int cs = *convolutionSize;\n"
+            + "	const int convolutionCount = convolutionsDimensions[0];\n"
+            + "	const int convolutionWidth = convolutionsDimensions[1];\n"
+            + "	const int convolutionHeight = convolutionsDimensions[2];\n"
+            + "	const int convolutionSize = convolutionWidth * convolutionHeight * inputChannels;\n"
             + "	const int x = s * (gid % (inputWidth / s));\n"
             + "	const int y = s * (gid / (inputWidth / s));\n"
-            + "	const int half = cs / 2;\n"
-            + "	const int virtualLeft = x + 1 - half;\n"
-            + "	const int virtualRight = virtualLeft + cs;\n"
-            + "	const int virtualTop = y + 1 - half;\n"
-            + "	const int virtualBottom = virtualTop + cs;\n"
+            + "	const int virtualLeft = x + 1 - (convolutionWidth / 2);\n"
+            + "	const int virtualRight = virtualLeft + convolutionWidth;\n"
+            + "	const int virtualTop = y + 1 - (convolutionHeight / 2);\n"
+            + "	const int virtualBottom = virtualTop + convolutionHeight;\n"
             + "	const int left = max(0, virtualLeft);\n"
             + "	const int right = min(virtualRight, inputWidth) - 1;\n"
             + "	const int top = max(0, virtualTop);\n"
@@ -69,10 +71,13 @@ public final class JOCLConvolution2D {
             + "		for (int xx = left, cx = cleft; xx <= right; ++xx, ++cx)\n"
             + "		{\n"
             + "			const int inputOffset = (yy * inputWidth + xx) * inputChannels;\n"
-            + "			const int kernelOffset = (cy * cs + cx) * inputChannels;\n"
+            + "			const int convolutionOffset = (cy * convolutionWidth + cx) * inputChannels;\n"
             + "			for (int c = 0; c < inputChannels; ++c)\n"
             + "			{\n"
-            + "				output[gid] += input[inputOffset + c] * convolutionKernel[kernelOffset + c];\n"
+            + "				const float inputValue = input[inputOffset + c];\n"
+            + "				for (int o = 0; o < convolutionCount; ++o) {\n"
+            + "					output[gid * convolutionCount + o] += inputValue * convolutions[o * convolutionSize + convolutionOffset + c];\n"
+            + "				}\n"
             + "			}\n"
             + "		}\n"
             + "	}\n"
@@ -100,6 +105,8 @@ public final class JOCLConvolution2D {
 				0F, 1F, 0F, 0F, 1F, 0F,
 				0F, 1F, 0F, 0F, 1F, 0F
 		};
+		final int convolutionSize = (int) sqrt(convolutionKernel.length / 3);
+		Tools.debugPrint(pixelCount, convolutionSize);
 		
 		for (int pixel = 0; pixel < pixelCount; ++pixel) {
 			final int rgb = image.getRGB(pixel % imageWidth, pixel / imageWidth);
@@ -122,7 +129,7 @@ public final class JOCLConvolution2D {
 		kernel.setArg(1, context.createInputBuffer(imageWidth, imageHeight, 3));
 		kernel.setArg(2, context.createInputBuffer(step));
 		kernel.setArg(3, context.createInputBuffer(convolutionKernel));
-		kernel.setArg(4, context.createInputBuffer((int) sqrt(convolutionKernel.length / 3)));
+		kernel.setArg(4, context.createInputBuffer(1, convolutionSize, convolutionSize));
 		kernel.setArg(5, context.createOutputBuffer(Sizeof.cl_float, outputPixelCount));
 		
 		Tools.debugPrint();
