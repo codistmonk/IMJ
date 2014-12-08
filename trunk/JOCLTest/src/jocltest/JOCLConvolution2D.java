@@ -158,14 +158,18 @@ public final class JOCLConvolution2D {
 		
 		for (int pixel = 0; pixel < outputPixelCount; ++pixel) {
 			outputImage.setRGB(pixel % outputWidth, pixel / outputWidth,
-					0xFF000000
-					| (toRed.convert(output[pixel + outputPixelCount * 0]) << 16)
-					| (toGreen.convert(output[pixel + outputPixelCount * 1]) << 8)
-					| (toBlue.convert(output[pixel + outputPixelCount * 2]) << 0));
+					a8r8g8b8(0xFF,
+							toRed.convert(output[pixel + outputPixelCount * 0]),
+							toGreen.convert(output[pixel + outputPixelCount * 1]),
+							toBlue.convert(output[pixel + outputPixelCount * 2])));
 		}
 		
 		Tools.debugPrint("Writing", outputFile);
 		ImageIO.write(outputImage, "png", outputFile);
+	}
+	
+	public static final int a8r8g8b8(final int a8, final int r8, final int g8, final int b8) {
+		return (a8 << 24) | (r8 << 16) | (g8 << 8) | (b8 << 0);
 	}
 	
 	/**
