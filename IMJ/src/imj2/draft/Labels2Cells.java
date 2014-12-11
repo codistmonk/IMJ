@@ -58,30 +58,33 @@ public final class Labels2Cells {
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final File root = new File(arguments.get("in", ""));
-		final File paletteFile = new File(arguments.get("palette", "transformerSelectorModel.jo"));
-		final ComboBoxModel<? extends RGBTransformer> palette = Tools.readObject(paletteFile.getPath());
 		final Map<Integer, Integer> labelCellSizes = new HashMap<>();
 		final List<String> counts2 = new ArrayList<>();
 		
-		Tools.debugPrint(palette);
-		final RGBTransformer quantizer = palette.getElementAt(1);
-		Tools.debugPrint(quantizer);
-		
-		// XXX temporary fix for a defective palette
-		if (true) {
-			final NearestNeighborRGBQuantizer nnq = (NearestNeighborRGBQuantizer) quantizer;
+		if (false) {
+			final File paletteFile = new File(arguments.get("palette", "transformerSelectorModel.jo"));
+			final ComboBoxModel<? extends RGBTransformer> palette = Tools.readObject(paletteFile.getPath());
 			
-			nnq.getClusters().remove(0xFF008080);
+			Tools.debugPrint(palette);
+			final RGBTransformer quantizer = palette.getElementAt(1);
+			Tools.debugPrint(quantizer);
 			
-			Tools.debugPrint(nnq.getClusters());
+			// XXX temporary fix for a defective palette
+			if (true) {
+				final NearestNeighborRGBQuantizer nnq = (NearestNeighborRGBQuantizer) quantizer;
+				
+				nnq.getClusters().remove(0xFF008080);
+				
+				Tools.debugPrint(nnq.getClusters());
+			}
 		}
 		
 		// TODO update the palette format so that next time we don't have to
 		//      hard code the cell types color prototypes
-//		final int positiveKey = 0xFF562E27;
-//		final int negativeKey = 0xFF9496B6;
-		final int positiveKey = 0xFF8A6851;
-		final int negativeKey = 0xFFA0A5C4;
+		final int positiveKey = 0xFF562E27;
+		final int negativeKey = 0xFF9496B6;
+//		final int positiveKey = 0xFF8A6851;
+//		final int negativeKey = 0xFFA0A5C4;
 		
 		labelCellSizes.put(positiveKey, 50);
 		labelCellSizes.put(negativeKey, 35);
