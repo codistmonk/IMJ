@@ -5,6 +5,7 @@ import static imj2.tools.IMJTools.green8;
 import static imj2.tools.IMJTools.red8;
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.abs;
+import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
@@ -22,6 +23,7 @@ import java.awt.GridBagLayout;
 import java.awt.Window;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.HierarchyListener;
@@ -39,19 +41,26 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.Semaphore;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.prefs.Preferences;
 
+import javax.swing.AbstractAction;
+import javax.swing.Box;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JTextField;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
@@ -143,12 +152,6 @@ public final class VisualSegmentation {
 			}
 			
 			repeat(mainFrame, 30_000, e -> {
-//			repeat(mainFrame, 10, e -> {
-//				final Serializable model = (Serializable) tree.getModel();
-//				
-//				synchronized (model) {
-//					Tools.writeObject(model, PALETTE_XML);
-//				}
 				final DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
 				
 				try (final OutputStream output = new FileOutputStream(PALETTE_XML)) {
@@ -193,6 +196,8 @@ public final class VisualSegmentation {
 			
 			result.setAttribute("name", cluster.getName());
 			result.setAttribute("label", Integer.toString(cluster.getLabel()));
+			result.setAttribute("minimumSegmentSize", Integer.toString(cluster.getMinimumSegmentSize()));
+			result.setAttribute("maximumSegmentSize", Integer.toString(cluster.getMaximumSegmentSize()));
 			
 			final int n = cluster.getChildCount();
 			
@@ -303,6 +308,93 @@ public final class VisualSegmentation {
 		return new DefaultTreeModel(new PaletteRoot());
 	}
 	
+	public static final void showEditDialog(final String title, final Runnable ifOkClicked, final Property... properties) {
+		final JDialog dialog = new JDialog((Window) null, title);
+		final Box box = Box.createVerticalBox();
+		final Map<Property, Supplier<String>> newValues = new IdentityHashMap<>();
+		
+		dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+		
+		for (final Property property : properties) {
+			final JTextField field = new JTextField("" + property.getGetter().get());
+			
+			box.add(horizontalBox(new JLabel(property.getName()), field));
+			
+			newValues.put(property, field::getText);
+		}
+		
+		box.add(horizontalBox(
+				Box.createHorizontalGlue(),
+				new JButton(new AbstractAction("Ok") {
+					
+					@Override
+					public final void actionPerformed(final ActionEvent event) {
+						for (final Property property : properties) {
+							property.getParser().apply(newValues.get(property).get());
+						}
+						
+						dialog.dispose();
+						
+						ifOkClicked.run();
+					}
+					
+					private static final long serialVersionUID = -1250254465599248142L;
+				
+				}),
+				new JButton(new AbstractAction("Cancel") {
+					
+					@Override
+					public final void actionPerformed(final ActionEvent event) {
+						dialog.dispose();
+					}
+					
+					private static final long serialVersionUID = -1250254465599248142L;
+					
+				})
+		));
+		
+		dialog.add(box);
+		
+		SwingTools.packAndCenter(dialog).setVisible(true);
+	}
+	
+	public static final Property property(final String name, final Supplier<?> getter,
+			final Function<String, ?> parser) {
+		return new Property(name, getter, parser);
+	}
+
+	
+	public static final class Property implements Serializable {
+		
+		private final String name;
+		
+		private final Supplier<?> getter;
+		
+		private final Function<String, ?> parser;
+		
+		public Property(final String name, final Supplier<?> getter,
+				final Function<String, ?> parser) {
+			this.name = name;
+			this.getter = getter;
+			this.parser = parser;
+		}
+		
+		public final String getName() {
+			return this.name;
+		}
+		
+		public final Supplier<?> getGetter() {
+			return this.getter;
+		}
+		
+		public final Function<String, ?> getParser() {
+			return this.parser;
+		}
+		
+		private static final long serialVersionUID = -6068768247605642711L;
+		
+	}
+	
 	public static final PaletteRoot fromXML(final InputStream input) {
 		final Document xml = XMLTools.parse(input);
 		final PaletteRoot result = new PaletteRoot();
@@ -310,7 +402,10 @@ public final class VisualSegmentation {
 		for (final Node clusterNode : XMLTools.getNodes(xml, "palette/cluster")) {
 			final PaletteCluster cluster = new PaletteCluster()
 				.setName(clusterNode.getAttributes().getNamedItem("name").getTextContent())
-				.setLabel(parseInt(clusterNode.getAttributes().getNamedItem("label").getTextContent()));
+				.setLabel(parseInt(clusterNode.getAttributes().getNamedItem("label").getTextContent()))
+				.setMinimumSegmentSize(parseInt(clusterNode.getAttributes().getNamedItem("minimumSegmentSize").getTextContent()))
+				.setMaximumSegmentSize(parseInt(clusterNode.getAttributes().getNamedItem("maximumSegmentSize").getTextContent()))
+				;
 			
 			result.add(cluster);
 			
@@ -352,23 +447,15 @@ public final class VisualSegmentation {
 					
 					treeModel.insertNodeInto(newNode, currentNode, currentNode.getChildCount());
 				}));
-				this.clusterPopup.add(newItem("Set cluster name", e -> {
+				this.clusterPopup.add(newItem("Edit cluster properties...", e -> {
 					final PaletteCluster currentNode = (PaletteCluster) this.currentPath[0].getLastPathComponent();
-					final String newValue = JOptionPane.showInputDialog(result, "Cluster name:", currentNode.getName());
-					
-					if (newValue != null) {
-						currentNode.setName(newValue);
-						treeModel.valueForPathChanged(this.currentPath[0], new Object());
-					}
-				}));
-				this.clusterPopup.add(newItem("Set cluster label", e -> {
-					final PaletteCluster currentNode = (PaletteCluster) this.currentPath[0].getLastPathComponent();
-					final String newValue = JOptionPane.showInputDialog(result, "Label:", currentNode.getLabel());
-					
-					if (newValue != null) {
-						currentNode.setLabel(Integer.parseInt(newValue));
-						treeModel.valueForPathChanged(this.currentPath[0], new Object());
-					}
+					showEditDialog("Edit cluster properties",
+							() -> { treeModel.valueForPathChanged(this.currentPath[0], new Object()); },
+							property("name:", currentNode::getName, currentNode::parseName),
+							property("label:", currentNode::getLabel, currentNode::parseLabel),
+							property("minimumSegmentSize:", currentNode::getMinimumSegmentSize, currentNode::parseMinimumSegmentSize),
+							property("maximumSegmentSize:", currentNode::getMaximumSegmentSize, currentNode::parseMaximumSegmentSize)
+					);
 				}));
 				this.clusterPopup.add(newItem("Add prototype", e -> {
 					final PaletteCluster currentNode = (PaletteCluster) this.currentPath[0].getLastPathComponent();
@@ -701,6 +788,10 @@ public final class VisualSegmentation {
 		
 		private int label;
 		
+		private int minimumSegmentSize = 0;
+		
+		private int maximumSegmentSize = Integer.MAX_VALUE;
+		
 		public final String getName() {
 			return this.name;
 		}
@@ -709,6 +800,10 @@ public final class VisualSegmentation {
 			this.name = name;
 			
 			return this;
+		}
+		
+		public final PaletteCluster parseName(final String name) {
+			return this.setName(name);
 		}
 		
 		public final int getLabel() {
@@ -721,9 +816,42 @@ public final class VisualSegmentation {
 			return this;
 		}
 		
+		public final PaletteCluster parseLabel(final String label) {
+			return this.setLabel(parseInt(label));
+		}
+		
+		public final int getMinimumSegmentSize() {
+			return this.minimumSegmentSize;
+		}
+		
+		public final PaletteCluster setMinimumSegmentSize(final int minimumSegmentSize) {
+			this.minimumSegmentSize = minimumSegmentSize;
+			
+			return this;
+		}
+		
+		public final PaletteCluster parseMinimumSegmentSize(final String minimumSegementSize) {
+			return this.setMinimumSegmentSize(parseInt(minimumSegementSize));
+		}
+		
+		public final int getMaximumSegmentSize() {
+			return this.maximumSegmentSize;
+		}
+		
+		public final PaletteCluster setMaximumSegmentSize(final int maximumSegmentSize) {
+			this.maximumSegmentSize = maximumSegmentSize;
+			
+			return this;
+		}
+		
+		public final PaletteCluster parseMaximumSegmentSize(final String maximumSegementSize) {
+			return this.setMaximumSegmentSize(parseInt(maximumSegementSize));
+		}
+		
 		@Override
 		public final String toString() {
-			return this.getName() + " " + Integer.toHexString(this.getLabel());
+			return this.getName() + " (label: " + Integer.toHexString(this.getLabel()) + " size: "
+					+ this.getMinimumSegmentSize() + ".." + (this.getMaximumSegmentSize() == Integer.MAX_VALUE ? "" : Integer.MAX_VALUE) + ")";
 		}
 		
 		@Override
