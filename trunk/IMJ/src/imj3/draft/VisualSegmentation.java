@@ -3,14 +3,14 @@ package imj3.draft;
 import static imj2.tools.IMJTools.blue8;
 import static imj2.tools.IMJTools.green8;
 import static imj2.tools.IMJTools.red8;
+import static java.lang.Integer.parseInt;
 import static java.lang.Math.abs;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.cast;
-
+import static net.sourceforge.aprog.tools.Tools.ignore;
 import imj2.draft.PaletteBasedHistograms;
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
-
 import imj3.tools.AwtImage2D;
 
 import java.awt.BorderLayout;
@@ -31,6 +31,10 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -56,16 +60,24 @@ import javax.swing.event.TreeModelEvent;
 import javax.swing.event.TreeModelListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
+import net.sourceforge.aprog.xml.XMLTools;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 /**
  * @author codistmonk (creation 2014-12-03)
  */
 public final class VisualSegmentation {
+	
+	public static final String PALETTE_XML = "palette.xml";
 	
 	private VisualSegmentation() {
 		throw new IllegalInstantiationException();
@@ -131,13 +143,121 @@ public final class VisualSegmentation {
 			}
 			
 			repeat(mainFrame, 30_000, e -> {
-				final Serializable model = (Serializable) tree.getModel();
+//			repeat(mainFrame, 10, e -> {
+//				final Serializable model = (Serializable) tree.getModel();
+//				
+//				synchronized (model) {
+//					Tools.writeObject(model, PALETTE_XML);
+//				}
+				final DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
 				
-				synchronized (model) {
-					Tools.writeObject(model, "palette.jo");
+				try (final OutputStream output = new FileOutputStream(PALETTE_XML)) {
+					
+					synchronized (model) {
+						writePaletteXML(model, output);
+					}
+				} catch (final IOException exception) {
+					exception.printStackTrace();
 				}
 			});
 		});
+	}
+	
+	public static final void writePaletteXML(final DefaultTreeModel model, final OutputStream output) {
+		XMLTools.write(((PaletteNode) model.getRoot()).accept(new ToXml()).getOwnerDocument(), output, 0);
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-01-14)
+	 */
+	public static final class ToXml implements PaletteNode.Visitor<Node> {
+		
+		private final Document xml = XMLTools.newDocument();
+		
+		@Override
+		public final Element visit(final PaletteRoot root) {
+			final Element result = (Element) this.xml.appendChild(this.xml.createElement("palette"));
+			
+			final int n = root.getChildCount();
+			
+			for (int i = 0; i < n; ++i) {
+				result.appendChild(((PaletteNode) root.getChildAt(i)).accept(this)); 
+			}
+			
+			return result;
+		}
+		
+		@Override
+		public final Element visit(final PaletteCluster cluster) {
+			final Element result = this.xml.createElement("cluster");
+			
+			result.setAttribute("name", cluster.getName());
+			result.setAttribute("label", Integer.toString(cluster.getLabel()));
+			
+			final int n = cluster.getChildCount();
+			
+			for (int i = 0; i < n; ++i) {
+				result.appendChild(((PaletteNode) cluster.getChildAt(i)).accept(this)); 
+			}
+			
+			return result;
+		}
+		
+		@Override
+		public final Element visit(final PalettePrototype prototype) {
+			final Element result = this.xml.createElement("prototype");
+			final Color color = (Color) prototype.getUserObject();
+			
+			result.appendChild(this.xml.createTextNode(Integer.toString(color.getRGB())));
+			
+			return result;
+		}
+		
+		private static final long serialVersionUID = 1863579901467828030L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-11-14)
+	 */
+	public static abstract interface TreeProcessor extends Serializable {
+		
+		public default void beginTree(final TreeModel model) {
+			ignore(model);
+		}
+		
+		public default void beginNode(final Object node) {
+			ignore(node);
+		}
+		
+		public default void endNode(final Object node) {
+			ignore(node);
+		}
+		
+		public default void endTree(final TreeModel model) {
+			ignore(model);
+		}
+		
+		public static void process(final TreeModel model, final TreeProcessor processor) {
+			processor.beginTree(model);
+			process(model, model.getRoot(), processor);
+			processor.endTree(model);
+		}
+		
+		public static void process(final TreeModel model, final Object node, final TreeProcessor processor) {
+			processor.beginNode(node);
+			
+			final int n = model.getChildCount(node);
+			
+			for (int i = 0; i < n; ++i) {
+				final Object child = model.getChild(node, i);
+				
+				process(model, child, processor);
+			}
+			
+			processor.endNode(node);
+		}
+		
 	}
 	
 	public static final void repeat(final Window window, final int delay, final ActionListener action) {
@@ -160,6 +280,7 @@ public final class VisualSegmentation {
 		};
 		
 		timer.setRepeats(true);
+		timer.start();
 		
 		window.addWindowListener(new WindowAdapter() {
 			
@@ -173,12 +294,36 @@ public final class VisualSegmentation {
 	
 	public static final DefaultTreeModel loadModel() {
 		try {
-			return Tools.readObject("palette.jo");
+			return new DefaultTreeModel(fromXML(Tools.getResourceAsStream(PALETTE_XML)));
 		} catch (final Exception exception) {
 			Tools.debugError(exception);
+			exception.printStackTrace();
 		}
 		
 		return new DefaultTreeModel(new PaletteRoot());
+	}
+	
+	public static final PaletteRoot fromXML(final InputStream input) {
+		final Document xml = XMLTools.parse(input);
+		final PaletteRoot result = new PaletteRoot();
+		
+		for (final Node clusterNode : XMLTools.getNodes(xml, "palette/cluster")) {
+			final PaletteCluster cluster = new PaletteCluster()
+				.setName(clusterNode.getAttributes().getNamedItem("name").getTextContent())
+				.setLabel(parseInt(clusterNode.getAttributes().getNamedItem("label").getTextContent()));
+			
+			result.add(cluster);
+			
+			for (final Node prototypeNode : XMLTools.getNodes(clusterNode, "prototype")) {
+				final PalettePrototype prototype = new PalettePrototype();
+				
+				cluster.add(prototype);
+				
+				prototype.setUserObject(new Color(parseInt(prototypeNode.getTextContent())));
+			}
+		}
+		
+		return result;
 	}
 	
 	public static final JTree newPaletteTree() {
@@ -439,6 +584,7 @@ public final class VisualSegmentation {
 			}
 			
 			private final void modelChanged(final TreeModelEvent event) {
+				ignore(event);
 				modelChanged.release();
 				tree.repaint();
 			}
@@ -459,6 +605,7 @@ public final class VisualSegmentation {
 		setView(mainFrame, view, scrollable(center(newView)), file.getName());
 	}
 	
+	@SuppressWarnings("unchecked")
 	public static final <N extends DefaultMutableTreeNode> boolean forEachNodeIn(final N root, final NodeProcessor<N> process) {
 		final int n = root.getChildCount();
 		
@@ -506,10 +653,25 @@ public final class VisualSegmentation {
 	 */
 	public static abstract class PaletteNode extends DefaultMutableTreeNode {
 		
+		public abstract <V> V accept(Visitor<V> visitor);
+		
 		/**
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -5014476872249171076L;
+		
+		/**
+		 * @author codistmonk (creation 2015-01-14)
+		 */
+		public static abstract interface Visitor<V> extends Serializable {
+			
+			public abstract V visit(PaletteRoot root);
+			
+			public abstract V visit(PaletteCluster cluster);
+			
+			public abstract V visit(PalettePrototype prototype);
+			
+		}
 		
 	}
 	
@@ -517,6 +679,11 @@ public final class VisualSegmentation {
 	 * @author codistmonk (creation 2014-12-05)
 	 */
 	public static final class PaletteRoot extends PaletteNode {
+		
+		@Override
+		public final <V> V accept(final Visitor<V> visitor) {
+			return visitor.visit(this);
+		}
 		
 		/**
 		 * {@value}.
@@ -559,6 +726,11 @@ public final class VisualSegmentation {
 			return this.getName() + " " + Integer.toHexString(this.getLabel());
 		}
 		
+		@Override
+		public final <V> V accept(final Visitor<V> visitor) {
+			return visitor.visit(this);
+		}
+		
 		/**
 		 * {@value}.
 		 */
@@ -570,6 +742,11 @@ public final class VisualSegmentation {
 	 * @author codistmonk (creation 2014-12-05)
 	 */
 	public static final class PalettePrototype extends PaletteNode {
+		
+		@Override
+		public final <V> V accept(final Visitor<V> visitor) {
+			return visitor.visit(this);
+		}
 		
 		/**
 		 * {@value}.
