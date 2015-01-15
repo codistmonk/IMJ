@@ -5,11 +5,13 @@ import static imj2.tools.IMJTools.green8;
 import static imj2.tools.IMJTools.red8;
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.abs;
+import static java.lang.Math.min;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import imj2.draft.PaletteBasedHistograms;
+import imj2.draft.PaletteBasedHistograms.Patch2DProcessor;
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
 import imj3.tools.AwtImage2D;
@@ -18,6 +20,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Window;
@@ -43,6 +46,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.Semaphore;
@@ -452,7 +456,7 @@ public final class VisualSegmentation {
 					showEditDialog("Edit cluster properties",
 							() -> { treeModel.valueForPathChanged(this.currentPath[0], new Object()); },
 							property("name:", currentNode::getName, currentNode::parseName),
-							property("label:", currentNode::getLabel, currentNode::parseLabel),
+							property("label:", currentNode::getLabelString, currentNode::parseLabel),
 							property("minimumSegmentSize:", currentNode::getMinimumSegmentSize, currentNode::parseMinimumSegmentSize),
 							property("maximumSegmentSize:", currentNode::getMaximumSegmentSize, currentNode::parseMaximumSegmentSize)
 					);
@@ -539,6 +543,13 @@ public final class VisualSegmentation {
 	
 	public static final void setView(final JFrame mainFrame, final Component[] view, final File file) {
 		final BufferedImage image = AwtImage2D.awtRead(file.getPath());
+		final BufferedImage mask = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_BINARY);
+		{
+			final Graphics2D g = mask.createGraphics();
+			g.setColor(Color.WHITE);
+			g.fillRect(0, 0, image.getWidth(), image.getHeight());
+			g.dispose();
+		}
 		final Canvas labels = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
 		final Canvas filtered = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
 		final JLabel newView = new JLabel(new ImageIcon(filtered.getImage()));
@@ -586,59 +597,12 @@ public final class VisualSegmentation {
 					
 					filtered.getGraphics().drawImage(image, 0, 0, null);
 					
-					final List<Color> prototypes = new ArrayList<>();
-					final List<PaletteCluster> clusters = new ArrayList<>();
-					
-					{
-						final PaletteCluster current[] = { null };
-						
-						forEachNodeIn((DefaultMutableTreeNode) treeModel.getRoot(), node -> {
-							final PaletteCluster cluster = cast(PaletteCluster.class, node);
-							
-							if (cluster != null) {
-								current[0] = cluster;
-							} else {
-								final PalettePrototype prototype = cast(PalettePrototype.class, node);
-								
-								if (prototype != null) {
-									prototypes.add((Color) prototype.getUserObject());
-									clusters.add(current[0]);
-								}
-							}
-							
-							return true;
-						});
-					}
-					
-					final int k = clusters.size();
-					
 					labels.getGraphics().setColor(new Color(0, true));
 					labels.getGraphics().fillRect(0, 0, labels.getWidth(), labels.getHeight());
 					
-					PaletteBasedHistograms.forEachPixelIn(image, (x, y) -> {
-						int bestDistance = Integer.MAX_VALUE;
-						PaletteCluster cluster = null;
-						
-						for (int i = 0; i < k; ++i) {
-							final Color c = prototypes.get(i);
-							final int rgb = image.getRGB(x, y);
-							int distance = abs(red8(rgb) - c.getRed())
-									+ abs(green8(rgb) - c.getGreen()) + abs(blue8(rgb) - c.getBlue());
-							
-							if (distance < bestDistance) {
-								bestDistance = distance;
-								cluster = clusters.get(i);
-							}
-						}
-						
-						if (cluster != null) {
-							labels.getImage().setRGB(x, y, cluster.getLabel());
-						}
-						
-						return true;
-					});
-					
-					PaletteBasedHistograms.outlineSegments(labels.getImage(), null, filtered.getImage(), 0xFF00FF00);
+					quantize(image, (PaletteRoot) treeModel.getRoot(), labels);
+					smootheLabels(labels.getImage(), mask, 3);
+					outlineSegments(labels.getImage(), null, filtered.getImage());
 					
 					newView.repaint();
 				}
@@ -692,8 +656,152 @@ public final class VisualSegmentation {
 		setView(mainFrame, view, scrollable(center(newView)), file.getName());
 	}
 	
-	@SuppressWarnings("unchecked")
-	public static final <N extends DefaultMutableTreeNode> boolean forEachNodeIn(final N root, final NodeProcessor<N> process) {
+	public static final void outlineSegments(final BufferedImage labels,
+			final BufferedImage mask, final BufferedImage image) {
+		final int imageWidth = image.getWidth();
+		final int imageHeight = image.getHeight();
+		
+		PaletteBasedHistograms.forEachPixelIn(labels, (x, y) -> {
+			if (mask == null || (mask.getRGB(x, y) & 1) != 0) {
+				final int label = labels.getRGB(x, y);
+				final int eastLabel = x + 1 < imageWidth ? labels.getRGB(x + 1, y) : label;
+				final int westLabel = 1 < x ? labels.getRGB(x - 1, y) : label;
+				final int southLabel = y + 1 < imageHeight ? labels.getRGB(x, y + 1) : label;
+				final int northLabel = 1 < y ? labels.getRGB(x, y - 1) : label;
+				
+				if (label != eastLabel || label != southLabel || label != westLabel || label != northLabel) {
+					image.setRGB(x, y, label);
+				}
+			}
+			
+			return true;
+		});
+	}
+	
+	public static final BufferedImage smootheLabels(final BufferedImage labels,
+			final BufferedImage mask, final int patchSize) {
+		final int imageWidth = labels.getWidth(); 
+		final int imageHeight = labels.getHeight();
+		final BufferedImage tmp = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
+		
+		labels.copyData(tmp.getRaster());
+		
+		PaletteBasedHistograms.forEachConvolutionPixelIn(tmp, patchSize, new Patch2DProcessor() {
+			
+			private final Map<Integer, int[]> histogram = new HashMap<>();
+			
+			private int x, y;
+			
+			private final int[] best = new int[2];
+			
+			@Override
+			public final boolean beginPatch(final int x, final int y) {
+				if ((mask.getRGB(x, y) & 1) != 0) {
+					this.x = x;
+					this.y = y;
+					this.best[0] = tmp.getRGB(x, y);
+					this.best[1] = 0;
+					this.histogram.clear();
+					
+					return true;
+				}
+				
+				return false;
+			}
+			
+			@Override
+			public final boolean pixel(final int x, final int y) {
+				final int rgb = tmp.getRGB(x, y);
+				
+				if (rgb != 0) {
+					++this.histogram.computeIfAbsent(rgb, v -> new int[1])[0];
+				}
+				
+				return true;
+			}
+			
+			@Override
+			public final boolean endPatch() {
+				this.histogram.forEach((label, count) -> {
+					if (this.best[COUNT] < count[0]) {
+						this.best[LABEL] = label;
+						this.best[COUNT] = count[0];
+					}
+				});
+				
+				if (this.histogram.get(tmp.getRGB(this.x, this.y))[0] < this.best[COUNT]) {
+					labels.setRGB(this.x, this.y, this.best[LABEL]);
+				}
+				
+				return true;
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = -5117333476493324315L;
+			
+			public static final int LABEL = 0;
+			
+			public static final int COUNT = 1;
+			
+		});
+		
+		return tmp;
+	}
+	
+	public static final void quantize(final BufferedImage image, final PaletteRoot root, final Canvas labels) {
+		final List<Color> prototypes = new ArrayList<>();
+		final List<PaletteCluster> clusters = new ArrayList<>();
+		
+		{
+			final PaletteCluster current[] = { null };
+			
+			forEachNodeIn(root, node -> {
+				final PaletteCluster cluster = cast(PaletteCluster.class, node);
+				
+				if (cluster != null) {
+					current[0] = cluster;
+				} else {
+					final PalettePrototype prototype = cast(PalettePrototype.class, node);
+					
+					if (prototype != null) {
+						prototypes.add((Color) prototype.getUserObject());
+						clusters.add(current[0]);
+					}
+				}
+				
+				return true;
+			});
+		}
+		
+		final int k = clusters.size();
+		
+		PaletteBasedHistograms.forEachPixelIn(image, (x, y) -> {
+			int bestDistance = Integer.MAX_VALUE;
+			PaletteCluster cluster = null;
+			
+			for (int i = 0; i < k; ++i) {
+				final Color c = prototypes.get(i);
+				final int rgb = image.getRGB(x, y);
+				int distance = abs(red8(rgb) - c.getRed())
+						+ abs(green8(rgb) - c.getGreen()) + abs(blue8(rgb) - c.getBlue());
+				
+				if (distance < bestDistance) {
+					bestDistance = distance;
+					cluster = clusters.get(i);
+				}
+			}
+			
+			if (cluster != null) {
+				labels.getImage().setRGB(x, y, cluster.getLabel());
+			}
+			
+			return true;
+		});
+	}
+	
+	public static final boolean forEachNodeIn(final DefaultMutableTreeNode root, final NodeProcessor<DefaultMutableTreeNode> process) {
 		final int n = root.getChildCount();
 		
 		if (n == 0) {
@@ -705,7 +813,7 @@ public final class VisualSegmentation {
 		}
 		
 		for (int i = 0; i < n; ++i) {
-			if (!forEachNodeIn((N) root.getChildAt(i), process)) {
+			if (!forEachNodeIn((DefaultMutableTreeNode) root.getChildAt(i), process)) {
 				return false;
 			}
 		}
@@ -810,6 +918,10 @@ public final class VisualSegmentation {
 			return this.label;
 		}
 		
+		public final String getLabelString() {
+			return "#" + Integer.toHexString(this.getLabel()).toUpperCase(Locale.ENGLISH);
+		}
+		
 		public final PaletteCluster setLabel(final int label) {
 			this.label = label;
 			
@@ -817,7 +929,7 @@ public final class VisualSegmentation {
 		}
 		
 		public final PaletteCluster parseLabel(final String label) {
-			return this.setLabel(parseInt(label));
+			return this.setLabel(label.startsWith("#") ? (int) Long.parseLong(label.substring(1), 16) : parseInt(label));
 		}
 		
 		public final int getMinimumSegmentSize() {
@@ -850,7 +962,7 @@ public final class VisualSegmentation {
 		
 		@Override
 		public final String toString() {
-			return this.getName() + " (label: " + Integer.toHexString(this.getLabel()) + " size: "
+			return this.getName() + " (label: " + this.getLabelString() + " size: "
 					+ this.getMinimumSegmentSize() + ".." + (this.getMaximumSegmentSize() == Integer.MAX_VALUE ? "" : Integer.MAX_VALUE) + ")";
 		}
 		
