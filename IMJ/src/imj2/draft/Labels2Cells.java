@@ -2,7 +2,6 @@ package imj2.draft;
 
 import static imj2.draft.PaletteBasedHistograms.awtReadImage;
 import static imj2.draft.PaletteBasedHistograms.forEachPixelIn;
-import static imj3.core.Channels.Predefined.*;
 import static java.lang.Integer.toHexString;
 import static java.lang.Math.max;
 import static net.sourceforge.aprog.tools.Tools.baseName;
@@ -20,7 +19,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -227,8 +225,8 @@ public final class Labels2Cells {
 					}
 					
 					for (int i = 0; i < 16; ++i) {
-						computeMeans(this.pixels, this.weights, clustering, kMeans, kWeights, kCounts);
-						recluster(this.pixels, clustering, kMeans);
+						KMeans.computeMeans(this.pixels, this.weights, clustering, kMeans, kWeights, kCounts);
+						KMeans.recluster(this.pixels, clustering, kMeans);
 					}
 					
 					for (int i = 0; i < n; ++i) {
@@ -276,59 +274,8 @@ public final class Labels2Cells {
 		jpgWriter.dispose();
 	}
 	
-	public static final void computeMeans(final List<Point> points, final List<Integer> weights,
-			final int[] clustering, final Point[] means, final int[] sizes, final int[] counts) {
-		final int k = means.length;
-		final int n = points.size();
-		
-		Arrays.fill(sizes, 0);
-		Arrays.fill(counts, 0);
-		
-		for (int i = 0; i < n; ++i) {
-			final Point p = points.get(i);
-			final int w = weights.get(i);
-			final int j = clustering[i];
-			means[j].x += p.x * w;
-			means[j].y += p.y * w;
-			sizes[j] += w;
-			++counts[j];
-		}
-		
-		for (int i = 0; i < k; ++i) {
-			final int weight = sizes[i];
-			
-			if (weight != 0) {
-				means[i].x /= weight;
-				means[i].y /= weight;
-			}
-		}
-	}
-	
-	public static final void recluster(final List<Point> points,
-			final int[] clustering, final Point[] centers) {
-		final int n = points.size();
-		final int k = centers.length;
-		
-		for (int i = 0; i < n; ++i) {
-			final Point p = points.get(i);
-			int nearest = clustering[i];
-			double bestDistance = Double.POSITIVE_INFINITY;
-			
-			for (int j = 0; j < k; ++j) {
-				final double distance = p.distance(centers[j]);
-				
-				if (distance < bestDistance) {
-					nearest = j;
-					bestDistance = distance;
-				}
-			}
-			
-			clustering[i] = nearest;
-		}
-	}
-	
 	public static final int lightness(final int rgb) {
-		return max(max(red8(rgb), green8(rgb)), blue8(rgb));
+		return max(max(IMJTools.red8(rgb), IMJTools.green8(rgb)), IMJTools.blue8(rgb));
 	}
 	
 }

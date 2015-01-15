@@ -1,5 +1,10 @@
 package imj3.core;
 
+import static imj3.core.Channels.Predefined.blue8;
+import static imj3.core.Channels.Predefined.green8;
+import static imj3.core.Channels.Predefined.red8;
+import static java.lang.Math.max;
+
 import java.io.Serializable;
 
 /**
@@ -183,6 +188,10 @@ public abstract interface Channels extends Serializable {
 		
 		public static final int blue8(final long pixelValue) {
 			return (int) A8R8G8B8.getChannelValue(pixelValue, 0);
+		}
+		
+		public static final int lightness(final long pixelValue) {
+			return max(max(red8(pixelValue), green8(pixelValue)), blue8(pixelValue));
 		}
 		
 	}
