@@ -10,7 +10,6 @@ import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
-
 import imj2.core.Image2D;
 import imj2.draft.KMeans;
 import imj2.draft.PaletteBasedHistograms;
@@ -19,7 +18,6 @@ import imj2.pixel3d.MouseHandler;
 import imj2.tools.AwtBackedImage;
 import imj2.tools.Canvas;
 import imj2.tools.IMJTools;
-
 import imj3.core.Channels;
 import imj3.tools.AwtImage2D;
 
@@ -612,15 +610,12 @@ public final class VisualSegmentation {
 					filtered.getGraphics().drawImage(image, 0, 0, null);
 					
 					final TicToc timer = new TicToc();
+					final Map<Integer, List<Pair<Point, Integer>>> labelCells = extractCells(
+							file, image, mask, labels, cells, (PaletteRoot) treeModel.getRoot());
 					
-					labels.getGraphics().setColor(new Color(0, true));
-					labels.getGraphics().fillRect(0, 0, labels.getWidth(), labels.getHeight());
-					
-					quantize(image, (PaletteRoot) treeModel.getRoot(), labels);
-					smootheLabels(labels.getImage(), mask, 3);
-					extractCellsFromLabels(labels.getImage(), file.getPath() + "_labels", image, mask,
-							(PaletteRoot) treeModel.getRoot(), cells.getImage());
 					outlineSegments(cells.getImage(), labels.getImage(), null, filtered.getImage());
+					
+					Tools.debugPrint(labelCells.size());
 					Tools.debugPrint(timer.toc());
 					
 					newView.repaint();
@@ -959,6 +954,21 @@ public final class VisualSegmentation {
 		return result;
 	}
 	
+	public static Map<Integer, List<Pair<Point, Integer>>> extractCells(
+			final File file, final BufferedImage image,
+			final BufferedImage mask, final Canvas labels, final Canvas cells,
+			final PaletteRoot palette) {
+		labels.getGraphics().setColor(new Color(0, true));
+		labels.getGraphics().fillRect(0, 0, labels.getWidth(), labels.getHeight());
+		
+		quantize(image, (PaletteRoot) palette.getRoot(), labels);
+		smootheLabels(labels.getImage(), mask, 3);
+		final Map<Integer, List<Pair<Point, Integer>>> labelCells = extractCellsFromLabels(
+				labels.getImage(), file.getPath() + "_labels", image, mask, palette, cells.getImage());
+		
+		return labelCells;
+	}
+
 	/**
 	 * @author codistmonk (creation 2014-12-05)
 	 */
