@@ -317,15 +317,15 @@ public final class PaletteBasedHistograms {
 			
 			@Override
 			public final boolean endPatch() {
-				this.histogram.forEach((k, v) -> {
-					if (this.best[1] < v[0]) {
-						this.best[0] = k;
-						this.best[1] = v[0];
+				this.histogram.forEach((label, count) -> {
+					if (this.best[COUNT] < count[0]) {
+						this.best[LABEL] = label;
+						this.best[COUNT] = count[0];
 					}
 				});
 				
-				if (this.histogram.get(tmp.getRGB(this.x, this.y))[0] < min(threshold, this.best[1])) {
-					labels.setRGB(this.x, this.y, this.best[0]);
+				if (this.histogram.get(tmp.getRGB(this.x, this.y))[0] < min(threshold, this.best[COUNT])) {
+					labels.setRGB(this.x, this.y, this.best[LABEL]);
 				}
 				
 				return true;
@@ -335,6 +335,10 @@ public final class PaletteBasedHistograms {
 			 * {@value}.
 			 */
 			private static final long serialVersionUID = -5117333476493324315L;
+			
+			public static final int LABEL = 0;
+			
+			public static final int COUNT = 1;
 			
 		});
 		
