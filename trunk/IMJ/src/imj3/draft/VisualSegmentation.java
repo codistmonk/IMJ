@@ -551,15 +551,9 @@ public final class VisualSegmentation {
 	
 	public static final void setView(final JFrame mainFrame, final Component[] view, final File file) {
 		final BufferedImage image = AwtImage2D.awtRead(file.getPath());
-		final BufferedImage mask = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_BINARY);
-		{
-			final Graphics2D g = mask.createGraphics();
-			g.setColor(Color.WHITE);
-			g.fillRect(0, 0, image.getWidth(), image.getHeight());
-			g.dispose();
-		}
+		final BufferedImage mask = newMaskFor(image);
 		final Canvas labels = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
-		final Canvas cells = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		final Canvas segments = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
 		final Canvas filtered = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
 		final JLabel newView = new JLabel(new ImageIcon(filtered.getImage()));
 		final JTree tree = getSharedProperty(mainFrame, "tree");
@@ -611,9 +605,9 @@ public final class VisualSegmentation {
 					
 					final TicToc timer = new TicToc();
 					final Map<Integer, List<Pair<Point, Integer>>> labelCells = extractCells(
-							file, image, mask, labels, cells, (PaletteRoot) treeModel.getRoot());
+							file, image, mask, labels, segments.getImage(), (PaletteRoot) treeModel.getRoot());
 					
-					outlineSegments(cells.getImage(), labels.getImage(), null, filtered.getImage());
+					outlineSegments(segments.getImage(), labels.getImage(), null, filtered.getImage());
 					
 					Tools.debugPrint(labelCells.size());
 					Tools.debugPrint(timer.toc());
@@ -668,6 +662,17 @@ public final class VisualSegmentation {
 		});
 		
 		setView(mainFrame, view, scrollable(center(newView)), file.getName());
+	}
+	
+	public static final BufferedImage newMaskFor(final BufferedImage image) {
+		final BufferedImage mask = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_BINARY);
+		{
+			final Graphics2D g = mask.createGraphics();
+			g.setColor(Color.WHITE);
+			g.fillRect(0, 0, image.getWidth(), image.getHeight());
+			g.dispose();
+		}
+		return mask;
 	}
 	
 	public static final Map<Integer, List<Pair<Point, Integer>>> extractCellsFromLabels(final BufferedImage labels,
@@ -956,7 +961,7 @@ public final class VisualSegmentation {
 	
 	public static Map<Integer, List<Pair<Point, Integer>>> extractCells(
 			final File file, final BufferedImage image,
-			final BufferedImage mask, final Canvas labels, final Canvas cells,
+			final BufferedImage mask, final Canvas labels, final BufferedImage segments,
 			final PaletteRoot palette) {
 		labels.getGraphics().setColor(new Color(0, true));
 		labels.getGraphics().fillRect(0, 0, labels.getWidth(), labels.getHeight());
@@ -964,7 +969,7 @@ public final class VisualSegmentation {
 		quantize(image, (PaletteRoot) palette.getRoot(), labels);
 		smootheLabels(labels.getImage(), mask, 3);
 		final Map<Integer, List<Pair<Point, Integer>>> labelCells = extractCellsFromLabels(
-				labels.getImage(), file.getPath() + "_labels", image, mask, palette, cells.getImage());
+				labels.getImage(), file.getPath() + "_labels", image, mask, palette, segments);
 		
 		return labelCells;
 	}
