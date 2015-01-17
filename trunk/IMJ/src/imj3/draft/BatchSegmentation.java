@@ -4,12 +4,14 @@ import static imj3.draft.VisualSegmentation.extractCells;
 import static imj3.draft.VisualSegmentation.newMaskFor;
 import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
 import imj2.draft.PaletteBasedHistograms;
+import imj2.draft.PaletteBasedHistograms.Patch2DProcessor;
 import imj2.tools.Canvas;
 import imj3.draft.VisualSegmentation.PaletteRoot;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -41,7 +43,7 @@ public final class BatchSegmentation {
 	public static final void main(final String[] commandLineArguments) throws IOException {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final File root = new File(arguments.get("in", ""));
-		final File outputRoot = new File(root, "results_ga_" + new SimpleDateFormat("YYYYMMDD", Locale.ENGLISH).format(new Date()));
+		final File outputRoot = new File(root, arguments.get("out", "results_ga_" + new SimpleDateFormat("YYYYMMDDHHmm", Locale.ENGLISH).format(new Date())));
 		final File referenceRoot = new File(root, arguments.get("reference", ""));
 		final PaletteRoot palette = VisualSegmentation.fromXML(getResourceAsStream(arguments.get("palette", "")));
 		final TicToc timer = new TicToc();
@@ -114,8 +116,19 @@ public final class BatchSegmentation {
 					});
 					
 					final double f1 = 2.0 * tp.get() / (2.0 * tp.get() + fp.get() + fn.get());
-					
-					Tools.debugPrint(tp, fp, tn, fn, f1);
+					final double f1b;
+					{
+						final double tpb = tp.get() + fn.get();
+						final double fpb = fp.get() + tn.get();
+						final double tnb = 0.0;
+						final double fnb = 0.0;
+						f1b = 2.0 * tpb / (2.0 * tpb + fpb + fnb);
+					}
+					Tools.debugPrint(tp, fp, tn, fn, f1, f1b, tp.get() + fp.get() + tn.get() + fn.get(), segments.getWidth() * segments.getHeight(), reference.getWidth() * reference.getHeight());
+					try (final PrintStream csv = new PrintStream(new File(outputRoot, baseName + ".csv"))) {
+						csv.println("TP,FP,TN,FN,F1,F1_0");
+						csv.println(Tools.join(",", tp, fp, tn, fn, f1, f1b));
+					}
 				}
 				
 				Tools.debugPrint(timer.toc());
