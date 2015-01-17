@@ -99,11 +99,11 @@ import org.w3c.dom.Node;
  */
 public final class VisualSegmentation {
 	
-	public static final String PALETTE_XML = "palette.xml";
-	
 	private VisualSegmentation() {
 		throw new IllegalInstantiationException();
 	}
+	
+	public static final String PALETTE_XML = "palette.xml";
 	
 	static final Preferences preferences = Preferences.userNodeForPackage(VisualSegmentation.class);
 	
@@ -967,7 +967,7 @@ public final class VisualSegmentation {
 		labels.getGraphics().fillRect(0, 0, labels.getWidth(), labels.getHeight());
 		
 		quantize(image, (PaletteRoot) palette.getRoot(), labels);
-		smootheLabels(labels.getImage(), mask, 3);
+		smootheLabels(labels.getImage(), mask, 8);
 		final Map<Integer, List<Pair<Point, Integer>>> labelCells = extractCellsFromLabels(
 				labels.getImage(), file.getPath() + "_labels", image, mask, palette, segments);
 		
