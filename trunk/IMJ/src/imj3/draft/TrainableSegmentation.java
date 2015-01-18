@@ -12,6 +12,7 @@ import static imj3.draft.VisualSegmentation.setSharedProperty;
 import static imj3.draft.VisualSegmentation.showEditDialog;
 import static java.lang.Math.abs;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
+import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import imj2.pixel3d.MouseHandler;
@@ -46,6 +47,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.prefs.Preferences;
 
+import javax.imageio.ImageIO;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JPopupMenu;
@@ -153,9 +155,13 @@ public final class TrainableSegmentation {
 					final DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
 					
 					try (final OutputStream output = new FileOutputStream(PALETTE_XML)) {
-						
 						synchronized (model) {
 							writePaletteXML((Quantizer) model.getRoot(), output);
+							final File imageFile = getSharedProperty(mainFrame, "file");
+							final File labelsFile = labelsFile(imageFile);
+							Tools.debugPrint("Writing", labelsFile);
+							ImageIO.write(((Canvas) getSharedProperty(mainFrame, "labels")).getImage(),
+									"png", labelsFile);
 						}
 					} catch (final IOException exception) {
 						exception.printStackTrace();
@@ -164,6 +170,10 @@ public final class TrainableSegmentation {
 			}
 			
 		});
+	}
+	
+	public static final File labelsFile(final File imageFile) {
+		return new File(baseName(imageFile.getPath()) + "_groundtruth.png");
 	}
 	
 	public static final void writePaletteXML(final Quantizer quantizer, final OutputStream output) {
@@ -221,12 +231,29 @@ public final class TrainableSegmentation {
 		
 	}
 	
+	public static final QuantizerCluster getSelectedCluster(final JTree tree) {
+		final TreePath selectionPath = tree.getSelectionPath();
+		
+		return selectionPath == null ? null : cast(QuantizerCluster.class, selectionPath.getLastPathComponent());
+	}
+	
 	public static final void setView(final JFrame mainFrame, final Component[] view, final File file) {
 		final BufferedImage image = AwtImage2D.awtRead(file.getPath());
-		final BufferedImage mask = newMaskFor(image);
-		final Canvas labels = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
-		final Canvas segments = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+//		final BufferedImage mask = newMaskFor(image);
+//		final Canvas segments = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
 		final Canvas filtered = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		final Canvas labels = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		{
+			final File labelsFile = labelsFile(file);
+			
+			try {
+				labels.getGraphics().drawImage(ImageIO.read(labelsFile), 0, 0, null);
+			} catch (final IOException exception) {
+				Tools.debugError(exception);
+			}
+		}
+		setSharedProperty(mainFrame, "labels", labels);
+		setSharedProperty(mainFrame, "file", file);
 		final ImageComponent newView = new ImageComponent(filtered.getImage());
 		final JTree tree = getSharedProperty(mainFrame, "tree");
 		final DefaultTreeModel treeModel = (DefaultTreeModel) tree.getModel();
@@ -235,12 +262,17 @@ public final class TrainableSegmentation {
 		newView.getBuffer().getSecond().add(new Painter() {
 			
 			@Override
-			public final void paint(Canvas canvas) {
-				if (0 <= xys[0]) {
+			public final void paint(final Canvas canvas) {
+				canvas.getGraphics().drawImage(labels.getImage(), 0, 0, null);
+				
+				final QuantizerCluster cluster = getSelectedCluster(tree);
+				
+				if (cluster != null && 0 <= xys[0]) {
 					final int x = xys[0];
 					final int y = xys[1];
-					final int s= xys[2];
-					canvas.getGraphics().setColor(Color.YELLOW);
+					final int s = xys[2];
+					
+					canvas.getGraphics().setColor(new Color(cluster.getLabel()));
 					canvas.getGraphics().drawOval(x - s / 2, y - s / 2, s, s);
 				}
 			}
@@ -255,6 +287,18 @@ public final class TrainableSegmentation {
 			public final void mouseDragged(final MouseEvent event) {
 				xys[0] = event.getX();
 				xys[1] = event.getY();
+				{
+					final QuantizerCluster cluster = getSelectedCluster(tree);
+					
+					if (cluster != null && 0 <= xys[0]) {
+						final int x = xys[0];
+						final int y = xys[1];
+						final int s = xys[2];
+						
+						labels.getGraphics().setColor(new Color(cluster.getLabel()));
+						labels.getGraphics().fillOval(x - s / 2, y - s / 2, s, s);
+					}
+				}
 				newView.repaint();
 			}
 			
