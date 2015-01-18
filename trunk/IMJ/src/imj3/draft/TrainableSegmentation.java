@@ -14,10 +14,8 @@ import static java.lang.Math.abs;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
-
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
-
 import imj3.tools.AwtImage2D;
 
 import java.awt.BorderLayout;
@@ -32,7 +30,10 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Locale;
@@ -144,19 +145,73 @@ public final class TrainableSegmentation {
 				repeat(mainFrame, 30_000, e -> {
 					final DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
 					
-//					try (final OutputStream output = new FileOutputStream(PALETTE_XML)) {
-//						
-//						synchronized (model) {
-//							writePaletteXML(model, output);
-//							// TODO
-//						}
-//					} catch (final IOException exception) {
-//						exception.printStackTrace();
-//					}
+					try (final OutputStream output = new FileOutputStream(PALETTE_XML)) {
+						
+						synchronized (model) {
+							writePaletteXML((Quantizer) model.getRoot(), output);
+						}
+					} catch (final IOException exception) {
+						exception.printStackTrace();
+					}
 				});
 			}
 			
 		});
+	}
+	
+	public static final void writePaletteXML(final Quantizer quantizer, final OutputStream output) {
+		XMLTools.write(quantizer.accept(new ToXML()), output, 0);
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-01-18)
+	 */
+	public static final class ToXML implements QuantizerNode.Visitor<Node> {
+		
+		private final Document xml = XMLTools.newDocument();
+		
+		@Override
+		public Element visit(final Quantizer quantizer) {
+			final Element result = (Element) this.xml.appendChild(this.xml.createElement("palette"));
+			final int n = quantizer.getChildCount();
+			
+			result.setAttribute("scale", quantizer.getScaleAsString());
+			
+			for (int i = 0; i < n; ++i) {
+				result.appendChild(((QuantizerCluster) quantizer.getChildAt(i)).accept(this));
+			}
+			
+			return result;
+		}
+		
+		@Override
+		public final Element visit(final QuantizerCluster cluster) {
+			final Element result = this.xml.createElement("cluster");
+			final int n = cluster.getChildCount();
+			
+			result.setAttribute("name", cluster.getName());
+			result.setAttribute("label", cluster.getLabelAsString());
+			result.setAttribute("minimumSegmentSize", cluster.getMinimumSegmentSizeAsString());
+			result.setAttribute("maximumSegmentSize", cluster.getMaximumSegmentSizeAsString());
+			
+			for (int i = 0; i < n; ++i) {
+				result.appendChild(((QuantizerPrototype) cluster.getChildAt(i)).accept(this));
+			}
+			
+			return result;
+		}
+		
+		@Override
+		public final Element visit(final QuantizerPrototype prototype) {
+			final Element result = this.xml.createElement("prototype");
+			
+			result.setTextContent(prototype.getDataAsString());
+			
+			return result;
+		}
+		
+		private static final long serialVersionUID = -8012834350224027358L;
+		
 	}
 	
 	public static final void setView(final JFrame mainFrame, final Component[] view, final File file) {
@@ -359,7 +414,6 @@ public final class TrainableSegmentation {
 						final Object node = path.getLastPathComponent();
 						JPopupMenu popup = null;
 						
-						Tools.debugPrint(node.getClass());
 						if (node instanceof Quantizer) {
 							popup = this.rootPopup;
 						} else if (node instanceof QuantizerCluster) {
@@ -393,6 +447,8 @@ public final class TrainableSegmentation {
 	public static final Quantizer fromXML(final InputStream input) {
 		final Document xml = XMLTools.parse(input);
 		final Quantizer result = new Quantizer().setUserObject();
+		
+		result.parseScale(((Element) XMLTools.getNode(xml, "palette")).getAttribute("scale"));
 		
 		for (final Node clusterNode : XMLTools.getNodes(xml, "palette/cluster")) {
 			final Element clusterElement = (Element) clusterNode;
@@ -470,6 +526,10 @@ public final class TrainableSegmentation {
 		}
 		
 		private static final long serialVersionUID = 7636724853656189383L;
+		
+		public static final int parseARGB(final String string) {
+			return string.startsWith("#") ? (int) Long.parseLong(string.substring(1), 16) : Integer.parseInt(string);
+		}
 		
 		/**
 		 * @author codistmonk (creation 2015-01-18)
@@ -663,8 +723,7 @@ public final class TrainableSegmentation {
 		}
 		
 		public final QuantizerCluster parseLabel(final String labelAsString) {
-			this.setLabel(labelAsString.startsWith("#") ?
-					(int) Long.parseLong(labelAsString.substring(1), 16) : Integer.parseInt(labelAsString));
+			this.setLabel(parseARGB(labelAsString));
 			
 			return this;
 		}
@@ -776,7 +835,7 @@ public final class TrainableSegmentation {
 		}
 		
 		public final Quantizer getQuantizer() {
-			return (Quantizer) this.getParent().getParent();
+			return this.getParent().getParent();
 		}
 		
 		public final String getDataAsString() {
@@ -785,7 +844,7 @@ public final class TrainableSegmentation {
 		}
 		
 		public final QuantizerPrototype parseData(final String dataAsString) {
-			final int[] parsed = Arrays.stream(dataAsString.split(",")).mapToInt(Integer::parseInt).toArray();
+			final int[] parsed = Arrays.stream(dataAsString.split(",")).mapToInt(QuantizerNode::parseARGB).toArray();
 			
 			System.arraycopy(parsed, 0, this.getData(), 0, this.getData().length);
 			
