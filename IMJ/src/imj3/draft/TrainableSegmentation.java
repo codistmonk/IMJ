@@ -14,9 +14,10 @@ import static java.lang.Math.abs;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
+
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
-import imj3.draft.VisualSegmentation.PaletteRoot;
+
 import imj3.tools.AwtImage2D;
 
 import java.awt.BorderLayout;
@@ -182,7 +183,8 @@ public final class TrainableSegmentation {
 						if (node != null) {
 							Quantizer.extractValues(image, event.getX(), event.getY(),
 									node.getQuantizer().getScale(), node.getData());
-							tree.getModel().valueForPathChanged(selectionPath, new Object());
+							tree.getModel().valueForPathChanged(selectionPath, node.renewUserObject());
+							mainFrame.validate();
 						}
 					}
 				}
@@ -253,7 +255,7 @@ public final class TrainableSegmentation {
 			private final void modelChanged(final TreeModelEvent event) {
 				ignore(event);
 				modelChanged.release();
-				tree.repaint();
+				mainFrame.validate();
 			}
 			
 		});
@@ -294,34 +296,42 @@ public final class TrainableSegmentation {
 				
 				this.rootPopup.add(newItem("Add cluster", e -> {
 					final Quantizer currentNode = (Quantizer) this.currentPath[0].getLastPathComponent();
-					final QuantizerCluster newNode = new QuantizerCluster().setName("cluster").setLabel(1);
+					final QuantizerCluster newNode = new QuantizerCluster().setName("cluster").setLabel(1).setUserObject();
 					
 					treeModel.insertNodeInto(newNode, currentNode, currentNode.getChildCount());
+					result.getRootPane().validate();
 				}));
 				this.clusterPopup.add(newItem("Edit cluster properties...", e -> {
 					final QuantizerCluster currentNode = (QuantizerCluster) this.currentPath[0].getLastPathComponent();
 					
 					showEditDialog("Edit cluster properties",
-							() -> { treeModel.valueForPathChanged(this.currentPath[0], new Object()); },
+							() -> {
+								treeModel.valueForPathChanged(this.currentPath[0], currentNode.renewUserObject());
+								result.getRootPane().validate();
+							},
 							property("name:", currentNode::getName, currentNode::setName),
 							property("label:", currentNode::getLabelAsString, currentNode::parseLabel),
 							property("minimumSegmentSize:", currentNode::getMinimumSegmentSize, currentNode::parseMinimumSegmentSize),
 							property("maximumSegmentSize:", currentNode::getMaximumSegmentSize, currentNode::parseMaximumSegmentSize)
 					);
+					
 				}));
 				this.clusterPopup.add(newItem("Add prototype", e -> {
 					final QuantizerCluster currentNode = (QuantizerCluster) this.currentPath[0].getLastPathComponent();
-					final QuantizerNode newNode = new QuantizerPrototype();
+					final QuantizerNode newNode = new QuantizerPrototype().setUserObject();
 					
 					treeModel.insertNodeInto(newNode, currentNode, currentNode.getChildCount());
+					result.getRootPane().validate();
 				}));
 				this.clusterPopup.add(newItem("Remove cluster", e -> {
 					final QuantizerCluster currentNode = (QuantizerCluster) this.currentPath[0].getLastPathComponent();
 					treeModel.removeNodeFromParent(currentNode);
+					result.getRootPane().validate();
 				}));
 				this.prototypePopup.add(newItem("Remove prototype", e -> {
 					final QuantizerPrototype currentNode = (QuantizerPrototype) this.currentPath[0].getLastPathComponent();
 					treeModel.removeNodeFromParent(currentNode);
+					result.getRootPane().validate();
 				}));
 			}
 			
@@ -349,6 +359,7 @@ public final class TrainableSegmentation {
 						final Object node = path.getLastPathComponent();
 						JPopupMenu popup = null;
 						
+						Tools.debugPrint(node.getClass());
 						if (node instanceof Quantizer) {
 							popup = this.rootPopup;
 						} else if (node instanceof QuantizerCluster) {
@@ -376,7 +387,7 @@ public final class TrainableSegmentation {
 			exception.printStackTrace();
 		}
 		
-		return new DefaultTreeModel(new PaletteRoot());
+		return new DefaultTreeModel(new Quantizer().setUserObject());
 	}
 	
 	public static final Quantizer fromXML(final InputStream input) {
@@ -454,6 +465,10 @@ public final class TrainableSegmentation {
 		
 		public abstract QuantizerNode setUserObject();
 		
+		public final UserObject renewUserObject() {
+			return (UserObject) this.setUserObject().getUserObject();
+		}
+		
 		private static final long serialVersionUID = 7636724853656189383L;
 		
 		/**
@@ -493,7 +508,7 @@ public final class TrainableSegmentation {
 				
 				@Override
 				public final String toString() {
-					return Quantizer.this.getScaleAsString();
+					return "scale: " + Quantizer.this.getScaleAsString();
 				}
 				
 				private static final long serialVersionUID = 948766593376210016L;
