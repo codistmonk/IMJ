@@ -3,11 +3,17 @@ package imj3.draft;
 import static imj3.core.Channels.Predefined.blue8;
 import static imj3.core.Channels.Predefined.green8;
 import static imj3.core.Channels.Predefined.red8;
+import static imj3.draft.VisualSegmentation.getSharedProperty;
+import static imj3.draft.VisualSegmentation.newMaskFor;
+import static imj3.draft.VisualSegmentation.repeat;
 import static imj3.draft.VisualSegmentation.setSharedProperty;
 import static java.lang.Math.abs;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.cast;
+import static net.sourceforge.aprog.tools.Tools.ignore;
+import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
+import imj3.tools.AwtImage2D;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -15,12 +21,18 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
+import java.awt.event.HierarchyEvent;
+import java.awt.event.HierarchyListener;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.concurrent.Semaphore;
 import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
@@ -29,12 +41,16 @@ import javax.swing.JFrame;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
+import javax.swing.event.TreeModelEvent;
+import javax.swing.event.TreeModelListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreePath;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
 /**
@@ -90,20 +106,146 @@ public final class TrainableSegmentation {
 					
 				});
 				
-				try {
-					mainFrame.add(SwingTools.scrollable(new ImageComponent(ImageIO.read(new File("/Users/Greg/Desktop/sysimit/sysimit_nb_cd8/lod4/SYS_NB01_97_00100_3_005_lod4.jpg")))));
-				} catch (final IOException exception) {
-					exception.printStackTrace();
+				SwingTools.packAndCenter(mainFrame).setVisible(true);
+				
+				{
+					final String filePath = preferences.get("filePath", "");
+					
+					if (!filePath.isEmpty()) {
+						setView(mainFrame, view, new File(filePath));
+					}
 				}
 				
-				SwingTools.packAndCenter(mainFrame).setVisible(true);
+				repeat(mainFrame, 30_000, e -> {
+					final DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+					
+					try (final OutputStream output = new FileOutputStream(PALETTE_XML)) {
+						
+						synchronized (model) {
+//							writePaletteXML(model, output);
+							// TODO
+						}
+					} catch (final IOException exception) {
+						exception.printStackTrace();
+					}
+				});
 			}
 			
 		});
 	}
 	
 	public static final void setView(final JFrame mainFrame, final Component[] view, final File file) {
-		// TODO
+		final BufferedImage image = AwtImage2D.awtRead(file.getPath());
+		final BufferedImage mask = newMaskFor(image);
+		final Canvas labels = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		final Canvas segments = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		final Canvas filtered = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		final ImageComponent newView = new ImageComponent(filtered.getImage());
+		final JTree tree = getSharedProperty(mainFrame, "tree");
+		final DefaultTreeModel treeModel = (DefaultTreeModel) tree.getModel();
+		
+		new MouseHandler(null) {
+			
+			@Override
+			public final void mouseClicked(final MouseEvent event) {
+				if (event.getClickCount() == 2) {
+					final TreePath selectionPath = tree.getSelectionPath();
+					
+					if (selectionPath != null) {
+						final QuantizerPrototype node = cast(QuantizerPrototype.class,
+								selectionPath.getLastPathComponent());
+						
+						if (node != null) {
+							Quantizer.extractValues(image, event.getX(), event.getY(),
+									node.getQuantizer().getScale(), node.getData());
+							tree.getModel().valueForPathChanged(selectionPath, new Object());
+						}
+					}
+				}
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 6325908040300578842L;
+			
+		}.addTo(newView);
+		
+		final Semaphore modelChanged = new Semaphore(1);
+		final Thread updater = new Thread() {
+			
+			@Override
+			public final void run() {
+				while (!this.isInterrupted()) {
+					try {
+						modelChanged.acquire();
+						modelChanged.drainPermits();
+					} catch (final InterruptedException exception) {
+						break;
+					}
+					
+					filtered.getGraphics().drawImage(image, 0, 0, null);
+					
+					final TicToc timer = new TicToc();
+//					final Map<Integer, List<Pair<Point, Integer>>> labelCells = extractCells(
+//							file, image, mask, labels, segments.getImage(), (PaletteRoot) treeModel.getRoot());
+//					
+//					outlineSegments(segments.getImage(), labels.getImage(), null, filtered.getImage());
+//					
+//					Tools.debugPrint(labelCells.size());
+					// TODO
+					Tools.debugPrint(timer.toc());
+					
+					newView.repaint();
+				}
+			}
+			
+		};
+		
+		updater.start();
+		
+		tree.getModel().addTreeModelListener(new TreeModelListener() {
+			
+			@Override
+			public final void treeStructureChanged(final TreeModelEvent event) {
+				this.modelChanged(event);
+			}
+			
+			@Override
+			public final void treeNodesRemoved(final TreeModelEvent event) {
+				this.modelChanged(event);
+			}
+			
+			@Override
+			public final void treeNodesInserted(final TreeModelEvent event) {
+				this.modelChanged(event);
+			}
+			
+			@Override
+			public final void treeNodesChanged(final TreeModelEvent event) {
+				this.modelChanged(event);
+			}
+			
+			private final void modelChanged(final TreeModelEvent event) {
+				ignore(event);
+				modelChanged.release();
+				tree.repaint();
+			}
+			
+		});
+		
+		newView.addHierarchyListener(new HierarchyListener() {
+			
+			@Override
+			public final void hierarchyChanged(final HierarchyEvent event) {
+				if ((event.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && !newView.isShowing()) {
+					updater.interrupt();
+				}
+			}
+			
+		});
+		
+		VisualSegmentation.setView(mainFrame, view, scrollable(VisualSegmentation.center(newView)), file.getName());
 	}
 	
 	public static final JTree newQuantizerTree() {
@@ -268,6 +410,15 @@ public final class TrainableSegmentation {
 			return this;
 		}
 		
+		@Override
+		public final Quantizer getParent() {
+			return (Quantizer) super.getParent();
+		}
+		
+		public final Quantizer getQuantizer() {
+			return this.getParent();
+		}
+		
 		public final int getLabel() {
 			return this.label;
 		}
@@ -324,6 +475,15 @@ public final class TrainableSegmentation {
 			}
 			
 			return this.data;
+		}
+		
+		@Override
+		public final QuantizerCluster getParent() {
+			return (QuantizerCluster) super.getParent();
+		}
+		
+		public final Quantizer getQuantizer() {
+			return (Quantizer) this.getParent().getParent();
 		}
 		
 		public final String getEditData() {
