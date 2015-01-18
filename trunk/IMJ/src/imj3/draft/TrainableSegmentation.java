@@ -16,9 +16,11 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
+import imj3.draft.TrainableSegmentation.ImageComponent.Painter;
 import imj3.tools.AwtImage2D;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -28,6 +30,7 @@ import java.awt.event.HierarchyEvent;
 import java.awt.event.HierarchyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -35,9 +38,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.prefs.Preferences;
 
 import javax.swing.JComponent;
@@ -57,6 +63,7 @@ import javax.swing.tree.TreePath;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Pair;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
@@ -223,26 +230,84 @@ public final class TrainableSegmentation {
 		final ImageComponent newView = new ImageComponent(filtered.getImage());
 		final JTree tree = getSharedProperty(mainFrame, "tree");
 		final DefaultTreeModel treeModel = (DefaultTreeModel) tree.getModel();
+		final int[] xys = { -1, 0, 16 };
+		final AtomicBoolean brushUpdateNeeded = new AtomicBoolean();
+		
+		newView.getBuffer().getSecond().add(new Painter() {
+			
+			@Override
+			public final void paint(Canvas canvas) {
+				if (0 <= xys[0]) {
+					final int x = xys[0];
+					final int y = xys[1];
+					final int s= xys[2];
+					canvas.getGraphics().setColor(Color.YELLOW);
+					canvas.getGraphics().drawOval(x - s / 2, y - s / 2, s, s);
+				}
+			}
+			
+			@Override
+			public final AtomicBoolean getUpdateNeeded() {
+				return brushUpdateNeeded;
+			}
+			
+			private static final long serialVersionUID = -891880936915736755L;
+			
+		});
 		
 		new MouseHandler(null) {
 			
 			@Override
-			public final void mouseClicked(final MouseEvent event) {
-				if (event.getClickCount() == 2) {
-					final TreePath selectionPath = tree.getSelectionPath();
-					
-					if (selectionPath != null) {
-						final QuantizerPrototype node = cast(QuantizerPrototype.class,
-								selectionPath.getLastPathComponent());
-						
-						if (node != null) {
-							Quantizer.extractValues(image, event.getX(), event.getY(),
-									node.getQuantizer().getScale(), node.getData());
-							tree.getModel().valueForPathChanged(selectionPath, node.renewUserObject());
-							mainFrame.validate();
-						}
-					}
+			public final void mouseDragged(final MouseEvent event) {
+				xys[0] = event.getX();
+				xys[1] = event.getY();
+				brushUpdateNeeded.set(true);
+				newView.repaint();
+			}
+			
+			@Override
+			public final void mouseMoved(final MouseEvent event) {
+				xys[0] = event.getX();
+				xys[1] = event.getY();
+				brushUpdateNeeded.set(true);
+				newView.repaint();
+			}
+			
+			@Override
+			public final void mouseWheelMoved(final MouseWheelEvent event) {
+				if (event.getWheelRotation() < 0) {
+					xys[2] = Math.max(1, xys[2] - 1);
+				} else {
+					++xys[2];
 				}
+				brushUpdateNeeded.set(true);
+				newView.repaint();
+			}
+			
+			@Override
+			public final void mouseExited(final MouseEvent event) {
+				xys[0] = -1;
+				brushUpdateNeeded.set(true);
+				newView.repaint();
+			}
+			
+			@Override
+			public final void mouseClicked(final MouseEvent event) {
+//				if (event.getClickCount() == 2) {
+//					final TreePath selectionPath = tree.getSelectionPath();
+//					
+//					if (selectionPath != null) {
+//						final QuantizerPrototype node = cast(QuantizerPrototype.class,
+//								selectionPath.getLastPathComponent());
+//						
+//						if (node != null) {
+//							Quantizer.extractValues(image, event.getX(), event.getY(),
+//									node.getQuantizer().getScale(), node.getData());
+//							tree.getModel().valueForPathChanged(selectionPath, node.renewUserObject());
+//							mainFrame.validate();
+//						}
+//					}
+//				}
 			}
 			
 			/**
@@ -480,13 +545,14 @@ public final class TrainableSegmentation {
 		
 		private final BufferedImage image;
 		
-		private final Canvas buffer;
+		private final Pair<Canvas, List<Painter>> buffer;
 		
 		public ImageComponent(final BufferedImage image) {
 			this.image = image;
 			final int imageWidth = image.getWidth();
 			final int imageHeight = image.getHeight();
-			this.buffer = new Canvas().setFormat(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
+			this.buffer = new Pair<>(
+					new Canvas().setFormat(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB), new ArrayList<>());
 			
 			this.setMinimumSize(new Dimension(imageWidth, imageHeight));
 			this.setMaximumSize(new Dimension(imageWidth, imageHeight));
@@ -498,17 +564,37 @@ public final class TrainableSegmentation {
 			return this.image;
 		}
 		
+		public final Pair<Canvas, List<Painter>> getBuffer() {
+			return this.buffer;
+		}
+		
 		@Override
 		protected final void paintComponent(final Graphics g) {
 			super.paintComponent(g);
 			
-			// XXX somehow this prevents a defect of Java 8 on Mac OS X Lion with low graphic capabilities
-			this.buffer.getGraphics().drawImage(this.getImage(), 0, 0, null);
+			final Pair<Canvas, List<Painter>> buffer = this.getBuffer();
+			final Canvas canvas = buffer.getFirst();
 			
-			g.drawImage(this.buffer.getImage(), 0, 0, null);
+			canvas.getGraphics().drawImage(this.getImage(), 0, 0, null);
+			buffer.getSecond().forEach(p -> p.paint(canvas));
+			
+			g.drawImage(canvas.getImage(), 0, 0, null);
 		}
 		
 		private static final long serialVersionUID = 1260599901446126551L;
+		
+		public static final Color CLEAR = new Color(0, true);
+		
+		/**
+		 * @author codistmonk (creation 2015-01-16)
+		 */
+		public static abstract interface Painter extends Serializable {
+			
+			public abstract void paint(Canvas canvas);
+			
+			public abstract AtomicBoolean getUpdateNeeded();
+			
+		}
 		
 	}
 	
