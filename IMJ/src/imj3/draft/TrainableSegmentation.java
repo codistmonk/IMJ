@@ -11,8 +11,11 @@ import static java.lang.Math.abs;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
+
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
+
+import imj3.draft.VisualSegmentation.PaletteRoot;
 import imj3.tools.AwtImage2D;
 
 import java.awt.BorderLayout;
@@ -26,21 +29,19 @@ import java.awt.event.HierarchyListener;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.InputStream;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.concurrent.Semaphore;
 import java.util.prefs.Preferences;
-
-import javax.imageio.ImageIO;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
+import javax.swing.event.TreeExpansionEvent;
+import javax.swing.event.TreeExpansionListener;
 import javax.swing.event.TreeModelEvent;
 import javax.swing.event.TreeModelListener;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -52,6 +53,11 @@ import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
+import net.sourceforge.aprog.xml.XMLTools;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 /**
  * @author codistmonk (creation 2015-01-16)
@@ -80,6 +86,20 @@ public final class TrainableSegmentation {
 				final JFrame mainFrame = new JFrame();
 				final Component[] view = { null };
 				final JTree tree = newQuantizerTree();
+				
+				tree.addTreeExpansionListener(new TreeExpansionListener() {
+					
+					@Override
+					public final void treeExpanded(final TreeExpansionEvent event) {
+						mainFrame.validate();
+					}
+					
+					@Override
+					public final void treeCollapsed(final TreeExpansionEvent event) {
+						mainFrame.validate();
+					}
+					
+				});
 				
 				mainFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 				
@@ -119,15 +139,15 @@ public final class TrainableSegmentation {
 				repeat(mainFrame, 30_000, e -> {
 					final DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
 					
-					try (final OutputStream output = new FileOutputStream(PALETTE_XML)) {
-						
-						synchronized (model) {
+//					try (final OutputStream output = new FileOutputStream(PALETTE_XML)) {
+//						
+//						synchronized (model) {
 //							writePaletteXML(model, output);
-							// TODO
-						}
-					} catch (final IOException exception) {
-						exception.printStackTrace();
-					}
+//							// TODO
+//						}
+//					} catch (final IOException exception) {
+//						exception.printStackTrace();
+//					}
 				});
 			}
 			
@@ -249,7 +269,49 @@ public final class TrainableSegmentation {
 	}
 	
 	public static final JTree newQuantizerTree() {
-		return new JTree(new DefaultTreeModel(new Quantizer()));
+		final DefaultTreeModel treeModel = loadModel();
+		final JTree result = new JTree(treeModel);
+		
+		// TODO
+		
+		return result;
+	}
+	
+	public static final DefaultTreeModel loadModel() {
+		try {
+			return new DefaultTreeModel(fromXML(Tools.getResourceAsStream(PALETTE_XML)));
+		} catch (final Exception exception) {
+			exception.printStackTrace();
+		}
+		
+		return new DefaultTreeModel(new PaletteRoot());
+	}
+	
+	public static final Quantizer fromXML(final InputStream input) {
+		final Document xml = XMLTools.parse(input);
+		final Quantizer result = new Quantizer();
+		
+		for (final Node clusterNode : XMLTools.getNodes(xml, "palette/cluster")) {
+			final Element clusterElement = (Element) clusterNode;
+			final QuantizerCluster cluster = new QuantizerCluster()
+				.setName(clusterElement.getAttribute("name"))
+				.parseLabel(clusterElement.getAttribute("label"))
+				.parseMinimumSegmentSize(clusterElement.getAttribute("minimumSegmentSize"))
+				.parseMaximumSegmentSize(clusterElement.getAttribute("maximumSegmentSize"))
+				;
+			
+			result.add(cluster);
+			
+			for (final Node prototypeNode : XMLTools.getNodes(clusterNode, "prototype")) {
+				final QuantizerPrototype prototype = new QuantizerPrototype();
+				
+				cluster.add(prototype);
+				
+				prototype.parseData(prototypeNode.getTextContent());
+			}
+		}
+		
+		return result;
 	}
 	
 	/**
@@ -334,12 +396,12 @@ public final class TrainableSegmentation {
 			}
 		}
 		
-		public final String getEditScale() {
+		public final String getScaleAsString() {
 			return Integer.toString(this.getScale());
 		}
 		
-		public final void parseEditScale(final String editScale) {
-			this.setScale(Integer.parseInt(editScale));
+		public final void parseScale(final String scaleAsString) {
+			this.setScale(Integer.parseInt(scaleAsString));
 		}
 		
 		public final QuantizerCluster quantize(final BufferedImage image, final int x, final int y) {
@@ -400,6 +462,10 @@ public final class TrainableSegmentation {
 		
 		private int label = 1;
 		
+		private int minimumSegmentSize = 0;
+		
+		private int maximumSegmentSize = Integer.MAX_VALUE;
+		
 		public final String getName() {
 			return this.name;
 		}
@@ -429,12 +495,55 @@ public final class TrainableSegmentation {
 			return this;
 		}
 		
-		public final String getEditLabel() {
+		public final String getLabelAsString() {
 			return "#" + Integer.toHexString(this.label).toUpperCase(Locale.ENGLISH);
 		}
 		
-		public final void parseEditLabel(final String editLabel) {
-			this.setLabel(editLabel.startsWith("#") ? (int) Long.parseLong(editLabel.substring(1), 16) : Integer.parseInt(editLabel));
+		public final QuantizerCluster parseLabel(final String labelAsString) {
+			this.setLabel(labelAsString.startsWith("#") ?
+					(int) Long.parseLong(labelAsString.substring(1), 16) : Integer.parseInt(labelAsString));
+			
+			return this;
+		}
+		
+		public final int getMinimumSegmentSize() {
+			return this.minimumSegmentSize;
+		}
+		
+		public final QuantizerCluster setMinimumSegmentSize(final int minimumSegmentSize) {
+			this.minimumSegmentSize = minimumSegmentSize;
+			
+			return this;
+		}
+		
+		public final String getMinimumSegmentSizeAsString() {
+			return Integer.toString(this.getMinimumSegmentSize());
+		}
+		
+		public final QuantizerCluster parseMinimumSegmentSize(final String minimumSegmentSizeAsString) {
+			this.setMinimumSegmentSize(Integer.parseInt(minimumSegmentSizeAsString));
+			
+			return this;
+		}
+		
+		public final int getMaximumSegmentSize() {
+			return this.maximumSegmentSize;
+		}
+		
+		public final QuantizerCluster setMaximumSegmentSize(final int maximumSegmentSize) {
+			this.maximumSegmentSize = maximumSegmentSize;
+			
+			return this;
+		}
+		
+		public final String getMaxnimumSegmentSizeAsString() {
+			return Integer.toString(this.getMaximumSegmentSize());
+		}
+		
+		public final QuantizerCluster parseMaximumSegmentSize(final String maximumSegmentSizeAsString) {
+			this.setMaximumSegmentSize(Integer.parseInt(maximumSegmentSizeAsString));
+			
+			return this;
 		}
 		
 		public final double distanceTo(final int[] values) {
@@ -486,13 +595,16 @@ public final class TrainableSegmentation {
 			return (Quantizer) this.getParent().getParent();
 		}
 		
-		public final String getEditData() {
+		public final String getDataAsString() {
 			return Tools.join(",", this.getData());
 		}
 		
-		public final void parseEditData(final String editData) {
-			System.arraycopy(Arrays.stream(editData.split(",")).mapToInt(Integer::parseInt), 0,
-					this.getData(), 0, this.getData().length);
+		public final QuantizerPrototype parseData(final String dataAsString) {
+			final int[] parsed = Arrays.stream(dataAsString.split(",")).mapToInt(Integer::parseInt).toArray();
+			
+			System.arraycopy(parsed, 0, this.getData(), 0, this.getData().length);
+			
+			return this;
 		}
 		
 		public final double distanceTo(final int[] values) {
