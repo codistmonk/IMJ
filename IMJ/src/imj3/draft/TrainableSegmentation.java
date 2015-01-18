@@ -231,7 +231,6 @@ public final class TrainableSegmentation {
 		final JTree tree = getSharedProperty(mainFrame, "tree");
 		final DefaultTreeModel treeModel = (DefaultTreeModel) tree.getModel();
 		final int[] xys = { -1, 0, 16 };
-		final AtomicBoolean brushUpdateNeeded = new AtomicBoolean();
 		
 		newView.getBuffer().getSecond().add(new Painter() {
 			
@@ -246,11 +245,6 @@ public final class TrainableSegmentation {
 				}
 			}
 			
-			@Override
-			public final AtomicBoolean getUpdateNeeded() {
-				return brushUpdateNeeded;
-			}
-			
 			private static final long serialVersionUID = -891880936915736755L;
 			
 		});
@@ -261,7 +255,6 @@ public final class TrainableSegmentation {
 			public final void mouseDragged(final MouseEvent event) {
 				xys[0] = event.getX();
 				xys[1] = event.getY();
-				brushUpdateNeeded.set(true);
 				newView.repaint();
 			}
 			
@@ -269,7 +262,6 @@ public final class TrainableSegmentation {
 			public final void mouseMoved(final MouseEvent event) {
 				xys[0] = event.getX();
 				xys[1] = event.getY();
-				brushUpdateNeeded.set(true);
 				newView.repaint();
 			}
 			
@@ -280,14 +272,12 @@ public final class TrainableSegmentation {
 				} else {
 					++xys[2];
 				}
-				brushUpdateNeeded.set(true);
 				newView.repaint();
 			}
 			
 			@Override
 			public final void mouseExited(final MouseEvent event) {
 				xys[0] = -1;
-				brushUpdateNeeded.set(true);
 				newView.repaint();
 			}
 			
@@ -591,8 +581,6 @@ public final class TrainableSegmentation {
 		public static abstract interface Painter extends Serializable {
 			
 			public abstract void paint(Canvas canvas);
-			
-			public abstract AtomicBoolean getUpdateNeeded();
 			
 		}
 		
