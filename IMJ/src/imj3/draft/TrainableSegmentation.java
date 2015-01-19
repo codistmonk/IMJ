@@ -11,13 +11,12 @@ import static imj3.draft.VisualSegmentation.setSharedProperty;
 import static imj3.draft.VisualSegmentation.showEditDialog;
 import static java.lang.Math.abs;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
+import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
-
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
-
 import imj3.draft.TrainableSegmentation.ImageComponent.Painter;
 import imj3.tools.AwtImage2D;
 
@@ -58,9 +57,13 @@ import java.util.concurrent.Semaphore;
 import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JPopupMenu;
+import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
@@ -104,13 +107,33 @@ public final class TrainableSegmentation {
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		
+		SwingTools.useSystemLookAndFeel();
+		
 		SwingUtilities.invokeLater(new Runnable() {
 			
 			@Override
 			public final void run() {
 				final JFrame mainFrame = new JFrame();
-				final Component[] view = { null };
+				final JToolBar toolBar = new JToolBar();
 				final JTree tree = newQuantizerTree();
+				final Component[] view = { null };
+				
+				toolBar.add(new JComboBox<>(array("Train and classify", "classify")));
+				toolBar.add(new JButton("Run"));
+				toolBar.addSeparator();
+				toolBar.add(new JLabel(" TP: "));
+				toolBar.add(new JLabel("-------"));
+				toolBar.add(new JLabel(" FP: "));
+				toolBar.add(new JLabel("-------"));
+				toolBar.add(new JLabel(" TN: "));
+				toolBar.add(new JLabel("-------"));
+				toolBar.add(new JLabel(" FN: "));
+				toolBar.add(new JLabel("-------"));
+				toolBar.addSeparator();
+				toolBar.add(new JLabel(" F1: "));
+				toolBar.add(new JLabel("---"));
+				toolBar.add(new JLabel(" F1°: "));
+				toolBar.add(new JLabel("---"));
 				
 				tree.addTreeExpansionListener(new TreeExpansionListener() {
 					
@@ -129,6 +152,7 @@ public final class TrainableSegmentation {
 				mainFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 				
 				mainFrame.setPreferredSize(new Dimension(512, 512));
+				mainFrame.add(toolBar, BorderLayout.NORTH);
 				mainFrame.add(scrollable(tree), BorderLayout.WEST);
 				
 				setSharedProperty(mainFrame, "tree", tree);
