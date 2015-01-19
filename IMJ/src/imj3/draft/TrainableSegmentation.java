@@ -11,12 +11,14 @@ import static imj3.draft.VisualSegmentation.repeat;
 import static imj3.draft.VisualSegmentation.setSharedProperty;
 import static imj3.draft.VisualSegmentation.showEditDialog;
 import static java.lang.Math.abs;
+import static java.util.Arrays.stream;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.instances;
+import static net.sourceforge.aprog.tools.Tools.join;
 import imj2.draft.PaletteBasedHistograms;
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
@@ -56,6 +58,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -220,6 +223,21 @@ public final class TrainableSegmentation {
 		return 2.0 * tp / (2.0 * tp + fp + fn);
 	}
 	
+	public static final <A> A deepCopy(final A array) {
+		if (!array.getClass().isArray()) {
+			return array;
+		}
+		
+		final int n = Array.getLength(array);
+		final Object result = Array.newInstance(array.getClass().getComponentType(), n);
+		
+		for (int i = 0; i < n; ++i) {
+			Array.set(result, i, deepCopy(Array.get(array, i)));
+		}
+		
+		return (A) result;
+	}
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
@@ -238,10 +256,18 @@ public final class TrainableSegmentation {
 				final JTree tree = newQuantizerTree();
 				final Component[] view = { null };
 				final JComboBox<String> actionSelector = new JComboBox<>(array("Train and classify", "classify"));
+				final double[] bestScore = { 0.0 };
+				final int[][][] bestConfusionMatrix = { null };
+				final JLabel bestScoreView = new JLabel("------");
 				
 				toolBar.add(actionSelector);
 				toolBar.add(new JButton(new AbstractAction("Run") {
 					
+					/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 					@Override
 					public final void actionPerformed(final ActionEvent event) {
 						final Quantizer quantizer = (Quantizer) tree.getModel().getRoot();
@@ -275,8 +301,10 @@ public final class TrainableSegmentation {
 							});
 							
 							Tools.debugPrint(Arrays.stream(classPixels).map(IntList::size).toArray());
-							double bestScore = 0.0;
 							Quantizer bestQuantizer = quantizer.copy();
+							bestScore[0] = 0.0;
+							bestConfusionMatrix[0] = null;
+							bestScoreView.setText("-----");
 							
 							for (int scale = 1; scale <= quantizer.getMaximumScale(); ++scale) {
 								quantizer.setScale(scale);
@@ -350,14 +378,15 @@ public final class TrainableSegmentation {
 										score *= f1(confusionMatrix, i);
 									}
 									
-									if (bestScore < score) {
-										bestScore = score;
+									if (bestScore[0] < score) {
+										bestScore[0] = score;
+										bestConfusionMatrix[0] = deepCopy(confusionMatrix);
 										bestQuantizer = quantizer.copy();
 									}
 								}
 							}
 							
-							Tools.debugPrint(bestScore);
+							bestScoreView.setText(bestScore[0] + "");
 							quantizer.set(bestQuantizer);
 							
 							((DefaultTreeModel) tree.getModel()).nodeStructureChanged(quantizer);
@@ -371,19 +400,48 @@ public final class TrainableSegmentation {
 					
 				}));
 				toolBar.addSeparator();
-				toolBar.add(new JLabel(" TP: "));
-				toolBar.add(new JLabel("-------"));
-				toolBar.add(new JLabel(" FP: "));
-				toolBar.add(new JLabel("-------"));
-				toolBar.add(new JLabel(" TN: "));
-				toolBar.add(new JLabel("-------"));
-				toolBar.add(new JLabel(" FN: "));
-				toolBar.add(new JLabel("-------"));
+				toolBar.add(new JButton(new AbstractAction("Confusion matrix...") {
+					
+					@Override
+					public final void actionPerformed(final ActionEvent event) {
+						final List<List<String>> table = new ArrayList<>();
+						{
+							final Quantizer quantizer = (Quantizer) tree.getModel().getRoot();
+							final int n = quantizer.getChildCount();
+							final List<String> header = new ArrayList<>(n + 1);
+							
+							header.add("<td></td>");
+							
+							for (int i = 0; i < n; ++i) {
+								header.add("<td>" + ((QuantizerCluster) quantizer.getChildAt(i)).getName() + "</td>");
+							}
+							
+							table.add(header);
+							
+							for (int i = 0; i < n; ++i) {
+								final List<String> row = new ArrayList<>(n + 1);
+								
+								row.add(header.get(i + 1));
+								
+								for (int j = 0; j < n; ++j) {
+									row.add("<td>" + bestConfusionMatrix[0][i][j] + "</td>");
+								}
+								
+								table.add(row);
+							}
+						}
+						final JLabel confusionMatrixView = new JLabel("<html><body><table>"
+								+ join("", table.stream().map(row -> "<tr>" + join("", row.stream().map(e -> "<td>" + e + "</td>").toArray()) + "</tr>\n" ).toArray())
+								+ "</table></body></html>");
+						SwingTools.show(confusionMatrixView, "Confusion matrix", false);
+					}
+					
+					private static final long serialVersionUID = -148814823214636457L;
+					
+				}));
 				toolBar.addSeparator();
 				toolBar.add(new JLabel(" F1: "));
-				toolBar.add(new JLabel("---"));
-				toolBar.add(new JLabel(" F1°: "));
-				toolBar.add(new JLabel("---"));
+				toolBar.add(bestScoreView);
 				
 				tree.addTreeExpansionListener(new TreeExpansionListener() {
 					
