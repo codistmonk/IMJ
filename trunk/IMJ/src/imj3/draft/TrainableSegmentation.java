@@ -276,6 +276,8 @@ public final class TrainableSegmentation {
 						final Canvas labels = getSharedProperty(mainFrame, "labels");
 						
 						if ("Train and classify".equals(actionSelector.getSelectedItem())) {
+							Tools.debugPrint("Training...");
+							
 							final int clusterCount = quantizer.getChildCount();
 							final int[] minMaxes = new int[clusterCount * 2];
 							final IntList[] classPixels = instances(clusterCount, IntList.FACTORY);
@@ -391,11 +393,22 @@ public final class TrainableSegmentation {
 							
 							((DefaultTreeModel) tree.getModel()).nodeStructureChanged(quantizer);
 							mainFrame.validate();
+							
+							Tools.debugPrint("Training done");
 						}
 						
 						// TODO Classify
 						
-						Tools.debugPrint("TODO");
+						Tools.debugPrint("Classifying...");
+						
+						PaletteBasedHistograms.forEachPixelIn(image, (x, y) -> {
+							final QuantizerCluster cluster = quantizer.quantize(image, x, y);
+							labels.getImage().setRGB(x, y, cluster.getLabel());
+							
+							return true;
+						});
+						
+						Tools.debugPrint("Classifying done");
 					}
 					
 				}));
