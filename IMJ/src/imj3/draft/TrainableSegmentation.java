@@ -34,6 +34,7 @@ import java.awt.RenderingHints;
 import java.awt.Stroke;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
+import java.awt.event.ActionEvent;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.HierarchyListener;
 import java.awt.event.MouseAdapter;
@@ -57,6 +58,7 @@ import java.util.concurrent.Semaphore;
 import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
+import javax.swing.AbstractAction;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -119,7 +121,19 @@ public final class TrainableSegmentation {
 				final Component[] view = { null };
 				
 				toolBar.add(new JComboBox<>(array("Train and classify", "classify")));
-				toolBar.add(new JButton("Run"));
+				toolBar.add(new JButton(new AbstractAction("Run") {
+					
+					@Override
+					public final void actionPerformed(final ActionEvent event) {
+						final Quantizer quantizer = (Quantizer) tree.getModel().getRoot();
+						final BufferedImage image = ((ImageComponent) getSharedProperty(mainFrame, "view")).getImage();
+						final Canvas groundTruth = getSharedProperty(mainFrame, "groundtruth");
+						final Canvas labels = getSharedProperty(mainFrame, "labels");
+						// TODO Auto-generated method stub
+						Tools.debugPrint("TODO");
+					}
+					
+				}));
 				toolBar.addSeparator();
 				toolBar.add(new JLabel(" TP: "));
 				toolBar.add(new JLabel("-------"));
@@ -192,10 +206,10 @@ public final class TrainableSegmentation {
 						synchronized (model) {
 							writePaletteXML((Quantizer) model.getRoot(), output);
 							final File imageFile = getSharedProperty(mainFrame, "file");
-							final File labelsFile = labelsFile(imageFile);
-							Tools.debugPrint("Writing", labelsFile);
-							ImageIO.write(((Canvas) getSharedProperty(mainFrame, "labels")).getImage(),
-									"png", labelsFile);
+							final File groundtruthFile = groundtruthFile(imageFile);
+							Tools.debugPrint("Writing", groundtruthFile);
+							ImageIO.write(((Canvas) getSharedProperty(mainFrame, "groundtruth")).getImage(),
+									"png", groundtruthFile);
 						}
 					} catch (final IOException exception) {
 						exception.printStackTrace();
@@ -206,7 +220,7 @@ public final class TrainableSegmentation {
 		});
 	}
 	
-	public static final File labelsFile(final File imageFile) {
+	public static final File groundtruthFile(final File imageFile) {
 		return new File(baseName(imageFile.getPath()) + "_groundtruth.png");
 	}
 	
@@ -214,6 +228,9 @@ public final class TrainableSegmentation {
 		XMLTools.write(quantizer.accept(new ToXML()), output, 0);
 	}
 	
+	/**
+	 * @author codistmonk (creation 2015-01-19)
+	 */
 	public static final class InvertComposite implements Composite {
 		
 		@Override
@@ -234,7 +251,9 @@ public final class TrainableSegmentation {
 					int n = buffer.length;
 					
 					for (int i = 0; i < n; ++i) {
-						buffer[i] ^= ~0;
+						if (((i + 1) % 4) != 0) {
+							buffer[i] ^= ~0;
+						}
 					}
 					
 					dstOut.setPixels(outBounds.x, outBounds.y, outBounds.width, outBounds.height, buffer);
@@ -304,31 +323,35 @@ public final class TrainableSegmentation {
 	
 	public static final void setView(final JFrame mainFrame, final Component[] view, final File file) {
 		final BufferedImage image = AwtImage2D.awtRead(file.getPath());
-//		final BufferedImage mask = newMaskFor(image);
-//		final Canvas segments = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
 		final Canvas filtered = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		final Canvas groundtruth = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
 		final Canvas labels = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		
 		{
-			final File labelsFile = labelsFile(file);
+			final File groundtruthFile = groundtruthFile(file);
 			
 			try {
-				labels.getGraphics().drawImage(ImageIO.read(labelsFile), 0, 0, null);
+				groundtruth.getGraphics().drawImage(ImageIO.read(groundtruthFile), 0, 0, null);
 			} catch (final IOException exception) {
 				Tools.debugError(exception);
 			}
 		}
+		
+		setSharedProperty(mainFrame, "groundtruth", groundtruth);
 		setSharedProperty(mainFrame, "labels", labels);
 		setSharedProperty(mainFrame, "file", file);
+		final BufferedImage mask = VisualSegmentation.newMaskFor(image);
 		final ImageComponent newView = new ImageComponent(filtered.getImage());
 		final JTree tree = getSharedProperty(mainFrame, "tree");
-		final DefaultTreeModel treeModel = (DefaultTreeModel) tree.getModel();
 		final int[] xys = { -1, 0, 16 };
 		
 		newView.getBuffer().getSecond().add(new Painter() {
 			
 			@Override
 			public final void paint(final Canvas canvas) {
-				canvas.getGraphics().drawImage(labels.getImage(), 0, 0, null);
+				canvas.getGraphics().drawImage(groundtruth.getImage(), 0, 0, null);
+				
+				VisualSegmentation.outlineSegments(labels.getImage(), labels.getImage(), mask, canvas.getImage());
 				
 				final QuantizerCluster cluster = getSelectedCluster(tree);
 				
@@ -366,21 +389,21 @@ public final class TrainableSegmentation {
 				final int y = xys[1] = event.getY();
 				final int s = xys[2];
 				final QuantizerCluster cluster = getSelectedCluster(tree);
-				final Composite savedComposite = labels.getGraphics().getComposite();
-				final Stroke savedStroke = labels.getGraphics().getStroke();
+				final Composite savedComposite = groundtruth.getGraphics().getComposite();
+				final Stroke savedStroke = groundtruth.getGraphics().getStroke();
 				
 				if (cluster == null) {
-					labels.getGraphics().setComposite(AlphaComposite.Clear);
+					groundtruth.getGraphics().setComposite(AlphaComposite.Clear);
 				} else {
-					labels.getGraphics().setColor(new Color(cluster.getLabel()));
+					groundtruth.getGraphics().setColor(new Color(cluster.getLabel()));
 				}
 				
-				labels.getGraphics().setStroke(new java.awt.BasicStroke(s, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-				labels.getGraphics().drawLine(oldX, oldY, x, y);
-				labels.getGraphics().setStroke(savedStroke);
+				groundtruth.getGraphics().setStroke(new java.awt.BasicStroke(s, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+				groundtruth.getGraphics().drawLine(oldX, oldY, x, y);
+				groundtruth.getGraphics().setStroke(savedStroke);
 				
 				if (cluster == null) {
-					labels.getGraphics().setComposite(savedComposite);
+					groundtruth.getGraphics().setComposite(savedComposite);
 				}
 				
 				newView.repaint();
@@ -411,21 +434,21 @@ public final class TrainableSegmentation {
 			
 			@Override
 			public final void mouseClicked(final MouseEvent event) {
-//				if (event.getClickCount() == 2) {
-//					final TreePath selectionPath = tree.getSelectionPath();
-//					
-//					if (selectionPath != null) {
-//						final QuantizerPrototype node = cast(QuantizerPrototype.class,
-//								selectionPath.getLastPathComponent());
-//						
-//						if (node != null) {
-//							Quantizer.extractValues(image, event.getX(), event.getY(),
-//									node.getQuantizer().getScale(), node.getData());
-//							tree.getModel().valueForPathChanged(selectionPath, node.renewUserObject());
-//							mainFrame.validate();
-//						}
-//					}
-//				}
+				if (event.getClickCount() == 2) {
+					final TreePath selectionPath = tree.getSelectionPath();
+					
+					if (selectionPath != null) {
+						final QuantizerPrototype node = cast(QuantizerPrototype.class,
+								selectionPath.getLastPathComponent());
+						
+						if (node != null) {
+							Quantizer.extractValues(image, event.getX(), event.getY(),
+									node.getQuantizer().getScale(), node.getData());
+							tree.getModel().valueForPathChanged(selectionPath, node.renewUserObject());
+							mainFrame.validate();
+						}
+					}
+				}
 			}
 			
 			/**
@@ -508,6 +531,8 @@ public final class TrainableSegmentation {
 			}
 			
 		});
+		
+		setSharedProperty(mainFrame, "view", newView);
 		
 		VisualSegmentation.setView(mainFrame, view, scrollable(VisualSegmentation.center(newView)), file.getName());
 	}
