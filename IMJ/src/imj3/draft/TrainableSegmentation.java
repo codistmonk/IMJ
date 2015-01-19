@@ -1,5 +1,6 @@
 package imj3.draft;
 
+import static imj3.core.Channels.Predefined.a8r8g8b8;
 import static imj3.core.Channels.Predefined.blue8;
 import static imj3.core.Channels.Predefined.green8;
 import static imj3.core.Channels.Predefined.red8;
@@ -19,8 +20,10 @@ import static net.sourceforge.aprog.tools.Tools.instances;
 import imj2.draft.PaletteBasedHistograms;
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
+import imj3.core.Channels.Predefined;
 import imj3.draft.TrainableSegmentation.ImageComponent.Painter;
 import imj3.tools.AwtImage2D;
+import imj3.tools.IMJTools;
 
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
@@ -280,6 +283,7 @@ public final class TrainableSegmentation {
 									Tools.debugPrint(Arrays.toString(prototypeCounts));
 									
 									for (int clusterIndex = 0; clusterIndex < clusterCount; ++clusterIndex) {
+										final QuantizerCluster cluster = (QuantizerCluster) quantizer.getChildAt(clusterIndex);
 										final IntList pixels = classPixels[clusterIndex];
 										final int n = pixels.size();
 										final int prototypeCount = prototypeCounts[clusterIndex];
@@ -290,14 +294,33 @@ public final class TrainableSegmentation {
 										}
 										
 										final Iterable<double[]> points = valuesAndWeights(image, classPixels[clusterIndex], scale);
+										double[][] means = null;
 										
 										for (int j = 0; j < 8; ++j) {
-											final double[][] means = new double[prototypeCount][scale * scale * 3];
+											means = new double[prototypeCount][scale * scale * 3];
 											final double[] sizes = new double[prototypeCount];
 											final int[] counts = new int[prototypeCount];
 											
 											KMeans.computeMeans(points, clusterings[clusterIndex], means, sizes, counts);
 											KMeans.recluster(points, clusterings[clusterIndex], means);
+										}
+										
+										cluster.removeAllChildren();
+										
+										for (int j = 0; j < prototypeCount; ++j) {
+											final QuantizerPrototype prototype = new QuantizerPrototype();
+											
+											cluster.add(prototype);
+											
+											final double[] prototypeElements = means[j];
+											final int[] data = prototype.getData();
+											
+											for (int k = 0; k < data.length; ++k) {
+												data[k] = a8r8g8b8(0xFF,
+														(int) prototypeElements[3 * k + 0],
+														(int) prototypeElements[3 * k + 1],
+														(int) prototypeElements[3 * k + 2]);
+											}
 										}
 									}
 									
@@ -480,6 +503,7 @@ public final class TrainableSegmentation {
 			final int n = quantizer.getChildCount();
 			
 			result.setAttribute("scale", quantizer.getScaleAsString());
+			result.setAttribute("maximumScale", quantizer.getMaximumScaleAsString());
 			
 			for (int i = 0; i < n; ++i) {
 				result.appendChild(((QuantizerCluster) quantizer.getChildAt(i)).accept(this));
@@ -497,6 +521,7 @@ public final class TrainableSegmentation {
 			result.setAttribute("label", cluster.getLabelAsString());
 			result.setAttribute("minimumSegmentSize", cluster.getMinimumSegmentSizeAsString());
 			result.setAttribute("maximumSegmentSize", cluster.getMaximumSegmentSizeAsString());
+			result.setAttribute("maximumPrototypeCount", cluster.getMaximumPrototypeCountAsString());
 			
 			for (int i = 0; i < n; ++i) {
 				result.appendChild(((QuantizerPrototype) cluster.getChildAt(i)).accept(this));
@@ -877,6 +902,7 @@ public final class TrainableSegmentation {
 		final Quantizer result = new Quantizer().setUserObject();
 		
 		result.setScale(((Element) XMLTools.getNode(xml, "palette")).getAttribute("scale"));
+		result.setMaximumScale(((Element) XMLTools.getNode(xml, "palette")).getAttribute("maximumScale"));
 		
 		for (final Node clusterNode : XMLTools.getNodes(xml, "palette/cluster")) {
 			final Element clusterElement = (Element) clusterNode;
@@ -885,6 +911,7 @@ public final class TrainableSegmentation {
 				.setLabel(clusterElement.getAttribute("label"))
 				.setMinimumSegmentSize(clusterElement.getAttribute("minimumSegmentSize"))
 				.setMaximumSegmentSize(clusterElement.getAttribute("maximumSegmentSize"))
+				.setMaximumPrototypeCount(clusterElement.getAttribute("maximumPrototypeCount"))
 				.setUserObject();
 			
 			result.add(cluster);
@@ -1009,6 +1036,8 @@ public final class TrainableSegmentation {
 		
 		private int[] buffer = new int[1];
 		
+		private int scale = 1;
+		
 		private int maximumScale = 1;
 		
 		@Override
@@ -1028,7 +1057,7 @@ public final class TrainableSegmentation {
 		}
 		
 		public final int getScale() {
-			return this.buffer.length;
+			return this.scale;
 		}
 		
 		public final Quantizer setScale(final int scale) {
@@ -1037,7 +1066,8 @@ public final class TrainableSegmentation {
 			}
 			
 			if (scale != this.getScale()) {
-				this.buffer = new int[scale];
+				this.scale = scale;
+				this.buffer = new int[scale * scale];
 			}
 			
 			return this;
@@ -1070,7 +1100,7 @@ public final class TrainableSegmentation {
 		}
 		
 		public final Quantizer setMaximumScale(final String maximumScaleAsString) {
-			this.setScale(Integer.parseInt(maximumScaleAsString));
+			this.setMaximumScale(Integer.parseInt(maximumScaleAsString));
 			
 			return this;
 		}
@@ -1288,7 +1318,7 @@ public final class TrainableSegmentation {
 		}
 		
 		public final String getMaximumPrototypeCountAsString() {
-			return Integer.toString(this.getMaximumSegmentSize());
+			return Integer.toString(this.getMaximumPrototypeCount());
 		}
 		
 		public final QuantizerCluster setMaximumPrototypeCount(final String maximumPrototypeCountAsString) {
@@ -1351,8 +1381,10 @@ public final class TrainableSegmentation {
 				return null;
 			}
 			
-			if (this.data.length != root.getScale()) {
-				this.data = new int[root.getScale()];
+			final int n = root.getScale() * root.getScale();
+			
+			if (this.data.length != n) {
+				this.data = new int[n];
 			}
 			
 			return this.data;
@@ -1383,7 +1415,7 @@ public final class TrainableSegmentation {
 		public final double distanceTo(final int[] values) {
 			final int n = values.length;
 			
-			if (n != this.data.length) {
+			if (n != this.getData().length) {
 				throw new IllegalArgumentException();
 			}
 			
