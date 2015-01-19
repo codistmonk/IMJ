@@ -557,6 +557,18 @@ public final class TrainableSegmentation {
 				this.prototypePopup = new JPopupMenu();
 				this.currentPath = new TreePath[1];
 				
+				this.rootPopup.add(newItem("Edit quantizer properties...", e -> {
+					final Quantizer currentNode = (Quantizer) this.currentPath[0].getLastPathComponent();
+					
+					showEditDialog("Edit quantizer properties",
+							() -> {
+								treeModel.valueForPathChanged(this.currentPath[0], currentNode.renewUserObject());
+								result.getRootPane().validate();
+							},
+							property("scale:", currentNode::getScale, currentNode::setScale),
+							property("maximumScale:", currentNode::getMaximumScale, currentNode::setMaximumScale)
+					);
+				}));
 				this.rootPopup.add(newItem("Add cluster", e -> {
 					final Quantizer currentNode = (Quantizer) this.currentPath[0].getLastPathComponent();
 					final QuantizerCluster newNode = new QuantizerCluster().setName("cluster").setLabel(1).setUserObject();
@@ -573,11 +585,11 @@ public final class TrainableSegmentation {
 								result.getRootPane().validate();
 							},
 							property("name:", currentNode::getName, currentNode::setName),
-							property("label:", currentNode::getLabelAsString, currentNode::parseLabel),
-							property("minimumSegmentSize:", currentNode::getMinimumSegmentSize, currentNode::parseMinimumSegmentSize),
-							property("maximumSegmentSize:", currentNode::getMaximumSegmentSize, currentNode::parseMaximumSegmentSize)
+							property("label:", currentNode::getLabelAsString, currentNode::setLabel),
+							property("minimumSegmentSize:", currentNode::getMinimumSegmentSize, currentNode::setMinimumSegmentSize),
+							property("maximumSegmentSize:", currentNode::getMaximumSegmentSize, currentNode::setMaximumSegmentSize),
+							property("maximumPrototypeCount:", currentNode::getMaximumPrototypeCount, currentNode::setMaximumPrototypeCount)
 					);
-					
 				}));
 				this.clusterPopup.add(newItem("Add prototype", e -> {
 					final QuantizerCluster currentNode = (QuantizerCluster) this.currentPath[0].getLastPathComponent();
@@ -656,15 +668,15 @@ public final class TrainableSegmentation {
 		final Document xml = XMLTools.parse(input);
 		final Quantizer result = new Quantizer().setUserObject();
 		
-		result.parseScale(((Element) XMLTools.getNode(xml, "palette")).getAttribute("scale"));
+		result.setScale(((Element) XMLTools.getNode(xml, "palette")).getAttribute("scale"));
 		
 		for (final Node clusterNode : XMLTools.getNodes(xml, "palette/cluster")) {
 			final Element clusterElement = (Element) clusterNode;
 			final QuantizerCluster cluster = new QuantizerCluster()
 				.setName(clusterElement.getAttribute("name"))
-				.parseLabel(clusterElement.getAttribute("label"))
-				.parseMinimumSegmentSize(clusterElement.getAttribute("minimumSegmentSize"))
-				.parseMaximumSegmentSize(clusterElement.getAttribute("maximumSegmentSize"))
+				.setLabel(clusterElement.getAttribute("label"))
+				.setMinimumSegmentSize(clusterElement.getAttribute("minimumSegmentSize"))
+				.setMaximumSegmentSize(clusterElement.getAttribute("maximumSegmentSize"))
 				.setUserObject();
 			
 			result.add(cluster);
@@ -674,7 +686,7 @@ public final class TrainableSegmentation {
 				
 				cluster.add(prototype);
 				
-				prototype.parseData(prototypeNode.getTextContent()).setUserObject();
+				prototype.setData(prototypeNode.getTextContent()).setUserObject();
 			}
 		}
 		
@@ -789,6 +801,8 @@ public final class TrainableSegmentation {
 		
 		private int[] buffer = new int[1];
 		
+		private int maximumScale = 1;
+		
 		@Override
 		public final Quantizer setUserObject() {
 			this.setUserObject(this.new UserObject() {
@@ -809,7 +823,7 @@ public final class TrainableSegmentation {
 			return this.buffer.length;
 		}
 		
-		public final void setScale(final int scale) {
+		public final Quantizer setScale(final int scale) {
 			if (scale <= 0) {
 				throw new IllegalArgumentException();
 			}
@@ -817,14 +831,40 @@ public final class TrainableSegmentation {
 			if (scale != this.getScale()) {
 				this.buffer = new int[scale];
 			}
+			
+			return this;
 		}
 		
 		public final String getScaleAsString() {
 			return Integer.toString(this.getScale());
 		}
 		
-		public final void parseScale(final String scaleAsString) {
-			this.setScale(Integer.parseInt(scaleAsString));
+		public final Quantizer setScale(final String scaleAsString) {
+			return this.setScale(Integer.parseInt(scaleAsString));
+		}
+		
+		public final int getMaximumScale() {
+			return this.maximumScale;
+		}
+		
+		public final Quantizer setMaximumScale(final int maximumScale) {
+			if (maximumScale <= 0) {
+				throw new IllegalArgumentException();
+			}
+			
+			this.maximumScale = maximumScale;
+			
+			return this;
+		}
+		
+		public final String getMaximumScaleAsString() {
+			return Integer.toString(this.getMaximumScale());
+		}
+		
+		public final Quantizer setMaximumScale(final String maximumScaleAsString) {
+			this.setScale(Integer.parseInt(maximumScaleAsString));
+			
+			return this;
 		}
 		
 		public final QuantizerCluster quantize(final BufferedImage image, final int x, final int y) {
@@ -894,6 +934,8 @@ public final class TrainableSegmentation {
 		
 		private int maximumSegmentSize = Integer.MAX_VALUE;
 		
+		private int maximumPrototypeCount = 1;
+		
 		@Override
 		public final QuantizerCluster setUserObject() {
 			this.setUserObject(this.new UserObject() {
@@ -949,7 +991,7 @@ public final class TrainableSegmentation {
 			return "#" + Integer.toHexString(this.label).toUpperCase(Locale.ENGLISH);
 		}
 		
-		public final QuantizerCluster parseLabel(final String labelAsString) {
+		public final QuantizerCluster setLabel(final String labelAsString) {
 			this.setLabel(parseARGB(labelAsString));
 			
 			return this;
@@ -969,7 +1011,7 @@ public final class TrainableSegmentation {
 			return Integer.toString(this.getMinimumSegmentSize());
 		}
 		
-		public final QuantizerCluster parseMinimumSegmentSize(final String minimumSegmentSizeAsString) {
+		public final QuantizerCluster setMinimumSegmentSize(final String minimumSegmentSizeAsString) {
 			this.setMinimumSegmentSize(Integer.parseInt(minimumSegmentSizeAsString));
 			
 			return this;
@@ -989,8 +1031,32 @@ public final class TrainableSegmentation {
 			return Integer.toString(this.getMaximumSegmentSize());
 		}
 		
-		public final QuantizerCluster parseMaximumSegmentSize(final String maximumSegmentSizeAsString) {
+		public final QuantizerCluster setMaximumSegmentSize(final String maximumSegmentSizeAsString) {
 			this.setMaximumSegmentSize(Integer.parseInt(maximumSegmentSizeAsString));
+			
+			return this;
+		}
+		
+		public final int getMaximumPrototypeCount() {
+			return this.maximumPrototypeCount;
+		}
+		
+		public final QuantizerCluster setMaximumPrototypeCount(final int maximumPrototypeCount) {
+			if (maximumPrototypeCount <= 0) {
+				throw new IllegalArgumentException();
+			}
+			
+			this.maximumPrototypeCount = maximumPrototypeCount;
+			
+			return this;
+		}
+		
+		public final String getMaximumPrototypeCountAsString() {
+			return Integer.toString(this.getMaximumSegmentSize());
+		}
+		
+		public final QuantizerCluster setMaximumPrototypeCount(final String maximumPrototypeCountAsString) {
+			this.setMaximumPrototypeCount(Integer.parseInt(maximumPrototypeCountAsString));
 			
 			return this;
 		}
@@ -1056,6 +1122,19 @@ public final class TrainableSegmentation {
 			return this.data;
 		}
 		
+		public final String getDataAsString() {
+			return Tools.join(",", Arrays.stream(this.getData()).mapToObj(
+					i -> "#" + Integer.toHexString(i).toUpperCase(Locale.ENGLISH)).toArray());
+		}
+		
+		public final QuantizerPrototype setData(final String dataAsString) {
+			final int[] parsed = Arrays.stream(dataAsString.split(",")).mapToInt(QuantizerNode::parseARGB).toArray();
+			
+			System.arraycopy(parsed, 0, this.getData(), 0, this.getData().length);
+			
+			return this;
+		}
+		
 		@Override
 		public final QuantizerCluster getParent() {
 			return (QuantizerCluster) super.getParent();
@@ -1063,19 +1142,6 @@ public final class TrainableSegmentation {
 		
 		public final Quantizer getQuantizer() {
 			return this.getParent().getParent();
-		}
-		
-		public final String getDataAsString() {
-			return Tools.join(",", Arrays.stream(this.getData()).mapToObj(
-					i -> "#" + Integer.toHexString(i).toUpperCase(Locale.ENGLISH)).toArray());
-		}
-		
-		public final QuantizerPrototype parseData(final String dataAsString) {
-			final int[] parsed = Arrays.stream(dataAsString.split(",")).mapToInt(QuantizerNode::parseARGB).toArray();
-			
-			System.arraycopy(parsed, 0, this.getData(), 0, this.getData().length);
-			
-			return this;
 		}
 		
 		public final double distanceTo(final int[] values) {
