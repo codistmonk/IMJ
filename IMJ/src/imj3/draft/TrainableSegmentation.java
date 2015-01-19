@@ -186,6 +186,7 @@ public final class TrainableSegmentation {
 							final int clusterCount = quantizer.getChildCount();
 							final int[] minMaxes = new int[clusterCount * 2];
 							final IntList[] classPixels = instances(clusterCount, IntList.FACTORY);
+							final int[][] clusterings = new int[clusterCount][];
 							
 							for (int i = 0; i < clusterCount; ++i) {
 								minMaxes[2 * i + 0] = 1;
@@ -213,6 +214,16 @@ public final class TrainableSegmentation {
 								
 								for (final int[] prototypeCounts : cartesian(minMaxes)) {
 									Tools.debugPrint(Arrays.toString(prototypeCounts));
+									
+									for (int i = 0; i < clusterCount; ++i) {
+										final IntList pixels = classPixels[i];
+										final int n = pixels.size();
+										clusterings[i] = new int[n];
+										
+										for (int j = 0; j < n; ++j) {
+											clusterings[i][j] = j % prototypeCounts[i];
+										}
+									}
 								}
 							}
 						}
