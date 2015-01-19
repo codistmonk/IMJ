@@ -22,6 +22,7 @@ import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
 import imj3.core.Channels.Predefined;
 import imj3.draft.TrainableSegmentation.ImageComponent.Painter;
+import imj3.draft.TrainableSegmentation.QuantizerNode;
 import imj3.tools.AwtImage2D;
 import imj3.tools.IMJTools;
 
@@ -274,6 +275,8 @@ public final class TrainableSegmentation {
 							});
 							
 							Tools.debugPrint(Arrays.stream(classPixels).map(IntList::size).toArray());
+							double bestScore = 0.0;
+							Quantizer bestQuantizer = quantizer.copy();
 							
 							for (int scale = 1; scale <= quantizer.getMaximumScale(); ++scale) {
 								quantizer.setScale(scale);
@@ -347,11 +350,18 @@ public final class TrainableSegmentation {
 										score *= f1(confusionMatrix, i);
 									}
 									
-									Tools.debugPrint(score);
+									if (bestScore < score) {
+										bestScore = score;
+										bestQuantizer = quantizer.copy();
+									}
 								}
-								
-								// TODO maximize score
 							}
+							
+							Tools.debugPrint(bestScore);
+							quantizer.set(bestQuantizer);
+							
+							((DefaultTreeModel) tree.getModel()).nodeStructureChanged(quantizer);
+							mainFrame.validate();
 						}
 						
 						// TODO Classify
@@ -898,21 +908,23 @@ public final class TrainableSegmentation {
 	}
 	
 	public static final Quantizer fromXML(final InputStream input) {
-		final Document xml = XMLTools.parse(input);
-		final Quantizer result = new Quantizer().setUserObject();
-		
+		return load(XMLTools.parse(input), new Quantizer().setUserObject());
+	}
+	
+	public static final Quantizer load(final Document xml, final Quantizer result) {
+		result.removeAllChildren();
 		result.setScale(((Element) XMLTools.getNode(xml, "palette")).getAttribute("scale"));
 		result.setMaximumScale(((Element) XMLTools.getNode(xml, "palette")).getAttribute("maximumScale"));
 		
 		for (final Node clusterNode : XMLTools.getNodes(xml, "palette/cluster")) {
 			final Element clusterElement = (Element) clusterNode;
 			final QuantizerCluster cluster = new QuantizerCluster()
-				.setName(clusterElement.getAttribute("name"))
-				.setLabel(clusterElement.getAttribute("label"))
-				.setMinimumSegmentSize(clusterElement.getAttribute("minimumSegmentSize"))
-				.setMaximumSegmentSize(clusterElement.getAttribute("maximumSegmentSize"))
-				.setMaximumPrototypeCount(clusterElement.getAttribute("maximumPrototypeCount"))
-				.setUserObject();
+			.setName(clusterElement.getAttribute("name"))
+			.setLabel(clusterElement.getAttribute("label"))
+			.setMinimumSegmentSize(clusterElement.getAttribute("minimumSegmentSize"))
+			.setMaximumSegmentSize(clusterElement.getAttribute("maximumSegmentSize"))
+			.setMaximumPrototypeCount(clusterElement.getAttribute("maximumPrototypeCount"))
+			.setUserObject();
 			
 			result.add(cluster);
 			
@@ -991,12 +1003,37 @@ public final class TrainableSegmentation {
 	 */
 	public static abstract class QuantizerNode extends DefaultMutableTreeNode {
 		
+		public abstract QuantizerNode copy();
+		
 		public abstract <V> V accept(Visitor<V> visitor);
 		
 		public abstract QuantizerNode setUserObject();
 		
 		public final UserObject renewUserObject() {
 			return (UserObject) this.setUserObject().getUserObject();
+		}
+		
+		protected final <N extends QuantizerNode> N copyChildrenTo(final N node) {
+			final int n = this.getChildCount();
+			
+			for (int i = 0; i < n; ++i) {
+				final QuantizerNode child = ((QuantizerNode) this.getChildAt(i)).copy();
+				
+				node.add(child);
+			}
+			
+			return node;
+		}
+		
+		@SuppressWarnings("unchecked")
+		public final <N extends QuantizerNode> N visitChildren(final Visitor<?> visitor) {
+			final int n = this.getChildCount();
+			
+			for (int i = 0; i < n; ++i) {
+				((QuantizerNode) this.getChildAt(i)).accept(visitor);
+			}
+			
+			return (N) this;
 		}
 		
 		private static final long serialVersionUID = 7636724853656189383L;
@@ -1008,7 +1045,7 @@ public final class TrainableSegmentation {
 		/**
 		 * @author codistmonk (creation 2015-01-18)
 		 */
-		public abstract class UserObject implements Serializable, Cloneable {
+		public abstract class UserObject implements Serializable {
 			
 			private static final long serialVersionUID = 1543313797613503533L;
 			
@@ -1039,6 +1076,51 @@ public final class TrainableSegmentation {
 		private int scale = 1;
 		
 		private int maximumScale = 1;
+		
+		@Override
+		public final Quantizer copy() {
+			final Quantizer result = new Quantizer();
+			
+			result.buffer = this.buffer.clone();
+			result.scale = this.scale;
+			result.maximumScale = this.maximumScale; 
+			
+			return this.copyChildrenTo(result);
+		}
+		
+		public final Quantizer set(final Quantizer that) {
+			this.buffer = that.buffer.clone();
+			this.scale = that.scale;
+			this.maximumScale = that.maximumScale;
+			final int n = that.getChildCount();
+			
+			this.removeAllChildren();
+			
+			for (int i = 0; i < n; ++i) {
+				this.add(((QuantizerNode) that.getChildAt(i)).copy());
+			}
+			
+			return (Quantizer) this.accept(new Visitor<QuantizerNode>() {
+				
+				@Override
+				public final QuantizerNode visit(final Quantizer quantizer) {
+					return quantizer.visitChildren(this).setUserObject();
+				}
+				
+				@Override
+				public final QuantizerNode visit(final QuantizerCluster cluster) {
+					return cluster.visitChildren(this).setUserObject();
+				}
+				
+				@Override
+				public final QuantizerNode visit(final QuantizerPrototype prototype) {
+					return prototype.visitChildren(this).setUserObject();
+				}
+				
+				private static final long serialVersionUID = 6586780367368082696L;
+				
+			});
+		}
 		
 		@Override
 		public final Quantizer setUserObject() {
@@ -1203,6 +1285,19 @@ public final class TrainableSegmentation {
 		private int maximumPrototypeCount = 1;
 		
 		@Override
+		public final QuantizerCluster copy() {
+			final QuantizerCluster result = new QuantizerCluster();
+			
+			result.name = this.name;
+			result.label = this.label;
+			result.minimumSegmentSize = this.minimumSegmentSize;
+			result.maximumSegmentSize = this.maximumSegmentSize;
+			result.maximumPrototypeCount = this.maximumPrototypeCount;
+			
+			return this.copyChildrenTo(result).setUserObject();
+		}
+		
+		@Override
 		public final QuantizerCluster setUserObject() {
 			this.setUserObject(this.new UserObject() {
 				
@@ -1357,6 +1452,15 @@ public final class TrainableSegmentation {
 	public static final class QuantizerPrototype extends QuantizerNode {
 		
 		private int[] data = new int[0];
+		
+		@Override
+		public final QuantizerPrototype copy() {
+			final QuantizerPrototype result = new QuantizerPrototype();
+			
+			result.data = this.data.clone();
+			
+			return this.copyChildrenTo(result).setUserObject();
+		}
 		
 		@Override
 		public final QuantizerPrototype setUserObject() {
