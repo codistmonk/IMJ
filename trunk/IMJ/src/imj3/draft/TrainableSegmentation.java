@@ -153,6 +153,52 @@ public final class TrainableSegmentation {
 		};
 	}
 	
+	public static final Iterable<double[]> valuesAndWeights(final BufferedImage image, final IntList pixels, final int patchSize) {
+		return new Iterable<double[]>() {
+			
+			@Override
+			public final Iterator<double[]> iterator() {
+				final int n = patchSize * patchSize;
+				
+				return new Iterator<double[]>() {
+					
+					private final int[] buffer = new int[n];
+					
+					private final double[] result = new double[n * 3 + 1];
+					
+					private int i = 0;
+					
+					{
+						this.result[n * 3] = 1.0;
+					}
+					
+					@Override
+					public final boolean hasNext() {
+						return this.i < pixels.size();
+					}
+					
+					@Override
+					public final double[] next() {
+						final int pixel = pixels.get(this.i++);
+						
+						Quantizer.extractValues(image, pixel % image.getWidth(), pixel / image.getWidth(), patchSize, this.buffer);
+						
+						for (int i = 0; i < n; ++i) {
+							final int rgb = this.buffer[i];
+							this.result[3 * i + 0] = red8(rgb);
+							this.result[3 * i + 1] = green8(rgb);
+							this.result[3 * i + 2] = blue8(rgb);
+						}
+						
+						return this.result;
+					}
+					
+				};
+			}
+			
+		};
+	}
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
@@ -218,11 +264,20 @@ public final class TrainableSegmentation {
 									for (int i = 0; i < clusterCount; ++i) {
 										final IntList pixels = classPixels[i];
 										final int n = pixels.size();
+										final int prototypeCount = prototypeCounts[i];
 										clusterings[i] = new int[n];
 										
 										for (int j = 0; j < n; ++j) {
-											clusterings[i][j] = j % prototypeCounts[i];
+											clusterings[i][j] = j % prototypeCount;
 										}
+										
+										final double[][] means = new double[prototypeCount][scale * scale * 3];
+										final double[] sizes = new double[prototypeCount];
+										final int[] counts = new int[prototypeCount];
+										
+										KMeans.computeMeans(valuesAndWeights(image, classPixels[i], scale), clusterings[i], means, sizes, counts);
+										
+										// TODO
 									}
 								}
 							}
