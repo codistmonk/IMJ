@@ -20,11 +20,14 @@ import imj2.tools.Canvas;
 import imj3.draft.TrainableSegmentation.ImageComponent.Painter;
 import imj3.tools.AwtImage2D;
 
+import java.awt.AlphaComposite;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Composite;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.Paint;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.HierarchyEvent;
@@ -287,18 +290,27 @@ public final class TrainableSegmentation {
 			public final void mouseDragged(final MouseEvent event) {
 				xys[0] = event.getX();
 				xys[1] = event.getY();
-				{
+				
+				if (0 <= xys[0]) {
+					final int x = xys[0];
+					final int y = xys[1];
+					final int s = xys[2];
 					final QuantizerCluster cluster = getSelectedCluster(tree);
+					final Composite saved = labels.getGraphics().getComposite();
 					
-					if (cluster != null && 0 <= xys[0]) {
-						final int x = xys[0];
-						final int y = xys[1];
-						final int s = xys[2];
-						
-						labels.getGraphics().setColor(new Color(cluster.getLabel()));
-						labels.getGraphics().fillOval(x - s / 2, y - s / 2, s, s);
+					if (cluster == null) {
+						labels.getGraphics().setComposite(AlphaComposite.Clear);
+					} else {
+						labels.getGraphics().setPaint(new Color(cluster.getLabel()));
+					}
+					
+					labels.getGraphics().fillOval(x - s / 2, y - s / 2, s, s);
+					
+					if (cluster == null) {
+						labels.getGraphics().setComposite(saved);
 					}
 				}
+				
 				newView.repaint();
 			}
 			
