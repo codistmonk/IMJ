@@ -52,6 +52,7 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Semaphore;
@@ -102,6 +103,53 @@ public final class TrainableSegmentation {
 	
 	static final Preferences preferences = Preferences.userNodeForPackage(TrainableSegmentation.class);
 	
+	public static final Iterable<int[]> cartesian(final int... minMaxes) {
+		return new Iterable<int[]>() {
+			
+			@Override
+			public final Iterator<int[]> iterator() {
+				final int n = minMaxes.length / 2;
+				
+				return new Iterator<int[]>() {
+					
+					private int[] result;
+					
+					@Override
+					public final boolean hasNext() {
+						if (this.result == null) {
+							this.result = new int[n];
+							
+							for (int i = 0; i < n; ++i) {
+								this.result[i] = minMaxes[2 * i + 0];
+							}
+							
+							--this.result[n - 1];
+						}
+						
+						for (int i = 0; i < n; ++i) {
+							if (this.result[i] < minMaxes[2 * i + 1]) {
+								return true;
+							}
+						}
+						
+						return false;
+					}
+					
+					@Override
+					public final int[] next() {
+						for (int i = n - 1; minMaxes[2 * i + 1] < ++this.result[i] && 0 < i; --i) {
+							this.result[i] = minMaxes[2 * i + 0];
+						}
+						
+						return this.result;
+					}
+					
+				};
+			}
+			
+		};
+	}
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
@@ -119,8 +167,9 @@ public final class TrainableSegmentation {
 				final JToolBar toolBar = new JToolBar();
 				final JTree tree = newQuantizerTree();
 				final Component[] view = { null };
+				final JComboBox<String> actionSelector = new JComboBox<>(array("Train and classify", "classify"));
 				
-				toolBar.add(new JComboBox<>(array("Train and classify", "classify")));
+				toolBar.add(actionSelector);
 				toolBar.add(new JButton(new AbstractAction("Run") {
 					
 					@Override
@@ -129,7 +178,28 @@ public final class TrainableSegmentation {
 						final BufferedImage image = ((ImageComponent) getSharedProperty(mainFrame, "view")).getImage();
 						final Canvas groundTruth = getSharedProperty(mainFrame, "groundtruth");
 						final Canvas labels = getSharedProperty(mainFrame, "labels");
-						// TODO Auto-generated method stub
+						
+						if ("Train and classify".equals(actionSelector.getSelectedItem())) {
+							final int clusterCount = quantizer.getChildCount();
+							final int[] minMaxes = new int[clusterCount * 2];
+							
+							for (int i = 0; i < clusterCount; ++i) {
+								minMaxes[2 * i + 0] = 1;
+								minMaxes[2 * i + 1] = ((QuantizerCluster) quantizer.getChildAt(i)).getMaximumPrototypeCount();
+							}
+							
+							for (int scale = 1; scale <= quantizer.getMaximumScale(); ++scale) {
+								quantizer.setScale(scale);
+								Tools.debugPrint(scale);
+								
+								for (final int[] prototypeCounts : cartesian(minMaxes)) {
+									Tools.debugPrint(Arrays.toString(prototypeCounts));
+								}
+							}
+						}
+						
+						// TODO Classify
+						
 						Tools.debugPrint("TODO");
 					}
 					
