@@ -11,7 +11,6 @@ import static imj3.draft.VisualSegmentation.repeat;
 import static imj3.draft.VisualSegmentation.setSharedProperty;
 import static imj3.draft.VisualSegmentation.showEditDialog;
 import static java.lang.Math.abs;
-import static java.util.Arrays.stream;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
@@ -22,11 +21,8 @@ import static net.sourceforge.aprog.tools.Tools.join;
 import imj2.draft.PaletteBasedHistograms;
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
-import imj3.core.Channels.Predefined;
 import imj3.draft.TrainableSegmentation.ImageComponent.Painter;
-import imj3.draft.TrainableSegmentation.QuantizerNode;
 import imj3.tools.AwtImage2D;
-import imj3.tools.IMJTools;
 
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
@@ -43,6 +39,8 @@ import java.awt.Stroke;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.HierarchyListener;
 import java.awt.event.MouseAdapter;
@@ -65,6 +63,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.prefs.Preferences;
 
@@ -223,6 +222,7 @@ public final class TrainableSegmentation {
 		return 2.0 * tp / (2.0 * tp + fp + fn);
 	}
 	
+	@SuppressWarnings("unchecked")
 	public static final <A> A deepCopy(final A array) {
 		if (!array.getClass().isArray()) {
 			return array;
@@ -255,21 +255,16 @@ public final class TrainableSegmentation {
 				final JToolBar toolBar = new JToolBar();
 				final JTree tree = newQuantizerTree();
 				final Component[] view = { null };
-				final JComboBox<String> actionSelector = new JComboBox<>(array("Train and classify", "classify"));
-				final double[] bestScore = { 0.0 };
-				final int[][][] bestConfusionMatrix = { null };
-				final JLabel bestScoreView = new JLabel("------");
+				final JComboBox<String> actionSelector = new JComboBox<>(array("Train and classify", "Classify"));
+				final JLabel scoreView = new JLabel("------");
+				final int[][][] confusionMatrix = { null };
 				
 				toolBar.add(actionSelector);
 				toolBar.add(new JButton(new AbstractAction("Run") {
 					
-					/**
-					 * 
-					 */
-					private static final long serialVersionUID = 1L;
-
 					@Override
 					public final void actionPerformed(final ActionEvent event) {
+						final double[] bestScore = { 0.0 };
 						final Quantizer quantizer = (Quantizer) tree.getModel().getRoot();
 						final BufferedImage image = ((ImageComponent) getSharedProperty(mainFrame, "view")).getImage();
 						final Canvas groundTruth = getSharedProperty(mainFrame, "groundtruth");
@@ -305,8 +300,6 @@ public final class TrainableSegmentation {
 							Tools.debugPrint(Arrays.stream(classPixels).map(IntList::size).toArray());
 							Quantizer bestQuantizer = quantizer.copy();
 							bestScore[0] = 0.0;
-							bestConfusionMatrix[0] = null;
-							bestScoreView.setText("-----");
 							
 							for (int scale = 1; scale <= quantizer.getMaximumScale(); ++scale) {
 								quantizer.setScale(scale);
@@ -374,21 +367,15 @@ public final class TrainableSegmentation {
 										});
 									}
 									
-									double score = 1.0;
-									
-									for (int i = 0; i < clusterCount; ++i) {
-										score *= f1(confusionMatrix, i);
-									}
+									final double score = score(confusionMatrix);
 									
 									if (bestScore[0] < score) {
 										bestScore[0] = score;
-										bestConfusionMatrix[0] = deepCopy(confusionMatrix);
 										bestQuantizer = quantizer.copy();
 									}
 								}
 							}
 							
-							bestScoreView.setText(bestScore[0] + "");
 							quantizer.set(bestQuantizer);
 							
 							((DefaultTreeModel) tree.getModel()).nodeStructureChanged(quantizer);
@@ -401,15 +388,34 @@ public final class TrainableSegmentation {
 						
 						Tools.debugPrint("Classifying...");
 						
+						final int clusterCount = quantizer.getChildCount();
+						confusionMatrix[0] = new int[clusterCount][clusterCount];
+						scoreView.setText("---");
+						final int[] referenceCount = new int[1];
+						
 						PaletteBasedHistograms.forEachPixelIn(image, (x, y) -> {
-							final QuantizerCluster cluster = quantizer.quantize(image, x, y);
-							labels.getImage().setRGB(x, y, cluster.getLabel());
+							final QuantizerCluster prediction = quantizer.quantize(image, x, y);
+							
+							labels.getImage().setRGB(x, y, prediction.getLabel());
+							
+							final QuantizerCluster truth = quantizer.findCluster(groundTruth.getImage().getRGB(x, y));
+							
+							if (truth != null) {
+								++confusionMatrix[0][quantizer.getIndex(truth)][quantizer.getIndex(prediction)];
+								++referenceCount[0];
+							}
 							
 							return true;
 						});
 						
+						if (0 < referenceCount[0]) {
+							scoreView.setText((int) (100.0 * score(confusionMatrix[0])) + "%");
+						}
+						
 						Tools.debugPrint("Classifying done");
 					}
+					
+					private static final long serialVersionUID = 7976765722450613823L;
 					
 				}));
 				toolBar.addSeparator();
@@ -437,7 +443,7 @@ public final class TrainableSegmentation {
 								row.add(header.get(i + 1));
 								
 								for (int j = 0; j < n; ++j) {
-									row.add("<td>" + bestConfusionMatrix[0][i][j] + "</td>");
+									row.add("<td>" + confusionMatrix[0][i][j] + "</td>");
 								}
 								
 								table.add(row);
@@ -454,7 +460,7 @@ public final class TrainableSegmentation {
 				}));
 				toolBar.addSeparator();
 				toolBar.add(new JLabel(" F1: "));
-				toolBar.add(bestScoreView);
+				toolBar.add(scoreView);
 				
 				tree.addTreeExpansionListener(new TreeExpansionListener() {
 					
@@ -475,6 +481,21 @@ public final class TrainableSegmentation {
 				mainFrame.setPreferredSize(new Dimension(512, 512));
 				mainFrame.add(toolBar, BorderLayout.NORTH);
 				mainFrame.add(scrollable(tree), BorderLayout.WEST);
+				
+				tree.addComponentListener(new ComponentAdapter() {
+					
+					@Override
+					public final void componentResized(final ComponentEvent event) {
+						if (256 < tree.getWidth()) {
+							tree.getParent().setPreferredSize(new Dimension(256, tree.getParent().getPreferredSize().height));
+							mainFrame.validate();
+						} else {
+							tree.getParent().setPreferredSize(null);
+							mainFrame.validate();
+						}
+					}
+					
+				});
 				
 				setSharedProperty(mainFrame, "tree", tree);
 				
@@ -1011,6 +1032,17 @@ public final class TrainableSegmentation {
 		return result;
 	}
 	
+	public static final double score(final int[][] confusionMatrix) {
+		final int n = confusionMatrix.length;
+		double result = 1.0;
+		
+		for (int i = 0; i < n; ++i) {
+			result *= f1(confusionMatrix, i);
+		}
+		
+		return result;
+	}
+
 	/**
 	 * @author codistmonk (creation 2015-01-16)
 	 */
