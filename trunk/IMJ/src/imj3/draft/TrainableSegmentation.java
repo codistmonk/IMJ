@@ -5,7 +5,6 @@ import static imj3.core.Channels.Predefined.green8;
 import static imj3.core.Channels.Predefined.red8;
 import static imj3.draft.VisualSegmentation.getSharedProperty;
 import static imj3.draft.VisualSegmentation.newItem;
-import static imj3.draft.VisualSegmentation.newMaskFor;
 import static imj3.draft.VisualSegmentation.property;
 import static imj3.draft.VisualSegmentation.repeat;
 import static imj3.draft.VisualSegmentation.setSharedProperty;
@@ -15,19 +14,25 @@ import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
+
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
+
 import imj3.draft.TrainableSegmentation.ImageComponent.Painter;
 import imj3.tools.AwtImage2D;
 
 import java.awt.AlphaComposite;
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Composite;
+import java.awt.CompositeContext;
 import java.awt.Dimension;
 import java.awt.Graphics;
-import java.awt.Paint;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
+import java.awt.Stroke;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.HierarchyEvent;
@@ -36,6 +41,9 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
+import java.awt.image.Raster;
+import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -47,7 +55,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
@@ -183,6 +190,37 @@ public final class TrainableSegmentation {
 		XMLTools.write(quantizer.accept(new ToXML()), output, 0);
 	}
 	
+	public static final class InvertComposite implements Composite {
+		
+		@Override
+		public final CompositeContext createContext(final ColorModel srcColorModel,
+				final ColorModel dstColorModel, final RenderingHints hints) {
+			return new CompositeContext() {
+				
+				@Override
+				public final void dispose() {
+					// NOP
+				}
+				
+				@Override
+				public final void compose(final Raster src, final Raster dstIn, final WritableRaster dstOut) {
+					final Rectangle inBounds = dstIn.getBounds();
+					final Rectangle outBounds = dstOut.getBounds();
+					final int[] buffer = dstIn.getPixels(inBounds.x, inBounds.y, inBounds.width, inBounds.height, (int[]) null);
+					int n = buffer.length;
+					
+					for (int i = 0; i < n; ++i) {
+						buffer[i] ^= ~0;
+					}
+					
+					dstOut.setPixels(outBounds.x, outBounds.y, outBounds.width, outBounds.height, buffer);
+				}
+				
+			};
+		}
+		
+	}
+
 	/**
 	 * @author codistmonk (creation 2015-01-18)
 	 */
@@ -270,13 +308,23 @@ public final class TrainableSegmentation {
 				
 				final QuantizerCluster cluster = getSelectedCluster(tree);
 				
-				if (cluster != null && 0 <= xys[0]) {
+				if (0 <= xys[0]) {
 					final int x = xys[0];
 					final int y = xys[1];
 					final int s = xys[2];
+					final Composite savedComposite = canvas.getGraphics().getComposite();
 					
-					canvas.getGraphics().setColor(new Color(cluster.getLabel()));
+					if (cluster == null) {
+						canvas.getGraphics().setComposite(new InvertComposite());
+					} else {
+						canvas.getGraphics().setColor(new Color(cluster.getLabel()));
+					}
+					
 					canvas.getGraphics().drawOval(x - s / 2, y - s / 2, s, s);
+					
+					if (cluster == null) {
+						canvas.getGraphics().setComposite(savedComposite);
+					}
 				}
 			}
 			
@@ -288,27 +336,27 @@ public final class TrainableSegmentation {
 			
 			@Override
 			public final void mouseDragged(final MouseEvent event) {
-				xys[0] = event.getX();
-				xys[1] = event.getY();
+				final int oldX = xys[0];
+				final int oldY = xys[1];
+				final int x = xys[0] = event.getX();
+				final int y = xys[1] = event.getY();
+				final int s = xys[2];
+				final QuantizerCluster cluster = getSelectedCluster(tree);
+				final Composite savedComposite = labels.getGraphics().getComposite();
+				final Stroke savedStroke = labels.getGraphics().getStroke();
 				
-				if (0 <= xys[0]) {
-					final int x = xys[0];
-					final int y = xys[1];
-					final int s = xys[2];
-					final QuantizerCluster cluster = getSelectedCluster(tree);
-					final Composite saved = labels.getGraphics().getComposite();
-					
-					if (cluster == null) {
-						labels.getGraphics().setComposite(AlphaComposite.Clear);
-					} else {
-						labels.getGraphics().setPaint(new Color(cluster.getLabel()));
-					}
-					
-					labels.getGraphics().fillOval(x - s / 2, y - s / 2, s, s);
-					
-					if (cluster == null) {
-						labels.getGraphics().setComposite(saved);
-					}
+				if (cluster == null) {
+					labels.getGraphics().setComposite(AlphaComposite.Clear);
+				} else {
+					labels.getGraphics().setColor(new Color(cluster.getLabel()));
+				}
+				
+				labels.getGraphics().setStroke(new java.awt.BasicStroke(s, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+				labels.getGraphics().drawLine(oldX, oldY, x, y);
+				labels.getGraphics().setStroke(savedStroke);
+				
+				if (cluster == null) {
+					labels.getGraphics().setComposite(savedComposite);
 				}
 				
 				newView.repaint();
