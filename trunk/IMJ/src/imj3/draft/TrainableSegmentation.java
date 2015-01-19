@@ -58,6 +58,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
@@ -199,6 +200,22 @@ public final class TrainableSegmentation {
 		};
 	}
 	
+	public static final double f1(final int[][] confusionMatrix, final int i) {
+		final int n = confusionMatrix.length;
+		final int tp = confusionMatrix[i][i];
+		int fp = 0;
+		int fn = 0;
+		
+		for (int j = 0; j < n; ++j) {
+			if (i != j) {
+				fp += confusionMatrix[j][i];
+				fn += confusionMatrix[i][j];
+			}
+		}
+		
+		return 2.0 * tp / (2.0 * tp + fp + fn);
+	}
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
@@ -240,13 +257,14 @@ public final class TrainableSegmentation {
 							}
 							
 							final BufferedImage groundtruthImage = groundTruth.getImage();
+							final int imageWidth = image.getWidth();
 							
 							PaletteBasedHistograms.forEachPixelIn(groundtruthImage, (x, y) -> {
 								final int label = groundtruthImage.getRGB(x, y);
 								final QuantizerCluster cluster = quantizer.findCluster(label);
 								
 								if (cluster != null) {
-									classPixels[quantizer.getIndex(cluster)].add(y * image.getWidth() + x);
+									classPixels[quantizer.getIndex(cluster)].add(y * imageWidth + x);
 								}
 								
 								return true;
@@ -261,32 +279,55 @@ public final class TrainableSegmentation {
 								for (final int[] prototypeCounts : cartesian(minMaxes)) {
 									Tools.debugPrint(Arrays.toString(prototypeCounts));
 									
-									for (int i = 0; i < clusterCount; ++i) {
-										final IntList pixels = classPixels[i];
+									for (int clusterIndex = 0; clusterIndex < clusterCount; ++clusterIndex) {
+										final IntList pixels = classPixels[clusterIndex];
 										final int n = pixels.size();
-										final int prototypeCount = prototypeCounts[i];
-										clusterings[i] = new int[n];
+										final int prototypeCount = prototypeCounts[clusterIndex];
+										clusterings[clusterIndex] = new int[n];
 										
 										for (int j = 0; j < n; ++j) {
-											clusterings[i][j] = j % prototypeCount;
+											clusterings[clusterIndex][j] = j % prototypeCount;
 										}
 										
-										final Iterable<double[]> points = valuesAndWeights(image, classPixels[i], scale);
+										final Iterable<double[]> points = valuesAndWeights(image, classPixels[clusterIndex], scale);
 										
 										for (int j = 0; j < 8; ++j) {
 											final double[][] means = new double[prototypeCount][scale * scale * 3];
 											final double[] sizes = new double[prototypeCount];
 											final int[] counts = new int[prototypeCount];
-											KMeans.computeMeans(points, clusterings[i], means, sizes, counts);
-											KMeans.recluster(points, clusterings[i], means);
-											Tools.debugPrint(Arrays.deepToString(means));
-											Tools.debugPrint(Arrays.toString(sizes));
-											Tools.debugPrint(Arrays.toString(counts));
+											
+											KMeans.computeMeans(points, clusterings[clusterIndex], means, sizes, counts);
+											KMeans.recluster(points, clusterings[clusterIndex], means);
 										}
-										
-										// TODO classify and maximize F1 score
 									}
+									
+									final int[][] confusionMatrix = new int[clusterCount][clusterCount];
+									
+									for (int clusterIndex = 0; clusterIndex < clusterCount; ++clusterIndex) {
+										final int truthIndex = clusterIndex;
+										
+										classPixels[clusterIndex].forEach(pixel -> {
+											final int x = pixel % imageWidth;
+											final int y = pixel / imageWidth;
+											final QuantizerCluster prediction = quantizer.quantize(image, x, y);
+											final int predictionIndex = quantizer.getIndex(prediction);
+											
+											++confusionMatrix[truthIndex][predictionIndex];
+											
+											return true;
+										});
+									}
+									
+									double score = 1.0;
+									
+									for (int i = 0; i < clusterCount; ++i) {
+										score *= f1(confusionMatrix, i);
+									}
+									
+									Tools.debugPrint(score);
 								}
+								
+								// TODO maximize score
 							}
 						}
 						
