@@ -15,6 +15,8 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
+import static net.sourceforge.aprog.tools.Tools.instances;
+import imj2.draft.PaletteBasedHistograms;
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
 import imj3.draft.TrainableSegmentation.ImageComponent.Painter;
@@ -78,6 +80,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 
+import jgencode.primitivelists.IntList;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -182,11 +185,27 @@ public final class TrainableSegmentation {
 						if ("Train and classify".equals(actionSelector.getSelectedItem())) {
 							final int clusterCount = quantizer.getChildCount();
 							final int[] minMaxes = new int[clusterCount * 2];
+							final IntList[] classPixels = instances(clusterCount, IntList.FACTORY);
 							
 							for (int i = 0; i < clusterCount; ++i) {
 								minMaxes[2 * i + 0] = 1;
 								minMaxes[2 * i + 1] = ((QuantizerCluster) quantizer.getChildAt(i)).getMaximumPrototypeCount();
 							}
+							
+							final BufferedImage groundtruthImage = groundTruth.getImage();
+							
+							PaletteBasedHistograms.forEachPixelIn(groundtruthImage, (x, y) -> {
+								final int label = groundtruthImage.getRGB(x, y);
+								final QuantizerCluster cluster = quantizer.findCluster(label);
+								
+								if (cluster != null) {
+									classPixels[quantizer.getIndex(cluster)].add(y * image.getWidth() + x);
+								}
+								
+								return true;
+							});
+							
+							Tools.debugPrint(Arrays.stream(classPixels).map(IntList::size).toArray());
 							
 							for (int scale = 1; scale <= quantizer.getMaximumScale(); ++scale) {
 								quantizer.setScale(scale);
@@ -450,6 +469,11 @@ public final class TrainableSegmentation {
 		});
 		
 		new MouseHandler(null) {
+			
+			@Override
+			public final void mousePressed(final MouseEvent event) {
+				this.mouseDragged(event);
+			}
 			
 			@Override
 			public final void mouseDragged(final MouseEvent event) {
@@ -954,6 +978,34 @@ public final class TrainableSegmentation {
 			}
 			
 			return result;
+		}
+		
+		public final QuantizerCluster findCluster(final String name) {
+			final int n = this.getChildCount();
+			
+			for (int i = 0; i < n; ++i) {
+				final QuantizerCluster cluster = (QuantizerCluster) this.getChildAt(i);
+				
+				if (name.equals(cluster.getName())) {
+					return cluster;
+				}
+			}
+			
+			return null;
+		}
+		
+		public final QuantizerCluster findCluster(final int label) {
+			final int n = this.getChildCount();
+			
+			for (int i = 0; i < n; ++i) {
+				final QuantizerCluster cluster = (QuantizerCluster) this.getChildAt(i);
+				
+				if (label == cluster.getLabel()) {
+					return cluster;
+				}
+			}
+			
+			return null;
 		}
 		
 		@Override
