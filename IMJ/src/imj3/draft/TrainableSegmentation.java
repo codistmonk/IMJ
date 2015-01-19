@@ -271,13 +271,20 @@ public final class TrainableSegmentation {
 											clusterings[i][j] = j % prototypeCount;
 										}
 										
-										final double[][] means = new double[prototypeCount][scale * scale * 3];
-										final double[] sizes = new double[prototypeCount];
-										final int[] counts = new int[prototypeCount];
+										final Iterable<double[]> points = valuesAndWeights(image, classPixels[i], scale);
 										
-										KMeans.computeMeans(valuesAndWeights(image, classPixels[i], scale), clusterings[i], means, sizes, counts);
+										for (int j = 0; j < 8; ++j) {
+											final double[][] means = new double[prototypeCount][scale * scale * 3];
+											final double[] sizes = new double[prototypeCount];
+											final int[] counts = new int[prototypeCount];
+											KMeans.computeMeans(points, clusterings[i], means, sizes, counts);
+											KMeans.recluster(points, clusterings[i], means);
+											Tools.debugPrint(Arrays.deepToString(means));
+											Tools.debugPrint(Arrays.toString(sizes));
+											Tools.debugPrint(Arrays.toString(counts));
+										}
 										
-										// TODO
+										// TODO classify and maximize F1 score
 									}
 								}
 							}
