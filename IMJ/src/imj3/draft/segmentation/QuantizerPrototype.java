@@ -5,8 +5,6 @@ import static imj3.core.Channels.Predefined.green8;
 import static imj3.core.Channels.Predefined.red8;
 import static java.lang.Math.abs;
 import static net.sourceforge.aprog.tools.Tools.cast;
-import imj3.draft.segmentation.QuantizerNode.UserObject;
-import imj3.draft.segmentation.QuantizerNode.Visitor;
 
 import java.util.Arrays;
 import java.util.Locale;

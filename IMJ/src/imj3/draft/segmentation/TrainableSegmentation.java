@@ -1,23 +1,26 @@
 package imj3.draft.segmentation;
 
 import static imj3.core.Channels.Predefined.a8r8g8b8;
-import static imj3.core.Channels.Predefined.blue8;
-import static imj3.core.Channels.Predefined.green8;
-import static imj3.core.Channels.Predefined.red8;
+import static imj3.draft.segmentation.CommonTools.*;
+import static imj3.draft.segmentation.SegmentationTools.*;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
+import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.join;
+
 import imj2.draft.PaletteBasedHistograms;
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
+
 import imj3.draft.KMeans;
 import imj3.draft.segmentation.ImageComponent.Painter;
 import imj3.draft.segmentation.QuantizerNode;
+import imj3.draft.segmentation.QuantizerNode.ToXML;
 import imj3.tools.AwtImage2D;
 
 import java.awt.AlphaComposite;
@@ -55,23 +58,15 @@ import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.Serializable;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.IdentityHashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.WeakHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.prefs.Preferences;
 
@@ -101,16 +96,13 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 
 import jgencode.primitivelists.IntList;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 
 /**
  * @author codistmonk (creation 2015-01-16)
@@ -124,17 +116,6 @@ public final class TrainableSegmentation {
 	public static final String PALETTE_XML = "palette.xml";
 	
 	static final Preferences preferences = Preferences.userNodeForPackage(TrainableSegmentation.class);
-	
-	static final Map<Object, Map<String, Object>> sharedProperties = new WeakHashMap<>();
-	
-	public static final void setSharedProperty(final Object object, final String key, final Object value) {
-		sharedProperties.computeIfAbsent(object, o -> new HashMap<>()).put(key, value);
-	}
-	
-	@SuppressWarnings("unchecked")
-	public static final <T> T getSharedProperty(final Object object, final String key) {
-		return (T) sharedProperties.getOrDefault(object, Collections.emptyMap()).get(key);
-	}
 	
 	public static final JMenuItem newItem(final String text, final ActionListener action) {
 		final JMenuItem result = new JMenuItem(text);
@@ -192,136 +173,6 @@ public final class TrainableSegmentation {
 		dialog.add(box);
 		
 		SwingTools.packAndCenter(dialog).setVisible(true);
-	}
-	
-	public static final Property property(final String name, final Supplier<?> getter,
-			final Function<String, ?> parser) {
-		return new Property(name, getter, parser);
-	}
-	
-	public static final Iterable<int[]> cartesian(final int... minMaxes) {
-		return new Iterable<int[]>() {
-			
-			@Override
-			public final Iterator<int[]> iterator() {
-				final int n = minMaxes.length / 2;
-				
-				return new Iterator<int[]>() {
-					
-					private int[] result;
-					
-					@Override
-					public final boolean hasNext() {
-						if (this.result == null) {
-							this.result = new int[n];
-							
-							for (int i = 0; i < n; ++i) {
-								this.result[i] = minMaxes[2 * i + 0];
-							}
-							
-							--this.result[n - 1];
-						}
-						
-						for (int i = 0; i < n; ++i) {
-							if (this.result[i] < minMaxes[2 * i + 1]) {
-								return true;
-							}
-						}
-						
-						return false;
-					}
-					
-					@Override
-					public final int[] next() {
-						for (int i = n - 1; minMaxes[2 * i + 1] < ++this.result[i] && 0 < i; --i) {
-							this.result[i] = minMaxes[2 * i + 0];
-						}
-						
-						return this.result;
-					}
-					
-				};
-			}
-			
-		};
-	}
-	
-	public static final Iterable<double[]> valuesAndWeights(final BufferedImage image, final IntList pixels, final int patchSize) {
-		return new Iterable<double[]>() {
-			
-			@Override
-			public final Iterator<double[]> iterator() {
-				final int n = patchSize * patchSize;
-				
-				return new Iterator<double[]>() {
-					
-					private final int[] buffer = new int[n];
-					
-					private final double[] result = new double[n * 3 + 1];
-					
-					private int i = 0;
-					
-					{
-						this.result[n * 3] = 1.0;
-					}
-					
-					@Override
-					public final boolean hasNext() {
-						return this.i < pixels.size();
-					}
-					
-					@Override
-					public final double[] next() {
-						final int pixel = pixels.get(this.i++);
-						
-						Quantizer.extractValues(image, pixel % image.getWidth(), pixel / image.getWidth(), patchSize, this.buffer);
-						
-						for (int i = 0; i < n; ++i) {
-							final int rgb = this.buffer[i];
-							this.result[3 * i + 0] = red8(rgb);
-							this.result[3 * i + 1] = green8(rgb);
-							this.result[3 * i + 2] = blue8(rgb);
-						}
-						
-						return this.result;
-					}
-					
-				};
-			}
-			
-		};
-	}
-	
-	public static final double f1(final int[][] confusionMatrix, final int i) {
-		final int n = confusionMatrix.length;
-		final int tp = confusionMatrix[i][i];
-		int fp = 0;
-		int fn = 0;
-		
-		for (int j = 0; j < n; ++j) {
-			if (i != j) {
-				fp += confusionMatrix[j][i];
-				fn += confusionMatrix[i][j];
-			}
-		}
-		
-		return 2.0 * tp / (2.0 * tp + fp + fn);
-	}
-	
-	@SuppressWarnings("unchecked")
-	public static final <A> A deepCopy(final A array) {
-		if (!array.getClass().isArray()) {
-			return array;
-		}
-		
-		final int n = Array.getLength(array);
-		final Object result = Array.newInstance(array.getClass().getComponentType(), n);
-		
-		for (int i = 0; i < n; ++i) {
-			Array.set(result, i, deepCopy(Array.get(array, i)));
-		}
-		
-		return (A) result;
 	}
 	
 	/**
@@ -746,107 +597,11 @@ public final class TrainableSegmentation {
 		}
 		
 	}
-
-	/**
-	 * @author codistmonk (creation 2015-01-18)
-	 */
-	public static final class ToXML implements QuantizerNode.Visitor<Node> {
-		
-		private final Document xml = XMLTools.newDocument();
-		
-		@Override
-		public Element visit(final Quantizer quantizer) {
-			final Element result = (Element) this.xml.appendChild(this.xml.createElement("palette"));
-			final int n = quantizer.getChildCount();
-			
-			result.setAttribute("scale", quantizer.getScaleAsString());
-			result.setAttribute("maximumScale", quantizer.getMaximumScaleAsString());
-			
-			for (int i = 0; i < n; ++i) {
-				result.appendChild(((QuantizerCluster) quantizer.getChildAt(i)).accept(this));
-			}
-			
-			return result;
-		}
-		
-		@Override
-		public final Element visit(final QuantizerCluster cluster) {
-			final Element result = this.xml.createElement("cluster");
-			final int n = cluster.getChildCount();
-			
-			result.setAttribute("name", cluster.getName());
-			result.setAttribute("label", cluster.getLabelAsString());
-			result.setAttribute("minimumSegmentSize", cluster.getMinimumSegmentSizeAsString());
-			result.setAttribute("maximumSegmentSize", cluster.getMaximumSegmentSizeAsString());
-			result.setAttribute("maximumPrototypeCount", cluster.getMaximumPrototypeCountAsString());
-			
-			for (int i = 0; i < n; ++i) {
-				result.appendChild(((QuantizerPrototype) cluster.getChildAt(i)).accept(this));
-			}
-			
-			return result;
-		}
-		
-		@Override
-		public final Element visit(final QuantizerPrototype prototype) {
-			final Element result = this.xml.createElement("prototype");
-			
-			result.setTextContent(prototype.getDataAsString());
-			
-			return result;
-		}
-		
-		private static final long serialVersionUID = -8012834350224027358L;
-		
-	}
-	
-	public static final BufferedImage newMaskFor(final BufferedImage image) {
-		final BufferedImage result = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_BINARY);
-		
-		{
-			final Graphics2D g = result.createGraphics();
-			
-			g.setColor(Color.WHITE);
-			g.fillRect(0, 0, image.getWidth(), image.getHeight());
-			g.dispose();
-		}
-		
-		return result;
-	}
 	
 	public static final QuantizerCluster getSelectedCluster(final JTree tree) {
 		final TreePath selectionPath = tree.getSelectionPath();
 		
 		return selectionPath == null ? null : cast(QuantizerCluster.class, selectionPath.getLastPathComponent());
-	}
-	
-	public static final void outlineSegments(final BufferedImage segments, final BufferedImage labels,
-			final BufferedImage mask, final BufferedImage image) {
-		final int imageWidth = image.getWidth();
-		final int imageHeight = image.getHeight();
-		
-		PaletteBasedHistograms.forEachPixelIn(segments, (x, y) -> {
-			if (mask == null || (mask.getRGB(x, y) & 1) != 0) {
-				final int segmentId = segments.getRGB(x, y);
-				
-				if (0 != segmentId) {
-					final int eastId = x + 1 < imageWidth ? segments.getRGB(x + 1, y) : segmentId;
-					final int westId = 1 < x ? segments.getRGB(x - 1, y) : segmentId;
-					final int southId = y + 1 < imageHeight ? segments.getRGB(x, y + 1) : segmentId;
-					final int northId = 1 < y ? segments.getRGB(x, y - 1) : segmentId;
-					
-					if (edge(segmentId, eastId) || edge(segmentId, southId) || edge(segmentId, westId) || edge(segmentId, northId)) {
-						image.setRGB(x, y, labels.getRGB(x, y));
-					}
-				}
-			}
-			
-			return true;
-		});
-	}
-	
-	public static final boolean edge(final int segmentId1, final int segmentId2) {
-		return segmentId1 != segmentId2;
 	}
 	
 	public static final void setView(final JFrame frame, final Component[] view, final Component newView, final String title) {
@@ -1262,96 +1017,12 @@ public final class TrainableSegmentation {
 	
 	public static final DefaultTreeModel loadModel() {
 		try {
-			return new DefaultTreeModel(fromXML(Tools.getResourceAsStream(PALETTE_XML)));
+			return new DefaultTreeModel(QuantizerNode.fromXML(getResourceAsStream(PALETTE_XML)));
 		} catch (final Exception exception) {
 			exception.printStackTrace();
 		}
 		
 		return new DefaultTreeModel(new Quantizer().setUserObject());
-	}
-	
-	public static final Quantizer fromXML(final InputStream input) {
-		return load(XMLTools.parse(input), new Quantizer().setUserObject());
-	}
-	
-	public static final String select(final String string, final Object defaultValue) {
-		return string.isEmpty() ? defaultValue.toString() : string;
-	}
-	
-	public static final Quantizer load(final Document xml, final Quantizer result) {
-		final Element paletteElement = (Element) XMLTools.getNode(xml, "palette");
-		
-		result.setScale(select(paletteElement.getAttribute("scale"), Quantizer.DEFAULT_SCALE));
-		result.setMaximumScale(select(paletteElement.getAttribute("maximumScale"), Quantizer.DEFAULT_MAXIMUM_SCALE));
-		result.removeAllChildren();
-		
-		for (final Node clusterNode : XMLTools.getNodes(xml, "palette/cluster")) {
-			final Element clusterElement = (Element) clusterNode;
-			final QuantizerCluster cluster = new QuantizerCluster()
-				.setName(select(clusterElement.getAttribute("name"), QuantizerCluster.DEFAULT_NAME))
-				.setLabel(select(clusterElement.getAttribute("label"), QuantizerCluster.DEFAULT_LABEL))
-				.setMinimumSegmentSize(select(clusterElement.getAttribute("minimumSegmentSize"), QuantizerCluster.DEFAULT_MINIMUM_SEGMENT_SIZE))
-				.setMaximumSegmentSize(select(clusterElement.getAttribute("maximumSegmentSize"), QuantizerCluster.DEFAULT_MAXIMUM_SEGMENT_SIZE))
-				.setMaximumPrototypeCount(select(clusterElement.getAttribute("maximumPrototypeCount"), QuantizerCluster.DEFAULT_MAXIMUM_PROTOTYPE_COUNT))
-				.setUserObject();
-			
-			result.add(cluster);
-			
-			for (final Node prototypeNode : XMLTools.getNodes(clusterNode, "prototype")) {
-				final QuantizerPrototype prototype = new QuantizerPrototype();
-				
-				cluster.add(prototype);
-				
-				prototype.setData(prototypeNode.getTextContent()).setUserObject();
-			}
-		}
-		
-		return result;
-	}
-	
-	public static final double score(final int[][] confusionMatrix) {
-		final int n = confusionMatrix.length;
-		double result = 1.0;
-		
-		for (int i = 0; i < n; ++i) {
-			result *= f1(confusionMatrix, i);
-		}
-		
-		return result;
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-01-14)
-	 */
-	public static final class Property implements Serializable {
-		
-		private final String name;
-		
-		private final Supplier<?> getter;
-		
-		private final Function<String, ?> parser;
-		
-		public Property(final String name, final Supplier<?> getter,
-				final Function<String, ?> parser) {
-			this.name = name;
-			this.getter = getter;
-			this.parser = parser;
-		}
-		
-		public final String getName() {
-			return this.name;
-		}
-		
-		public final Supplier<?> getGetter() {
-			return this.getter;
-		}
-		
-		public final Function<String, ?> getParser() {
-			return this.parser;
-		}
-		
-		private static final long serialVersionUID = -6068768247605642711L;
-		
 	}
 	
 }
