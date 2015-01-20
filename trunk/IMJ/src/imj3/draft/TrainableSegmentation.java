@@ -18,9 +18,11 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.join;
+
 import imj2.draft.PaletteBasedHistograms;
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
+
 import imj3.draft.TrainableSegmentation.ImageComponent.Painter;
 import imj3.tools.AwtImage2D;
 
@@ -63,8 +65,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
@@ -88,6 +88,7 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 
 import jgencode.primitivelists.IntList;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -1003,20 +1004,26 @@ public final class TrainableSegmentation {
 		return load(XMLTools.parse(input), new Quantizer().setUserObject());
 	}
 	
+	public static final String select(final String string, final Object defaultValue) {
+		return string.isEmpty() ? defaultValue.toString() : string;
+	}
+	
 	public static final Quantizer load(final Document xml, final Quantizer result) {
+		final Element paletteElement = (Element) XMLTools.getNode(xml, "palette");
+		
+		result.setScale(select(paletteElement.getAttribute("scale"), Quantizer.DEFAULT_SCALE));
+		result.setMaximumScale(select(paletteElement.getAttribute("maximumScale"), Quantizer.DEFAULT_MAXIMUM_SCALE));
 		result.removeAllChildren();
-		result.setScale(((Element) XMLTools.getNode(xml, "palette")).getAttribute("scale"));
-		result.setMaximumScale(((Element) XMLTools.getNode(xml, "palette")).getAttribute("maximumScale"));
 		
 		for (final Node clusterNode : XMLTools.getNodes(xml, "palette/cluster")) {
 			final Element clusterElement = (Element) clusterNode;
 			final QuantizerCluster cluster = new QuantizerCluster()
-			.setName(clusterElement.getAttribute("name"))
-			.setLabel(clusterElement.getAttribute("label"))
-			.setMinimumSegmentSize(clusterElement.getAttribute("minimumSegmentSize"))
-			.setMaximumSegmentSize(clusterElement.getAttribute("maximumSegmentSize"))
-			.setMaximumPrototypeCount(clusterElement.getAttribute("maximumPrototypeCount"))
-			.setUserObject();
+				.setName(select(clusterElement.getAttribute("name"), QuantizerCluster.DEFAULT_NAME))
+				.setLabel(select(clusterElement.getAttribute("label"), QuantizerCluster.DEFAULT_LABEL))
+				.setMinimumSegmentSize(select(clusterElement.getAttribute("minimumSegmentSize"), QuantizerCluster.DEFAULT_MINIMUM_SEGMENT_SIZE))
+				.setMaximumSegmentSize(select(clusterElement.getAttribute("maximumSegmentSize"), QuantizerCluster.DEFAULT_MAXIMUM_SEGMENT_SIZE))
+				.setMaximumPrototypeCount(select(clusterElement.getAttribute("maximumPrototypeCount"), QuantizerCluster.DEFAULT_MAXIMUM_PROTOTYPE_COUNT))
+				.setUserObject();
 			
 			result.add(cluster);
 			
@@ -1174,11 +1181,11 @@ public final class TrainableSegmentation {
 	 */
 	public static final class Quantizer extends QuantizerNode {
 		
-		private int[] buffer = new int[1];
+		private int scale = DEFAULT_SCALE;
 		
-		private int scale = 1;
+		private int maximumScale = DEFAULT_MAXIMUM_SCALE;
 		
-		private int maximumScale = 1;
+		private int[] buffer = new int[this.scale];
 		
 		@Override
 		public final Quantizer copy() {
@@ -1344,6 +1351,10 @@ public final class TrainableSegmentation {
 		
 		private static final long serialVersionUID = 3228746395868315788L;
 		
+		public static final int DEFAULT_SCALE = 1;
+		
+		public static final int DEFAULT_MAXIMUM_SCALE = 1;
+		
 		public static final int[] extractValues(final BufferedImage image, final int x, final int y, final int patchSize, final int[] result) {
 			Arrays.fill(result, 0);
 			
@@ -1377,15 +1388,15 @@ public final class TrainableSegmentation {
 	 */
 	public static final class QuantizerCluster extends QuantizerNode {
 		
-		private String name = "cluster";
+		private String name = DEFAULT_NAME;
 		
-		private int label = 1;
+		private int label = DEFAULT_LABEL;
 		
-		private int minimumSegmentSize = 0;
+		private int minimumSegmentSize = DEFAULT_MINIMUM_SEGMENT_SIZE;
 		
-		private int maximumSegmentSize = Integer.MAX_VALUE;
+		private int maximumSegmentSize = DEFAULT_MAXIMUM_SEGMENT_SIZE;
 		
-		private int maximumPrototypeCount = 1;
+		private int maximumPrototypeCount = DEFAULT_MAXIMUM_PROTOTYPE_COUNT;
 		
 		@Override
 		public final QuantizerCluster copy() {
@@ -1546,6 +1557,16 @@ public final class TrainableSegmentation {
 		}
 		
 		private static final long serialVersionUID = -3727849715989585298L;
+		
+		public static final String DEFAULT_NAME = "cluster";
+		
+		public static final int DEFAULT_LABEL = 1;
+		
+		public static final int DEFAULT_MINIMUM_SEGMENT_SIZE = 0;
+		
+		public static final int DEFAULT_MAXIMUM_SEGMENT_SIZE = Integer.MAX_VALUE;
+		
+		public static final int DEFAULT_MAXIMUM_PROTOTYPE_COUNT = 1;
 		
 	}
 	
