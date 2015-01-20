@@ -1,9 +1,9 @@
 package imj3.draft.segmentation;
 
 import static imj3.core.Channels.Predefined.a8r8g8b8;
+import static imj3.draft.segmentation.CommonSwingTools.*;
 import static imj3.draft.segmentation.CommonTools.*;
 import static imj3.draft.segmentation.SegmentationTools.*;
-import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
@@ -29,19 +29,12 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Composite;
-import java.awt.CompositeContext;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Rectangle;
-import java.awt.RenderingHints;
 import java.awt.Stroke;
-import java.awt.Window;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.HierarchyEvent;
@@ -49,12 +42,7 @@ import java.awt.event.HierarchyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
-import java.awt.image.ColorModel;
-import java.awt.image.Raster;
-import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -62,31 +50,22 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
-import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
-import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JMenuItem;
-import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
-import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
-import javax.swing.Timer;
 import javax.swing.WindowConstants;
 import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeExpansionListener;
@@ -117,64 +96,6 @@ public final class TrainableSegmentation {
 	
 	static final Preferences preferences = Preferences.userNodeForPackage(TrainableSegmentation.class);
 	
-	public static final JMenuItem newItem(final String text, final ActionListener action) {
-		final JMenuItem result = new JMenuItem(text);
-		
-		result.addActionListener(action);
-		
-		return result;
-	}
-	
-	public static final void showEditDialog(final String title, final Runnable ifOkClicked, final Property... properties) {
-		final JDialog dialog = new JDialog((Window) null, title);
-		final Box box = Box.createVerticalBox();
-		final Map<Property, Supplier<String>> newValues = new IdentityHashMap<>();
-		
-		dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-		
-		for (final Property property : properties) {
-			final JTextField field = new JTextField("" + property.getGetter().get());
-			
-			box.add(horizontalBox(new JLabel(property.getName()), field));
-			
-			newValues.put(property, field::getText);
-		}
-		
-		box.add(horizontalBox(
-				Box.createHorizontalGlue(),
-				new JButton(new AbstractAction("Ok") {
-					
-					@Override
-					public final void actionPerformed(final ActionEvent event) {
-						for (final Property property : properties) {
-							property.getParser().apply(newValues.get(property).get());
-						}
-						
-						dialog.dispose();
-						
-						ifOkClicked.run();
-					}
-					
-					private static final long serialVersionUID = -1250254465599248142L;
-				
-				}),
-				new JButton(new AbstractAction("Cancel") {
-					
-					@Override
-					public final void actionPerformed(final ActionEvent event) {
-						dialog.dispose();
-					}
-					
-					private static final long serialVersionUID = -1250254465599248142L;
-					
-				})
-		));
-		
-		dialog.add(box);
-		
-		SwingTools.packAndCenter(dialog).setVisible(true);
-	}
-	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
@@ -204,6 +125,8 @@ public final class TrainableSegmentation {
 						view[0].repaint();
 					}
 					
+					private static final long serialVersionUID = 8956800165218713075L;
+					
 				});
 				final JToggleButton showSegmentsButton = new JToggleButton(new AbstractAction("Show segments") {
 					
@@ -213,6 +136,8 @@ public final class TrainableSegmentation {
 						segmentsUpdateNeeded.set(true);
 						view[0].repaint();
 					}
+					
+					private static final long serialVersionUID = -6729300010871284168L;
 					
 				});
 				
@@ -522,80 +447,12 @@ public final class TrainableSegmentation {
 		});
 	}
 	
-	public static final void repeat(final Window window, final int delay, final ActionListener action) {
-		final Timer timer = new Timer(delay, action) {
-			
-			@Override
-			public final void stop() {
-				try {
-					action.actionPerformed(null);
-				} finally {
-					super.stop();
-				}
-			}
-			
-			/**
-			 * {@value}.
-			 */
-			private static final long serialVersionUID = 4028342893634389147L;
-			
-		};
-		
-		timer.setRepeats(true);
-		timer.start();
-		
-		window.addWindowListener(new WindowAdapter() {
-			
-			@Override
-			public final void windowClosing(final WindowEvent event) {
-				timer.stop();
-			}
-			
-		});
-	}
-	
 	public static final File groundtruthFile(final File imageFile) {
 		return new File(baseName(imageFile.getPath()) + "_groundtruth.png");
 	}
 	
 	public static final void writePaletteXML(final Quantizer quantizer, final OutputStream output) {
 		XMLTools.write(quantizer.accept(new ToXML()), output, 0);
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-01-19)
-	 */
-	public static final class InvertComposite implements Composite {
-		
-		@Override
-		public final CompositeContext createContext(final ColorModel srcColorModel,
-				final ColorModel dstColorModel, final RenderingHints hints) {
-			return new CompositeContext() {
-				
-				@Override
-				public final void dispose() {
-					// NOP
-				}
-				
-				@Override
-				public final void compose(final Raster src, final Raster dstIn, final WritableRaster dstOut) {
-					final Rectangle inBounds = dstIn.getBounds();
-					final Rectangle outBounds = dstOut.getBounds();
-					final int[] buffer = dstIn.getPixels(inBounds.x, inBounds.y, inBounds.width, inBounds.height, (int[]) null);
-					int n = buffer.length;
-					
-					for (int i = 0; i < n; ++i) {
-						if (((i + 1) % 4) != 0) {
-							buffer[i] ^= ~0;
-						}
-					}
-					
-					dstOut.setPixels(outBounds.x, outBounds.y, outBounds.width, outBounds.height, buffer);
-				}
-				
-			};
-		}
-		
 	}
 	
 	public static final QuantizerCluster getSelectedCluster(final JTree tree) {
@@ -633,6 +490,7 @@ public final class TrainableSegmentation {
 		setSharedProperty(mainFrame, "groundtruth", groundtruth);
 		setSharedProperty(mainFrame, "labels", labels);
 		setSharedProperty(mainFrame, "file", file);
+		
 		final BufferedImage mask = newMaskFor(image);
 		final ImageComponent newView = new ImageComponent(filtered.getImage());
 		final JTree tree = getSharedProperty(mainFrame, "tree");
@@ -887,17 +745,6 @@ public final class TrainableSegmentation {
 		setView(mainFrame, view, scrollable(center(newView)), file.getName());
 	}
 	
-	public static final JPanel center(final Component component) {
-		final JPanel result = new JPanel(new GridBagLayout());
-		final GridBagConstraints c = new GridBagConstraints();
-		
-		c.anchor = GridBagConstraints.CENTER;
-		
-		result.add(component, c);
-		
-		return result;
-	}
-	
 	public static final JTree newQuantizerTree() {
 		final DefaultTreeModel treeModel = loadModel();
 		final JTree result = new JTree(treeModel);
@@ -918,7 +765,7 @@ public final class TrainableSegmentation {
 				this.prototypePopup = new JPopupMenu();
 				this.currentPath = new TreePath[1];
 				
-				this.rootPopup.add(newItem("Edit quantizer properties...", e -> {
+				this.rootPopup.add(item("Edit quantizer properties...", e -> {
 					final Quantizer currentNode = (Quantizer) this.currentPath[0].getLastPathComponent();
 					
 					showEditDialog("Edit quantizer properties",
@@ -930,14 +777,14 @@ public final class TrainableSegmentation {
 							property("maximumScale:", currentNode::getMaximumScale, currentNode::setMaximumScale)
 					);
 				}));
-				this.rootPopup.add(newItem("Add cluster", e -> {
+				this.rootPopup.add(item("Add cluster", e -> {
 					final Quantizer currentNode = (Quantizer) this.currentPath[0].getLastPathComponent();
 					final QuantizerCluster newNode = new QuantizerCluster().setName("cluster").setLabel(1).setUserObject();
 					
 					treeModel.insertNodeInto(newNode, currentNode, currentNode.getChildCount());
 					result.getRootPane().validate();
 				}));
-				this.clusterPopup.add(newItem("Edit cluster properties...", e -> {
+				this.clusterPopup.add(item("Edit cluster properties...", e -> {
 					final QuantizerCluster currentNode = (QuantizerCluster) this.currentPath[0].getLastPathComponent();
 					
 					showEditDialog("Edit cluster properties",
@@ -952,19 +799,19 @@ public final class TrainableSegmentation {
 							property("maximumPrototypeCount:", currentNode::getMaximumPrototypeCount, currentNode::setMaximumPrototypeCount)
 					);
 				}));
-				this.clusterPopup.add(newItem("Add prototype", e -> {
+				this.clusterPopup.add(item("Add prototype", e -> {
 					final QuantizerCluster currentNode = (QuantizerCluster) this.currentPath[0].getLastPathComponent();
 					final QuantizerNode newNode = new QuantizerPrototype().setUserObject();
 					
 					treeModel.insertNodeInto(newNode, currentNode, currentNode.getChildCount());
 					result.getRootPane().validate();
 				}));
-				this.clusterPopup.add(newItem("Remove cluster", e -> {
+				this.clusterPopup.add(item("Remove cluster", e -> {
 					final QuantizerCluster currentNode = (QuantizerCluster) this.currentPath[0].getLastPathComponent();
 					treeModel.removeNodeFromParent(currentNode);
 					result.getRootPane().validate();
 				}));
-				this.prototypePopup.add(newItem("Remove prototype", e -> {
+				this.prototypePopup.add(item("Remove prototype", e -> {
 					final QuantizerPrototype currentNode = (QuantizerPrototype) this.currentPath[0].getLastPathComponent();
 					treeModel.removeNodeFromParent(currentNode);
 					result.getRootPane().validate();
