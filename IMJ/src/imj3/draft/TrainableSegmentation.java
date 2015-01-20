@@ -18,11 +18,10 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.join;
-
+import static net.sourceforge.aprog.tools.Tools.last;
 import imj2.draft.PaletteBasedHistograms;
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
-
 import imj3.draft.TrainableSegmentation.ImageComponent.Painter;
 import imj3.tools.AwtImage2D;
 
@@ -35,6 +34,7 @@ import java.awt.Composite;
 import java.awt.CompositeContext;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
@@ -65,6 +65,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
@@ -88,7 +89,6 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 
 import jgencode.primitivelists.IntList;
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -414,6 +414,9 @@ public final class TrainableSegmentation {
 						}
 						
 						Tools.debugPrint("Classifying done");
+						
+						((AtomicBoolean) getSharedProperty(mainFrame, "segmentsUpdateNeeded")).set(true);
+						view[0].repaint();
 					}
 					
 					private static final long serialVersionUID = 7976765722450613823L;
@@ -675,33 +678,72 @@ public final class TrainableSegmentation {
 		final ImageComponent newView = new ImageComponent(filtered.getImage());
 		final JTree tree = getSharedProperty(mainFrame, "tree");
 		final int[] xys = { -1, 0, 16 };
+		final AtomicBoolean groundtruthUpdateNeeded = new AtomicBoolean(true);
+		final AtomicBoolean segmentsUpdateNeeded = new AtomicBoolean(true);
+		final AtomicBoolean overlayUpdateNeeded = new AtomicBoolean(true);
 		
-		newView.getBuffer().getSecond().add(new Painter() {
+		setSharedProperty(mainFrame, "segmentsUpdateNeeded", segmentsUpdateNeeded);
+		
+		newView.addLayer().getPainters().add(new Painter() {
+			
+			@Override
+			public final AtomicBoolean getUpdateNeeded() {
+				return groundtruthUpdateNeeded;
+			}
 			
 			@Override
 			public final void paint(final Canvas canvas) {
 				canvas.getGraphics().drawImage(groundtruth.getImage(), 0, 0, null);
-				
+			}
+			
+			private static final long serialVersionUID = -5052994161290677219L;
+			
+		});
+		
+		newView.addLayer().getPainters().add(new Painter() {
+			
+			@Override
+			public final AtomicBoolean getUpdateNeeded() {
+				return segmentsUpdateNeeded;
+			}
+			
+			@Override
+			public final void paint(final Canvas canvas) {
 				VisualSegmentation.outlineSegments(labels.getImage(), labels.getImage(), mask, canvas.getImage());
-				
+			}
+			
+			private static final long serialVersionUID = -995036829480742335L;
+			
+		});
+		
+		newView.addLayer().getPainters().add(new Painter() {
+			
+			@Override
+			public final AtomicBoolean getUpdateNeeded() {
+				return overlayUpdateNeeded;
+			}
+			
+			@Override
+			public final void paint(final Canvas canvas) {
+				final Graphics2D graphics = canvas.getGraphics();
 				final QuantizerCluster cluster = getSelectedCluster(tree);
 				
 				if (0 <= xys[0]) {
 					final int x = xys[0];
 					final int y = xys[1];
 					final int s = xys[2];
-					final Composite savedComposite = canvas.getGraphics().getComposite();
+					final Composite savedComposite = graphics.getComposite();
 					
 					if (cluster == null) {
-						canvas.getGraphics().setComposite(new InvertComposite());
+						graphics.setComposite(new InvertComposite());
 					} else {
-						canvas.getGraphics().setColor(new Color(cluster.getLabel()));
+						graphics.setColor(new Color(cluster.getLabel()));
 					}
 					
-					canvas.getGraphics().drawOval(x - s / 2, y - s / 2, s, s);
+					graphics.drawOval(x - s / 2, y - s / 2, s, s);
 					
 					if (cluster == null) {
-						canvas.getGraphics().setComposite(savedComposite);
+						graphics.setComposite(savedComposite);
 					}
 				}
 			}
@@ -742,6 +784,7 @@ public final class TrainableSegmentation {
 					groundtruth.getGraphics().setComposite(savedComposite);
 				}
 				
+				groundtruthUpdateNeeded.set(true);
 				newView.repaint();
 			}
 			
@@ -749,6 +792,7 @@ public final class TrainableSegmentation {
 			public final void mouseMoved(final MouseEvent event) {
 				xys[0] = event.getX();
 				xys[1] = event.getY();
+				overlayUpdateNeeded.set(true);
 				newView.repaint();
 			}
 			
@@ -759,12 +803,14 @@ public final class TrainableSegmentation {
 				} else {
 					++xys[2];
 				}
+				overlayUpdateNeeded.set(true);
 				newView.repaint();
 			}
 			
 			@Override
 			public final void mouseExited(final MouseEvent event) {
 				xys[0] = -1;
+				overlayUpdateNeeded.set(true);
 				newView.repaint();
 			}
 			
@@ -1057,14 +1103,31 @@ public final class TrainableSegmentation {
 		
 		private final BufferedImage image;
 		
-		private final Pair<Canvas, List<Painter>> buffer;
+		private final List<Layer> layers;
 		
 		public ImageComponent(final BufferedImage image) {
 			this.image = image;
+			this.layers = new ArrayList<>();
 			final int imageWidth = image.getWidth();
 			final int imageHeight = image.getHeight();
-			this.buffer = new Pair<>(
-					new Canvas().setFormat(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB), new ArrayList<>());
+			
+			this.addLayer().getPainters().add(new Painter() {
+				
+				private final AtomicBoolean updateNeeded = new AtomicBoolean(true);
+				
+				@Override
+				public final void paint(final Canvas canvas) {
+					canvas.getGraphics().drawImage(ImageComponent.this.getImage(), 0, 0, null);
+				}
+				
+				@Override
+				public final AtomicBoolean getUpdateNeeded() {
+					return this.updateNeeded;
+				}
+				
+				private static final long serialVersionUID = 7401374809131989838L;
+				
+			});
 			
 			this.setMinimumSize(new Dimension(imageWidth, imageHeight));
 			this.setMaximumSize(new Dimension(imageWidth, imageHeight));
@@ -1072,25 +1135,36 @@ public final class TrainableSegmentation {
 			this.setSize(new Dimension(imageWidth, imageHeight));
 		}
 		
-		public final BufferedImage getImage() {
-			return this.image;
+		public final List<Layer> getLayers() {
+			return this.layers;
 		}
 		
-		public final Pair<Canvas, List<Painter>> getBuffer() {
-			return this.buffer;
+		public final Layer addLayer() {
+			final Layer result = this.getLayers().isEmpty() ? this.new Layer(this.getImage().getWidth(), this.getImage().getHeight())
+				: this.new Layer(last(this.getLayers()));
+			
+			this.getLayers().add(result);
+			
+			return result;
+		}
+		
+		public final BufferedImage getImage() {
+			return this.image;
 		}
 		
 		@Override
 		protected final void paintComponent(final Graphics g) {
 			super.paintComponent(g);
 			
-			final Pair<Canvas, List<Painter>> buffer = this.getBuffer();
-			final Canvas canvas = buffer.getFirst();
+			final Layer layer = last(this.getLayers());
+			final Canvas buffer = layer.getCanvas();
 			
-			canvas.getGraphics().drawImage(this.getImage(), 0, 0, null);
-			buffer.getSecond().forEach(p -> p.paint(canvas));
+			layer.update();
 			
-			g.drawImage(canvas.getImage(), 0, 0, null);
+			// XXX Fix for Java 8 defect on some machines
+			buffer.getGraphics().drawImage(this.getImage(), 0, 0, 1, 1, 0, 0, 1, 1, null);
+			
+			g.drawImage(buffer.getImage(), 0, 0, null);
 		}
 		
 		private static final long serialVersionUID = 1260599901446126551L;
@@ -1103,6 +1177,67 @@ public final class TrainableSegmentation {
 		public static abstract interface Painter extends Serializable {
 			
 			public abstract void paint(Canvas canvas);
+			
+			public abstract AtomicBoolean getUpdateNeeded();
+			
+		}
+		
+		/**
+		 * @author codistmonk (creation 2015-01-16)
+		 */
+		public final class Layer implements Serializable {
+			
+			private final Layer previous;
+			
+			private final Canvas canvas;
+			
+			private final List<Painter> painters;
+			
+			public Layer(final Layer previous) {
+				this(previous, previous.getCanvas().getWidth(), previous.getCanvas().getHeight());
+			}
+			
+			public Layer(final int width, final int height) {
+				this(null, width, height);
+			}
+			
+			private Layer(final Layer previous, final int width, final int height) {
+				this.previous = previous;
+				this.canvas = new Canvas().setFormat(width, height, BufferedImage.TYPE_INT_ARGB);
+				this.painters = new ArrayList<>();
+			}
+			
+			public final Layer getPrevious() {
+				return this.previous;
+			}
+			
+			public final boolean update() {
+				boolean result = this.getPrevious() != null && this.getPrevious().update();
+				
+				for (final Painter painter : this.getPainters()) {
+					result |= painter.getUpdateNeeded().getAndSet(false);
+				}
+				
+				if (result) {
+					if (this.getPrevious() != null) {
+						this.getCanvas().getGraphics().drawImage(this.getPrevious().getCanvas().getImage(), 0, 0, null);
+					}
+					
+					this.getPainters().forEach(painter -> painter.paint(this.getCanvas()));
+				}
+				
+				return result;
+			}
+			
+			public final Canvas getCanvas() {
+				return this.canvas;
+			}
+			
+			public final List<Painter> getPainters() {
+				return this.painters;
+			}
+			
+			private static final long serialVersionUID = 6101324389175368308L;
 			
 		}
 		
