@@ -164,7 +164,6 @@ public final class TrainableSegmentation {
 							
 							final int clusterCount = quantizer.getChildCount();
 							final int[] minMaxes = new int[clusterCount * 2];
-							final IntList[] classPixels = instances(clusterCount, IntList.FACTORY);
 							final int[][] clusterings = new int[clusterCount][];
 							
 							for (int i = 0; i < clusterCount; ++i) {
@@ -174,20 +173,10 @@ public final class TrainableSegmentation {
 							
 							final BufferedImage groundtruthImage = groundTruth.getImage();
 							final int imageWidth = image.getWidth();
-							
-							PaletteBasedHistograms.forEachPixelIn(groundtruthImage, (x, y) -> {
-								final int label = groundtruthImage.getRGB(x, y);
-								final QuantizerCluster cluster = quantizer.findCluster(label);
-								
-								if (cluster != null) {
-									classPixels[quantizer.getIndex(cluster)].add(y * imageWidth + x);
-								}
-								
-								return true;
-							});
+							final IntList[] groundtruthPixels = collectGroundtruthPixels(groundtruthImage, quantizer);
 							
 							Tools.debugPrint("Ground truth pixels collected in", timer.toc(), "ms");
-							Tools.debugPrint("counts:", Arrays.stream(classPixels).map(IntList::size).toArray());
+							Tools.debugPrint("counts:", Arrays.stream(groundtruthPixels).map(IntList::size).toArray());
 							
 							Quantizer bestQuantizer = quantizer.copy();
 							bestScore[0] = 0.0;
@@ -203,7 +192,7 @@ public final class TrainableSegmentation {
 									
 									for (int clusterIndex = 0; clusterIndex < clusterCount; ++clusterIndex) {
 										final QuantizerCluster cluster = (QuantizerCluster) quantizer.getChildAt(clusterIndex);
-										final IntList pixels = classPixels[clusterIndex];
+										final IntList pixels = groundtruthPixels[clusterIndex];
 										final int n = pixels.size();
 										final int prototypeCount = prototypeCounts[clusterIndex];
 										clusterings[clusterIndex] = new int[n];
@@ -212,7 +201,7 @@ public final class TrainableSegmentation {
 											clusterings[clusterIndex][j] = j % prototypeCount;
 										}
 										
-										final Iterable<double[]> points = valuesAndWeights(image, classPixels[clusterIndex], scale);
+										final Iterable<double[]> points = valuesAndWeights(image, groundtruthPixels[clusterIndex], scale);
 										double[][] means = null;
 										
 										for (int j = 0; j < 8; ++j) {
@@ -224,23 +213,7 @@ public final class TrainableSegmentation {
 											KMeans.recluster(points, clusterings[clusterIndex], means);
 										}
 										
-										cluster.removeAllChildren();
-										
-										for (int j = 0; j < prototypeCount; ++j) {
-											final QuantizerPrototype prototype = new QuantizerPrototype();
-											
-											cluster.add(prototype);
-											
-											final double[] prototypeElements = means[j];
-											final int[] data = prototype.getData();
-											
-											for (int k = 0; k < data.length; ++k) {
-												data[k] = a8r8g8b8(0xFF,
-														(int) prototypeElements[3 * k + 0],
-														(int) prototypeElements[3 * k + 1],
-														(int) prototypeElements[3 * k + 2]);
-											}
-										}
+										setPrototypes(cluster, means);
 									}
 									
 									Tools.debugPrint("Clustering done in", timer.toc(), "ms");
@@ -251,7 +224,7 @@ public final class TrainableSegmentation {
 									for (int clusterIndex = 0; clusterIndex < clusterCount; ++clusterIndex) {
 										final int truthIndex = clusterIndex;
 										
-										classPixels[clusterIndex].forEach(pixel -> {
+										groundtruthPixels[clusterIndex].forEach(pixel -> {
 											final int x = pixel % imageWidth;
 											final int y = pixel / imageWidth;
 											final QuantizerCluster prediction = quantizer.quantize(image, x, y);
@@ -870,6 +843,47 @@ public final class TrainableSegmentation {
 		}
 		
 		return new DefaultTreeModel(new Quantizer().setUserObject());
+	}
+	
+	public static final IntList[] collectGroundtruthPixels(final BufferedImage groundtruthImage, final Quantizer quantizer) {
+		final int imageWidth = groundtruthImage.getWidth();
+		final int clusterCount = quantizer.getChildCount();
+		final IntList[] result = instances(clusterCount, IntList.FACTORY);
+		
+		PaletteBasedHistograms.forEachPixelIn(groundtruthImage, (x, y) -> {
+			final int label = groundtruthImage.getRGB(x, y);
+			final QuantizerCluster cluster = quantizer.findCluster(label);
+			
+			if (cluster != null) {
+				result[quantizer.getIndex(cluster)].add(y * imageWidth + x);
+			}
+			
+			return true;
+		});
+		
+		return result;
+	}
+	
+	public static final void setPrototypes(final QuantizerCluster cluster, final double[][] means) {
+		final int prototypeCount = means.length;
+		
+		cluster.removeAllChildren();
+		
+		for (int j = 0; j < prototypeCount; ++j) {
+			final QuantizerPrototype prototype = new QuantizerPrototype();
+			
+			cluster.add(prototype);
+			
+			final double[] prototypeElements = means[j];
+			final int[] data = prototype.getData();
+			
+			for (int k = 0; k < data.length; ++k) {
+				data[k] = a8r8g8b8(0xFF,
+						(int) prototypeElements[3 * k + 0],
+						(int) prototypeElements[3 * k + 1],
+						(int) prototypeElements[3 * k + 2]);
+			}
+		}
 	}
 	
 }
