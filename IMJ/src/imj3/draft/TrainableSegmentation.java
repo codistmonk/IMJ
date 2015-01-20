@@ -77,6 +77,7 @@ import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPopupMenu;
+import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
@@ -260,7 +261,33 @@ public final class TrainableSegmentation {
 				final JComboBox<String> actionSelector = new JComboBox<>(array("Train and classify", "Classify"));
 				final JLabel scoreView = new JLabel("------");
 				final int[][][] confusionMatrix = { null };
+				final JToggleButton showGroundtruthButton = new JToggleButton(new AbstractAction("Show ground truth") {
+					
+					@Override
+					public final void actionPerformed(final ActionEvent event) {
+						final AtomicBoolean groundtruthUpdateNeeded = getSharedProperty(mainFrame, "groundtruthUpdateNeeded");
+						groundtruthUpdateNeeded.set(true);
+						view[0].repaint();
+					}
+					
+				});
+				final JToggleButton showSegmentsButton = new JToggleButton(new AbstractAction("Show segments") {
+					
+					@Override
+					public final void actionPerformed(final ActionEvent event) {
+						final AtomicBoolean segmentsUpdateNeeded = getSharedProperty(mainFrame, "segmentsUpdateNeeded");
+						segmentsUpdateNeeded.set(true);
+						view[0].repaint();
+					}
+					
+				});
 				
+				setSharedProperty(mainFrame, "showGroundtruthButton", showGroundtruthButton);
+				setSharedProperty(mainFrame, "showSegmentsButton", showSegmentsButton);
+				
+				toolBar.add(showGroundtruthButton);
+				toolBar.add(showSegmentsButton);
+				toolBar.addSeparator();
 				toolBar.add(actionSelector);
 				toolBar.add(new JButton(new AbstractAction("Run") {
 					
@@ -691,6 +718,7 @@ public final class TrainableSegmentation {
 		final AtomicBoolean segmentsUpdateNeeded = new AtomicBoolean(true);
 		final AtomicBoolean overlayUpdateNeeded = new AtomicBoolean(true);
 		
+		setSharedProperty(mainFrame, "groundtruthUpdateNeeded", groundtruthUpdateNeeded);
 		setSharedProperty(mainFrame, "segmentsUpdateNeeded", segmentsUpdateNeeded);
 		
 		newView.addLayer().getPainters().add(new Painter() {
@@ -702,7 +730,11 @@ public final class TrainableSegmentation {
 			
 			@Override
 			public final void paint(final Canvas canvas) {
-				canvas.getGraphics().drawImage(groundtruth.getImage(), 0, 0, null);
+				final JToggleButton showGroundtruthButton = getSharedProperty(mainFrame, "showGroundtruthButton");
+				
+				if (showGroundtruthButton.isSelected()) {
+					canvas.getGraphics().drawImage(groundtruth.getImage(), 0, 0, null);
+				}
 			}
 			
 			private static final long serialVersionUID = -5052994161290677219L;
@@ -718,7 +750,11 @@ public final class TrainableSegmentation {
 			
 			@Override
 			public final void paint(final Canvas canvas) {
-				VisualSegmentation.outlineSegments(labels.getImage(), labels.getImage(), mask, canvas.getImage());
+				final JToggleButton showSegmentsButton = getSharedProperty(mainFrame, "showSegmentsButton");
+				
+				if (showSegmentsButton.isSelected()) {
+					VisualSegmentation.outlineSegments(labels.getImage(), labels.getImage(), mask, canvas.getImage());
+				}
 			}
 			
 			private static final long serialVersionUID = -995036829480742335L;
