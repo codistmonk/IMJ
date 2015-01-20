@@ -10,6 +10,7 @@ import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
+
 import imj2.core.Image2D;
 import imj2.draft.KMeans;
 import imj2.draft.PaletteBasedHistograms;
@@ -18,6 +19,7 @@ import imj2.pixel3d.MouseHandler;
 import imj2.tools.AwtBackedImage;
 import imj2.tools.Canvas;
 import imj2.tools.IMJTools;
+
 import imj3.core.Channels;
 import imj3.tools.AwtImage2D;
 
@@ -374,8 +376,10 @@ public final class VisualSegmentation {
 			final Function<String, ?> parser) {
 		return new Property(name, getter, parser);
 	}
-
 	
+	/**
+	 * @author codistmonk (creation 2015-01-14)
+	 */
 	public static final class Property implements Serializable {
 		
 		private final String name;

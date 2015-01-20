@@ -4,13 +4,8 @@ import static imj3.core.Channels.Predefined.a8r8g8b8;
 import static imj3.core.Channels.Predefined.blue8;
 import static imj3.core.Channels.Predefined.green8;
 import static imj3.core.Channels.Predefined.red8;
-import static imj3.draft.VisualSegmentation.getSharedProperty;
-import static imj3.draft.VisualSegmentation.newItem;
-import static imj3.draft.VisualSegmentation.property;
-import static imj3.draft.VisualSegmentation.repeat;
-import static imj3.draft.VisualSegmentation.setSharedProperty;
-import static imj3.draft.VisualSegmentation.showEditDialog;
 import static java.lang.Math.abs;
+import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
@@ -19,9 +14,11 @@ import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
+
 import imj2.draft.PaletteBasedHistograms;
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
+
 import imj3.draft.TrainableSegmentation.ImageComponent.Painter;
 import imj3.tools.AwtImage2D;
 
@@ -35,12 +32,16 @@ import java.awt.CompositeContext;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
+import java.awt.Window;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.HierarchyEvent;
@@ -48,6 +49,8 @@ import java.awt.event.HierarchyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
 import java.awt.image.Raster;
@@ -61,26 +64,39 @@ import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
+import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import javax.swing.WindowConstants;
 import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeExpansionListener;
@@ -91,10 +107,10 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 
 import jgencode.primitivelists.IntList;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Pair;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
@@ -115,6 +131,80 @@ public final class TrainableSegmentation {
 	public static final String PALETTE_XML = "palette.xml";
 	
 	static final Preferences preferences = Preferences.userNodeForPackage(TrainableSegmentation.class);
+	
+	static final Map<Object, Map<String, Object>> sharedProperties = new WeakHashMap<>();
+	
+	public static final void setSharedProperty(final Object object, final String key, final Object value) {
+		sharedProperties.computeIfAbsent(object, o -> new HashMap<>()).put(key, value);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final <T> T getSharedProperty(final Object object, final String key) {
+		return (T) sharedProperties.getOrDefault(object, Collections.emptyMap()).get(key);
+	}
+	
+	public static final JMenuItem newItem(final String text, final ActionListener action) {
+		final JMenuItem result = new JMenuItem(text);
+		
+		result.addActionListener(action);
+		
+		return result;
+	}
+	
+	public static final void showEditDialog(final String title, final Runnable ifOkClicked, final Property... properties) {
+		final JDialog dialog = new JDialog((Window) null, title);
+		final Box box = Box.createVerticalBox();
+		final Map<Property, Supplier<String>> newValues = new IdentityHashMap<>();
+		
+		dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+		
+		for (final Property property : properties) {
+			final JTextField field = new JTextField("" + property.getGetter().get());
+			
+			box.add(horizontalBox(new JLabel(property.getName()), field));
+			
+			newValues.put(property, field::getText);
+		}
+		
+		box.add(horizontalBox(
+				Box.createHorizontalGlue(),
+				new JButton(new AbstractAction("Ok") {
+					
+					@Override
+					public final void actionPerformed(final ActionEvent event) {
+						for (final Property property : properties) {
+							property.getParser().apply(newValues.get(property).get());
+						}
+						
+						dialog.dispose();
+						
+						ifOkClicked.run();
+					}
+					
+					private static final long serialVersionUID = -1250254465599248142L;
+				
+				}),
+				new JButton(new AbstractAction("Cancel") {
+					
+					@Override
+					public final void actionPerformed(final ActionEvent event) {
+						dialog.dispose();
+					}
+					
+					private static final long serialVersionUID = -1250254465599248142L;
+					
+				})
+		));
+		
+		dialog.add(box);
+		
+		SwingTools.packAndCenter(dialog).setVisible(true);
+	}
+	
+	public static final Property property(final String name, final Supplier<?> getter,
+			final Function<String, ?> parser) {
+		return new Property(name, getter, parser);
+	}
 	
 	public static final Iterable<int[]> cartesian(final int... minMaxes) {
 		return new Iterable<int[]>() {
@@ -588,6 +678,38 @@ public final class TrainableSegmentation {
 		});
 	}
 	
+	public static final void repeat(final Window window, final int delay, final ActionListener action) {
+		final Timer timer = new Timer(delay, action) {
+			
+			@Override
+			public final void stop() {
+				try {
+					action.actionPerformed(null);
+				} finally {
+					super.stop();
+				}
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 4028342893634389147L;
+			
+		};
+		
+		timer.setRepeats(true);
+		timer.start();
+		
+		window.addWindowListener(new WindowAdapter() {
+			
+			@Override
+			public final void windowClosing(final WindowEvent event) {
+				timer.stop();
+			}
+			
+		});
+	}
+	
 	public static final File groundtruthFile(final File imageFile) {
 		return new File(baseName(imageFile.getPath()) + "_groundtruth.png");
 	}
@@ -685,10 +807,63 @@ public final class TrainableSegmentation {
 		
 	}
 	
+	public static final BufferedImage newMaskFor(final BufferedImage image) {
+		final BufferedImage result = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_BINARY);
+		
+		{
+			final Graphics2D g = result.createGraphics();
+			
+			g.setColor(Color.WHITE);
+			g.fillRect(0, 0, image.getWidth(), image.getHeight());
+			g.dispose();
+		}
+		
+		return result;
+	}
+	
 	public static final QuantizerCluster getSelectedCluster(final JTree tree) {
 		final TreePath selectionPath = tree.getSelectionPath();
 		
 		return selectionPath == null ? null : cast(QuantizerCluster.class, selectionPath.getLastPathComponent());
+	}
+	
+	public static final void outlineSegments(final BufferedImage segments, final BufferedImage labels,
+			final BufferedImage mask, final BufferedImage image) {
+		final int imageWidth = image.getWidth();
+		final int imageHeight = image.getHeight();
+		
+		PaletteBasedHistograms.forEachPixelIn(segments, (x, y) -> {
+			if (mask == null || (mask.getRGB(x, y) & 1) != 0) {
+				final int segmentId = segments.getRGB(x, y);
+				
+				if (0 != segmentId) {
+					final int eastId = x + 1 < imageWidth ? segments.getRGB(x + 1, y) : segmentId;
+					final int westId = 1 < x ? segments.getRGB(x - 1, y) : segmentId;
+					final int southId = y + 1 < imageHeight ? segments.getRGB(x, y + 1) : segmentId;
+					final int northId = 1 < y ? segments.getRGB(x, y - 1) : segmentId;
+					
+					if (edge(segmentId, eastId) || edge(segmentId, southId) || edge(segmentId, westId) || edge(segmentId, northId)) {
+						image.setRGB(x, y, labels.getRGB(x, y));
+					}
+				}
+			}
+			
+			return true;
+		});
+	}
+	
+	public static final boolean edge(final int segmentId1, final int segmentId2) {
+		return segmentId1 != segmentId2;
+	}
+	
+	public static final void setView(final JFrame frame, final Component[] view, final Component newView, final String title) {
+		if (view[0] != null) {
+			frame.remove(view[0]);
+		}
+		
+		frame.add(view[0] = newView, BorderLayout.CENTER);
+		frame.setTitle(title);
+		frame.revalidate();
 	}
 	
 	public static final void setView(final JFrame mainFrame, final Component[] view, final File file) {
@@ -710,7 +885,7 @@ public final class TrainableSegmentation {
 		setSharedProperty(mainFrame, "groundtruth", groundtruth);
 		setSharedProperty(mainFrame, "labels", labels);
 		setSharedProperty(mainFrame, "file", file);
-		final BufferedImage mask = VisualSegmentation.newMaskFor(image);
+		final BufferedImage mask = newMaskFor(image);
 		final ImageComponent newView = new ImageComponent(filtered.getImage());
 		final JTree tree = getSharedProperty(mainFrame, "tree");
 		final int[] xys = { -1, 0, 16 };
@@ -753,7 +928,7 @@ public final class TrainableSegmentation {
 				final JToggleButton showSegmentsButton = getSharedProperty(mainFrame, "showSegmentsButton");
 				
 				if (showSegmentsButton.isSelected()) {
-					VisualSegmentation.outlineSegments(labels.getImage(), labels.getImage(), mask, canvas.getImage());
+					outlineSegments(labels.getImage(), labels.getImage(), mask, canvas.getImage());
 				}
 			}
 			
@@ -961,7 +1136,18 @@ public final class TrainableSegmentation {
 		
 		setSharedProperty(mainFrame, "view", newView);
 		
-		VisualSegmentation.setView(mainFrame, view, scrollable(VisualSegmentation.center(newView)), file.getName());
+		setView(mainFrame, view, scrollable(center(newView)), file.getName());
+	}
+	
+	public static final JPanel center(final Component component) {
+		final JPanel result = new JPanel(new GridBagLayout());
+		final GridBagConstraints c = new GridBagConstraints();
+		
+		c.anchor = GridBagConstraints.CENTER;
+		
+		result.add(component, c);
+		
+		return result;
 	}
 	
 	public static final JTree newQuantizerTree() {
@@ -1847,6 +2033,40 @@ public final class TrainableSegmentation {
 		}
 		
 		private static final long serialVersionUID = 946728342547485375L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-01-14)
+	 */
+	public static final class Property implements Serializable {
+		
+		private final String name;
+		
+		private final Supplier<?> getter;
+		
+		private final Function<String, ?> parser;
+		
+		public Property(final String name, final Supplier<?> getter,
+				final Function<String, ?> parser) {
+			this.name = name;
+			this.getter = getter;
+			this.parser = parser;
+		}
+		
+		public final String getName() {
+			return this.name;
+		}
+		
+		public final Supplier<?> getGetter() {
+			return this.getter;
+		}
+		
+		public final Function<String, ?> getParser() {
+			return this.parser;
+		}
+		
+		private static final long serialVersionUID = -6068768247605642711L;
 		
 	}
 	
