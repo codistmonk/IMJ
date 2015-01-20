@@ -1,8 +1,5 @@
 package imj3.draft.segmentation;
 
-import imj3.draft.segmentation.QuantizerNode.UserObject;
-import imj3.draft.segmentation.QuantizerNode.Visitor;
-
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 
