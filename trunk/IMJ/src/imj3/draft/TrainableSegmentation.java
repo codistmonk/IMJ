@@ -61,6 +61,7 @@ import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -270,9 +271,10 @@ public final class TrainableSegmentation {
 						final BufferedImage image = ((ImageComponent) getSharedProperty(mainFrame, "view")).getImage();
 						final Canvas groundTruth = getSharedProperty(mainFrame, "groundtruth");
 						final Canvas labels = getSharedProperty(mainFrame, "labels");
+						final TicToc timer = new TicToc();
 						
 						if ("Train and classify".equals(actionSelector.getSelectedItem())) {
-							Tools.debugPrint("Training...");
+							Tools.debugPrint("Training...", new Date(timer.tic()));
 							
 							final int clusterCount = quantizer.getChildCount();
 							final int[] minMaxes = new int[clusterCount * 2];
@@ -298,16 +300,20 @@ public final class TrainableSegmentation {
 								return true;
 							});
 							
-							Tools.debugPrint(Arrays.stream(classPixels).map(IntList::size).toArray());
+							Tools.debugPrint("Ground truth pixels collected in", timer.toc(), "ms");
+							Tools.debugPrint("counts:", Arrays.stream(classPixels).map(IntList::size).toArray());
+							
 							Quantizer bestQuantizer = quantizer.copy();
 							bestScore[0] = 0.0;
 							
 							for (int scale = 1; scale <= quantizer.getMaximumScale(); ++scale) {
+								Tools.debugPrint("scale:", scale);
+								
 								quantizer.setScale(scale);
-								Tools.debugPrint(scale);
 								
 								for (final int[] prototypeCounts : cartesian(minMaxes)) {
-									Tools.debugPrint(Arrays.toString(prototypeCounts));
+									Tools.debugPrint("prototypes:", Arrays.toString(prototypeCounts));
+									Tools.debugPrint("Clustering...", new Date(timer.tic()));
 									
 									for (int clusterIndex = 0; clusterIndex < clusterCount; ++clusterIndex) {
 										final QuantizerCluster cluster = (QuantizerCluster) quantizer.getChildAt(clusterIndex);
@@ -351,6 +357,9 @@ public final class TrainableSegmentation {
 										}
 									}
 									
+									Tools.debugPrint("Clustering done in", timer.toc(), "ms");
+									Tools.debugPrint("Evaluation...", new Date(timer.tic()));
+									
 									final int[][] confusionMatrix = new int[clusterCount][clusterCount];
 									
 									for (int clusterIndex = 0; clusterIndex < clusterCount; ++clusterIndex) {
@@ -374,20 +383,20 @@ public final class TrainableSegmentation {
 										bestScore[0] = score;
 										bestQuantizer = quantizer.copy();
 									}
+									
+									Tools.debugPrint("Evaluation done in", timer.toc(), "ms");
 								}
 							}
+							
+							Tools.debugPrint("Training done in", timer.getTotalTime(), "ms");
 							
 							quantizer.set(bestQuantizer);
 							
 							((DefaultTreeModel) tree.getModel()).nodeStructureChanged(quantizer);
 							mainFrame.validate();
-							
-							Tools.debugPrint("Training done");
 						}
 						
-						// TODO Classify
-						
-						Tools.debugPrint("Classifying...");
+						Tools.debugPrint("Classifying...", new Date(timer.tic()));
 						
 						final int clusterCount = quantizer.getChildCount();
 						confusionMatrix[0] = new int[clusterCount][clusterCount];
@@ -409,11 +418,11 @@ public final class TrainableSegmentation {
 							return true;
 						});
 						
+						Tools.debugPrint("Classifying done in", timer.toc(), "ms");
+						
 						if (0 < referenceCount[0]) {
 							scoreView.setText((int) (100.0 * score(confusionMatrix[0])) + "%");
 						}
-						
-						Tools.debugPrint("Classifying done");
 						
 						((AtomicBoolean) getSharedProperty(mainFrame, "segmentsUpdateNeeded")).set(true);
 						view[0].repaint();
