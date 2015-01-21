@@ -176,7 +176,7 @@ public final class TrainableSegmentation {
 							final IntList[] groundtruthPixels = collectGroundtruthPixels(groundtruthImage, quantizer);
 							
 							Tools.debugPrint("Ground truth pixels collected in", timer.toc(), "ms");
-							Tools.debugPrint("counts:", Arrays.stream(groundtruthPixels).map(IntList::size).toArray());
+							Tools.debugPrint("counts:", Arrays.toString(Arrays.stream(groundtruthPixels).map(IntList::size).toArray()));
 							
 							Quantizer bestQuantizer = quantizer.copy();
 							bestScore[0] = 0.0;
@@ -210,6 +210,11 @@ public final class TrainableSegmentation {
 											final int[] counts = new int[prototypeCount];
 											
 											KMeans.computeMeans(points, clusterings[clusterIndex], means, sizes, counts);
+											
+											if (prototypeCount == 1) {
+												break;
+											}
+											
 											KMeans.recluster(points, clusterings[clusterIndex], means);
 										}
 										
@@ -241,6 +246,8 @@ public final class TrainableSegmentation {
 									if (bestScore[0] < score) {
 										bestScore[0] = score;
 										bestQuantizer = quantizer.copy();
+										
+										Tools.debugPrint("bestScore:", score);
 									}
 									
 									Tools.debugPrint("Evaluation done in", timer.toc(), "ms");
