@@ -155,12 +155,12 @@ public final class QuantizerCluster extends QuantizerNode {
 		return this;
 	}
 	
-	public final double distanceTo(final int[] values) {
+	public final double distanceTo(final int[] values, final double maximum) {
 		final int n = this.getChildCount();
 		double result = Double.POSITIVE_INFINITY;
 		
 		for (int i = 0; i < n; ++i) {
-			final double distance = ((QuantizerPrototype) this.getChildAt(i)).distanceTo(values);
+			final double distance = ((QuantizerPrototype) this.getChildAt(i)).distanceTo(values, maximum);
 			
 			if (distance < result) {
 				result = distance;
