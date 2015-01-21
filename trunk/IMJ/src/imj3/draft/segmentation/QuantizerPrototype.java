@@ -81,7 +81,7 @@ public final class QuantizerPrototype extends QuantizerNode {
 		return this.getParent().getParent();
 	}
 	
-	public final double distanceTo(final int[] values) {
+	public final double distanceTo(final int[] values, final double maximum) {
 		final int n = values.length;
 		
 		if (n != this.getData().length) {
@@ -90,13 +90,12 @@ public final class QuantizerPrototype extends QuantizerNode {
 		
 		double result = 0.0;
 		
-		for (int i = 0; i < n; ++i) {
+		for (int i = 0; i < n && result < maximum; ++i) {
 			final int thisRGB = this.data[i];
 			final int thatRGB = values[i];
 			result += abs(red8(thisRGB) - red8(thatRGB))
 					+ abs(green8(thisRGB) - green8(thatRGB))
 					+ abs(blue8(thisRGB) - blue8(thatRGB));
-					
 		}
 		
 		return result;

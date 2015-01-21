@@ -132,7 +132,7 @@ public final class Quantizer extends QuantizerNode {
 		
 		for (int i = 0; i < n; ++i) {
 			final QuantizerCluster cluster = (QuantizerCluster) this.getChildAt(i);
-			final double distance = cluster.distanceTo(this.buffer);
+			final double distance = cluster.distanceTo(this.buffer, bestDistance);
 			
 			if (distance < bestDistance) {
 				result = cluster;
