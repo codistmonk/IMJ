@@ -16,6 +16,7 @@ import static net.sourceforge.aprog.tools.Tools.join;
 import imj2.draft.PaletteBasedHistograms;
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
+import imj2.tools.MultiThreadTools;
 
 import imj3.draft.KMeans;
 import imj3.draft.segmentation.ImageComponent.Painter;
@@ -49,8 +50,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.prefs.Preferences;
@@ -155,7 +160,9 @@ public final class TrainableSegmentation {
 						final double[] bestScore = { 0.0 };
 						final Quantizer quantizer = (Quantizer) tree.getModel().getRoot();
 						final BufferedImage image = ((ImageComponent) getSharedProperty(mainFrame, "view")).getImage();
-						final Canvas groundTruth = getSharedProperty(mainFrame, "groundtruth");
+						final int imageWidth = image.getWidth();
+						final int imageHeight = image.getHeight();
+						final Canvas groundtruth = getSharedProperty(mainFrame, "groundtruth");
 						final Canvas labels = getSharedProperty(mainFrame, "labels");
 						final TicToc timer = new TicToc();
 						
@@ -171,8 +178,7 @@ public final class TrainableSegmentation {
 								minMaxes[2 * i + 1] = ((QuantizerCluster) quantizer.getChildAt(i)).getMaximumPrototypeCount();
 							}
 							
-							final BufferedImage groundtruthImage = groundTruth.getImage();
-							final int imageWidth = image.getWidth();
+							final BufferedImage groundtruthImage = groundtruth.getImage();
 							final IntList[] groundtruthPixels = collectGroundtruthPixels(groundtruthImage, quantizer);
 							
 							Tools.debugPrint("Ground truth pixels collected in", timer.toc(), "ms");
@@ -243,7 +249,7 @@ public final class TrainableSegmentation {
 									
 									final double score = score(confusionMatrix);
 									
-									if (bestScore[0] < score) {
+									if (bestScore[0] * 1.01 <= score) {
 										bestScore[0] = score;
 										bestQuantizer = quantizer.copy();
 										
@@ -268,16 +274,32 @@ public final class TrainableSegmentation {
 						confusionMatrix[0] = new int[clusterCount][clusterCount];
 						scoreView.setText("---");
 						final int[] referenceCount = new int[1];
+						final Collection<Future<?>> tasks = new ArrayList<>(imageHeight);
+						
+						for (int y0 = 0; y0 < imageHeight; ++y0) {
+							final int y = y0;
+							tasks.add(MultiThreadTools.getExecutor().submit(() -> {
+								for (int x = 0; x < imageWidth; ++x) {
+									labels.getImage().setRGB(x, y, quantizer.quantize(image, x, y).getLabel());
+								}
+							}));
+						}
+						
+						MultiThreadTools.wait(tasks);
+						
+						final Map<Integer, Integer> labelIndices = new HashMap<>();
+						
+						for (int i = 0; i < clusterCount; ++i) {
+							labelIndices.put(((QuantizerCluster) quantizer.getChildAt(i)).getLabel(), i);
+						}
 						
 						PaletteBasedHistograms.forEachPixelIn(image, (x, y) -> {
-							final QuantizerCluster prediction = quantizer.quantize(image, x, y);
+							final int expected = groundtruth.getImage().getRGB(x, y);
 							
-							labels.getImage().setRGB(x, y, prediction.getLabel());
-							
-							final QuantizerCluster truth = quantizer.findCluster(groundTruth.getImage().getRGB(x, y));
-							
-							if (truth != null) {
-								++confusionMatrix[0][quantizer.getIndex(truth)][quantizer.getIndex(prediction)];
+							if (expected != 0) {
+								final int predicted = labels.getImage().getRGB(x, y);
+								
+								++confusionMatrix[0][labelIndices.get(expected)][labelIndices.get(predicted)];
 								++referenceCount[0];
 							}
 							
@@ -406,17 +428,26 @@ public final class TrainableSegmentation {
 					}
 				}
 				
-				repeat(mainFrame, 30_000, e -> {
+				repeat(mainFrame, 60_000, e -> {
 					final DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
 					
 					try (final OutputStream output = new FileOutputStream(PALETTE_XML)) {
 						synchronized (model) {
 							writePaletteXML((Quantizer) model.getRoot(), output);
 							final File imageFile = getSharedProperty(mainFrame, "file");
+							
 							final File groundtruthFile = groundtruthFile(imageFile);
 							Tools.debugPrint("Writing", groundtruthFile);
 							ImageIO.write(((Canvas) getSharedProperty(mainFrame, "groundtruth")).getImage(),
 									"png", groundtruthFile);
+							
+							final Canvas labels = (Canvas) getSharedProperty(mainFrame, "labels");
+							
+							if (labels != null) {
+								final File labelsFile = labelsFile(imageFile);
+								Tools.debugPrint("Writing", labelsFile);
+								ImageIO.write(labels.getImage(), "png", labelsFile);
+							}
 						}
 					} catch (final IOException exception) {
 						exception.printStackTrace();
@@ -429,6 +460,10 @@ public final class TrainableSegmentation {
 	
 	public static final File groundtruthFile(final File imageFile) {
 		return new File(baseName(imageFile.getPath()) + "_groundtruth.png");
+	}
+	
+	public static final File labelsFile(final File imageFile) {
+		return new File(baseName(imageFile.getPath()) + "_labels.png");
 	}
 	
 	public static final void writePaletteXML(final Quantizer quantizer, final OutputStream output) {
@@ -462,6 +497,16 @@ public final class TrainableSegmentation {
 			
 			try {
 				groundtruth.getGraphics().drawImage(ImageIO.read(groundtruthFile), 0, 0, null);
+			} catch (final IOException exception) {
+				Tools.debugError(exception);
+			}
+		}
+		
+		{
+			final File labelsFile = labelsFile(file);
+			
+			try {
+				labels.getGraphics().drawImage(ImageIO.read(labelsFile), 0, 0, null);
 			} catch (final IOException exception) {
 				Tools.debugError(exception);
 			}
