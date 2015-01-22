@@ -2,6 +2,8 @@ package imj3.draft.segmentation;
 
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * @author codistmonk (creation 2015-01-16)
@@ -12,13 +14,13 @@ public final class Quantizer extends QuantizerNode {
 	
 	private int maximumScale = DEFAULT_MAXIMUM_SCALE;
 	
-	private int[] buffer = new int[this.scale];
+//	private int[] buffer = new int[this.scale];
 	
 	@Override
 	public final Quantizer copy() {
 		final Quantizer result = new Quantizer();
 		
-		result.buffer = this.buffer.clone();
+//		result.buffer = this.buffer.clone();
 		result.scale = this.scale;
 		result.maximumScale = this.maximumScale; 
 		
@@ -26,7 +28,7 @@ public final class Quantizer extends QuantizerNode {
 	}
 	
 	public final Quantizer set(final Quantizer that) {
-		this.buffer = that.buffer.clone();
+//		this.buffer = that.buffer.clone();
 		this.scale = that.scale;
 		this.maximumScale = that.maximumScale;
 		final int n = that.getChildCount();
@@ -86,7 +88,7 @@ public final class Quantizer extends QuantizerNode {
 		
 		if (scale != this.getScale()) {
 			this.scale = scale;
-			this.buffer = new int[scale * scale];
+//			this.buffer = new int[scale * scale];
 		}
 		
 		return this;
@@ -124,15 +126,27 @@ public final class Quantizer extends QuantizerNode {
 		return this;
 	}
 	
+	private final Map<Thread, int[]> buffers = new WeakHashMap<>();
+	
 	public final QuantizerCluster quantize(final BufferedImage image, final int x, final int y) {
-		extractValues(image, x, y, this.getScale(), this.buffer);
+		int[] buffer = this.buffers.get(Thread.currentThread());
+		
+		{
+			final int n = this.getScale() * this.getScale();
+			
+			if (buffer == null || buffer.length != n) {
+				this.buffers.put(Thread.currentThread(), buffer = new int[n]);
+			}
+		}
+		
+		extractValues(image, x, y, this.getScale(), buffer);
 		final int n = this.getChildCount();
 		QuantizerCluster result = null;
 		double bestDistance = Double.POSITIVE_INFINITY;
 		
 		for (int i = 0; i < n; ++i) {
 			final QuantizerCluster cluster = (QuantizerCluster) this.getChildAt(i);
-			final double distance = cluster.distanceTo(this.buffer, bestDistance);
+			final double distance = cluster.distanceTo(buffer, bestDistance);
 			
 			if (distance < bestDistance) {
 				result = cluster;
