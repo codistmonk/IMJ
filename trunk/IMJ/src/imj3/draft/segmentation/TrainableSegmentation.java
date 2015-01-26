@@ -119,7 +119,9 @@ public final class TrainableSegmentation {
 				final JTree tree = newQuantizerTree();
 				final Component[] view = { null };
 				final JComboBox<String> actionSelector = new JComboBox<>(array("Train and classify", "Classify"));
-				final JLabel scoreView = new JLabel("------");
+				final JLabel scoreView = new JLabel("--");
+				final JLabel trainingTimeView = new JLabel("--");
+				final JLabel classificationTimeView = new JLabel("--");
 				final int[][][] confusionMatrix = { null };
 				final JToggleButton showGroundtruthButton = new JToggleButton(new AbstractAction("Show ground truth") {
 					
@@ -260,7 +262,13 @@ public final class TrainableSegmentation {
 								}
 							}
 							
-							Tools.debugPrint("Training done in", timer.getTotalTime(), "ms");
+							{
+								final long trainingMilliseconds = timer.getTotalTime();
+								
+								Tools.debugPrint("Training done in", trainingMilliseconds, "ms");
+								
+								trainingTimeView.setText("" + trainingMilliseconds / 1000.0);
+							}
 							
 							quantizer.set(bestQuantizer);
 							
@@ -268,7 +276,7 @@ public final class TrainableSegmentation {
 							mainFrame.validate();
 						}
 						
-						Tools.debugPrint("Classifying...", new Date(timer.tic()));
+						Tools.debugPrint("Classification...", new Date(timer.tic()));
 						
 						final int clusterCount = quantizer.getChildCount();
 						confusionMatrix[0] = new int[clusterCount][clusterCount];
@@ -306,7 +314,13 @@ public final class TrainableSegmentation {
 							return true;
 						});
 						
-						Tools.debugPrint("Classifying done in", timer.toc(), "ms");
+						{
+							final long classificationMilliseconds = timer.toc();
+							
+							Tools.debugPrint("Classification done in", classificationMilliseconds, "ms");
+							
+							classificationTimeView.setText("" + classificationMilliseconds / 1000.0);
+						}
 						
 						if (0 < referenceCount[0]) {
 							scoreView.setText((int) (100.0 * score(confusionMatrix[0])) + "%");
@@ -359,6 +373,12 @@ public final class TrainableSegmentation {
 					private static final long serialVersionUID = -148814823214636457L;
 					
 				}));
+				toolBar.addSeparator();
+				toolBar.add(new JLabel(" Training (s): "));
+				toolBar.add(trainingTimeView);
+				toolBar.addSeparator();
+				toolBar.add(new JLabel(" Classification (s): "));
+				toolBar.add(classificationTimeView);
 				toolBar.addSeparator();
 				toolBar.add(new JLabel(" F1: "));
 				toolBar.add(scoreView);
@@ -539,7 +559,10 @@ public final class TrainableSegmentation {
 				final JToggleButton showGroundtruthButton = getSharedProperty(mainFrame, "showGroundtruthButton");
 				
 				if (showGroundtruthButton.isSelected()) {
+					final Composite saved = canvas.getGraphics().getComposite();
+					canvas.getGraphics().setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3F));
 					canvas.getGraphics().drawImage(groundtruth.getImage(), 0, 0, null);
+					canvas.getGraphics().setComposite(saved);
 				}
 			}
 			
