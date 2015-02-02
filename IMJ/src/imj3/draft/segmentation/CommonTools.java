@@ -35,7 +35,7 @@ public final class CommonTools {
 	@SuppressWarnings("unchecked")
 	public static final <T> T getSharedProperty(final Object object, final String key,
 			final Function<? super String, ? extends Object> mappingIfAbsent) {
-		return (T) sharedProperties.getOrDefault(object, Collections.emptyMap()).computeIfAbsent(key, mappingIfAbsent);
+		return (T) sharedProperties.computeIfAbsent(object, o -> new HashMap<>()).computeIfAbsent(key, mappingIfAbsent);
 	}
 	
 	public static final Iterable<int[]> cartesian(final int... minMaxes) {
