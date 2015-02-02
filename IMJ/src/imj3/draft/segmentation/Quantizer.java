@@ -1,6 +1,9 @@
 package imj3.draft.segmentation;
 
+import static net.sourceforge.aprog.tools.Tools.baseName;
+
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -10,7 +13,7 @@ import java.util.WeakHashMap;
  */
 public final class Quantizer extends QuantizerNode {
 	
-	private String name = DEFAULT_NAME;
+	private String filePath = DEFAULT_FILE_PATH;
 	
 	private int scale = DEFAULT_SCALE;
 	
@@ -67,7 +70,7 @@ public final class Quantizer extends QuantizerNode {
 			
 			@Override
 			public final String toString() {
-				return "scale: " + Quantizer.this.getScaleAsString();
+				return Quantizer.this.getName() + " (" + "scale: " + Quantizer.this.getScaleAsString() + ")";
 			}
 			
 			private static final long serialVersionUID = 948766593376210016L;
@@ -78,11 +81,15 @@ public final class Quantizer extends QuantizerNode {
 	}
 	
 	public final String getName() {
-		return this.name;
+		return baseName(new File(Quantizer.this.getFilePath()).getName());
 	}
 	
-	public final Quantizer setName(final String name) {
-		this.name = name;
+	public final String getFilePath() {
+		return this.filePath;
+	}
+	
+	public final Quantizer setFilePath(final String filePath) {
+		this.filePath = filePath;
 		
 		return this;
 	}
@@ -199,7 +206,7 @@ public final class Quantizer extends QuantizerNode {
 	
 	private static final long serialVersionUID = 3228746395868315788L;
 	
-	public static final String DEFAULT_NAME = "";
+	public static final String DEFAULT_FILE_PATH = "quantizer.xml";
 	
 	public static final int DEFAULT_SCALE = 1;
 	

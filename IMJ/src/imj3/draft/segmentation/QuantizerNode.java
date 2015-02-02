@@ -66,7 +66,6 @@ public abstract class QuantizerNode extends DefaultMutableTreeNode {
 	public static final Quantizer load(final Document xml, final Quantizer result) {
 		final Element paletteElement = (Element) XMLTools.getNode(xml, "palette");
 		
-		result.setScale(select(paletteElement.getAttribute("name"), Quantizer.DEFAULT_NAME));
 		result.setScale(select(paletteElement.getAttribute("scale"), Quantizer.DEFAULT_SCALE));
 		result.setMaximumScale(select(paletteElement.getAttribute("maximumScale"), Quantizer.DEFAULT_MAXIMUM_SCALE));
 		result.removeAllChildren();
@@ -74,7 +73,6 @@ public abstract class QuantizerNode extends DefaultMutableTreeNode {
 		for (final Node clusterNode : XMLTools.getNodes(xml, "palette/cluster")) {
 			final Element clusterElement = (Element) clusterNode;
 			final QuantizerCluster cluster = new QuantizerCluster()
-				.setName(select(clusterElement.getAttribute("name"), QuantizerCluster.DEFAULT_NAME))
 				.setLabel(select(clusterElement.getAttribute("label"), QuantizerCluster.DEFAULT_LABEL))
 				.setMinimumSegmentSize(select(clusterElement.getAttribute("minimumSegmentSize"), QuantizerCluster.DEFAULT_MINIMUM_SEGMENT_SIZE))
 				.setMaximumSegmentSize(select(clusterElement.getAttribute("maximumSegmentSize"), QuantizerCluster.DEFAULT_MAXIMUM_SEGMENT_SIZE))
@@ -144,7 +142,6 @@ public abstract class QuantizerNode extends DefaultMutableTreeNode {
 			final Element result = this.xml.createElement("cluster");
 			final int n = cluster.getChildCount();
 			
-			result.setAttribute("name", cluster.getName());
 			result.setAttribute("label", cluster.getLabelAsString());
 			result.setAttribute("minimumSegmentSize", cluster.getMinimumSegmentSizeAsString());
 			result.setAttribute("maximumSegmentSize", cluster.getMaximumSegmentSizeAsString());
