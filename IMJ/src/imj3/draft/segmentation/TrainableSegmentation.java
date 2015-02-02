@@ -115,6 +115,9 @@ public final class TrainableSegmentation {
 				final JFrame mainFrame = new JFrame();
 				final JToolBar toolBar = new JToolBar();
 				final JTree tree = newQuantizerTree();
+				
+				setSharedProperty(mainFrame, "model", new Model().setQuantizer((Quantizer) tree.getModel().getRoot()));
+				
 				final Component[] view = { null };
 				final JComboBox<String> actionSelector = new JComboBox<>(array("Train and classify", "Classify"));
 				final JLabel scoreView = new JLabel("--");
@@ -447,24 +450,30 @@ public final class TrainableSegmentation {
 				}
 				
 				repeat(mainFrame, 60_000, e -> {
-					final DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+					final Model model = getSharedProperty(mainFrame, "model");
 					
 					try (final OutputStream output = new FileOutputStream(PALETTE_XML)) {
 						synchronized (model) {
-							writePaletteXML((Quantizer) model.getRoot(), output);
-							final File imageFile = getSharedProperty(mainFrame, "file");
+							writePaletteXML(model.getQuantizer(), output);
 							
-							final File groundtruthFile = groundtruthFile(imageFile);
-							Tools.debugPrint("Writing", groundtruthFile);
-							ImageIO.write(((Canvas) getSharedProperty(mainFrame, "groundtruth")).getImage(),
-									"png", groundtruthFile);
+							final File imageFile = model.getImageFile();
 							
-							final Canvas labels = (Canvas) getSharedProperty(mainFrame, "labels");
+							if (model.isGroundTruthUnsaved()) {
+								final File groundtruthFile = groundtruthFile(imageFile);
+								
+								Tools.debugPrint("Writing", groundtruthFile);
+								ImageIO.write(((Canvas) getSharedProperty(mainFrame, "groundtruth")).getImage(),
+										"png", groundtruthFile);
+							}
 							
-							if (labels != null) {
-								final File labelsFile = labelsFile(imageFile);
-								Tools.debugPrint("Writing", labelsFile);
-								ImageIO.write(labels.getImage(), "png", labelsFile);
+							if (model.isClassificationUnsaved()) {
+								final Canvas classification = (Canvas) getSharedProperty(mainFrame, "labels");
+								
+								if (classification != null) {
+									final File classificationFile = classificationFile(imageFile);
+									Tools.debugPrint("Writing", classificationFile);
+									ImageIO.write(classification.getImage(), "png", classificationFile);
+								}
 							}
 						}
 					} catch (final IOException exception) {
@@ -480,7 +489,7 @@ public final class TrainableSegmentation {
 		return new File(baseName(imageFile.getPath()) + "_groundtruth.png");
 	}
 	
-	public static final File labelsFile(final File imageFile) {
+	public static final File classificationFile(final File imageFile) {
 		return new File(baseName(imageFile.getPath()) + "_labels.png");
 	}
 	
@@ -505,7 +514,7 @@ public final class TrainableSegmentation {
 	}
 	
 	public static final void setView(final JFrame mainFrame, final Component[] view, final File file) {
-		final Model model = CommonTools.getSharedProperty(mainFrame, "model", k -> new Model());
+		final Model model = getSharedProperty(mainFrame, "model");
 		final Canvas input = model.getInput();
 		final Canvas groundTruth = model.getGroundTruth();
 		final Canvas classification = model.getClassification();
@@ -523,7 +532,7 @@ public final class TrainableSegmentation {
 		}
 		
 		{
-			final File labelsFile = labelsFile(file);
+			final File labelsFile = classificationFile(file);
 			
 			try {
 				classification.getGraphics().drawImage(ImageIO.read(labelsFile), 0, 0, null);
@@ -917,21 +926,25 @@ public final class TrainableSegmentation {
 			return this.quantizer;
 		}
 		
-		public final void setQuantizer(final Quantizer quantizer) {
+		public final Model setQuantizer(final Quantizer quantizer) {
 			this.quantizer = quantizer;
+			
+			return this;
 		}
 		
 		public final File getImageFile() {
 			return this.imageFile;
 		}
 		
-		public final void setImageFile(final File imageFile) {
+		public final Model setImageFile(final File imageFile) {
 			this.imageFile = imageFile;
 			final BufferedImage image = AwtImage2D.awtRead(imageFile.getPath());
 			this.getInput().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
 			this.getGroundTruth().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
 			this.getClassification().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
 			this.getInput().getGraphics().drawImage(image, 0, 0, null);
+			
+			return this;
 		}
 		
 		public final Canvas getInput() {
@@ -946,8 +959,10 @@ public final class TrainableSegmentation {
 			return this.groundTruthUnsaved;
 		}
 		
-		public final void setGroundTruthUnsaved(final boolean groundTruthUnsaved) {
+		public final Model setGroundTruthUnsaved(final boolean groundTruthUnsaved) {
 			this.groundTruthUnsaved = groundTruthUnsaved;
+			
+			return this;
 		}
 		
 		public final Canvas getClassification() {
@@ -958,8 +973,10 @@ public final class TrainableSegmentation {
 			return this.classificationUnsaved;
 		}
 		
-		public final void setClassificationUnsaved(final boolean classificationUnsaved) {
+		public final Model setClassificationUnsaved(final boolean classificationUnsaved) {
 			this.classificationUnsaved = classificationUnsaved;
+			
+			return this;
 		}
 		
 		private static final long serialVersionUID = -252741989094974406L;
