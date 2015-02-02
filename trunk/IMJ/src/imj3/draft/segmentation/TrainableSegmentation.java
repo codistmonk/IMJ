@@ -4,18 +4,20 @@ import static imj3.core.Channels.Predefined.a8r8g8b8;
 import static imj3.draft.segmentation.CommonSwingTools.*;
 import static imj3.draft.segmentation.CommonTools.*;
 import static imj3.draft.segmentation.SegmentationTools.*;
+import static imj3.draft.segmentation.TrainableSegmentation.Context.context;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
-import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.join;
+
 import imj2.draft.PaletteBasedHistograms;
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
 import imj2.tools.MultiThreadTools;
+
 import imj3.draft.KMeans;
 import imj3.draft.segmentation.ImageComponent.Painter;
 import imj3.draft.segmentation.QuantizerNode;
@@ -36,8 +38,6 @@ import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-import java.awt.event.HierarchyEvent;
-import java.awt.event.HierarchyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
@@ -55,7 +55,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.prefs.Preferences;
 
@@ -73,12 +72,11 @@ import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeExpansionListener;
-import javax.swing.event.TreeModelEvent;
-import javax.swing.event.TreeModelListener;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 
 import jgencode.primitivelists.IntList;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -116,7 +114,7 @@ public final class TrainableSegmentation {
 				final JToolBar toolBar = new JToolBar();
 				final JTree tree = newQuantizerTree();
 				
-				setSharedProperty(mainFrame, "model", new Model().setQuantizer((Quantizer) tree.getModel().getRoot()));
+				context(mainFrame).setQuantizer((Quantizer) tree.getModel().getRoot());
 				
 				final Component[] view = { null };
 				final JComboBox<String> actionSelector = new JComboBox<>(array("Train and classify", "Classify"));
@@ -450,15 +448,15 @@ public final class TrainableSegmentation {
 				}
 				
 				repeat(mainFrame, 60_000, e -> {
-					final Model model = getSharedProperty(mainFrame, "model");
+					final Context context = context(mainFrame);
 					
 					try (final OutputStream output = new FileOutputStream(PALETTE_XML)) {
-						synchronized (model) {
-							writePaletteXML(model.getQuantizer(), output);
+						synchronized (context) {
+							writePaletteXML(context.getQuantizer(), output);
 							
-							final File imageFile = model.getImageFile();
+							final File imageFile = context.getImageFile();
 							
-							if (model.isGroundTruthUnsaved()) {
+							if (context.isGroundTruthUnsaved()) {
 								final File groundtruthFile = groundtruthFile(imageFile);
 								
 								Tools.debugPrint("Writing", groundtruthFile);
@@ -466,7 +464,7 @@ public final class TrainableSegmentation {
 										"png", groundtruthFile);
 							}
 							
-							if (model.isClassificationUnsaved()) {
+							if (context.isClassificationUnsaved()) {
 								final Canvas classification = (Canvas) getSharedProperty(mainFrame, "labels");
 								
 								if (classification != null) {
@@ -514,12 +512,12 @@ public final class TrainableSegmentation {
 	}
 	
 	public static final void setView(final JFrame mainFrame, final Component[] view, final File file) {
-		final Model model = getSharedProperty(mainFrame, "model");
-		final Canvas input = model.getInput();
-		final Canvas groundTruth = model.getGroundTruth();
-		final Canvas classification = model.getClassification();
+		final Context context = context(mainFrame);
+		final Canvas input = context.getInput();
+		final Canvas groundTruth = context.getGroundTruth();
+		final Canvas classification = context.getClassification();
 		
-		model.setImageFile(file);
+		context.setImageFile(file);
 		
 		{
 			final File groundtruthFile = groundtruthFile(file);
@@ -900,7 +898,7 @@ public final class TrainableSegmentation {
 	/**
 	 * @author codistmonk (creation 2015-02-02)
 	 */
-	public static final class Model implements Serializable {
+	public static final class Context implements Serializable {
 		
 		private Quantizer quantizer;
 		
@@ -916,17 +914,19 @@ public final class TrainableSegmentation {
 		
 		private boolean classificationUnsaved;
 		
-		public Model() {
+		public Context(final Object object) {
 			this.input = new Canvas();
 			this.groundTruth = new Canvas();
 			this.classification = new Canvas();
+			
+			setSharedProperty(object, KEY, this);
 		}
 		
 		public final Quantizer getQuantizer() {
 			return this.quantizer;
 		}
 		
-		public final Model setQuantizer(final Quantizer quantizer) {
+		public final Context setQuantizer(final Quantizer quantizer) {
 			this.quantizer = quantizer;
 			
 			return this;
@@ -936,7 +936,7 @@ public final class TrainableSegmentation {
 			return this.imageFile;
 		}
 		
-		public final Model setImageFile(final File imageFile) {
+		public final Context setImageFile(final File imageFile) {
 			this.imageFile = imageFile;
 			final BufferedImage image = AwtImage2D.awtRead(imageFile.getPath());
 			this.getInput().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
@@ -959,7 +959,7 @@ public final class TrainableSegmentation {
 			return this.groundTruthUnsaved;
 		}
 		
-		public final Model setGroundTruthUnsaved(final boolean groundTruthUnsaved) {
+		public final Context setGroundTruthUnsaved(final boolean groundTruthUnsaved) {
 			this.groundTruthUnsaved = groundTruthUnsaved;
 			
 			return this;
@@ -973,13 +973,19 @@ public final class TrainableSegmentation {
 			return this.classificationUnsaved;
 		}
 		
-		public final Model setClassificationUnsaved(final boolean classificationUnsaved) {
+		public final Context setClassificationUnsaved(final boolean classificationUnsaved) {
 			this.classificationUnsaved = classificationUnsaved;
 			
 			return this;
 		}
 		
 		private static final long serialVersionUID = -252741989094974406L;
+		
+		public static final String KEY = "context";
+		
+		public static final Context context(final Object object) {
+			return getSharedProperty(object, KEY, k -> new Context(object));
+		}
 		
 	}
 	
