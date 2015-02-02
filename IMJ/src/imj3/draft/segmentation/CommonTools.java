@@ -32,6 +32,12 @@ public final class CommonTools {
 		return (T) sharedProperties.getOrDefault(object, Collections.emptyMap()).get(key);
 	}
 	
+	@SuppressWarnings("unchecked")
+	public static final <T> T getSharedProperty(final Object object, final String key,
+			final Function<? super String, ? extends Object> mappingIfAbsent) {
+		return (T) sharedProperties.getOrDefault(object, Collections.emptyMap()).computeIfAbsent(key, mappingIfAbsent);
+	}
+	
 	public static final Iterable<int[]> cartesian(final int... minMaxes) {
 		return new Iterable<int[]>() {
 			

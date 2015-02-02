@@ -12,12 +12,10 @@ import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.join;
-
 import imj2.draft.PaletteBasedHistograms;
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
 import imj2.tools.MultiThreadTools;
-
 import imj3.draft.KMeans;
 import imj3.draft.segmentation.ImageComponent.Painter;
 import imj3.draft.segmentation.QuantizerNode;
@@ -48,6 +46,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -80,7 +79,6 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 
 import jgencode.primitivelists.IntList;
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -507,16 +505,18 @@ public final class TrainableSegmentation {
 	}
 	
 	public static final void setView(final JFrame mainFrame, final Component[] view, final File file) {
-		final BufferedImage image = AwtImage2D.awtRead(file.getPath());
-		final Canvas filtered = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
-		final Canvas groundtruth = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
-		final Canvas labels = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		final Model model = CommonTools.getSharedProperty(mainFrame, "model", k -> new Model());
+		final Canvas input = model.getInput();
+		final Canvas groundTruth = model.getGroundTruth();
+		final Canvas classification = model.getClassification();
+		
+		model.setImageFile(file);
 		
 		{
 			final File groundtruthFile = groundtruthFile(file);
 			
 			try {
-				groundtruth.getGraphics().drawImage(ImageIO.read(groundtruthFile), 0, 0, null);
+				groundTruth.getGraphics().drawImage(ImageIO.read(groundtruthFile), 0, 0, null);
 			} catch (final IOException exception) {
 				Tools.debugError(exception);
 			}
@@ -526,18 +526,18 @@ public final class TrainableSegmentation {
 			final File labelsFile = labelsFile(file);
 			
 			try {
-				labels.getGraphics().drawImage(ImageIO.read(labelsFile), 0, 0, null);
+				classification.getGraphics().drawImage(ImageIO.read(labelsFile), 0, 0, null);
 			} catch (final IOException exception) {
 				Tools.debugError(exception);
 			}
 		}
 		
-		setSharedProperty(mainFrame, "groundtruth", groundtruth);
-		setSharedProperty(mainFrame, "labels", labels);
+		setSharedProperty(mainFrame, "groundtruth", groundTruth);
+		setSharedProperty(mainFrame, "labels", classification);
 		setSharedProperty(mainFrame, "file", file);
 		
-		final BufferedImage mask = newMaskFor(image);
-		final ImageComponent newView = new ImageComponent(filtered.getImage());
+		final BufferedImage mask = newMaskFor(input.getImage());
+		final ImageComponent newView = new ImageComponent(input.getImage());
 		final JTree tree = getSharedProperty(mainFrame, "tree");
 		final int[] xys = { -1, 0, 16 };
 		final AtomicBoolean groundtruthUpdateNeeded = new AtomicBoolean(true);
@@ -561,7 +561,7 @@ public final class TrainableSegmentation {
 				if (showGroundtruthButton.isSelected()) {
 					final Composite saved = canvas.getGraphics().getComposite();
 					canvas.getGraphics().setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3F));
-					canvas.getGraphics().drawImage(groundtruth.getImage(), 0, 0, null);
+					canvas.getGraphics().drawImage(groundTruth.getImage(), 0, 0, null);
 					canvas.getGraphics().setComposite(saved);
 				}
 			}
@@ -582,7 +582,7 @@ public final class TrainableSegmentation {
 				final JToggleButton showSegmentsButton = getSharedProperty(mainFrame, "showSegmentsButton");
 				
 				if (showSegmentsButton.isSelected()) {
-					outlineSegments(labels.getImage(), labels.getImage(), mask, canvas.getImage());
+					outlineSegments(classification.getImage(), classification.getImage(), mask, canvas.getImage());
 				}
 			}
 			
@@ -641,21 +641,21 @@ public final class TrainableSegmentation {
 				final int y = xys[1] = event.getY();
 				final int s = xys[2];
 				final QuantizerCluster cluster = getSelectedCluster(tree);
-				final Composite savedComposite = groundtruth.getGraphics().getComposite();
-				final Stroke savedStroke = groundtruth.getGraphics().getStroke();
+				final Composite savedComposite = groundTruth.getGraphics().getComposite();
+				final Stroke savedStroke = groundTruth.getGraphics().getStroke();
 				
 				if (cluster == null) {
-					groundtruth.getGraphics().setComposite(AlphaComposite.Clear);
+					groundTruth.getGraphics().setComposite(AlphaComposite.Clear);
 				} else {
-					groundtruth.getGraphics().setColor(new Color(cluster.getLabel()));
+					groundTruth.getGraphics().setColor(new Color(cluster.getLabel()));
 				}
 				
-				groundtruth.getGraphics().setStroke(new java.awt.BasicStroke(s, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-				groundtruth.getGraphics().drawLine(oldX, oldY, x, y);
-				groundtruth.getGraphics().setStroke(savedStroke);
+				groundTruth.getGraphics().setStroke(new java.awt.BasicStroke(s, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+				groundTruth.getGraphics().drawLine(oldX, oldY, x, y);
+				groundTruth.getGraphics().setStroke(savedStroke);
 				
 				if (cluster == null) {
-					groundtruth.getGraphics().setComposite(savedComposite);
+					groundTruth.getGraphics().setComposite(savedComposite);
 				}
 				
 				groundtruthUpdateNeeded.set(true);
@@ -698,7 +698,7 @@ public final class TrainableSegmentation {
 								selectionPath.getLastPathComponent());
 						
 						if (node != null) {
-							Quantizer.extractValues(image, event.getX(), event.getY(),
+							Quantizer.extractValues(input.getImage(), event.getX(), event.getY(),
 									node.getQuantizer().getScale(), node.getData());
 							tree.getModel().valueForPathChanged(selectionPath, node.renewUserObject());
 							mainFrame.validate();
@@ -714,87 +714,13 @@ public final class TrainableSegmentation {
 			
 		}.addTo(newView);
 		
-		final Semaphore modelChanged = new Semaphore(1);
-		final Thread updater = new Thread() {
-			
-			@Override
-			public final void run() {
-				while (!this.isInterrupted()) {
-					try {
-						modelChanged.acquire();
-						modelChanged.drainPermits();
-					} catch (final InterruptedException exception) {
-						break;
-					}
-					
-					filtered.getGraphics().drawImage(image, 0, 0, null);
-					
-					final TicToc timer = new TicToc();
-//					final Map<Integer, List<Pair<Point, Integer>>> labelCells = extractCells(
-//							file, image, mask, labels, segments.getImage(), (PaletteRoot) treeModel.getRoot());
-//					
-//					outlineSegments(segments.getImage(), labels.getImage(), null, filtered.getImage());
-//					
-//					Tools.debugPrint(labelCells.size());
-					// TODO
-					Tools.debugPrint(timer.toc());
-					
-					newView.repaint();
-				}
-			}
-			
-		};
-		
-		updater.start();
-		
-		tree.getModel().addTreeModelListener(new TreeModelListener() {
-			
-			@Override
-			public final void treeStructureChanged(final TreeModelEvent event) {
-				this.modelChanged(event);
-			}
-			
-			@Override
-			public final void treeNodesRemoved(final TreeModelEvent event) {
-				this.modelChanged(event);
-			}
-			
-			@Override
-			public final void treeNodesInserted(final TreeModelEvent event) {
-				this.modelChanged(event);
-			}
-			
-			@Override
-			public final void treeNodesChanged(final TreeModelEvent event) {
-				this.modelChanged(event);
-			}
-			
-			private final void modelChanged(final TreeModelEvent event) {
-				ignore(event);
-				modelChanged.release();
-				mainFrame.validate();
-			}
-			
-		});
-		
-		newView.addHierarchyListener(new HierarchyListener() {
-			
-			@Override
-			public final void hierarchyChanged(final HierarchyEvent event) {
-				if ((event.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && !newView.isShowing()) {
-					updater.interrupt();
-				}
-			}
-			
-		});
-		
 		setSharedProperty(mainFrame, "view", newView);
 		
 		setView(mainFrame, view, scrollable(center(newView)), file.getName());
 	}
 	
 	public static final JTree newQuantizerTree() {
-		final DefaultTreeModel treeModel = loadModel();
+		final DefaultTreeModel treeModel = loadQuantizer();
 		final JTree result = new JTree(treeModel);
 		
 		result.addMouseListener(new MouseAdapter() {
@@ -821,6 +747,7 @@ public final class TrainableSegmentation {
 								treeModel.valueForPathChanged(this.currentPath[0], currentNode.renewUserObject());
 								result.getRootPane().validate();
 							},
+							property("name:", currentNode::getName, currentNode::setName),
 							property("scale:", currentNode::getScale, currentNode::setScale),
 							property("maximumScale:", currentNode::getMaximumScale, currentNode::setMaximumScale)
 					);
@@ -910,7 +837,7 @@ public final class TrainableSegmentation {
 		return result;
 	}
 	
-	public static final DefaultTreeModel loadModel() {
+	public static final DefaultTreeModel loadQuantizer() {
 		try {
 			return new DefaultTreeModel(QuantizerNode.fromXML(getResourceAsStream(PALETTE_XML)));
 		} catch (final Exception exception) {
@@ -959,6 +886,84 @@ public final class TrainableSegmentation {
 						(int) prototypeElements[3 * k + 2]);
 			}
 		}
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-02)
+	 */
+	public static final class Model implements Serializable {
+		
+		private Quantizer quantizer;
+		
+		private File imageFile;
+		
+		private final Canvas input;
+		
+		private final Canvas groundTruth;
+		
+		private boolean groundTruthUnsaved;
+		
+		private final Canvas classification;
+		
+		private boolean classificationUnsaved;
+		
+		public Model() {
+			this.input = new Canvas();
+			this.groundTruth = new Canvas();
+			this.classification = new Canvas();
+		}
+		
+		public final Quantizer getQuantizer() {
+			return this.quantizer;
+		}
+		
+		public final void setQuantizer(final Quantizer quantizer) {
+			this.quantizer = quantizer;
+		}
+		
+		public final File getImageFile() {
+			return this.imageFile;
+		}
+		
+		public final void setImageFile(final File imageFile) {
+			this.imageFile = imageFile;
+			final BufferedImage image = AwtImage2D.awtRead(imageFile.getPath());
+			this.getInput().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+			this.getGroundTruth().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+			this.getClassification().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+			this.getInput().getGraphics().drawImage(image, 0, 0, null);
+		}
+		
+		public final Canvas getInput() {
+			return this.input;
+		}
+		
+		public final Canvas getGroundTruth() {
+			return this.groundTruth;
+		}
+		
+		public final boolean isGroundTruthUnsaved() {
+			return this.groundTruthUnsaved;
+		}
+		
+		public final void setGroundTruthUnsaved(final boolean groundTruthUnsaved) {
+			this.groundTruthUnsaved = groundTruthUnsaved;
+		}
+		
+		public final Canvas getClassification() {
+			return this.classification;
+		}
+		
+		public final boolean isClassificationUnsaved() {
+			return this.classificationUnsaved;
+		}
+		
+		public final void setClassificationUnsaved(final boolean classificationUnsaved) {
+			this.classificationUnsaved = classificationUnsaved;
+		}
+		
+		private static final long serialVersionUID = -252741989094974406L;
+		
 	}
 	
 }
