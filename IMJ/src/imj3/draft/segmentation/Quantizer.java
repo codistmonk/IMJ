@@ -14,13 +14,12 @@ public final class Quantizer extends QuantizerNode {
 	
 	private int maximumScale = DEFAULT_MAXIMUM_SCALE;
 	
-//	private int[] buffer = new int[this.scale];
+	private final Map<Thread, int[]> buffers = new WeakHashMap<>();
 	
 	@Override
 	public final Quantizer copy() {
 		final Quantizer result = new Quantizer();
 		
-//		result.buffer = this.buffer.clone();
 		result.scale = this.scale;
 		result.maximumScale = this.maximumScale; 
 		
@@ -28,7 +27,6 @@ public final class Quantizer extends QuantizerNode {
 	}
 	
 	public final Quantizer set(final Quantizer that) {
-//		this.buffer = that.buffer.clone();
 		this.scale = that.scale;
 		this.maximumScale = that.maximumScale;
 		final int n = that.getChildCount();
@@ -88,7 +86,6 @@ public final class Quantizer extends QuantizerNode {
 		
 		if (scale != this.getScale()) {
 			this.scale = scale;
-//			this.buffer = new int[scale * scale];
 		}
 		
 		return this;
@@ -125,8 +122,6 @@ public final class Quantizer extends QuantizerNode {
 		
 		return this;
 	}
-	
-	private final Map<Thread, int[]> buffers = new WeakHashMap<>();
 	
 	public final QuantizerCluster quantize(final BufferedImage image, final int x, final int y) {
 		int[] buffer = this.buffers.get(Thread.currentThread());
