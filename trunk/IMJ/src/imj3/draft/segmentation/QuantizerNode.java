@@ -66,6 +66,7 @@ public abstract class QuantizerNode extends DefaultMutableTreeNode {
 	public static final Quantizer load(final Document xml, final Quantizer result) {
 		final Element paletteElement = (Element) XMLTools.getNode(xml, "palette");
 		
+		result.setScale(select(paletteElement.getAttribute("name"), Quantizer.DEFAULT_NAME));
 		result.setScale(select(paletteElement.getAttribute("scale"), Quantizer.DEFAULT_SCALE));
 		result.setMaximumScale(select(paletteElement.getAttribute("maximumScale"), Quantizer.DEFAULT_MAXIMUM_SCALE));
 		result.removeAllChildren();

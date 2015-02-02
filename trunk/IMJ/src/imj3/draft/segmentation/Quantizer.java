@@ -10,6 +10,8 @@ import java.util.WeakHashMap;
  */
 public final class Quantizer extends QuantizerNode {
 	
+	private String name = DEFAULT_NAME;
+	
 	private int scale = DEFAULT_SCALE;
 	
 	private int maximumScale = DEFAULT_MAXIMUM_SCALE;
@@ -71,6 +73,16 @@ public final class Quantizer extends QuantizerNode {
 			private static final long serialVersionUID = 948766593376210016L;
 			
 		});
+		
+		return this;
+	}
+	
+	public final String getName() {
+		return this.name;
+	}
+	
+	public final Quantizer setName(final String name) {
+		this.name = name;
 		
 		return this;
 	}
@@ -186,6 +198,8 @@ public final class Quantizer extends QuantizerNode {
 	}
 	
 	private static final long serialVersionUID = 3228746395868315788L;
+	
+	public static final String DEFAULT_NAME = "";
 	
 	public static final int DEFAULT_SCALE = 1;
 	
