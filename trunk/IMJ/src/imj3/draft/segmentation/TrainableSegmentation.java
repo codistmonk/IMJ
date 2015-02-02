@@ -93,7 +93,7 @@ public final class TrainableSegmentation {
 		throw new IllegalInstantiationException();
 	}
 	
-	public static final String PALETTE_XML = "palette.xml";
+	public static final String DEFAULT_QUANTIZER_PATH = "quantizer.xml";
 	
 	static final Preferences preferences = Preferences.userNodeForPackage(TrainableSegmentation.class);
 	
@@ -122,6 +122,46 @@ public final class TrainableSegmentation {
 				final JLabel trainingTimeView = new JLabel("--");
 				final JLabel classificationTimeView = new JLabel("--");
 				final int[][][] confusionMatrix = { null };
+				final JButton saveButton = new JButton(new AbstractAction("Save") {
+					
+					@Override
+					public final void actionPerformed(final ActionEvent event) {
+						final Context context = context(mainFrame);
+						final Quantizer quantizer = context.getQuantizer();
+						
+						Tools.debugPrint("Writing", quantizer.getFilePath());
+						writeXML(quantizer);
+						
+						final String imageBasePath = baseName(context.getImageFile().getPath());
+						
+						{
+							final String groundTruthPath = imageBasePath + "_" + quantizer.getName() + "_groundtruth.png";
+							
+							Tools.debugPrint("Writing", groundTruthPath);
+							
+							try (final OutputStream output = new FileOutputStream(groundTruthPath)) {
+								ImageIO.write(context.getGroundTruth().getImage(), "png", output);
+							} catch (final IOException exception) {
+								exception.printStackTrace();
+							}
+						}
+						
+						{
+							final String classificationPath = imageBasePath + "_" + quantizer.getName() + "_classification.png";
+							
+							Tools.debugPrint("Writing", classificationPath);
+							
+							try (final OutputStream output = new FileOutputStream(classificationPath)) {
+								ImageIO.write(context.getClassification().getImage(), "png", output);
+							} catch (final IOException exception) {
+								exception.printStackTrace();
+							}
+						}
+					}
+					
+					private static final long serialVersionUID = -6680573992750711448L;
+					
+				});
 				final JToggleButton showGroundtruthButton = new JToggleButton(new AbstractAction("Show ground truth") {
 					
 					@Override
@@ -150,6 +190,8 @@ public final class TrainableSegmentation {
 				setSharedProperty(mainFrame, "showGroundtruthButton", showGroundtruthButton);
 				setSharedProperty(mainFrame, "showSegmentsButton", showSegmentsButton);
 				
+				toolBar.add(saveButton);
+				toolBar.addSeparator();
 				toolBar.add(showGroundtruthButton);
 				toolBar.add(showSegmentsButton);
 				toolBar.addSeparator();
@@ -450,9 +492,9 @@ public final class TrainableSegmentation {
 				repeat(mainFrame, 60_000, e -> {
 					final Context context = context(mainFrame);
 					
-					try (final OutputStream output = new FileOutputStream(PALETTE_XML)) {
+					try (final OutputStream output = new FileOutputStream(DEFAULT_QUANTIZER_PATH)) {
 						synchronized (context) {
-							writePaletteXML(context.getQuantizer(), output);
+							writeXML(context.getQuantizer(), output);
 							
 							final File imageFile = context.getImageFile();
 							
@@ -491,7 +533,15 @@ public final class TrainableSegmentation {
 		return new File(baseName(imageFile.getPath()) + "_labels.png");
 	}
 	
-	public static final void writePaletteXML(final Quantizer quantizer, final OutputStream output) {
+	public static final void writeXML(final Quantizer quantizer) {
+		try (final OutputStream output = new FileOutputStream(quantizer.getFilePath())) {
+			XMLTools.write(quantizer.accept(new ToXML()), output, 0);
+		} catch (IOException exception) {
+			exception.printStackTrace();
+		}
+	}
+	
+	public static final void writeXML(final Quantizer quantizer, final OutputStream output) {
 		XMLTools.write(quantizer.accept(new ToXML()), output, 0);
 	}
 	
@@ -754,7 +804,7 @@ public final class TrainableSegmentation {
 								treeModel.valueForPathChanged(this.currentPath[0], currentNode.renewUserObject());
 								result.getRootPane().validate();
 							},
-							property("name:", currentNode::getName, currentNode::setName),
+							property("file:", currentNode::getFilePath, currentNode::setFilePath),
 							property("scale:", currentNode::getScale, currentNode::setScale),
 							property("maximumScale:", currentNode::getMaximumScale, currentNode::setMaximumScale)
 					);
@@ -845,13 +895,18 @@ public final class TrainableSegmentation {
 	}
 	
 	public static final DefaultTreeModel loadQuantizer() {
+		final String quantizerPath = preferences.get("quantizerFile", DEFAULT_QUANTIZER_PATH);
+		
 		try {
-			return new DefaultTreeModel(QuantizerNode.fromXML(getResourceAsStream(PALETTE_XML)));
+			final Quantizer quantizer = QuantizerNode.fromXML(getResourceAsStream(quantizerPath))
+					.setFilePath(quantizerPath);
+			
+			return new DefaultTreeModel(quantizer);
 		} catch (final Exception exception) {
 			exception.printStackTrace();
 		}
 		
-		return new DefaultTreeModel(new Quantizer().setUserObject());
+		return new DefaultTreeModel(new Quantizer().setFilePath(quantizerPath).setUserObject());
 	}
 	
 	public static final IntList[] collectGroundtruthPixels(final BufferedImage groundtruthImage, final Quantizer quantizer) {
