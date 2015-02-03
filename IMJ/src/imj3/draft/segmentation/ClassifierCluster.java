@@ -5,7 +5,7 @@ import java.util.Locale;
 /**
  * @author codistmonk (creation 2015-01-16)
  */
-public final class QuantizerCluster extends QuantizerNode {
+public final class ClassifierCluster extends ClassifierNode {
 	
 	private String name = DEFAULT_NAME;
 	
@@ -18,8 +18,8 @@ public final class QuantizerCluster extends QuantizerNode {
 	private int maximumPrototypeCount = DEFAULT_MAXIMUM_PROTOTYPE_COUNT;
 	
 	@Override
-	public final QuantizerCluster copy() {
-		final QuantizerCluster result = new QuantizerCluster();
+	public final ClassifierCluster copy() {
+		final ClassifierCluster result = new ClassifierCluster();
 		
 		result.name = this.name;
 		result.label = this.label;
@@ -31,17 +31,17 @@ public final class QuantizerCluster extends QuantizerNode {
 	}
 	
 	@Override
-	public final QuantizerCluster setUserObject() {
+	public final ClassifierCluster setUserObject() {
 		this.setUserObject(this.new UserObject() {
 			
 			@Override
 			public final String toString() {
-				final boolean showMaximum = QuantizerCluster.this.getMaximumSegmentSize() != Integer.MAX_VALUE;
+				final boolean showMaximum = ClassifierCluster.this.getMaximumSegmentSize() != Integer.MAX_VALUE;
 				
-				return QuantizerCluster.this.getName() + " ("
-						+ QuantizerCluster.this.getLabelAsString() + " "
-						+ QuantizerCluster.this.getMinimumSegmentSizeAsString() + ".."
-						+ (showMaximum ? QuantizerCluster.this.getMaximumSegmentSizeAsString() : "")
+				return ClassifierCluster.this.getName() + " ("
+						+ ClassifierCluster.this.getLabelAsString() + " "
+						+ ClassifierCluster.this.getMinimumSegmentSizeAsString() + ".."
+						+ (showMaximum ? ClassifierCluster.this.getMaximumSegmentSizeAsString() : "")
 						+ ")";
 			}
 			
@@ -56,18 +56,18 @@ public final class QuantizerCluster extends QuantizerNode {
 		return this.name;
 	}
 	
-	public final QuantizerCluster setName(final String name) {
+	public final ClassifierCluster setName(final String name) {
 		this.name = name;
 		
 		return this;
 	}
 	
 	@Override
-	public final Quantizer getParent() {
-		return (Quantizer) super.getParent();
+	public final Classifier getParent() {
+		return (Classifier) super.getParent();
 	}
 	
-	public final Quantizer getQuantizer() {
+	public final Classifier getQuantizer() {
 		return this.getParent();
 	}
 	
@@ -75,7 +75,7 @@ public final class QuantizerCluster extends QuantizerNode {
 		return this.label;
 	}
 	
-	public final QuantizerCluster setLabel(final int label) {
+	public final ClassifierCluster setLabel(final int label) {
 		this.label = label;
 		
 		return this;
@@ -85,7 +85,7 @@ public final class QuantizerCluster extends QuantizerNode {
 		return "#" + Integer.toHexString(this.label).toUpperCase(Locale.ENGLISH);
 	}
 	
-	public final QuantizerCluster setLabel(final String labelAsString) {
+	public final ClassifierCluster setLabel(final String labelAsString) {
 		this.setLabel(parseARGB(labelAsString));
 		
 		return this;
@@ -95,7 +95,7 @@ public final class QuantizerCluster extends QuantizerNode {
 		return this.minimumSegmentSize;
 	}
 	
-	public final QuantizerCluster setMinimumSegmentSize(final int minimumSegmentSize) {
+	public final ClassifierCluster setMinimumSegmentSize(final int minimumSegmentSize) {
 		this.minimumSegmentSize = minimumSegmentSize;
 		
 		return this;
@@ -105,7 +105,7 @@ public final class QuantizerCluster extends QuantizerNode {
 		return Integer.toString(this.getMinimumSegmentSize());
 	}
 	
-	public final QuantizerCluster setMinimumSegmentSize(final String minimumSegmentSizeAsString) {
+	public final ClassifierCluster setMinimumSegmentSize(final String minimumSegmentSizeAsString) {
 		this.setMinimumSegmentSize(Integer.parseInt(minimumSegmentSizeAsString));
 		
 		return this;
@@ -115,7 +115,7 @@ public final class QuantizerCluster extends QuantizerNode {
 		return this.maximumSegmentSize;
 	}
 	
-	public final QuantizerCluster setMaximumSegmentSize(final int maximumSegmentSize) {
+	public final ClassifierCluster setMaximumSegmentSize(final int maximumSegmentSize) {
 		this.maximumSegmentSize = maximumSegmentSize;
 		
 		return this;
@@ -125,7 +125,7 @@ public final class QuantizerCluster extends QuantizerNode {
 		return Integer.toString(this.getMaximumSegmentSize());
 	}
 	
-	public final QuantizerCluster setMaximumSegmentSize(final String maximumSegmentSizeAsString) {
+	public final ClassifierCluster setMaximumSegmentSize(final String maximumSegmentSizeAsString) {
 		this.setMaximumSegmentSize(Integer.parseInt(maximumSegmentSizeAsString));
 		
 		return this;
@@ -135,7 +135,7 @@ public final class QuantizerCluster extends QuantizerNode {
 		return this.maximumPrototypeCount;
 	}
 	
-	public final QuantizerCluster setMaximumPrototypeCount(final int maximumPrototypeCount) {
+	public final ClassifierCluster setMaximumPrototypeCount(final int maximumPrototypeCount) {
 		if (maximumPrototypeCount <= 0) {
 			throw new IllegalArgumentException();
 		}
@@ -149,7 +149,7 @@ public final class QuantizerCluster extends QuantizerNode {
 		return Integer.toString(this.getMaximumPrototypeCount());
 	}
 	
-	public final QuantizerCluster setMaximumPrototypeCount(final String maximumPrototypeCountAsString) {
+	public final ClassifierCluster setMaximumPrototypeCount(final String maximumPrototypeCountAsString) {
 		this.setMaximumPrototypeCount(Integer.parseInt(maximumPrototypeCountAsString));
 		
 		return this;
@@ -160,7 +160,7 @@ public final class QuantizerCluster extends QuantizerNode {
 		double result = Double.POSITIVE_INFINITY;
 		
 		for (int i = 0; i < n; ++i) {
-			final double distance = ((QuantizerPrototype) this.getChildAt(i)).distanceTo(values, maximum);
+			final double distance = ((ClassifierRawPrototype) this.getChildAt(i)).distanceTo(values, maximum);
 			
 			if (distance < result) {
 				result = distance;

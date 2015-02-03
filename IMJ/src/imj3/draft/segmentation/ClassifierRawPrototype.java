@@ -14,13 +14,13 @@ import net.sourceforge.aprog.tools.Tools;
 /**
  * @author codistmonk (creation 2015-01-16)
  */
-public final class QuantizerPrototype extends QuantizerNode {
+public final class ClassifierRawPrototype extends ClassifierNode {
 	
 	private int[] data = new int[0];
 	
 	@Override
-	public final QuantizerPrototype copy() {
-		final QuantizerPrototype result = new QuantizerPrototype();
+	public final ClassifierRawPrototype copy() {
+		final ClassifierRawPrototype result = new ClassifierRawPrototype();
 		
 		result.data = this.data.clone();
 		
@@ -28,12 +28,12 @@ public final class QuantizerPrototype extends QuantizerNode {
 	}
 	
 	@Override
-	public final QuantizerPrototype setUserObject() {
+	public final ClassifierRawPrototype setUserObject() {
 		this.setUserObject(this.new UserObject() {
 			
 			@Override
 			public final String toString() {
-				return QuantizerPrototype.this.getDataAsString();
+				return ClassifierRawPrototype.this.getDataAsString();
 			}
 			
 			private static final long serialVersionUID = 4617070174363518324L;
@@ -44,7 +44,7 @@ public final class QuantizerPrototype extends QuantizerNode {
 	}
 	
 	public final int[] getData() {
-		final Quantizer root = cast(Quantizer.class, this.getRoot());
+		final Classifier root = cast(Classifier.class, this.getRoot());
 		
 		if (root == null) {
 			return null;
@@ -64,8 +64,8 @@ public final class QuantizerPrototype extends QuantizerNode {
 				i -> "#" + Integer.toHexString(i).toUpperCase(Locale.ENGLISH)).toArray());
 	}
 	
-	public final QuantizerPrototype setData(final String dataAsString) {
-		final int[] parsed = Arrays.stream(dataAsString.split(",")).mapToInt(QuantizerNode::parseARGB).toArray();
+	public final ClassifierRawPrototype setData(final String dataAsString) {
+		final int[] parsed = Arrays.stream(dataAsString.split(",")).mapToInt(ClassifierNode::parseARGB).toArray();
 		
 		System.arraycopy(parsed, 0, this.getData(), 0, this.getData().length);
 		
@@ -73,11 +73,11 @@ public final class QuantizerPrototype extends QuantizerNode {
 	}
 	
 	@Override
-	public final QuantizerCluster getParent() {
-		return (QuantizerCluster) super.getParent();
+	public final ClassifierCluster getParent() {
+		return (ClassifierCluster) super.getParent();
 	}
 	
-	public final Quantizer getQuantizer() {
+	public final Classifier getClassifier() {
 		return this.getParent().getParent();
 	}
 	
