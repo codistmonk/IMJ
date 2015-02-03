@@ -20,8 +20,8 @@ import imj2.tools.MultiThreadTools;
 
 import imj3.draft.KMeans;
 import imj3.draft.segmentation.ImageComponent.Painter;
-import imj3.draft.segmentation.QuantizerNode;
-import imj3.draft.segmentation.QuantizerNode.ToXML;
+import imj3.draft.segmentation.ClassifierNode;
+import imj3.draft.segmentation.ClassifierNode.ToXML;
 import imj3.tools.AwtImage2D;
 
 import java.awt.AlphaComposite;
@@ -93,8 +93,6 @@ public final class TrainableSegmentation {
 		throw new IllegalInstantiationException();
 	}
 	
-	public static final String DEFAULT_QUANTIZER_PATH = "quantizer.xml";
-	
 	static final Preferences preferences = Preferences.userNodeForPackage(TrainableSegmentation.class);
 	
 	public static final void write(final BufferedImage image, final String path) {
@@ -122,9 +120,9 @@ public final class TrainableSegmentation {
 			public final void run() {
 				final JFrame mainFrame = new JFrame();
 				final JToolBar toolBar = new JToolBar();
-				final JTree tree = newQuantizerTree();
+				final JTree tree = newClassifierTree();
 				
-				context(mainFrame).setQuantizer((Quantizer) tree.getModel().getRoot());
+				context(mainFrame).setClassifier((Classifier) tree.getModel().getRoot());
 				
 				final Component[] view = { null };
 				final JComboBox<String> actionSelector = new JComboBox<>(array("Train and classify", "Classify"));
@@ -138,7 +136,7 @@ public final class TrainableSegmentation {
 					public final void actionPerformed(final ActionEvent event) {
 						final Context context = context(mainFrame);
 						
-						writeXML(context.getQuantizer());
+						writeXML(context.getClassifier());
 						write(context.getGroundTruth().getImage(), context.getGroundTruthPath());
 						write(context.getClassification().getImage(), context.getClassificationPath());
 					}
@@ -185,7 +183,7 @@ public final class TrainableSegmentation {
 					@Override
 					public final void actionPerformed(final ActionEvent event) {
 						final Context context = context(mainFrame);
-						final Quantizer quantizer = context.getQuantizer();
+						final Classifier classifier = context.getClassifier();
 						final BufferedImage image = ((ImageComponent) getSharedProperty(mainFrame, "view")).getImage();
 						final Canvas groundtruth = context.getGroundTruth();
 						final Canvas classification = context.getClassification();
@@ -194,7 +192,7 @@ public final class TrainableSegmentation {
 						if ("Train and classify".equals(actionSelector.getSelectedItem())) {
 							Tools.debugPrint("Training...", new Date(timer.tic()));
 							
-							train(quantizer, image, groundtruth, timer);
+							train(classifier, image, groundtruth, timer);
 							
 							{
 								final long trainingMilliseconds = timer.getTotalTime();
@@ -204,7 +202,7 @@ public final class TrainableSegmentation {
 								trainingTimeView.setText("" + trainingMilliseconds / 1000.0);
 							}
 							
-							((DefaultTreeModel) tree.getModel()).nodeStructureChanged(quantizer);
+							((DefaultTreeModel) tree.getModel()).nodeStructureChanged(classifier);
 							mainFrame.validate();
 						}
 						
@@ -213,7 +211,7 @@ public final class TrainableSegmentation {
 						scoreView.setText("---");
 						
 						final int referenceCount = classify(image,
-								quantizer, classification, groundtruth, confusionMatrix);
+								classifier, classification, groundtruth, confusionMatrix);
 						
 						{
 							final long classificationMilliseconds = timer.toc();
@@ -241,14 +239,14 @@ public final class TrainableSegmentation {
 					public final void actionPerformed(final ActionEvent event) {
 						final List<List<String>> table = new ArrayList<>();
 						{
-							final Quantizer quantizer = (Quantizer) tree.getModel().getRoot();
-							final int n = quantizer.getChildCount();
+							final Classifier classifier = (Classifier) tree.getModel().getRoot();
+							final int n = classifier.getChildCount();
 							final List<String> header = new ArrayList<>(n + 1);
 							
 							header.add("<td></td>");
 							
 							for (int i = 0; i < n; ++i) {
-								header.add("<td>" + ((QuantizerCluster) quantizer.getChildAt(i)).getName() + "</td>");
+								header.add("<td>" + ((ClassifierCluster) classifier.getChildAt(i)).getName() + "</td>");
 							}
 							
 							table.add(header);
@@ -352,9 +350,9 @@ public final class TrainableSegmentation {
 				repeat(mainFrame, 60_000, e -> {
 					final Context context = context(mainFrame);
 					
-					try (final OutputStream output = new FileOutputStream(DEFAULT_QUANTIZER_PATH)) {
+					try (final OutputStream output = new FileOutputStream(Classifier.DEFAULT_FILE_PATH)) {
 						synchronized (context) {
-							writeXML(context.getQuantizer(), output);
+							writeXML(context.getClassifier(), output);
 							
 							final File imageFile = context.getImageFile();
 							
@@ -385,11 +383,11 @@ public final class TrainableSegmentation {
 		});
 	}
 	
-	public static final int classify(final BufferedImage image, final Quantizer quantizer,
+	public static final int classify(final BufferedImage image, final Classifier classifier,
 			final Canvas classification, final Canvas groundtruth, final int[][][] confusionMatrix) {
 		final int imageWidth = image.getWidth();
 		final int imageHeight = image.getHeight();
-		final int clusterCount = quantizer.getChildCount();
+		final int clusterCount = classifier.getChildCount();
 		confusionMatrix[0] = new int[clusterCount][clusterCount];
 		final int[] referenceCount = new int[1];
 		final Collection<Future<?>> tasks = new ArrayList<>(imageHeight);
@@ -398,7 +396,7 @@ public final class TrainableSegmentation {
 			final int y = y0;
 			tasks.add(MultiThreadTools.getExecutor().submit(() -> {
 				for (int x = 0; x < imageWidth; ++x) {
-					classification.getImage().setRGB(x, y, quantizer.quantize(image, x, y).getLabel());
+					classification.getImage().setRGB(x, y, classifier.quantize(image, x, y).getLabel());
 				}
 			}));
 		}
@@ -408,7 +406,7 @@ public final class TrainableSegmentation {
 		final Map<Integer, Integer> labelIndices = new HashMap<>();
 		
 		for (int i = 0; i < clusterCount; ++i) {
-			labelIndices.put(((QuantizerCluster) quantizer.getChildAt(i)).getLabel(), i);
+			labelIndices.put(((ClassifierCluster) classifier.getChildAt(i)).getLabel(), i);
 		}
 		
 		PaletteBasedHistograms.forEachPixelIn(image, (x, y) -> {
@@ -435,24 +433,24 @@ public final class TrainableSegmentation {
 		return new File(baseName(imageFile.getPath()) + "_labels.png");
 	}
 	
-	public static final void writeXML(final Quantizer quantizer) {
-		Tools.getDebugOutput().println(Tools.debug(Tools.DEBUG_STACK_OFFSET + 1, "Writing", quantizer.getFilePath()));
+	public static final void writeXML(final Classifier classifier) {
+		Tools.getDebugOutput().println(Tools.debug(Tools.DEBUG_STACK_OFFSET + 1, "Writing", classifier.getFilePath()));
 		
-		try (final OutputStream output = new FileOutputStream(quantizer.getFilePath())) {
-			XMLTools.write(quantizer.accept(new ToXML()), output, 0);
+		try (final OutputStream output = new FileOutputStream(classifier.getFilePath())) {
+			XMLTools.write(classifier.accept(new ToXML()), output, 0);
 		} catch (IOException exception) {
 			exception.printStackTrace();
 		}
 	}
 	
-	public static final void writeXML(final Quantizer quantizer, final OutputStream output) {
-		XMLTools.write(quantizer.accept(new ToXML()), output, 0);
+	public static final void writeXML(final Classifier classifier, final OutputStream output) {
+		XMLTools.write(classifier.accept(new ToXML()), output, 0);
 	}
 	
-	public static final QuantizerCluster getSelectedCluster(final JTree tree) {
+	public static final ClassifierCluster getSelectedCluster(final JTree tree) {
 		final TreePath selectionPath = tree.getSelectionPath();
 		
-		return selectionPath == null ? null : cast(QuantizerCluster.class, selectionPath.getLastPathComponent());
+		return selectionPath == null ? null : cast(ClassifierCluster.class, selectionPath.getLastPathComponent());
 	}
 	
 	public static final void setView(final JFrame frame, final Component[] view, final Component newView, final String title) {
@@ -538,7 +536,7 @@ public final class TrainableSegmentation {
 			@Override
 			public final void paint(final Canvas canvas) {
 				final Graphics2D graphics = canvas.getGraphics();
-				final QuantizerCluster cluster = getSelectedCluster(tree);
+				final ClassifierCluster cluster = getSelectedCluster(tree);
 				
 				if (0 <= xys[0]) {
 					final int x = xys[0];
@@ -578,7 +576,7 @@ public final class TrainableSegmentation {
 				final int x = xys[0] = event.getX();
 				final int y = xys[1] = event.getY();
 				final int s = xys[2];
-				final QuantizerCluster cluster = getSelectedCluster(tree);
+				final ClassifierCluster cluster = getSelectedCluster(tree);
 				final Composite savedComposite = groundTruth.getGraphics().getComposite();
 				final Stroke savedStroke = groundTruth.getGraphics().getStroke();
 				
@@ -632,12 +630,12 @@ public final class TrainableSegmentation {
 					final TreePath selectionPath = tree.getSelectionPath();
 					
 					if (selectionPath != null) {
-						final QuantizerPrototype node = cast(QuantizerPrototype.class,
+						final ClassifierRawPrototype node = cast(ClassifierRawPrototype.class,
 								selectionPath.getLastPathComponent());
 						
 						if (node != null) {
-							Quantizer.extractValues(input.getImage(), event.getX(), event.getY(),
-									node.getQuantizer().getScale(), node.getData());
+							Classifier.extractValues(input.getImage(), event.getX(), event.getY(),
+									node.getClassifier().getScale(), node.getData());
 							tree.getModel().valueForPathChanged(selectionPath, node.renewUserObject());
 							mainFrame.validate();
 						}
@@ -657,8 +655,8 @@ public final class TrainableSegmentation {
 		setView(mainFrame, view, scrollable(center(newView)), file.getName());
 	}
 	
-	public static final JTree newQuantizerTree() {
-		final DefaultTreeModel treeModel = loadQuantizer();
+	public static final JTree newClassifierTree() {
+		final DefaultTreeModel treeModel = loadClassifier();
 		final JTree result = new JTree(treeModel);
 		
 		result.addMouseListener(new MouseAdapter() {
@@ -677,10 +675,10 @@ public final class TrainableSegmentation {
 				this.prototypePopup = new JPopupMenu();
 				this.currentPath = new TreePath[1];
 				
-				this.rootPopup.add(item("Edit quantizer properties...", e -> {
-					final Quantizer currentNode = (Quantizer) this.currentPath[0].getLastPathComponent();
+				this.rootPopup.add(item("Edit classifier properties...", e -> {
+					final Classifier currentNode = (Classifier) this.currentPath[0].getLastPathComponent();
 					
-					showEditDialog("Edit quantizer properties",
+					showEditDialog("Edit classifier properties",
 							() -> {
 								treeModel.valueForPathChanged(this.currentPath[0], currentNode.renewUserObject());
 								result.getRootPane().validate();
@@ -691,14 +689,14 @@ public final class TrainableSegmentation {
 					);
 				}));
 				this.rootPopup.add(item("Add cluster", e -> {
-					final Quantizer currentNode = (Quantizer) this.currentPath[0].getLastPathComponent();
-					final QuantizerCluster newNode = new QuantizerCluster().setName("cluster").setLabel(1).setUserObject();
+					final Classifier currentNode = (Classifier) this.currentPath[0].getLastPathComponent();
+					final ClassifierCluster newNode = new ClassifierCluster().setName("cluster").setLabel(1).setUserObject();
 					
 					treeModel.insertNodeInto(newNode, currentNode, currentNode.getChildCount());
 					result.getRootPane().validate();
 				}));
 				this.clusterPopup.add(item("Edit cluster properties...", e -> {
-					final QuantizerCluster currentNode = (QuantizerCluster) this.currentPath[0].getLastPathComponent();
+					final ClassifierCluster currentNode = (ClassifierCluster) this.currentPath[0].getLastPathComponent();
 					
 					showEditDialog("Edit cluster properties",
 							() -> {
@@ -713,19 +711,19 @@ public final class TrainableSegmentation {
 					);
 				}));
 				this.clusterPopup.add(item("Add prototype", e -> {
-					final QuantizerCluster currentNode = (QuantizerCluster) this.currentPath[0].getLastPathComponent();
-					final QuantizerNode newNode = new QuantizerPrototype().setUserObject();
+					final ClassifierCluster currentNode = (ClassifierCluster) this.currentPath[0].getLastPathComponent();
+					final ClassifierNode newNode = new ClassifierRawPrototype().setUserObject();
 					
 					treeModel.insertNodeInto(newNode, currentNode, currentNode.getChildCount());
 					result.getRootPane().validate();
 				}));
 				this.clusterPopup.add(item("Remove cluster", e -> {
-					final QuantizerCluster currentNode = (QuantizerCluster) this.currentPath[0].getLastPathComponent();
+					final ClassifierCluster currentNode = (ClassifierCluster) this.currentPath[0].getLastPathComponent();
 					treeModel.removeNodeFromParent(currentNode);
 					result.getRootPane().validate();
 				}));
 				this.prototypePopup.add(item("Remove prototype", e -> {
-					final QuantizerPrototype currentNode = (QuantizerPrototype) this.currentPath[0].getLastPathComponent();
+					final ClassifierRawPrototype currentNode = (ClassifierRawPrototype) this.currentPath[0].getLastPathComponent();
 					treeModel.removeNodeFromParent(currentNode);
 					result.getRootPane().validate();
 				}));
@@ -755,11 +753,11 @@ public final class TrainableSegmentation {
 						final Object node = path.getLastPathComponent();
 						JPopupMenu popup = null;
 						
-						if (node instanceof Quantizer) {
+						if (node instanceof Classifier) {
 							popup = this.rootPopup;
-						} else if (node instanceof QuantizerCluster) {
+						} else if (node instanceof ClassifierCluster) {
 							popup = this.clusterPopup;
-						} else if (node instanceof QuantizerPrototype) {
+						} else if (node instanceof ClassifierRawPrototype) {
 							popup = this.prototypePopup;
 						}
 						
@@ -775,32 +773,32 @@ public final class TrainableSegmentation {
 		return result;
 	}
 	
-	public static final DefaultTreeModel loadQuantizer() {
-		final String quantizerPath = preferences.get("quantizerFile", DEFAULT_QUANTIZER_PATH);
+	public static final DefaultTreeModel loadClassifier() {
+		final String classifierPath = preferences.get("classifierFile", Classifier.DEFAULT_FILE_PATH);
 		
 		try {
-			final Quantizer quantizer = QuantizerNode.fromXML(getResourceAsStream(quantizerPath))
-					.setFilePath(quantizerPath);
+			final Classifier classifier = ClassifierNode.fromXML(getResourceAsStream(classifierPath))
+					.setFilePath(classifierPath);
 			
-			return new DefaultTreeModel(quantizer);
+			return new DefaultTreeModel(classifier);
 		} catch (final Exception exception) {
 			exception.printStackTrace();
 		}
 		
-		return new DefaultTreeModel(new Quantizer().setFilePath(quantizerPath).setUserObject());
+		return new DefaultTreeModel(new Classifier().setFilePath(classifierPath).setUserObject());
 	}
 	
-	public static final IntList[] collectGroundtruthPixels(final BufferedImage groundtruthImage, final Quantizer quantizer) {
+	public static final IntList[] collectGroundtruthPixels(final BufferedImage groundtruthImage, final Classifier classifier) {
 		final int imageWidth = groundtruthImage.getWidth();
-		final int clusterCount = quantizer.getChildCount();
+		final int clusterCount = classifier.getChildCount();
 		final IntList[] result = instances(clusterCount, IntList.FACTORY);
 		
 		PaletteBasedHistograms.forEachPixelIn(groundtruthImage, (x, y) -> {
 			final int label = groundtruthImage.getRGB(x, y);
-			final QuantizerCluster cluster = quantizer.findCluster(label);
+			final ClassifierCluster cluster = classifier.findCluster(label);
 			
 			if (cluster != null) {
-				result[quantizer.getIndex(cluster)].add(y * imageWidth + x);
+				result[classifier.getIndex(cluster)].add(y * imageWidth + x);
 			}
 			
 			return true;
@@ -809,13 +807,13 @@ public final class TrainableSegmentation {
 		return result;
 	}
 	
-	public static final void setPrototypes(final QuantizerCluster cluster, final double[][] means) {
+	public static final void setPrototypes(final ClassifierCluster cluster, final double[][] means) {
 		final int prototypeCount = means.length;
 		
 		cluster.removeAllChildren();
 		
 		for (int j = 0; j < prototypeCount; ++j) {
-			final QuantizerPrototype prototype = new QuantizerPrototype();
+			final ClassifierRawPrototype prototype = new ClassifierRawPrototype();
 			
 			cluster.add(prototype);
 			
@@ -831,38 +829,38 @@ public final class TrainableSegmentation {
 		}
 	}
 	
-	public static final void train(final Quantizer quantizer, final BufferedImage image, final Canvas groundtruth, final TicToc timer) {
+	public static final void train(final Classifier classifier, final BufferedImage image, final Canvas groundtruth, final TicToc timer) {
 		final int imageWidth = image.getWidth();
-		final int clusterCount = quantizer.getChildCount();
+		final int clusterCount = classifier.getChildCount();
 		final int[] minMaxes = new int[clusterCount * 2];
 		final int[][] clusterings = new int[clusterCount][];
 		final double[] bestScore = { 0.0 };
 		
 		for (int i = 0; i < clusterCount; ++i) {
 			minMaxes[2 * i + 0] = 1;
-			minMaxes[2 * i + 1] = ((QuantizerCluster) quantizer.getChildAt(i)).getMaximumPrototypeCount();
+			minMaxes[2 * i + 1] = ((ClassifierCluster) classifier.getChildAt(i)).getMaximumPrototypeCount();
 		}
 		
 		final BufferedImage groundtruthImage = groundtruth.getImage();
-		final IntList[] groundtruthPixels = collectGroundtruthPixels(groundtruthImage, quantizer);
+		final IntList[] groundtruthPixels = collectGroundtruthPixels(groundtruthImage, classifier);
 		
 		Tools.debugPrint("Ground truth pixels collected in", timer.toc(), "ms");
 		Tools.debugPrint("counts:", Arrays.toString(Arrays.stream(groundtruthPixels).map(IntList::size).toArray()));
 		
-		Quantizer bestQuantizer = quantizer.copy();
+		Classifier bestClassifier = classifier.copy();
 		bestScore[0] = 0.0;
 		
-		for (int scale = 1; scale <= quantizer.getMaximumScale(); ++scale) {
+		for (int scale = 1; scale <= classifier.getMaximumScale(); ++scale) {
 			Tools.debugPrint("scale:", scale);
 			
-			quantizer.setScale(scale);
+			classifier.setScale(scale);
 			
 			for (final int[] prototypeCounts : cartesian(minMaxes)) {
 				Tools.debugPrint("prototypes:", Arrays.toString(prototypeCounts));
 				Tools.debugPrint("Clustering...", new Date(timer.tic()));
 				
 				for (int clusterIndex = 0; clusterIndex < clusterCount; ++clusterIndex) {
-					final QuantizerCluster cluster = (QuantizerCluster) quantizer.getChildAt(clusterIndex);
+					final ClassifierCluster cluster = (ClassifierCluster) classifier.getChildAt(clusterIndex);
 					final IntList pixels = groundtruthPixels[clusterIndex];
 					final int n = pixels.size();
 					final int prototypeCount = prototypeCounts[clusterIndex];
@@ -903,8 +901,8 @@ public final class TrainableSegmentation {
 					groundtruthPixels[clusterIndex].forEach(pixel -> {
 						final int x = pixel % imageWidth;
 						final int y = pixel / imageWidth;
-						final QuantizerCluster prediction = quantizer.quantize(image, x, y);
-						final int predictionIndex = quantizer.getIndex(prediction);
+						final ClassifierCluster prediction = classifier.quantize(image, x, y);
+						final int predictionIndex = classifier.getIndex(prediction);
 						
 						++confusionMatrix[truthIndex][predictionIndex];
 						
@@ -916,7 +914,7 @@ public final class TrainableSegmentation {
 				
 				if (bestScore[0] * 1.01 <= score) {
 					bestScore[0] = score;
-					bestQuantizer = quantizer.copy();
+					bestClassifier = classifier.copy();
 					
 					Tools.debugPrint("bestScore:", score);
 				}
@@ -925,7 +923,7 @@ public final class TrainableSegmentation {
 			}
 		}
 		
-		quantizer.set(bestQuantizer);
+		classifier.set(bestClassifier);
 	}
 
 	/**
@@ -933,7 +931,7 @@ public final class TrainableSegmentation {
 	 */
 	public static final class Context implements Serializable {
 		
-		private Quantizer quantizer;
+		private Classifier classifier;
 		
 		private File imageFile;
 		
@@ -968,7 +966,7 @@ public final class TrainableSegmentation {
 					this.getClassification().setFormat(width, height, BufferedImage.TYPE_INT_ARGB).clear(clearColor);
 				}
 				
-				if (this.getQuantizer() != null) {
+				if (this.getClassifier() != null) {
 					this.reset(this.getGroundTruthPath(), this.getGroundTruth());
 					this.reset(this.getClassificationPath(), this.getClassification());
 				}
@@ -986,19 +984,19 @@ public final class TrainableSegmentation {
 		}
 		
 		public final String getGroundTruthPath() {
-			return this.getImageBasePath() + "_" + this.getQuantizer().getName() + "_groundtruth.png";
+			return this.getImageBasePath() + "_" + this.getClassifier().getName() + "_groundtruth.png";
 		}
 		
 		public final String getClassificationPath() {
-			return this.getImageBasePath() + "_" + this.getQuantizer().getName() + "_classification.png";
+			return this.getImageBasePath() + "_" + this.getClassifier().getName() + "_classification.png";
 		}
 		
-		public final Quantizer getQuantizer() {
-			return this.quantizer;
+		public final Classifier getClassifier() {
+			return this.classifier;
 		}
 		
-		public final Context setQuantizer(final Quantizer quantizer) {
-			this.quantizer = quantizer;
+		public final Context setClassifier(final Classifier classifier) {
+			this.classifier = classifier;
 			
 			return this.resetData();
 		}

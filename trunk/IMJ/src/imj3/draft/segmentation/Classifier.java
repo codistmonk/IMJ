@@ -11,7 +11,7 @@ import java.util.WeakHashMap;
 /**
  * @author codistmonk (creation 2015-01-16)
  */
-public final class Quantizer extends QuantizerNode {
+public final class Classifier extends ClassifierNode {
 	
 	private String filePath = DEFAULT_FILE_PATH;
 	
@@ -22,8 +22,8 @@ public final class Quantizer extends QuantizerNode {
 	private final Map<Thread, int[]> buffers = new WeakHashMap<>();
 	
 	@Override
-	public final Quantizer copy() {
-		final Quantizer result = new Quantizer();
+	public final Classifier copy() {
+		final Classifier result = new Classifier();
 		
 		result.scale = this.scale;
 		result.maximumScale = this.maximumScale; 
@@ -31,7 +31,7 @@ public final class Quantizer extends QuantizerNode {
 		return this.copyChildrenTo(result);
 	}
 	
-	public final Quantizer set(final Quantizer that) {
+	public final Classifier set(final Classifier that) {
 		this.scale = that.scale;
 		this.maximumScale = that.maximumScale;
 		final int n = that.getChildCount();
@@ -39,23 +39,23 @@ public final class Quantizer extends QuantizerNode {
 		this.removeAllChildren();
 		
 		for (int i = 0; i < n; ++i) {
-			this.add(((QuantizerNode) that.getChildAt(i)).copy());
+			this.add(((ClassifierNode) that.getChildAt(i)).copy());
 		}
 		
-		return (Quantizer) this.accept(new Visitor<QuantizerNode>() {
+		return (Classifier) this.accept(new Visitor<ClassifierNode>() {
 			
 			@Override
-			public final QuantizerNode visit(final Quantizer quantizer) {
+			public final ClassifierNode visit(final Classifier quantizer) {
 				return quantizer.visitChildren(this).setUserObject();
 			}
 			
 			@Override
-			public final QuantizerNode visit(final QuantizerCluster cluster) {
+			public final ClassifierNode visit(final ClassifierCluster cluster) {
 				return cluster.visitChildren(this).setUserObject();
 			}
 			
 			@Override
-			public final QuantizerNode visit(final QuantizerPrototype prototype) {
+			public final ClassifierNode visit(final ClassifierRawPrototype prototype) {
 				return prototype.visitChildren(this).setUserObject();
 			}
 			
@@ -65,12 +65,12 @@ public final class Quantizer extends QuantizerNode {
 	}
 	
 	@Override
-	public final Quantizer setUserObject() {
+	public final Classifier setUserObject() {
 		this.setUserObject(this.new UserObject() {
 			
 			@Override
 			public final String toString() {
-				return Quantizer.this.getName() + " (" + "scale: " + Quantizer.this.getScaleAsString() + ")";
+				return Classifier.this.getName() + " (" + "scale: " + Classifier.this.getScaleAsString() + ")";
 			}
 			
 			private static final long serialVersionUID = 948766593376210016L;
@@ -81,14 +81,14 @@ public final class Quantizer extends QuantizerNode {
 	}
 	
 	public final String getName() {
-		return baseName(new File(Quantizer.this.getFilePath()).getName());
+		return baseName(new File(Classifier.this.getFilePath()).getName());
 	}
 	
 	public final String getFilePath() {
 		return this.filePath;
 	}
 	
-	public final Quantizer setFilePath(final String filePath) {
+	public final Classifier setFilePath(final String filePath) {
 		this.filePath = filePath;
 		
 		return this;
@@ -98,7 +98,7 @@ public final class Quantizer extends QuantizerNode {
 		return this.scale;
 	}
 	
-	public final Quantizer setScale(final int scale) {
+	public final Classifier setScale(final int scale) {
 		if (scale <= 0) {
 			throw new IllegalArgumentException();
 		}
@@ -114,7 +114,7 @@ public final class Quantizer extends QuantizerNode {
 		return Integer.toString(this.getScale());
 	}
 	
-	public final Quantizer setScale(final String scaleAsString) {
+	public final Classifier setScale(final String scaleAsString) {
 		return this.setScale(Integer.parseInt(scaleAsString));
 	}
 	
@@ -122,7 +122,7 @@ public final class Quantizer extends QuantizerNode {
 		return this.maximumScale;
 	}
 	
-	public final Quantizer setMaximumScale(final int maximumScale) {
+	public final Classifier setMaximumScale(final int maximumScale) {
 		if (maximumScale <= 0) {
 			throw new IllegalArgumentException();
 		}
@@ -136,13 +136,13 @@ public final class Quantizer extends QuantizerNode {
 		return Integer.toString(this.getMaximumScale());
 	}
 	
-	public final Quantizer setMaximumScale(final String maximumScaleAsString) {
+	public final Classifier setMaximumScale(final String maximumScaleAsString) {
 		this.setMaximumScale(Integer.parseInt(maximumScaleAsString));
 		
 		return this;
 	}
 	
-	public final QuantizerCluster quantize(final BufferedImage image, final int x, final int y) {
+	public final ClassifierCluster quantize(final BufferedImage image, final int x, final int y) {
 		int[] buffer = this.buffers.get(Thread.currentThread());
 		
 		{
@@ -155,11 +155,11 @@ public final class Quantizer extends QuantizerNode {
 		
 		extractValues(image, x, y, this.getScale(), buffer);
 		final int n = this.getChildCount();
-		QuantizerCluster result = null;
+		ClassifierCluster result = null;
 		double bestDistance = Double.POSITIVE_INFINITY;
 		
 		for (int i = 0; i < n; ++i) {
-			final QuantizerCluster cluster = (QuantizerCluster) this.getChildAt(i);
+			final ClassifierCluster cluster = (ClassifierCluster) this.getChildAt(i);
 			final double distance = cluster.distanceTo(buffer, bestDistance);
 			
 			if (distance < bestDistance) {
@@ -171,11 +171,11 @@ public final class Quantizer extends QuantizerNode {
 		return result;
 	}
 	
-	public final QuantizerCluster findCluster(final String name) {
+	public final ClassifierCluster findCluster(final String name) {
 		final int n = this.getChildCount();
 		
 		for (int i = 0; i < n; ++i) {
-			final QuantizerCluster cluster = (QuantizerCluster) this.getChildAt(i);
+			final ClassifierCluster cluster = (ClassifierCluster) this.getChildAt(i);
 			
 			if (name.equals(cluster.getName())) {
 				return cluster;
@@ -185,11 +185,11 @@ public final class Quantizer extends QuantizerNode {
 		return null;
 	}
 	
-	public final QuantizerCluster findCluster(final int label) {
+	public final ClassifierCluster findCluster(final int label) {
 		final int n = this.getChildCount();
 		
 		for (int i = 0; i < n; ++i) {
-			final QuantizerCluster cluster = (QuantizerCluster) this.getChildAt(i);
+			final ClassifierCluster cluster = (ClassifierCluster) this.getChildAt(i);
 			
 			if (label == cluster.getLabel()) {
 				return cluster;
@@ -206,7 +206,7 @@ public final class Quantizer extends QuantizerNode {
 	
 	private static final long serialVersionUID = 3228746395868315788L;
 	
-	public static final String DEFAULT_FILE_PATH = "quantizer.xml";
+	public static final String DEFAULT_FILE_PATH = "classifier.xml";
 	
 	public static final int DEFAULT_SCALE = 1;
 	

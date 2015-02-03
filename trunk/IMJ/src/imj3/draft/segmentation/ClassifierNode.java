@@ -14,23 +14,23 @@ import org.w3c.dom.Node;
 /**
  * @author codistmonk (creation 2015-01-16)
  */
-public abstract class QuantizerNode extends DefaultMutableTreeNode {
+public abstract class ClassifierNode extends DefaultMutableTreeNode {
 	
-	public abstract QuantizerNode copy();
+	public abstract ClassifierNode copy();
 	
-	public abstract <V> V accept(QuantizerNode.Visitor<V> visitor);
+	public abstract <V> V accept(ClassifierNode.Visitor<V> visitor);
 	
-	public abstract QuantizerNode setUserObject();
+	public abstract ClassifierNode setUserObject();
 	
 	public final UserObject renewUserObject() {
 		return (UserObject) this.setUserObject().getUserObject();
 	}
 	
-	protected final <N extends QuantizerNode> N copyChildrenTo(final N node) {
+	protected final <N extends ClassifierNode> N copyChildrenTo(final N node) {
 		final int n = this.getChildCount();
 		
 		for (int i = 0; i < n; ++i) {
-			final QuantizerNode child = ((QuantizerNode) this.getChildAt(i)).copy();
+			final ClassifierNode child = ((ClassifierNode) this.getChildAt(i)).copy();
 			
 			node.add(child);
 		}
@@ -39,11 +39,11 @@ public abstract class QuantizerNode extends DefaultMutableTreeNode {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public final <N extends QuantizerNode> N visitChildren(final QuantizerNode.Visitor<?> visitor) {
+	public final <N extends ClassifierNode> N visitChildren(final ClassifierNode.Visitor<?> visitor) {
 		final int n = this.getChildCount();
 		
 		for (int i = 0; i < n; ++i) {
-			((QuantizerNode) this.getChildAt(i)).accept(visitor);
+			((ClassifierNode) this.getChildAt(i)).accept(visitor);
 		}
 		
 		return (N) this;
@@ -55,34 +55,34 @@ public abstract class QuantizerNode extends DefaultMutableTreeNode {
 		return string.startsWith("#") ? (int) Long.parseLong(string.substring(1), 16) : Integer.parseInt(string);
 	}
 	
-	public static final Quantizer fromXML(final InputStream input) {
-		return load(XMLTools.parse(input), new Quantizer().setUserObject());
+	public static final Classifier fromXML(final InputStream input) {
+		return load(XMLTools.parse(input), new Classifier().setUserObject());
 	}
 	
 	public static final String select(final String string, final Object defaultValue) {
 		return string.isEmpty() ? defaultValue.toString() : string;
 	}
 	
-	public static final Quantizer load(final Document xml, final Quantizer result) {
+	public static final Classifier load(final Document xml, final Classifier result) {
 		final Element paletteElement = (Element) XMLTools.getNode(xml, "palette");
 		
-		result.setScale(select(paletteElement.getAttribute("scale"), Quantizer.DEFAULT_SCALE));
-		result.setMaximumScale(select(paletteElement.getAttribute("maximumScale"), Quantizer.DEFAULT_MAXIMUM_SCALE));
+		result.setScale(select(paletteElement.getAttribute("scale"), Classifier.DEFAULT_SCALE));
+		result.setMaximumScale(select(paletteElement.getAttribute("maximumScale"), Classifier.DEFAULT_MAXIMUM_SCALE));
 		result.removeAllChildren();
 		
 		for (final Node clusterNode : XMLTools.getNodes(xml, "palette/cluster")) {
 			final Element clusterElement = (Element) clusterNode;
-			final QuantizerCluster cluster = new QuantizerCluster()
-				.setLabel(select(clusterElement.getAttribute("label"), QuantizerCluster.DEFAULT_LABEL))
-				.setMinimumSegmentSize(select(clusterElement.getAttribute("minimumSegmentSize"), QuantizerCluster.DEFAULT_MINIMUM_SEGMENT_SIZE))
-				.setMaximumSegmentSize(select(clusterElement.getAttribute("maximumSegmentSize"), QuantizerCluster.DEFAULT_MAXIMUM_SEGMENT_SIZE))
-				.setMaximumPrototypeCount(select(clusterElement.getAttribute("maximumPrototypeCount"), QuantizerCluster.DEFAULT_MAXIMUM_PROTOTYPE_COUNT))
+			final ClassifierCluster cluster = new ClassifierCluster()
+				.setLabel(select(clusterElement.getAttribute("label"), ClassifierCluster.DEFAULT_LABEL))
+				.setMinimumSegmentSize(select(clusterElement.getAttribute("minimumSegmentSize"), ClassifierCluster.DEFAULT_MINIMUM_SEGMENT_SIZE))
+				.setMaximumSegmentSize(select(clusterElement.getAttribute("maximumSegmentSize"), ClassifierCluster.DEFAULT_MAXIMUM_SEGMENT_SIZE))
+				.setMaximumPrototypeCount(select(clusterElement.getAttribute("maximumPrototypeCount"), ClassifierCluster.DEFAULT_MAXIMUM_PROTOTYPE_COUNT))
 				.setUserObject();
 			
 			result.add(cluster);
 			
 			for (final Node prototypeNode : XMLTools.getNodes(clusterNode, "prototype")) {
-				final QuantizerPrototype prototype = new QuantizerPrototype();
+				final ClassifierRawPrototype prototype = new ClassifierRawPrototype();
 				
 				cluster.add(prototype);
 				
@@ -107,38 +107,38 @@ public abstract class QuantizerNode extends DefaultMutableTreeNode {
 	 */
 	public static abstract interface Visitor<V> extends Serializable {
 		
-		public abstract V visit(Quantizer quantizer);
+		public abstract V visit(Classifier classifier);
 		
-		public abstract V visit(QuantizerCluster cluster);
+		public abstract V visit(ClassifierCluster cluster);
 		
-		public abstract V visit(QuantizerPrototype prototype);
+		public abstract V visit(ClassifierRawPrototype prototype);
 		
 	}
 	
 	/**
 	 * @author codistmonk (creation 2015-01-18)
 	 */
-	public static final class ToXML implements QuantizerNode.Visitor<Node> {
+	public static final class ToXML implements ClassifierNode.Visitor<Node> {
 		
 		private final Document xml = XMLTools.newDocument();
 		
 		@Override
-		public Element visit(final Quantizer quantizer) {
+		public Element visit(final Classifier classifier) {
 			final Element result = (Element) this.xml.appendChild(this.xml.createElement("palette"));
-			final int n = quantizer.getChildCount();
+			final int n = classifier.getChildCount();
 			
-			result.setAttribute("scale", quantizer.getScaleAsString());
-			result.setAttribute("maximumScale", quantizer.getMaximumScaleAsString());
+			result.setAttribute("scale", classifier.getScaleAsString());
+			result.setAttribute("maximumScale", classifier.getMaximumScaleAsString());
 			
 			for (int i = 0; i < n; ++i) {
-				result.appendChild(((QuantizerCluster) quantizer.getChildAt(i)).accept(this));
+				result.appendChild(((ClassifierCluster) classifier.getChildAt(i)).accept(this));
 			}
 			
 			return result;
 		}
 		
 		@Override
-		public final Element visit(final QuantizerCluster cluster) {
+		public final Element visit(final ClassifierCluster cluster) {
 			final Element result = this.xml.createElement("cluster");
 			final int n = cluster.getChildCount();
 			
@@ -148,14 +148,14 @@ public abstract class QuantizerNode extends DefaultMutableTreeNode {
 			result.setAttribute("maximumPrototypeCount", cluster.getMaximumPrototypeCountAsString());
 			
 			for (int i = 0; i < n; ++i) {
-				result.appendChild(((QuantizerPrototype) cluster.getChildAt(i)).accept(this));
+				result.appendChild(((ClassifierRawPrototype) cluster.getChildAt(i)).accept(this));
 			}
 			
 			return result;
 		}
 		
 		@Override
-		public final Element visit(final QuantizerPrototype prototype) {
+		public final Element visit(final ClassifierRawPrototype prototype) {
 			final Element result = this.xml.createElement("prototype");
 			
 			result.setTextContent(prototype.getDataAsString());

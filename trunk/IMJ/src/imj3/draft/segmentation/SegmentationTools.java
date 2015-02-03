@@ -79,7 +79,7 @@ public final class SegmentationTools {
 					public final double[] next() {
 						final int pixel = pixels.get(this.i++);
 						
-						Quantizer.extractValues(image, pixel % image.getWidth(), pixel / image.getWidth(), patchSize, this.buffer);
+						Classifier.extractValues(image, pixel % image.getWidth(), pixel / image.getWidth(), patchSize, this.buffer);
 						
 						for (int i = 0; i < n; ++i) {
 							final int rgb = this.buffer[i];
