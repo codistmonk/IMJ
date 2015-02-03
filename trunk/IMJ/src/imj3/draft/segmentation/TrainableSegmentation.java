@@ -184,12 +184,13 @@ public final class TrainableSegmentation {
 					
 					@Override
 					public final void actionPerformed(final ActionEvent event) {
-						final Quantizer quantizer = (Quantizer) tree.getModel().getRoot();
+						final Context context = context(mainFrame);
+						final Quantizer quantizer = context.getQuantizer();
 						final BufferedImage image = ((ImageComponent) getSharedProperty(mainFrame, "view")).getImage();
 						final int imageWidth = image.getWidth();
 						final int imageHeight = image.getHeight();
-						final Canvas groundtruth = getSharedProperty(mainFrame, "groundtruth");
-						final Canvas labels = getSharedProperty(mainFrame, "labels");
+						final Canvas groundtruth = context.getGroundTruth();
+						final Canvas classification = context.getClassification();
 						final TicToc timer = new TicToc();
 						
 						if ("Train and classify".equals(actionSelector.getSelectedItem())) {
@@ -221,7 +222,7 @@ public final class TrainableSegmentation {
 							final int y = y0;
 							tasks.add(MultiThreadTools.getExecutor().submit(() -> {
 								for (int x = 0; x < imageWidth; ++x) {
-									labels.getImage().setRGB(x, y, quantizer.quantize(image, x, y).getLabel());
+									classification.getImage().setRGB(x, y, quantizer.quantize(image, x, y).getLabel());
 								}
 							}));
 						}
@@ -238,7 +239,7 @@ public final class TrainableSegmentation {
 							final int expected = groundtruth.getImage().getRGB(x, y);
 							
 							if (expected != 0) {
-								final int predicted = labels.getImage().getRGB(x, y);
+								final int predicted = classification.getImage().getRGB(x, y);
 								
 								++confusionMatrix[0][labelIndices.get(expected)][labelIndices.get(predicted)];
 								++referenceCount[0];
@@ -462,30 +463,7 @@ public final class TrainableSegmentation {
 		final Canvas classification = context.getClassification();
 		
 		context.setImageFile(file);
-		
-		{
-			final File groundtruthFile = groundtruthFile(file);
-			
-			try {
-				groundTruth.getGraphics().drawImage(ImageIO.read(groundtruthFile), 0, 0, null);
-			} catch (final IOException exception) {
-				Tools.debugError(exception);
-			}
-		}
-		
-		{
-			final File labelsFile = classificationFile(file);
-			
-			try {
-				classification.getGraphics().drawImage(ImageIO.read(labelsFile), 0, 0, null);
-			} catch (final IOException exception) {
-				Tools.debugError(exception);
-			}
-		}
-		
-		setSharedProperty(mainFrame, "groundtruth", groundTruth);
-		setSharedProperty(mainFrame, "labels", classification);
-		setSharedProperty(mainFrame, "file", file);
+		Tools.debugPrint();
 		
 		final BufferedImage mask = newMaskFor(input.getImage());
 		final ImageComponent newView = new ImageComponent(input.getImage());
@@ -968,6 +946,32 @@ public final class TrainableSegmentation {
 			setSharedProperty(object, KEY, this);
 		}
 		
+		public final Context resetData() {
+			if (this.getImageFile() != null) {
+				this.reset(this.getImageFile().getPath(), this.getInput());
+				
+				{
+					final int width = this.getInput().getWidth();
+					final int height = this.getInput().getHeight();
+					final Color clearColor = new Color(0, true);
+					
+					this.getGroundTruth().setFormat(width, height, BufferedImage.TYPE_INT_ARGB).clear(clearColor);
+					this.getClassification().setFormat(width, height, BufferedImage.TYPE_INT_ARGB).clear(clearColor);
+				}
+				
+				if (this.getQuantizer() != null) {
+					this.reset(this.getGroundTruthPath(), this.getGroundTruth());
+					this.reset(this.getClassificationPath(), this.getClassification());
+				}
+			} else {
+				this.getInput().setFormat(1, 1, BufferedImage.TYPE_INT_ARGB);
+				this.getGroundTruth().setFormat(1, 1, BufferedImage.TYPE_INT_ARGB);
+				this.getClassification().setFormat(1, 1, BufferedImage.TYPE_INT_ARGB);
+			}
+			
+			return this;
+		}
+		
 		public final String getImageBasePath() {
 			return baseName(this.getImageFile().getPath());
 		}
@@ -987,7 +991,7 @@ public final class TrainableSegmentation {
 		public final Context setQuantizer(final Quantizer quantizer) {
 			this.quantizer = quantizer;
 			
-			return this;
+			return this.resetData();
 		}
 		
 		public final File getImageFile() {
@@ -996,13 +1000,8 @@ public final class TrainableSegmentation {
 		
 		public final Context setImageFile(final File imageFile) {
 			this.imageFile = imageFile;
-			final BufferedImage image = AwtImage2D.awtRead(imageFile.getPath());
-			this.getInput().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
-			this.getGroundTruth().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
-			this.getClassification().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
-			this.getInput().getGraphics().drawImage(image, 0, 0, null);
 			
-			return this;
+			return this.resetData();
 		}
 		
 		public final Canvas getInput() {
@@ -1033,6 +1032,23 @@ public final class TrainableSegmentation {
 		
 		public final Context setClassificationUnsaved(final boolean classificationUnsaved) {
 			this.classificationUnsaved = classificationUnsaved;
+			
+			return this;
+		}
+		
+		private final Context reset(final String imagePath, final Canvas canvas) {
+			if (new File(imagePath).exists()) {
+				final BufferedImage image = AwtImage2D.awtRead(imagePath);
+				
+				canvas.setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB)
+					.getGraphics().drawImage(image, 0, 0, null);
+				
+				if (canvas == this.getGroundTruth()) {
+					this.setGroundTruthUnsaved(false);
+				} else if (canvas == this.getClassification()) {
+					this.setClassificationUnsaved(false);
+				}
+			}
 			
 			return this;
 		}
