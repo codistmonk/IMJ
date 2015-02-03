@@ -187,8 +187,6 @@ public final class TrainableSegmentation {
 						final Context context = context(mainFrame);
 						final Quantizer quantizer = context.getQuantizer();
 						final BufferedImage image = ((ImageComponent) getSharedProperty(mainFrame, "view")).getImage();
-						final int imageWidth = image.getWidth();
-						final int imageHeight = image.getHeight();
 						final Canvas groundtruth = context.getGroundTruth();
 						final Canvas classification = context.getClassification();
 						final TicToc timer = new TicToc();
@@ -212,41 +210,10 @@ public final class TrainableSegmentation {
 						
 						Tools.debugPrint("Classification...", new Date(timer.tic()));
 						
-						final int clusterCount = quantizer.getChildCount();
-						confusionMatrix[0] = new int[clusterCount][clusterCount];
 						scoreView.setText("---");
-						final int[] referenceCount = new int[1];
-						final Collection<Future<?>> tasks = new ArrayList<>(imageHeight);
 						
-						for (int y0 = 0; y0 < imageHeight; ++y0) {
-							final int y = y0;
-							tasks.add(MultiThreadTools.getExecutor().submit(() -> {
-								for (int x = 0; x < imageWidth; ++x) {
-									classification.getImage().setRGB(x, y, quantizer.quantize(image, x, y).getLabel());
-								}
-							}));
-						}
-						
-						MultiThreadTools.wait(tasks);
-						
-						final Map<Integer, Integer> labelIndices = new HashMap<>();
-						
-						for (int i = 0; i < clusterCount; ++i) {
-							labelIndices.put(((QuantizerCluster) quantizer.getChildAt(i)).getLabel(), i);
-						}
-						
-						PaletteBasedHistograms.forEachPixelIn(image, (x, y) -> {
-							final int expected = groundtruth.getImage().getRGB(x, y);
-							
-							if (expected != 0) {
-								final int predicted = classification.getImage().getRGB(x, y);
-								
-								++confusionMatrix[0][labelIndices.get(expected)][labelIndices.get(predicted)];
-								++referenceCount[0];
-							}
-							
-							return true;
-						});
+						final int referenceCount = classify(image,
+								quantizer, classification, groundtruth, confusionMatrix);
 						
 						{
 							final long classificationMilliseconds = timer.toc();
@@ -256,7 +223,7 @@ public final class TrainableSegmentation {
 							classificationTimeView.setText("" + classificationMilliseconds / 1000.0);
 						}
 						
-						if (0 < referenceCount[0]) {
+						if (0 < referenceCount) {
 							scoreView.setText((int) (100.0 * score(confusionMatrix[0])) + "%");
 						}
 						
@@ -416,6 +383,48 @@ public final class TrainableSegmentation {
 			}
 			
 		});
+	}
+	
+	public static final int classify(final BufferedImage image, final Quantizer quantizer,
+			final Canvas classification, final Canvas groundtruth, final int[][][] confusionMatrix) {
+		final int imageWidth = image.getWidth();
+		final int imageHeight = image.getHeight();
+		final int clusterCount = quantizer.getChildCount();
+		confusionMatrix[0] = new int[clusterCount][clusterCount];
+		final int[] referenceCount = new int[1];
+		final Collection<Future<?>> tasks = new ArrayList<>(imageHeight);
+		
+		for (int y0 = 0; y0 < imageHeight; ++y0) {
+			final int y = y0;
+			tasks.add(MultiThreadTools.getExecutor().submit(() -> {
+				for (int x = 0; x < imageWidth; ++x) {
+					classification.getImage().setRGB(x, y, quantizer.quantize(image, x, y).getLabel());
+				}
+			}));
+		}
+		
+		MultiThreadTools.wait(tasks);
+		
+		final Map<Integer, Integer> labelIndices = new HashMap<>();
+		
+		for (int i = 0; i < clusterCount; ++i) {
+			labelIndices.put(((QuantizerCluster) quantizer.getChildAt(i)).getLabel(), i);
+		}
+		
+		PaletteBasedHistograms.forEachPixelIn(image, (x, y) -> {
+			final int expected = groundtruth.getImage().getRGB(x, y);
+			
+			if (expected != 0) {
+				final int predicted = classification.getImage().getRGB(x, y);
+				
+				++confusionMatrix[0][labelIndices.get(expected)][labelIndices.get(predicted)];
+				++referenceCount[0];
+			}
+			
+			return true;
+		});
+		
+		return referenceCount[0];
 	}
 	
 	public static final File groundtruthFile(final File imageFile) {
