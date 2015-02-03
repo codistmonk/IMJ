@@ -97,6 +97,16 @@ public final class TrainableSegmentation {
 	
 	static final Preferences preferences = Preferences.userNodeForPackage(TrainableSegmentation.class);
 	
+	public static final void write(final BufferedImage image, final String path) {
+		Tools.getDebugOutput().println(Tools.debug(Tools.DEBUG_STACK_OFFSET + 1, "Writing", path));
+		
+		try (final OutputStream output = new FileOutputStream(path)) {
+			ImageIO.write(image, "png", output);
+		} catch (final IOException exception) {
+			exception.printStackTrace();
+		}
+	}
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
@@ -127,36 +137,10 @@ public final class TrainableSegmentation {
 					@Override
 					public final void actionPerformed(final ActionEvent event) {
 						final Context context = context(mainFrame);
-						final Quantizer quantizer = context.getQuantizer();
 						
-						Tools.debugPrint("Writing", quantizer.getFilePath());
-						writeXML(quantizer);
-						
-						final String imageBasePath = baseName(context.getImageFile().getPath());
-						
-						{
-							final String groundTruthPath = imageBasePath + "_" + quantizer.getName() + "_groundtruth.png";
-							
-							Tools.debugPrint("Writing", groundTruthPath);
-							
-							try (final OutputStream output = new FileOutputStream(groundTruthPath)) {
-								ImageIO.write(context.getGroundTruth().getImage(), "png", output);
-							} catch (final IOException exception) {
-								exception.printStackTrace();
-							}
-						}
-						
-						{
-							final String classificationPath = imageBasePath + "_" + quantizer.getName() + "_classification.png";
-							
-							Tools.debugPrint("Writing", classificationPath);
-							
-							try (final OutputStream output = new FileOutputStream(classificationPath)) {
-								ImageIO.write(context.getClassification().getImage(), "png", output);
-							} catch (final IOException exception) {
-								exception.printStackTrace();
-							}
-						}
+						writeXML(context.getQuantizer());
+						write(context.getGroundTruth().getImage(), context.getGroundTruthPath());
+						write(context.getClassification().getImage(), context.getClassificationPath());
 					}
 					
 					private static final long serialVersionUID = -6680573992750711448L;
@@ -200,7 +184,6 @@ public final class TrainableSegmentation {
 					
 					@Override
 					public final void actionPerformed(final ActionEvent event) {
-						final double[] bestScore = { 0.0 };
 						final Quantizer quantizer = (Quantizer) tree.getModel().getRoot();
 						final BufferedImage image = ((ImageComponent) getSharedProperty(mainFrame, "view")).getImage();
 						final int imageWidth = image.getWidth();
@@ -212,96 +195,7 @@ public final class TrainableSegmentation {
 						if ("Train and classify".equals(actionSelector.getSelectedItem())) {
 							Tools.debugPrint("Training...", new Date(timer.tic()));
 							
-							final int clusterCount = quantizer.getChildCount();
-							final int[] minMaxes = new int[clusterCount * 2];
-							final int[][] clusterings = new int[clusterCount][];
-							
-							for (int i = 0; i < clusterCount; ++i) {
-								minMaxes[2 * i + 0] = 1;
-								minMaxes[2 * i + 1] = ((QuantizerCluster) quantizer.getChildAt(i)).getMaximumPrototypeCount();
-							}
-							
-							final BufferedImage groundtruthImage = groundtruth.getImage();
-							final IntList[] groundtruthPixels = collectGroundtruthPixels(groundtruthImage, quantizer);
-							
-							Tools.debugPrint("Ground truth pixels collected in", timer.toc(), "ms");
-							Tools.debugPrint("counts:", Arrays.toString(Arrays.stream(groundtruthPixels).map(IntList::size).toArray()));
-							
-							Quantizer bestQuantizer = quantizer.copy();
-							bestScore[0] = 0.0;
-							
-							for (int scale = 1; scale <= quantizer.getMaximumScale(); ++scale) {
-								Tools.debugPrint("scale:", scale);
-								
-								quantizer.setScale(scale);
-								
-								for (final int[] prototypeCounts : cartesian(minMaxes)) {
-									Tools.debugPrint("prototypes:", Arrays.toString(prototypeCounts));
-									Tools.debugPrint("Clustering...", new Date(timer.tic()));
-									
-									for (int clusterIndex = 0; clusterIndex < clusterCount; ++clusterIndex) {
-										final QuantizerCluster cluster = (QuantizerCluster) quantizer.getChildAt(clusterIndex);
-										final IntList pixels = groundtruthPixels[clusterIndex];
-										final int n = pixels.size();
-										final int prototypeCount = prototypeCounts[clusterIndex];
-										clusterings[clusterIndex] = new int[n];
-										
-										for (int j = 0; j < n; ++j) {
-											clusterings[clusterIndex][j] = j % prototypeCount;
-										}
-										
-										final Iterable<double[]> points = valuesAndWeights(image, groundtruthPixels[clusterIndex], scale);
-										double[][] means = null;
-										
-										for (int j = 0; j < 8; ++j) {
-											means = new double[prototypeCount][scale * scale * 3];
-											final double[] sizes = new double[prototypeCount];
-											final int[] counts = new int[prototypeCount];
-											
-											KMeans.computeMeans(points, clusterings[clusterIndex], means, sizes, counts);
-											
-											if (prototypeCount == 1) {
-												break;
-											}
-											
-											KMeans.recluster(points, clusterings[clusterIndex], means);
-										}
-										
-										setPrototypes(cluster, means);
-									}
-									
-									Tools.debugPrint("Clustering done in", timer.toc(), "ms");
-									Tools.debugPrint("Evaluation...", new Date(timer.tic()));
-									
-									final int[][] confusionMatrix = new int[clusterCount][clusterCount];
-									
-									for (int clusterIndex = 0; clusterIndex < clusterCount; ++clusterIndex) {
-										final int truthIndex = clusterIndex;
-										
-										groundtruthPixels[clusterIndex].forEach(pixel -> {
-											final int x = pixel % imageWidth;
-											final int y = pixel / imageWidth;
-											final QuantizerCluster prediction = quantizer.quantize(image, x, y);
-											final int predictionIndex = quantizer.getIndex(prediction);
-											
-											++confusionMatrix[truthIndex][predictionIndex];
-											
-											return true;
-										});
-									}
-									
-									final double score = score(confusionMatrix);
-									
-									if (bestScore[0] * 1.01 <= score) {
-										bestScore[0] = score;
-										bestQuantizer = quantizer.copy();
-										
-										Tools.debugPrint("bestScore:", score);
-									}
-									
-									Tools.debugPrint("Evaluation done in", timer.toc(), "ms");
-								}
-							}
+							train(quantizer, image, groundtruth, timer);
 							
 							{
 								final long trainingMilliseconds = timer.getTotalTime();
@@ -310,8 +204,6 @@ public final class TrainableSegmentation {
 								
 								trainingTimeView.setText("" + trainingMilliseconds / 1000.0);
 							}
-							
-							quantizer.set(bestQuantizer);
 							
 							((DefaultTreeModel) tree.getModel()).nodeStructureChanged(quantizer);
 							mainFrame.validate();
@@ -534,6 +426,8 @@ public final class TrainableSegmentation {
 	}
 	
 	public static final void writeXML(final Quantizer quantizer) {
+		Tools.getDebugOutput().println(Tools.debug(Tools.DEBUG_STACK_OFFSET + 1, "Writing", quantizer.getFilePath()));
+		
 		try (final OutputStream output = new FileOutputStream(quantizer.getFilePath())) {
 			XMLTools.write(quantizer.accept(new ToXML()), output, 0);
 		} catch (IOException exception) {
@@ -950,6 +844,103 @@ public final class TrainableSegmentation {
 		}
 	}
 	
+	public static final void train(final Quantizer quantizer, final BufferedImage image, final Canvas groundtruth, final TicToc timer) {
+		final int imageWidth = image.getWidth();
+		final int clusterCount = quantizer.getChildCount();
+		final int[] minMaxes = new int[clusterCount * 2];
+		final int[][] clusterings = new int[clusterCount][];
+		final double[] bestScore = { 0.0 };
+		
+		for (int i = 0; i < clusterCount; ++i) {
+			minMaxes[2 * i + 0] = 1;
+			minMaxes[2 * i + 1] = ((QuantizerCluster) quantizer.getChildAt(i)).getMaximumPrototypeCount();
+		}
+		
+		final BufferedImage groundtruthImage = groundtruth.getImage();
+		final IntList[] groundtruthPixels = collectGroundtruthPixels(groundtruthImage, quantizer);
+		
+		Tools.debugPrint("Ground truth pixels collected in", timer.toc(), "ms");
+		Tools.debugPrint("counts:", Arrays.toString(Arrays.stream(groundtruthPixels).map(IntList::size).toArray()));
+		
+		Quantizer bestQuantizer = quantizer.copy();
+		bestScore[0] = 0.0;
+		
+		for (int scale = 1; scale <= quantizer.getMaximumScale(); ++scale) {
+			Tools.debugPrint("scale:", scale);
+			
+			quantizer.setScale(scale);
+			
+			for (final int[] prototypeCounts : cartesian(minMaxes)) {
+				Tools.debugPrint("prototypes:", Arrays.toString(prototypeCounts));
+				Tools.debugPrint("Clustering...", new Date(timer.tic()));
+				
+				for (int clusterIndex = 0; clusterIndex < clusterCount; ++clusterIndex) {
+					final QuantizerCluster cluster = (QuantizerCluster) quantizer.getChildAt(clusterIndex);
+					final IntList pixels = groundtruthPixels[clusterIndex];
+					final int n = pixels.size();
+					final int prototypeCount = prototypeCounts[clusterIndex];
+					clusterings[clusterIndex] = new int[n];
+					
+					for (int j = 0; j < n; ++j) {
+						clusterings[clusterIndex][j] = j % prototypeCount;
+					}
+					
+					final Iterable<double[]> points = valuesAndWeights(image, groundtruthPixels[clusterIndex], scale);
+					double[][] means = null;
+					
+					for (int j = 0; j < 8; ++j) {
+						means = new double[prototypeCount][scale * scale * 3];
+						final double[] sizes = new double[prototypeCount];
+						final int[] counts = new int[prototypeCount];
+						
+						KMeans.computeMeans(points, clusterings[clusterIndex], means, sizes, counts);
+						
+						if (prototypeCount == 1) {
+							break;
+						}
+						
+						KMeans.recluster(points, clusterings[clusterIndex], means);
+					}
+					
+					setPrototypes(cluster, means);
+				}
+				
+				Tools.debugPrint("Clustering done in", timer.toc(), "ms");
+				Tools.debugPrint("Evaluation...", new Date(timer.tic()));
+				
+				final int[][] confusionMatrix = new int[clusterCount][clusterCount];
+				
+				for (int clusterIndex = 0; clusterIndex < clusterCount; ++clusterIndex) {
+					final int truthIndex = clusterIndex;
+					
+					groundtruthPixels[clusterIndex].forEach(pixel -> {
+						final int x = pixel % imageWidth;
+						final int y = pixel / imageWidth;
+						final QuantizerCluster prediction = quantizer.quantize(image, x, y);
+						final int predictionIndex = quantizer.getIndex(prediction);
+						
+						++confusionMatrix[truthIndex][predictionIndex];
+						
+						return true;
+					});
+				}
+				
+				final double score = score(confusionMatrix);
+				
+				if (bestScore[0] * 1.01 <= score) {
+					bestScore[0] = score;
+					bestQuantizer = quantizer.copy();
+					
+					Tools.debugPrint("bestScore:", score);
+				}
+				
+				Tools.debugPrint("Evaluation done in", timer.toc(), "ms");
+			}
+		}
+		
+		quantizer.set(bestQuantizer);
+	}
+
 	/**
 	 * @author codistmonk (creation 2015-02-02)
 	 */
@@ -975,6 +966,18 @@ public final class TrainableSegmentation {
 			this.classification = new Canvas();
 			
 			setSharedProperty(object, KEY, this);
+		}
+		
+		public final String getImageBasePath() {
+			return baseName(this.getImageFile().getPath());
+		}
+		
+		public final String getGroundTruthPath() {
+			return this.getImageBasePath() + "_" + this.getQuantizer().getName() + "_groundtruth.png";
+		}
+		
+		public final String getClassificationPath() {
+			return this.getImageBasePath() + "_" + this.getQuantizer().getName() + "_classification.png";
 		}
 		
 		public final Quantizer getQuantizer() {
