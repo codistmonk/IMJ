@@ -71,8 +71,15 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 		
 		private final double[] datum;
 		
+		private double weight;
+		
 		public Prototype(final double[] datum) {
+			this(datum, 1.0);
+		}
+		
+		public Prototype(final double[] datum, final double weight) {
 			this.datum = datum;
+			this.weight = weight;
 		}
 		
 		public final int getIndex() {
@@ -87,6 +94,22 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 		
 		public final double[] getDatum() {
 			return this.datum;
+		}
+		
+		public final double getWeight() {
+			return this.weight;
+		}
+		
+		public final Prototype setWeight(final double weight) {
+			this.weight = weight;
+			
+			return this;
+		}
+		
+		public final Prototype updateWeight(final double delta) {
+			this.weight += delta;
+			
+			return this;
 		}
 		
 		private static final long serialVersionUID = 2041173451916012723L;
