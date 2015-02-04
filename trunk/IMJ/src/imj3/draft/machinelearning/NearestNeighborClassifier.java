@@ -1,4 +1,4 @@
-package imj3.draft.segmentation2;
+package imj3.draft.machinelearning;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -96,9 +96,9 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 		 */
 		public static final class Measure implements ClassifierClass.Measure<Prototype> {
 			
-			private final imj3.draft.segmentation2.Measure inputMeasure;
+			private final imj3.draft.machinelearning.Measure inputMeasure;
 			
-			public Measure(final imj3.draft.segmentation2.Measure inputMeasure) {
+			public Measure(final imj3.draft.machinelearning.Measure inputMeasure) {
 				this.inputMeasure = inputMeasure;
 			}
 			

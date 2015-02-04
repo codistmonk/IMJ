@@ -1,4 +1,4 @@
-package imj3.draft.segmentation2;
+package imj3.draft.machinelearning;
 
 import static net.sourceforge.aprog.tools.Tools.ignore;
 
