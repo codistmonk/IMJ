@@ -1,6 +1,5 @@
 package imj3.draft.segmentation;
 
-import static imj3.core.Channels.Predefined.a8r8g8b8;
 import static imj3.draft.segmentation.CommonSwingTools.*;
 import static imj3.draft.segmentation.CommonTools.*;
 import static imj3.draft.segmentation.SegmentationTools.*;
@@ -346,38 +345,6 @@ public final class TrainableSegmentation {
 						setView(mainFrame, view, new File(filePath));
 					}
 				}
-				
-				repeat(mainFrame, 60_000, e -> {
-					final Context context = context(mainFrame);
-					
-					try (final OutputStream output = new FileOutputStream(Classifier.DEFAULT_FILE_PATH)) {
-						synchronized (context) {
-							writeXML(context.getClassifier(), output);
-							
-							final File imageFile = context.getImageFile();
-							
-							if (context.isGroundTruthUnsaved()) {
-								final File groundtruthFile = groundtruthFile(imageFile);
-								
-								Tools.debugPrint("Writing", groundtruthFile);
-								ImageIO.write(((Canvas) getSharedProperty(mainFrame, "groundtruth")).getImage(),
-										"png", groundtruthFile);
-							}
-							
-							if (context.isClassificationUnsaved()) {
-								final Canvas classification = (Canvas) getSharedProperty(mainFrame, "labels");
-								
-								if (classification != null) {
-									final File classificationFile = classificationFile(imageFile);
-									Tools.debugPrint("Writing", classificationFile);
-									ImageIO.write(classification.getImage(), "png", classificationFile);
-								}
-							}
-						}
-					} catch (final IOException exception) {
-						exception.printStackTrace();
-					}
-				});
 			}
 			
 		});
@@ -630,7 +597,7 @@ public final class TrainableSegmentation {
 					final TreePath selectionPath = tree.getSelectionPath();
 					
 					if (selectionPath != null) {
-						final ClassifierRawPrototype node = cast(ClassifierRawPrototype.class,
+						final ClassifierPrototype node = cast(ClassifierPrototype.class,
 								selectionPath.getLastPathComponent());
 						
 						if (node != null) {
@@ -714,9 +681,10 @@ public final class TrainableSegmentation {
 				}));
 				this.clusterPopup.add(item("Add prototype", e -> {
 					final ClassifierCluster currentNode = (ClassifierCluster) this.currentPath[0].getLastPathComponent();
-					final ClassifierNode newNode = new ClassifierRawPrototype().setUserObject();
+					final ClassifierNode newNode = currentNode.getParent().getPrototypeFactory().newPrototype();
 					
 					treeModel.insertNodeInto(newNode, currentNode, currentNode.getChildCount());
+					newNode.setUserObject();
 					result.getRootPane().validate();
 				}));
 				this.clusterPopup.add(item("Remove cluster", e -> {
@@ -725,7 +693,7 @@ public final class TrainableSegmentation {
 					result.getRootPane().validate();
 				}));
 				this.prototypePopup.add(item("Remove prototype", e -> {
-					final ClassifierRawPrototype currentNode = (ClassifierRawPrototype) this.currentPath[0].getLastPathComponent();
+					final ClassifierPrototype currentNode = (ClassifierPrototype) this.currentPath[0].getLastPathComponent();
 					treeModel.removeNodeFromParent(currentNode);
 					result.getRootPane().validate();
 				}));
@@ -759,7 +727,7 @@ public final class TrainableSegmentation {
 							popup = this.rootPopup;
 						} else if (node instanceof ClassifierCluster) {
 							popup = this.clusterPopup;
-						} else if (node instanceof ClassifierRawPrototype) {
+						} else if (node instanceof ClassifierPrototype) {
 							popup = this.prototypePopup;
 						}
 						
@@ -815,7 +783,7 @@ public final class TrainableSegmentation {
 		cluster.removeAllChildren();
 		
 		for (int j = 0; j < prototypeCount; ++j) {
-			final ClassifierRawPrototype prototype = new ClassifierRawPrototype();
+			final ClassifierPrototype prototype = cluster.getParent().getPrototypeFactory().newPrototype();
 			
 			cluster.add(prototype);
 			

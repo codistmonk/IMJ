@@ -2,15 +2,13 @@ package imj3.draft.segmentation;
 
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj3.draft.segmentation.ClassifierPrototype.Factory;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.WeakHashMap;
-
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-01-16)
@@ -61,7 +59,7 @@ public final class Classifier extends ClassifierNode {
 			}
 			
 			@Override
-			public final ClassifierNode visit(final ClassifierRawPrototype prototype) {
+			public final ClassifierNode visit(final ClassifierPrototype prototype) {
 				return prototype.visitChildren(this).setUserObject();
 			}
 			
@@ -159,7 +157,7 @@ public final class Classifier extends ClassifierNode {
 	}
 	
 	public final String getPrototypeFactoryAsString() {
-		return this.getPrototypeFactory().toString();
+		return this.getPrototypeFactory().getClass().getName();
 	}
 	
 	public final Classifier setPrototypeFactory(final String prototypeFactoryAsString) {

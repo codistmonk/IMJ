@@ -8,15 +8,26 @@ import java.io.Serializable;
  */
 public abstract class ClassifierPrototype extends ClassifierNode {
 	
-	private static final long serialVersionUID = 7111244764386006986L;
+	@Override
+	public final ClassifierCluster getParent() {
+		return (ClassifierCluster) super.getParent();
+	}
+	
+	public final Classifier getClassifier() {
+		return this.getParent().getParent();
+	}
+	
+	public abstract int[] getData();
 	
 	public abstract ClassifierPrototype setData(double[] elements);
 	
-	public abstract ClassifierPrototype setData(String dataAsString);
-	
 	public abstract String getDataAsString();
 	
+	public abstract ClassifierPrototype setData(String dataAsString);
+	
 	public abstract double distanceTo(int[] data, double limit);
+	
+	private static final long serialVersionUID = 7111244764386006986L;
 	
 	/**
 	 * @author codistmonk (creation 2015-02-03)

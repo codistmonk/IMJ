@@ -45,6 +45,7 @@ public final class ClassifierRawPrototype extends ClassifierPrototype {
 		return this;
 	}
 	
+	@Override
 	public final int[] getData() {
 		final Classifier root = cast(Classifier.class, this.getRoot());
 		
@@ -62,7 +63,7 @@ public final class ClassifierRawPrototype extends ClassifierPrototype {
 	}
 	
 	@Override
-	public final ClassifierPrototype setData(double[] elements) {
+	public final ClassifierPrototype setData(final double[] elements) {
 		final int[] data = this.getData();
 		
 		for (int k = 0; k < data.length; ++k) {
@@ -88,15 +89,6 @@ public final class ClassifierRawPrototype extends ClassifierPrototype {
 		System.arraycopy(parsed, 0, this.getData(), 0, this.getData().length);
 		
 		return this;
-	}
-	
-	@Override
-	public final ClassifierCluster getParent() {
-		return (ClassifierCluster) super.getParent();
-	}
-	
-	public final Classifier getClassifier() {
-		return this.getParent().getParent();
 	}
 	
 	@Override
