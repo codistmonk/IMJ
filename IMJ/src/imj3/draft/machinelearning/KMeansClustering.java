@@ -19,7 +19,7 @@ public final class KMeansClustering implements Clustering<NearestNeighborClassif
 	private final int iterations;
 	
 	public KMeansClustering(final Measure measure, final int k) {
-		this(measure, k, 3);
+		this(measure, k, 2);
 	}
 	
 	public KMeansClustering(final Measure measure, final int k, final int iterations) {
