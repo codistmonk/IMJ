@@ -3,6 +3,7 @@ package imj3.draft.machinelearning;
 import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 
 import java.util.Arrays;
+import java.util.Random;
 
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
@@ -40,6 +41,8 @@ public final class KMeansClustering implements Clustering<NearestNeighborClassif
 		return this.iterations;
 	}
 	
+	static final Random random = new Random(0L);
+	
 	@Override
 	public final NearestNeighborClassifier cluster(final DataSource<Prototype> inputs) {
 		final TicToc timer = new TicToc();
@@ -59,6 +62,8 @@ public final class KMeansClustering implements Clustering<NearestNeighborClassif
 		for (int i = 0; i < n; ++i) {
 			clusterIndices[i] = (int) ((long) k * i / n);
 		}
+		
+		shuffle(clusterIndices);
 		
 		this.computeMeans(inputs, clusterIndices, means);
 		
@@ -127,6 +132,20 @@ public final class KMeansClustering implements Clustering<NearestNeighborClassif
 		for (int i = 0; i < n; ++i) {
 			v[i] /= divisor;
 		}
+	}
+	
+	public static final void shuffle(final int[] values) {
+		final int n = values.length;
+		
+		for (int i = 0; i < n; ++i) {
+			swap(values, i, random.nextInt(n));
+		}
+	}
+	
+	public static final void swap(final int[] values, final int i, final int j) {
+		final int tmp = values[i];
+		values[i] = values[j];
+		values[j] = tmp;
 	}
 	
 }

@@ -20,19 +20,22 @@ public final class ClusteringExperiment {
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) {
-		final int s = 32;
+		final int s = 64;
 		final int d = s * s * 3;
-		final int n = 10_000;
+		final int n = 1_000;
 		final int k = 16;
+		
+		Tools.debugPrint("dimension:", d);
+		
 //		final DataSource<Prototype> inputs = new RandomPrototypeSource(d, n, 0L);
 //		final DataSource<Prototype> inputs = new BufferedDataSource<>(new RandomPrototypeSource(d, n, 0L));
 //		final DataSource<Prototype> inputs = new GaussianMixturePrototypeSource(k, d, n, 0L);
 		final DataSource<Prototype> inputs = new BufferedDataSource<>(new GaussianMixturePrototypeSource(k, d, n, 0L));
 		
 //		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L1, n).cluster(inputs), inputs));
-		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L1, k, 2).cluster(inputs), inputs));
-//		Tools.debugPrint(evaluate(new OnlineClustering(Measure.Predefined.L1, n).cluster(inputs), inputs));
-		Tools.debugPrint(evaluate(new OnlineClustering(Measure.Predefined.L1, k).cluster(inputs), inputs));
+		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L1, k, 1).cluster(inputs), inputs));
+//		Tools.debugPrint(evaluate(new StreamingClustering(Measure.Predefined.L1, n).cluster(inputs), inputs));
+		Tools.debugPrint(evaluate(new StreamingClustering(Measure.Predefined.L1, k).cluster(inputs), inputs));
 	}
 	
 	// XXX rename this method to evaluateReconstructionError?
