@@ -49,7 +49,7 @@ public final class KMeansClustering implements Clustering<NearestNeighborClassif
 			clusterIndices[i] = (int) ((long) k * i / n);
 		}
 		
-		for (int i = 0; i < 8; ++i) {
+		for (int i = 0; i < 4; ++i) {
 			this.computeMeans(inputs, clusterIndices, means);
 			this.recluster(inputs, result, clusterIndices);
 		}

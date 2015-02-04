@@ -54,6 +54,14 @@ public final class RandomPrototypeSource implements DataSource<Prototype> {
 					this.datum[i] = this.random.nextDouble();
 				}
 				
+				if (SIMULATE_SLOW_ACCESS) {
+					try {
+						Thread.sleep(1L);
+					} catch (final InterruptedException exception) {
+						exception.printStackTrace();
+					}
+				}
+				
 				return this.result;
 			}
 			
@@ -71,5 +79,7 @@ public final class RandomPrototypeSource implements DataSource<Prototype> {
 	}
 	
 	private static final long serialVersionUID = -5303911125576388280L;
+	
+	static final boolean SIMULATE_SLOW_ACCESS = false;
 	
 }
