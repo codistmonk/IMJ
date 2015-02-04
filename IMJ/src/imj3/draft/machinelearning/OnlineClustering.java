@@ -1,6 +1,6 @@
-package imj3.draft.segmentation2;
+package imj3.draft.machinelearning;
 
-import imj3.draft.segmentation2.NearestNeighborClassifier.Prototype;
+import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 
 import java.util.List;
 

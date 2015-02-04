@@ -1,4 +1,4 @@
-package imj3.draft.segmentation2;
+package imj3.draft.machinelearning;
 
 import static java.lang.Math.abs;
 import static java.lang.Math.sqrt;
