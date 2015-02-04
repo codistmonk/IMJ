@@ -1,12 +1,16 @@
 package imj3.draft.segmentation;
 
 import static net.sourceforge.aprog.tools.Tools.baseName;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
+import imj3.draft.segmentation.ClassifierPrototype.Factory;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.WeakHashMap;
+
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-01-16)
@@ -18,6 +22,8 @@ public final class Classifier extends ClassifierNode {
 	private int scale = DEFAULT_SCALE;
 	
 	private int maximumScale = DEFAULT_MAXIMUM_SCALE;
+	
+	private ClassifierPrototype.Factory prototypeFactory;
 	
 	private final Map<Thread, int[]> buffers = new WeakHashMap<>();
 	
@@ -140,6 +146,28 @@ public final class Classifier extends ClassifierNode {
 		this.setMaximumScale(Integer.parseInt(maximumScaleAsString));
 		
 		return this;
+	}
+	
+	public final ClassifierPrototype.Factory getPrototypeFactory() {
+		return this.prototypeFactory;
+	}
+	
+	public final Classifier setPrototypeFactory(final ClassifierPrototype.Factory prototypeFactory) {
+		this.prototypeFactory = prototypeFactory;
+		
+		return this;
+	}
+	
+	public final String getPrototypeFactoryAsString() {
+		return this.getPrototypeFactory().toString();
+	}
+	
+	public final Classifier setPrototypeFactory(final String prototypeFactoryAsString) {
+		try {
+			return this.setPrototypeFactory((Factory) Class.forName(prototypeFactoryAsString).newInstance());
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
 	}
 	
 	public final ClassifierCluster quantize(final BufferedImage image, final int x, final int y) {

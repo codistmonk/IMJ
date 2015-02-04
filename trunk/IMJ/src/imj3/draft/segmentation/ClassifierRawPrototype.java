@@ -14,7 +14,7 @@ import net.sourceforge.aprog.tools.Tools;
 /**
  * @author codistmonk (creation 2015-01-16)
  */
-public final class ClassifierRawPrototype extends ClassifierNode {
+public final class ClassifierRawPrototype extends ClassifierPrototype {
 	
 	private int[] data = new int[0];
 	
@@ -81,7 +81,8 @@ public final class ClassifierRawPrototype extends ClassifierNode {
 		return this.getParent().getParent();
 	}
 	
-	public final double distanceTo(final int[] values, final double maximum) {
+	@Override
+	public final double distanceTo(final int[] values, final double limit) {
 		final int n = values.length;
 		
 		if (n != this.getData().length) {
@@ -90,7 +91,7 @@ public final class ClassifierRawPrototype extends ClassifierNode {
 		
 		double result = 0.0;
 		
-		for (int i = 0; i < n && result < maximum; ++i) {
+		for (int i = 0; i < n && result < limit; ++i) {
 			final int thisRGB = this.data[i];
 			final int thatRGB = values[i];
 			result += abs(red8(thisRGB) - red8(thatRGB))
