@@ -1,9 +1,9 @@
 package imj3.draft.segmentation2;
 
-import java.util.List;
-
 import imj3.draft.segmentation2.NearestNeighborClassifier.Prototype;
+
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
 /**
@@ -21,7 +21,7 @@ public final class ClusteringExperiment {
 	 */
 	public static final void main(final String[] commandLineArguments) {
 		final int d = 8 * 8 * 3;
-		final int n = 10_000;
+		final int n = 20_000;
 		final int k = 256;
 		final DataSource<Prototype> inputs = new RandomPrototypeSource(d, n, 0L);
 		
@@ -33,75 +33,16 @@ public final class ClusteringExperiment {
 	
 	// XXX rename this method to evaluateReconstructionError?
 	public static final <C extends ClassifierClass> double evaluate(final Classifier<C> classifier, final DataSource<C> inputs) {
+		final TicToc timer = new TicToc();
 		double result = 0.0;
 		
 		for (final Classification<C> classification : inputs) {
 			result += classifier.getClassMeasure().compute(classification.getClassifierClass(), classifier.classify(classification.getInput()).getClassifierClass());
 		}
 		
+		Tools.debugPrint("Evaluation done in", timer.toc(), "ms");
+		
 		return result;
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-02-04)
-	 */
-	public static final class OnlineClustering implements Clustering<Prototype> {
-		
-		private final Measure measure;
-		
-		private final int clusterCount;
-		
-		public OnlineClustering(final Measure measure, final int clusterCount) {
-			this.measure = measure;
-			this.clusterCount = clusterCount;
-		}
-		
-		public final Measure getMeasure() {
-			return this.measure;
-		}
-		
-		public final int getClusterCount() {
-			return this.clusterCount;
-		}
-		
-		@Override
-		public final NearestNeighborClassifier cluster(final DataSource<Prototype> inputs) {
-			final NearestNeighborClassifier result = new NearestNeighborClassifier(this.getMeasure());
-			final int k = this.getClusterCount();
-			final List<Prototype> prototypes = result.getPrototypes();
-			final double[] weights = new double[k];
-			
-			for (final Classification<Prototype> classification : inputs) {
-				final int n = prototypes.size();
-				// XXX should the weights be considered instead of performing a normal classification?
-				final Classification<Prototype> c = result.classify(classification.getInput());
-				
-				if (c == null || 0.0 != c.getScore() && n < k) {
-					++weights[n];
-					prototypes.add(new Prototype(c.getInput().clone()).setIndex(n));
-				} else if (0.0 == c.getScore()) {
-					++weights[n];
-				} else {
-					final Prototype prototype = c.getClassifierClass();
-					
-					mergeInto(prototype.getDatum(), weights[prototype.getIndex()], c.getInput(), 1.0);
-				}
-			}
-			
-			return result;
-		}
-		
-		private static final long serialVersionUID = 1208345425946241729L;
-		
-		public static final void mergeInto(final double[] v1, final double w1, final double[] v2, final double w2) {
-			final int n = v1.length;
-			final double w = w1 + w2;
-			
-			for (int i = 0; i < n; ++i) {
-				v1[i] = (v1[i] * w1 + v2[i] * w2) / w;
-			}
-		}
-		
 	}
 	
 }
