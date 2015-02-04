@@ -106,6 +106,11 @@ public final class ClusteringExperiment {
 					
 					mergeInto(prototype.getDatum(), weights[prototype.getIndex()], c.getInput(), 1.0);
 					
+					for (int i = 0; i < n; ++i) {
+						for (int j = 0; j < i; ++j) {
+							
+						}
+					}
 					// TODO update prototypeNearestNeighbors and prototypeNearestNeighbors
 				}
 			}
