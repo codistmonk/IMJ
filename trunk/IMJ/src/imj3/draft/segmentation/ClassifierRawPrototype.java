@@ -1,11 +1,13 @@
 package imj3.draft.segmentation;
 
+import static imj3.core.Channels.Predefined.a8r8g8b8;
 import static imj3.core.Channels.Predefined.blue8;
 import static imj3.core.Channels.Predefined.green8;
 import static imj3.core.Channels.Predefined.red8;
 import static java.lang.Math.abs;
 import static net.sourceforge.aprog.tools.Tools.cast;
 
+import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.Locale;
 
@@ -59,11 +61,27 @@ public final class ClassifierRawPrototype extends ClassifierPrototype {
 		return this.data;
 	}
 	
+	@Override
+	public final ClassifierPrototype setData(double[] elements) {
+		final int[] data = this.getData();
+		
+		for (int k = 0; k < data.length; ++k) {
+			data[k] = a8r8g8b8(0xFF,
+					(int) elements[3 * k + 0],
+					(int) elements[3 * k + 1],
+					(int) elements[3 * k + 2]);
+		}
+		
+		return this;
+	}
+	
+	@Override
 	public final String getDataAsString() {
 		return Tools.join(",", Arrays.stream(this.getData()).mapToObj(
 				i -> "#" + Integer.toHexString(i).toUpperCase(Locale.ENGLISH)).toArray());
 	}
 	
+	@Override
 	public final ClassifierRawPrototype setData(final String dataAsString) {
 		final int[] parsed = Arrays.stream(dataAsString.split(",")).mapToInt(ClassifierNode::parseARGB).toArray();
 		
@@ -108,5 +126,54 @@ public final class ClassifierRawPrototype extends ClassifierPrototype {
 	}
 	
 	private static final long serialVersionUID = 946728342547485375L;
+	
+	public static final Factory FACTORY = new Factory();
+	
+	/**
+	 * @author codistmonk (creation 2015-02-04)
+	 */
+	public static final class Factory implements ClassifierPrototype.Factory {
+		
+		@Override
+		public final ClassifierRawPrototype newPrototype() {
+			return new ClassifierRawPrototype();
+		}
+		
+		@Override
+		public final int[] allocateDataBuffer(final int scale, final int[] old) {
+			final int n = scale * scale;
+			
+			return old == null || old.length != n ? new int[n] : old;
+		}
+		
+		@Override
+		public final void extractData(final BufferedImage image, final int x, final int y, final int scale,
+				final int[] result) {
+			Arrays.fill(result, 0);
+			
+			final int width = image.getWidth();
+			final int height = image.getHeight();
+			final int s = scale / 2;
+			final int left = x - s;
+			final int right = left + scale;
+			final int top = y - s;
+			final int bottom = top + scale;
+			
+			for (int yy = top, i = 0; yy < bottom; ++yy) {
+				if (0 <= yy && yy < height) {
+					for (int xx = left; xx < right; ++xx, ++i) {
+						if (0 <= xx && xx < width) {
+							result[i] = image.getRGB(xx, yy);
+						}
+					}
+				} else {
+					i += scale;
+				}
+			}
+		}
+		
+		private static final long serialVersionUID = 2715848951797691503L;
+		
+	}
 	
 }

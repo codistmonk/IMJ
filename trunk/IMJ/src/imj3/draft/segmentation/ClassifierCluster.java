@@ -2,6 +2,8 @@ package imj3.draft.segmentation;
 
 import java.util.Locale;
 
+import net.sourceforge.aprog.tools.Tools;
+
 /**
  * @author codistmonk (creation 2015-01-16)
  */
@@ -160,7 +162,7 @@ public final class ClassifierCluster extends ClassifierNode {
 		double result = Double.POSITIVE_INFINITY;
 		
 		for (int i = 0; i < n; ++i) {
-			final double distance = ((ClassifierRawPrototype) this.getChildAt(i)).distanceTo(values, maximum);
+			final double distance = ((ClassifierPrototype) this.getChildAt(i)).distanceTo(values, maximum);
 			
 			if (distance < result) {
 				result = distance;
