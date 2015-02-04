@@ -46,7 +46,7 @@ public final class OnlineClustering implements Clustering<Prototype> {
 				++weights[n];
 				prototypes.add(new Prototype(c.getInput().clone()).setIndex(n));
 			} else if (0.0 == c.getScore()) {
-				++weights[n];
+				++weights[c.getClassifierClass().getIndex()];
 			} else {
 				final Prototype prototype = c.getClassifierClass();
 				
