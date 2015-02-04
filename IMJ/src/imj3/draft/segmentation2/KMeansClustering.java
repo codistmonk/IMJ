@@ -42,7 +42,7 @@ public final class KMeansClustering implements Clustering<NearestNeighborClassif
 		final int[] clusterIndices = new int[n];
 		
 		for (int i = 0; i < n; ++i) {
-			clusterIndices[i] = k * i / n;
+			clusterIndices[i] = (int) ((long) k * i / n);
 		}
 		
 		for (int i = 0; i < 8; ++i) {
