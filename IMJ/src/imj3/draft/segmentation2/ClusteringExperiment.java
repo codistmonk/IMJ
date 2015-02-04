@@ -79,11 +79,12 @@ public final class ClusteringExperiment {
 			
 			for (final Classification<Prototype> classification : inputs) {
 				final int n = prototypes.size();
+				// XXX should the weights be considered instead of performing a normal classification?
 				final Classification<Prototype> c = result.classify(classification.getInput());
 				
 				if (c == null || 0.0 != c.getScore() && n < k) {
 					++weights[n];
-					prototypes.add(new Prototype(c.getInput().clone()));
+					prototypes.add(new Prototype(c.getInput().clone()).setIndex(n));
 					
 					for (int i = 0; i < n; ++i) {
 						final double score = this.getMeasure().compute(c.getInput(), prototypes.get(i).getDatum(), Double.POSITIVE_INFINITY);
@@ -101,7 +102,11 @@ public final class ClusteringExperiment {
 				} else if (0.0 == c.getScore()) {
 					++weights[n];
 				} else {
-					// TODO
+					final Prototype prototype = c.getClassifierClass();
+					
+					mergeInto(prototype.getDatum(), weights[prototype.getIndex()], c.getInput(), 1.0);
+					
+					// TODO update prototypeNearestNeighbors and prototypeNearestNeighbors
 				}
 			}
 			
@@ -109,6 +114,15 @@ public final class ClusteringExperiment {
 		}
 		
 		private static final long serialVersionUID = 1208345425946241729L;
+		
+		public static final void mergeInto(final double[] v1, final double w1, final double[] v2, final double w2) {
+			final int n = v1.length;
+			final double w = w1 + w2;
+			
+			for (int i = 0; i < n; ++i) {
+				v1[i] = (v1[i] * w1 + v2[i] * w2) / w;
+			}
+		}
 		
 	}
 	
