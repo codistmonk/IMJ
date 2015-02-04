@@ -23,7 +23,7 @@ public final class Classifier extends ClassifierNode {
 	
 	private int maximumScale = DEFAULT_MAXIMUM_SCALE;
 	
-	private ClassifierPrototype.Factory prototypeFactory;
+	private ClassifierPrototype.Factory prototypeFactory = ClassifierRawPrototype.FACTORY;
 	
 	private final Map<Thread, int[]> buffers = new WeakHashMap<>();
 	
@@ -174,14 +174,15 @@ public final class Classifier extends ClassifierNode {
 		int[] buffer = this.buffers.get(Thread.currentThread());
 		
 		{
-			final int n = this.getScale() * this.getScale();
+			final int[] newBuffer = this.getPrototypeFactory().allocateDataBuffer(this.getScale(), buffer);
 			
-			if (buffer == null || buffer.length != n) {
-				this.buffers.put(Thread.currentThread(), buffer = new int[n]);
+			if (newBuffer != buffer) {
+				this.buffers.put(Thread.currentThread(), buffer = newBuffer);
 			}
 		}
 		
-		extractValues(image, x, y, this.getScale(), buffer);
+		this.getPrototypeFactory().extractData(image, x, y, this.getScale(), buffer);
+		
 		final int n = this.getChildCount();
 		ClassifierCluster result = null;
 		double bestDistance = Double.POSITIVE_INFINITY;
@@ -239,31 +240,5 @@ public final class Classifier extends ClassifierNode {
 	public static final int DEFAULT_SCALE = 1;
 	
 	public static final int DEFAULT_MAXIMUM_SCALE = 1;
-	
-	public static final int[] extractValues(final BufferedImage image, final int x, final int y, final int patchSize, final int[] result) {
-		Arrays.fill(result, 0);
-		
-		final int width = image.getWidth();
-		final int height = image.getHeight();
-		final int s = patchSize / 2;
-		final int left = x - s;
-		final int right = left + patchSize;
-		final int top = y - s;
-		final int bottom = top + patchSize;
-		
-		for (int yy = top, i = 0; yy < bottom; ++yy) {
-			if (0 <= yy && yy < height) {
-				for (int xx = left; xx < right; ++xx, ++i) {
-					if (0 <= xx && xx < width) {
-						result[i] = image.getRGB(xx, yy);
-					}
-				}
-			} else {
-				i += patchSize;
-			}
-		}
-		
-		return result;
-	}
 	
 }

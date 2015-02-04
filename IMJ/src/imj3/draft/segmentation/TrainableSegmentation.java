@@ -384,7 +384,7 @@ public final class TrainableSegmentation {
 	}
 	
 	public static final int classify(final BufferedImage image, final Classifier classifier,
-			final Canvas classification, final Canvas groundtruth, final int[][][] confusionMatrix) {
+			final Canvas classification, final Canvas groundTruth, final int[][][] confusionMatrix) {
 		final int imageWidth = image.getWidth();
 		final int imageHeight = image.getHeight();
 		final int clusterCount = classifier.getChildCount();
@@ -410,7 +410,7 @@ public final class TrainableSegmentation {
 		}
 		
 		PaletteBasedHistograms.forEachPixelIn(image, (x, y) -> {
-			final int expected = groundtruth.getImage().getRGB(x, y);
+			final int expected = groundTruth.getImage().getRGB(x, y);
 			
 			if (expected != 0) {
 				final int predicted = classification.getImage().getRGB(x, y);
@@ -634,8 +634,10 @@ public final class TrainableSegmentation {
 								selectionPath.getLastPathComponent());
 						
 						if (node != null) {
-							Classifier.extractValues(input.getImage(), event.getX(), event.getY(),
-									node.getClassifier().getScale(), node.getData());
+							final Classifier classifier = node.getClassifier();
+							
+							classifier.getPrototypeFactory().extractData(input.getImage(), event.getX(), event.getY(),
+									classifier.getScale(), node.getData());
 							tree.getModel().valueForPathChanged(selectionPath, node.renewUserObject());
 							mainFrame.validate();
 						}
@@ -817,15 +819,7 @@ public final class TrainableSegmentation {
 			
 			cluster.add(prototype);
 			
-			final double[] prototypeElements = means[j];
-			final int[] data = prototype.getData();
-			
-			for (int k = 0; k < data.length; ++k) {
-				data[k] = a8r8g8b8(0xFF,
-						(int) prototypeElements[3 * k + 0],
-						(int) prototypeElements[3 * k + 1],
-						(int) prototypeElements[3 * k + 2]);
-			}
+			prototype.setData(means[j]);
 		}
 	}
 	
