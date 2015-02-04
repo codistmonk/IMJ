@@ -20,13 +20,15 @@ public final class ClusteringExperiment {
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) {
-		final int d = 2;
-		final int n = 10;
-		final int k = 2;
+		final int d = 8 * 8 * 3;
+		final int n = 10_000;
+		final int k = 256;
 		final DataSource<Prototype> inputs = new RandomPrototypeSource(d, n, 0L);
 		
-		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L1, n).cluster(inputs), inputs));
+//		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L1, n).cluster(inputs), inputs));
 		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L1, k).cluster(inputs), inputs));
+//		Tools.debugPrint(evaluate(new OnlineClustering(Measure.Predefined.L1, n).cluster(inputs), inputs));
+		Tools.debugPrint(evaluate(new OnlineClustering(Measure.Predefined.L1, k).cluster(inputs), inputs));
 	}
 	
 	// XXX rename this method to evaluateReconstructionError?
