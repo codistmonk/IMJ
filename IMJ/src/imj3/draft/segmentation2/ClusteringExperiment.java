@@ -66,16 +66,8 @@ public final class ClusteringExperiment {
 		public final NearestNeighborClassifier cluster(final DataSource<Prototype> inputs) {
 			final NearestNeighborClassifier result = new NearestNeighborClassifier(this.getMeasure());
 			final int k = this.getClusterCount();
-			final int d = inputs.getDimension();
 			final List<Prototype> prototypes = result.getPrototypes();
 			final double[] weights = new double[k];
-			final int[] prototypeNearestNeighbors = new int[k];
-			final double[] prototypeNearestScores = new double[k];
-			
-			for (int i = 0; i < k; ++i) {
-				prototypeNearestNeighbors[i] = i;
-				prototypeNearestScores[i] = Double.POSITIVE_INFINITY;
-			}
 			
 			for (final Classification<Prototype> classification : inputs) {
 				final int n = prototypes.size();
@@ -85,33 +77,12 @@ public final class ClusteringExperiment {
 				if (c == null || 0.0 != c.getScore() && n < k) {
 					++weights[n];
 					prototypes.add(new Prototype(c.getInput().clone()).setIndex(n));
-					
-					for (int i = 0; i < n; ++i) {
-						final double score = this.getMeasure().compute(c.getInput(), prototypes.get(i).getDatum(), Double.POSITIVE_INFINITY);
-						
-						if (score < prototypeNearestScores[i]) {
-							prototypeNearestNeighbors[i] = n;
-							prototypeNearestScores[i] = score;
-						}
-						
-						if (score < prototypeNearestScores[n]) {
-							prototypeNearestNeighbors[n] = i;
-							prototypeNearestScores[n] = score;
-						}
-					}
 				} else if (0.0 == c.getScore()) {
 					++weights[n];
 				} else {
 					final Prototype prototype = c.getClassifierClass();
 					
 					mergeInto(prototype.getDatum(), weights[prototype.getIndex()], c.getInput(), 1.0);
-					
-					for (int i = 0; i < n; ++i) {
-						for (int j = 0; j < i; ++j) {
-							
-						}
-					}
-					// TODO update prototypeNearestNeighbors and prototypeNearestNeighbors
 				}
 			}
 			
