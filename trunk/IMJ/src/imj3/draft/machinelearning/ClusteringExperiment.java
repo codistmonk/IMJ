@@ -30,7 +30,7 @@ public final class ClusteringExperiment {
 		final DataSource<Prototype> inputs = new BufferedDataSource<>(new GaussianMixturePrototypeSource(k, d, n, 0L));
 		
 //		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L1, n).cluster(inputs), inputs));
-		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L1, k, 1).cluster(inputs), inputs));
+		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L1, k, 2).cluster(inputs), inputs));
 //		Tools.debugPrint(evaluate(new OnlineClustering(Measure.Predefined.L1, n).cluster(inputs), inputs));
 		Tools.debugPrint(evaluate(new OnlineClustering(Measure.Predefined.L1, k).cluster(inputs), inputs));
 	}
@@ -41,7 +41,8 @@ public final class ClusteringExperiment {
 		double result = 0.0;
 		
 		for (final Classification<C> classification : inputs) {
-			result += classifier.getClassMeasure().compute(classification.getClassifierClass(), classifier.classify(classification.getInput()).getClassifierClass());
+			result += classifier.getClassMeasure().compute(
+					classification.getClassifierClass(), classifier.classify(classification.getInput()).getClassifierClass());
 		}
 		
 		Tools.debugPrint("Evaluation done in", timer.toc(), "ms");
