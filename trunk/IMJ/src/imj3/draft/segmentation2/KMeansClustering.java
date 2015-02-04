@@ -16,9 +16,16 @@ public final class KMeansClustering implements Clustering<NearestNeighborClassif
 	
 	private final int k;
 	
+	private final int iterations;
+	
 	public KMeansClustering(final Measure measure, final int k) {
+		this(measure, k, 3);
+	}
+	
+	public KMeansClustering(final Measure measure, final int k, final int iterations) {
 		this.measure = measure;
 		this.k = k;
+		this.iterations = iterations;
 	}
 	
 	public final Measure getMeasure() {
@@ -27,6 +34,10 @@ public final class KMeansClustering implements Clustering<NearestNeighborClassif
 	
 	public final int getK() {
 		return this.k;
+	}
+	
+	public final int getIterations() {
+		return this.iterations;
 	}
 	
 	@Override
@@ -49,9 +60,13 @@ public final class KMeansClustering implements Clustering<NearestNeighborClassif
 			clusterIndices[i] = (int) ((long) k * i / n);
 		}
 		
-		for (int i = 0; i < 4; ++i) {
-			this.computeMeans(inputs, clusterIndices, means);
+		this.computeMeans(inputs, clusterIndices, means);
+		
+		final int iterations = this.getIterations();
+		
+		for (int i = 0; i < iterations; ++i) {
 			this.recluster(inputs, result, clusterIndices);
+			this.computeMeans(inputs, clusterIndices, means);
 		}
 		
 		Tools.debugPrint("Clustering done in", timer.toc(), "ms");
