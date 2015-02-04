@@ -1,5 +1,7 @@
 package imj3.draft.segmentation2;
 
+import java.util.List;
+
 import imj3.draft.segmentation2.NearestNeighborClassifier.Prototype;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
@@ -36,6 +38,78 @@ public final class ClusteringExperiment {
 		}
 		
 		return result;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-04)
+	 */
+	public static final class OnlineClustering implements Clustering<Prototype> {
+		
+		private final Measure measure;
+		
+		private final int clusterCount;
+		
+		public OnlineClustering(final Measure measure, final int clusterCount) {
+			this.measure = measure;
+			this.clusterCount = clusterCount;
+		}
+		
+		public final Measure getMeasure() {
+			return this.measure;
+		}
+		
+		public final int getClusterCount() {
+			return this.clusterCount;
+		}
+		
+		@Override
+		public final NearestNeighborClassifier cluster(final DataSource<Prototype> inputs) {
+			final NearestNeighborClassifier result = new NearestNeighborClassifier(this.getMeasure());
+			final int k = this.getClusterCount();
+			final int d = inputs.getDimension();
+			final List<Prototype> prototypes = result.getPrototypes();
+			final double[] weights = new double[k];
+			final int[] prototypeNearestNeighbors = new int[k];
+			final double[] prototypeNearestScores = new double[k];
+			
+			for (int i = 0; i < k; ++i) {
+				prototypeNearestNeighbors[i] = i;
+				prototypeNearestScores[i] = Double.POSITIVE_INFINITY;
+			}
+			
+			for (final Classification<Prototype> classification : inputs) {
+				final int n = prototypes.size();
+				final Classification<Prototype> c = result.classify(classification.getInput());
+				
+				if (c == null || 0.0 != c.getScore() && n < k) {
+					++weights[n];
+					prototypes.add(new Prototype(c.getInput().clone()));
+					
+					for (int i = 0; i < n; ++i) {
+						final double score = this.getMeasure().compute(c.getInput(), prototypes.get(i).getDatum(), Double.POSITIVE_INFINITY);
+						
+						if (score < prototypeNearestScores[i]) {
+							prototypeNearestNeighbors[i] = n;
+							prototypeNearestScores[i] = score;
+						}
+						
+						if (score < prototypeNearestScores[n]) {
+							prototypeNearestNeighbors[n] = i;
+							prototypeNearestScores[n] = score;
+						}
+					}
+				} else if (0.0 == c.getScore()) {
+					++weights[n];
+				} else {
+					// TODO
+				}
+			}
+			
+			return result;
+		}
+		
+		private static final long serialVersionUID = 1208345425946241729L;
+		
 	}
 	
 }
