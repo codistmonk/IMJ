@@ -8,7 +8,7 @@ import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
 /**
- * Clusters data by reading each element only once; sometimes better than single-step k-means for low dimensions (k&lt;30).
+ * Clusters data by reading each element only once.
  * 
  * @author codistmonk (creation 2015-02-04)
  */
