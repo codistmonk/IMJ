@@ -79,8 +79,10 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 			return this.index;
 		}
 		
-		public final void setIndex(final int index) {
+		public final Prototype setIndex(final int index) {
 			this.index = index;
+			
+			return this;
 		}
 		
 		public final double[] getDatum() {
