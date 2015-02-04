@@ -64,13 +64,14 @@ public abstract class ClassifierNode extends DefaultMutableTreeNode {
 	}
 	
 	public static final Classifier load(final Document xml, final Classifier result) {
-		final Element paletteElement = (Element) XMLTools.getNode(xml, "palette");
+		final Element classifierElement = (Element) XMLTools.getNode(xml, "classifier");
 		
-		result.setScale(select(paletteElement.getAttribute("scale"), Classifier.DEFAULT_SCALE));
-		result.setMaximumScale(select(paletteElement.getAttribute("maximumScale"), Classifier.DEFAULT_MAXIMUM_SCALE));
+		result.setPrototypeFactory(select(classifierElement.getAttribute("prototypeFactory"), ClassifierRawPrototype.Factory.class.getName()));
+		result.setScale(select(classifierElement.getAttribute("scale"), Classifier.DEFAULT_SCALE));
+		result.setMaximumScale(select(classifierElement.getAttribute("maximumScale"), Classifier.DEFAULT_MAXIMUM_SCALE));
 		result.removeAllChildren();
 		
-		for (final Node clusterNode : XMLTools.getNodes(xml, "palette/cluster")) {
+		for (final Node clusterNode : XMLTools.getNodes(xml, "classifier/cluster")) {
 			final Element clusterElement = (Element) clusterNode;
 			final ClassifierCluster cluster = new ClassifierCluster()
 				.setLabel(select(clusterElement.getAttribute("label"), ClassifierCluster.DEFAULT_LABEL))
@@ -82,7 +83,7 @@ public abstract class ClassifierNode extends DefaultMutableTreeNode {
 			result.add(cluster);
 			
 			for (final Node prototypeNode : XMLTools.getNodes(clusterNode, "prototype")) {
-				final ClassifierRawPrototype prototype = new ClassifierRawPrototype();
+				final ClassifierPrototype prototype = result.getPrototypeFactory().newPrototype();
 				
 				cluster.add(prototype);
 				
@@ -111,7 +112,7 @@ public abstract class ClassifierNode extends DefaultMutableTreeNode {
 		
 		public abstract V visit(ClassifierCluster cluster);
 		
-		public abstract V visit(ClassifierRawPrototype prototype);
+		public abstract V visit(ClassifierPrototype prototype);
 		
 	}
 	
@@ -124,11 +125,12 @@ public abstract class ClassifierNode extends DefaultMutableTreeNode {
 		
 		@Override
 		public Element visit(final Classifier classifier) {
-			final Element result = (Element) this.xml.appendChild(this.xml.createElement("palette"));
+			final Element result = (Element) this.xml.appendChild(this.xml.createElement("classifier"));
 			final int n = classifier.getChildCount();
 			
 			result.setAttribute("scale", classifier.getScaleAsString());
 			result.setAttribute("maximumScale", classifier.getMaximumScaleAsString());
+			result.setAttribute("prototypeFactory", classifier.getPrototypeFactoryAsString());
 			
 			for (int i = 0; i < n; ++i) {
 				result.appendChild(((ClassifierCluster) classifier.getChildAt(i)).accept(this));
@@ -148,14 +150,14 @@ public abstract class ClassifierNode extends DefaultMutableTreeNode {
 			result.setAttribute("maximumPrototypeCount", cluster.getMaximumPrototypeCountAsString());
 			
 			for (int i = 0; i < n; ++i) {
-				result.appendChild(((ClassifierRawPrototype) cluster.getChildAt(i)).accept(this));
+				result.appendChild(((ClassifierPrototype) cluster.getChildAt(i)).accept(this));
 			}
 			
 			return result;
 		}
 		
 		@Override
-		public final Element visit(final ClassifierRawPrototype prototype) {
+		public final Element visit(final ClassifierPrototype prototype) {
 			final Element result = this.xml.createElement("prototype");
 			
 			result.setTextContent(prototype.getDataAsString());
