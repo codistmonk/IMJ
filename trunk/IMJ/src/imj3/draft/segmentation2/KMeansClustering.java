@@ -4,6 +4,9 @@ import imj3.draft.segmentation2.NearestNeighborClassifier.Prototype;
 
 import java.util.Arrays;
 
+import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
+
 /**
  * @author codistmonk (creation 2015-02-04)
  */
@@ -28,6 +31,7 @@ public final class KMeansClustering implements Clustering<NearestNeighborClassif
 	
 	@Override
 	public final NearestNeighborClassifier cluster(final DataSource<Prototype> inputs) {
+		final TicToc timer = new TicToc();
 		final NearestNeighborClassifier result = new NearestNeighborClassifier(this.getMeasure());
 		final int k = this.getK();
 		final double[][] means = new double[k][inputs.getDimension()];
@@ -49,6 +53,8 @@ public final class KMeansClustering implements Clustering<NearestNeighborClassif
 			this.computeMeans(inputs, clusterIndices, means);
 			this.recluster(inputs, result, clusterIndices);
 		}
+		
+		Tools.debugPrint("Clustering done in", timer.toc(), "ms");
 		
 		return result;
 	}
