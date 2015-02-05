@@ -1,5 +1,7 @@
 package imj3.draft.machinelearning;
 
+import static java.lang.Math.min;
+import static java.lang.Math.pow;
 import static java.util.stream.Collectors.toList;
 
 import java.io.Serializable;
@@ -69,6 +71,7 @@ public final class AssignmentProblem {
 		}
 		
 		public final double[] optimize() {
+			final int precision = 8;
 			final double[] objective = this.objective.clone();
 			final int n = objective.length;
 			final double[] tmp = new double[n];
@@ -79,30 +82,24 @@ public final class AssignmentProblem {
 			final int hyperplaneCount = this.hyperplanes.size();
 			int constraintCount = constraints.size();
 			
-			Tools.debugPrint(hyperplaneCount, constraintCount);
-			
 			{
 				for (int i = 0; i < hyperplaneCount; ++i) {
 					System.arraycopy(constraints.get(i), 0, tmp, 0, n);
 					
 					project(objective, tmp);
 					
-					Tools.debugPrint(Arrays.toString(tmp));
-					
 					for (final double[] constraint : constraints) {
 						project(constraint, tmp);
 					}
 					
-					if (dot(this.hyperplanes.get(i), this.solution) != this.hyperplaneOffsets.get(i)) {
+					if (round(precision, dot(this.hyperplanes.get(i), this.solution)) != round(precision, this.hyperplaneOffsets.get(i))) {
 						Tools.debugError();
 						return null;
 					}
 				}
 			}
 			
-			Tools.debugPrint(Arrays.toString(objective));
-			
-			if (dot(objective, this.objective) < 0.0) {
+			if (round(precision, dot(objective, this.objective)) < 0.0) {
 				Tools.debugError();
 				return this.solution;
 			}
@@ -112,11 +109,8 @@ public final class AssignmentProblem {
 				final double dcs = dot(constraint, this.solution);
 				final double dco = dot(constraint, objective);
 				
-				Tools.debugPrint(dcs, dco);
-				
-				if (dcs > this.halfHyperspaceOffsets.get(i - hyperplaneCount)
-						|| dco >= 0.0) {
-					Tools.debugPrint(dcs, dco);
+				if (round(precision, dcs) > round(precision, this.halfHyperspaceOffsets.get(i - hyperplaneCount))
+						|| round(precision, dco) >= 0.0) {
 					constraints.remove(i--);
 					--constraintCount;
 				}
@@ -132,8 +126,28 @@ public final class AssignmentProblem {
 				}
 			}
 			
-			Tools.debugPrint(Arrays.toString(objective));
-			// TODO
+			{
+				// (s + k obj) . c = off
+				// s . c + k obj . c = off
+				// k = (off - s . c) / obj . c
+				double k = Double.POSITIVE_INFINITY;
+				int i = -1;
+				
+				for (final double[] halfHyperspace : this.halfHyperspaces) {
+					++i;
+					final double doh = dot(objective, halfHyperspace);
+					
+					if (round(precision, doh) < 0.0) {
+						k = min(k, (this.halfHyperspaceOffsets.get(i) - dot(this.solution, halfHyperspace)) / doh);
+					}
+				}
+				
+				if (0 < k) {
+					StreamingClustering.mergeInto(this.solution, 1.0, objective, k);
+				}
+			}
+			
+			// TODO repeat
 			
 			return this.solution;
 		}
@@ -146,31 +160,52 @@ public final class AssignmentProblem {
 		
 	}
 	
+	public static final long mantissa(final double value) {
+		final long bits = Double.doubleToLongBits(value);
+		
+		return (exponent(value) == 0) ?
+                (bits & 0xfffffffffffffL) << 1 :
+                (bits & 0xfffffffffffffL) | 0x10000000000000L;
+	}
+	
+	public static final long exponent(final double value) {
+		return ((Double.doubleToLongBits(value) >> 52) & 0x7ffL) - 1075L;
+	}
+	
+	public static final long sign(final double value) {
+		return ((Double.doubleToLongBits(value) >> 63) == 0) ? 1 : -1;
+	}
+	
+	public static final boolean isZero(final double value) {
+		return Math.abs(value) < 1.0E-12;
+	}
+	
+	public static final double round(final int digits, final double value) {
+		final double scale = pow(10.0, digits);
+		
+		return Math.round(value * scale) / scale;
+	}
+	
+	public static final double[] round(final int digits, final double[] values) {
+		final int n = values.length;
+		
+		for (int i = 0; i < n; ++i) {
+			values[i] = round(digits, values[i]);
+		}
+		
+		return values;
+	}
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) {
-		if (false) {
-			final double[] objective = { -1.0, -1.0, -1.0 };
-			final List<double[]> hyperplanes = Arrays.asList(
-					v(1.0, 0.0, 0.0),
-					v(0.0, 1.0, 0.0),
-					v(0.0, 0.0, 1.0)
-			);
-			
-			projectOnObstacles(objective, hyperplanes);
-			
-			Tools.debugPrint(Arrays.toString(objective));
-			Tools.debugPrint(Arrays.deepToString(hyperplanes.toArray()));
-			
-			return;
-		}
-		
 		if (true) {
 			final LinearProgram lap = new LinearProgram();
 			
-			lap.initialSolution(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
+//			lap.initialSolution(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
+			lap.initialSolution(0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 			lap.objective(-250, -400, -200, -400, -600, -400, -350, -350, -250);
 			lap.hyperplane(1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
 			lap.hyperplane(0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0);
@@ -189,49 +224,10 @@ public final class AssignmentProblem {
 			lap.halfHyperspace(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
 			lap.halfHyperspace(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 			
-			Tools.debugPrint(Arrays.toString(lap.optimize()));
+			Tools.debugPrint(Arrays.toString(round(1, lap.optimize())));
 			
 			return;
 		}
-		if (true) {
-			final double[] solution = { 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 };
-			final double[] initialObjective = { -250, -400, -200, -400, -600, -400, -350, -350, -250 };
-			final double[] objective = initialObjective.clone();
-			final List<double[]> hyperplanes = Arrays.asList(
-					v(1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-					v(0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0),
-					v(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0),
-					v(1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-					v(0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0),
-					v(0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0),
-					
-//					v(1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-					v(0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-//					v(0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-//					v(0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-//					v(0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0),
-					v(0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0),
-					v(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0)
-//					v(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
-//					v(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0)
-					);
-			
-			for (final double[] hyperplane : hyperplanes) {
-				Tools.debugPrint(dot(hyperplane, solution));
-			}
-			
-			projectOnAll(objective, hyperplanes.stream().map((Function<double[], double[]>) double[]::clone).collect(toList()));
-			
-			for (final double[] hyperplane : hyperplanes) {
-				Tools.debugPrint(dot(hyperplane, objective));
-			}
-			
-			Tools.debugPrint(Arrays.toString(objective));
-			Tools.debugPrint(dot(initialObjective, objective));
-			
-			return;
-		}
-		
 		
 		final int n = 10;
 		final int d = 1;
@@ -265,39 +261,6 @@ public final class AssignmentProblem {
 				new TicToc(), 4_000L);
 		
 		Tools.debugPrint(bestCost[0]);
-	}
-	
-	public static final void projectOnObstacles(final double[] objective, final List<double[]> hyperplanes) {
-		final int n = objective.length;
-		final double[] tmp = new double[n];
-		
-		for (final double[] projection : hyperplanes) {
-			if (dot(objective, projection) < 0.0) {
-				System.arraycopy(projection, 0, tmp, 0, n);
-				project(objective, tmp);
-				
-				for (final double[] hyperplane : hyperplanes) {
-					project(hyperplane, tmp);
-				}
-				
-				Tools.debugPrint(Arrays.toString(objective));
-				Tools.debugPrint(Arrays.deepToString(hyperplanes.toArray()));
-			}
-		}
-	}
-	
-	public static final void projectOnAll(final double[] objective, final List<double[]> hyperplanes) {
-		final int n = objective.length;
-		final double[] tmp = new double[n];
-		
-		for (final double[] projection : hyperplanes) {
-			System.arraycopy(projection, 0, tmp, 0, n);
-			project(objective, tmp);
-			
-			for (final double[] hyperplane : hyperplanes) {
-				project(hyperplane, tmp);
-			}
-		}
 	}
 	
 	public static final void project(final double[] v, final double[] direction) {
