@@ -13,6 +13,10 @@ public abstract interface Measure extends Serializable {
 	
 	public abstract double compute(double[] v1, double[] v2, double limit);
 	
+	public default double compute(final double[] v1, final double[] v2) {
+		return compute(v1, v2, Double.POSITIVE_INFINITY);
+	}
+	
 	/**
 	 * @author codistmonk (creation 2015-02-04)
 	 */
