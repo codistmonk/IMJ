@@ -1,11 +1,16 @@
 package imj3.draft.machinelearning;
 
+import static java.util.stream.Collectors.toList;
+
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Function;
 
+import jgencode.primitivelists.DoubleList;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -17,11 +22,124 @@ public final class AssignmentProblem {
 	static final Random random = new Random(0L);
 	
 	/**
+	 * @author codistmonk (creation 2015-02-05)
+	 */
+	public static final class LinearProgram implements Serializable {
+		
+		private double[] solution;
+		
+		private double[] objective;
+		
+		private final List<double[]> hyperplanes = new ArrayList<>();
+		
+		private final DoubleList hyperplaneOffsets = new DoubleList();
+		
+		private final List<double[]> halfHyperspaces = new ArrayList<>();
+		
+		private final DoubleList halfHyperspaceOffsets = new DoubleList();
+		
+		public final LinearProgram initialSolution(final double... initialSolution) {
+			this.solution = initialSolution;
+			
+			return this;
+		}
+		
+		public final LinearProgram objective(final double... objective) {
+			this.objective = objective;
+			
+			return this;
+		}
+		
+		public final LinearProgram hyperplane(final double... hyperplaneAndOffset) {
+			final int n = hyperplaneAndOffset.length - 1;
+			
+			this.hyperplanes.add(Arrays.copyOf(hyperplaneAndOffset, n));
+			this.hyperplaneOffsets.add(hyperplaneAndOffset[n]);
+			
+			return this;
+		}
+		
+		public final LinearProgram halfHyperspace(final double... halfHyperspaceAndOffset) {
+			final int n = halfHyperspaceAndOffset.length - 1;
+			
+			this.halfHyperspaces.add(Arrays.copyOf(halfHyperspaceAndOffset, n));
+			this.halfHyperspaceOffsets.add(halfHyperspaceAndOffset[n]);
+			
+			return this;
+		}
+		
+		public final double[] optimize() {
+			// TODO
+			
+			return this.solution;
+		}
+		
+		private static final long serialVersionUID = 6331295733725395587L;
+		
+	}
+	
+	/**
 	 * @param commandLineArguments
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) {
-		final int n = 256;
+		if (false) {
+			final double[] objective = { -1.0, -1.0, -1.0 };
+			final List<double[]> hyperplanes = Arrays.asList(
+					v(1.0, 0.0, 0.0),
+					v(0.0, 1.0, 0.0),
+					v(0.0, 0.0, 1.0)
+			);
+			
+			projectOnObstacles(objective, hyperplanes);
+			
+			Tools.debugPrint(Arrays.toString(objective));
+			Tools.debugPrint(Arrays.deepToString(hyperplanes.toArray()));
+			
+			return;
+		}
+		
+		if (true) {
+			final double[] solution = { 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 };
+			final double[] initialObjective = { -250, -400, -200, -400, -600, -400, -350, -350, -250 };
+			final double[] objective = initialObjective.clone();
+			final List<double[]> hyperplanes = Arrays.asList(
+					v(1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+					v(0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0),
+					v(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0),
+					v(1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+					v(0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0),
+					v(0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0),
+					
+//					v(1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+					v(0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+//					v(0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+//					v(0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+//					v(0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0),
+					v(0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0),
+					v(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+//					v(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+//					v(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+					);
+			
+			for (final double[] hyperplane : hyperplanes) {
+				Tools.debugPrint(dot(hyperplane, solution));
+			}
+			
+			projectOnAll(objective, hyperplanes.stream().map((Function<double[], double[]>) double[]::clone).collect(toList()));
+			
+			for (final double[] hyperplane : hyperplanes) {
+				Tools.debugPrint(dot(hyperplane, objective));
+			}
+			
+			Tools.debugPrint(Arrays.toString(objective));
+			Tools.debugPrint(dot(initialObjective, objective));
+			
+			return;
+		}
+		
+		
+		final int n = 10;
 		final int d = 1;
 		final List<EndPoint<double[]>> sources = new ArrayList<>(n);
 		final List<EndPoint<double[]>> targets = new ArrayList<>(n);
@@ -53,6 +171,67 @@ public final class AssignmentProblem {
 				new TicToc(), 4_000L);
 		
 		Tools.debugPrint(bestCost[0]);
+	}
+	
+	public static final void projectOnObstacles(final double[] objective, final List<double[]> hyperplanes) {
+		final int n = objective.length;
+		final double[] tmp = new double[n];
+		
+		for (final double[] projection : hyperplanes) {
+			if (dot(objective, projection) < 0.0) {
+				System.arraycopy(projection, 0, tmp, 0, n);
+				project(objective, tmp);
+				
+				for (final double[] hyperplane : hyperplanes) {
+					project(hyperplane, tmp);
+				}
+				
+				Tools.debugPrint(Arrays.toString(objective));
+				Tools.debugPrint(Arrays.deepToString(hyperplanes.toArray()));
+			}
+		}
+	}
+	
+	public static final void projectOnAll(final double[] objective, final List<double[]> hyperplanes) {
+		final int n = objective.length;
+		final double[] tmp = new double[n];
+		
+		for (final double[] projection : hyperplanes) {
+			System.arraycopy(projection, 0, tmp, 0, n);
+			project(objective, tmp);
+			
+			for (final double[] hyperplane : hyperplanes) {
+				project(hyperplane, tmp);
+			}
+		}
+	}
+	
+	public static final void project(final double[] v, final double[] direction) {
+		// (v + k d) . d = 0
+		// <- v . d + k d . d = 0
+		// <- k = - v . d / d . d
+		final double numerator = dot(v, direction);
+		final double denominator = dot(direction, direction);
+		final int n = v.length;
+		
+		for (int i = 0; i < n; ++i) {
+			v[i] = v[i] - direction[i] * numerator / denominator;
+		}
+	}
+	
+	public static final double dot(final double[] v1, final double[] v2) {
+		final int n = v1.length;
+		double result = 0.0;
+		
+		for (int i = 0; i < n; ++i) {
+			result += v1[i] * v2[i];
+		}
+		
+		return result;
+	}
+	
+	public static final double[] v(final double... v) {
+		return v;
 	}
 	
 	public static final <T> boolean findBestAssignment(final List<Association<T>> associations,
