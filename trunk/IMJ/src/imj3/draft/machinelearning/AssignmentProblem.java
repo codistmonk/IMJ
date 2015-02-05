@@ -142,7 +142,7 @@ public final class AssignmentProblem {
 					}
 				}
 				
-				if (0 < k) {
+				if (0 < k && Double.isFinite(k)) {
 					StreamingClustering.mergeInto(this.solution, 1.0, objective, k);
 				}
 			}
