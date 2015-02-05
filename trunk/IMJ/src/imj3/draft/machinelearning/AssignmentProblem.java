@@ -69,12 +69,80 @@ public final class AssignmentProblem {
 		}
 		
 		public final double[] optimize() {
+			final double[] objective = this.objective.clone();
+			final int n = objective.length;
+			final double[] tmp = new double[n];
+			final List<double[]> constraints = copy(this.hyperplanes);
+			
+			constraints.addAll(copy(this.halfHyperspaces));
+			
+			final int hyperplaneCount = this.hyperplanes.size();
+			int constraintCount = constraints.size();
+			
+			Tools.debugPrint(hyperplaneCount, constraintCount);
+			
+			{
+				for (int i = 0; i < hyperplaneCount; ++i) {
+					System.arraycopy(constraints.get(i), 0, tmp, 0, n);
+					
+					project(objective, tmp);
+					
+					Tools.debugPrint(Arrays.toString(tmp));
+					
+					for (final double[] constraint : constraints) {
+						project(constraint, tmp);
+					}
+					
+					if (dot(this.hyperplanes.get(i), this.solution) != this.hyperplaneOffsets.get(i)) {
+						Tools.debugError();
+						return null;
+					}
+				}
+			}
+			
+			Tools.debugPrint(Arrays.toString(objective));
+			
+			if (dot(objective, this.objective) < 0.0) {
+				Tools.debugError();
+				return this.solution;
+			}
+			
+			for (int i = hyperplaneCount; i < constraintCount; ++i) {
+				final double[] constraint = constraints.get(i);
+				final double dcs = dot(constraint, this.solution);
+				final double dco = dot(constraint, objective);
+				
+				Tools.debugPrint(dcs, dco);
+				
+				if (dcs > this.halfHyperspaceOffsets.get(i - hyperplaneCount)
+						|| dco >= 0.0) {
+					Tools.debugPrint(dcs, dco);
+					constraints.remove(i--);
+					--constraintCount;
+				}
+			}
+			
+			for (int i = hyperplaneCount; i < constraintCount; ++i) {
+				System.arraycopy(constraints.get(i), 0, tmp, 0, n);
+				
+				project(objective, tmp);
+				
+				for (int j = i; j < constraintCount; ++j) {
+					project(constraints.get(j), tmp);
+				}
+			}
+			
+			Tools.debugPrint(Arrays.toString(objective));
 			// TODO
 			
 			return this.solution;
 		}
 		
 		private static final long serialVersionUID = 6331295733725395587L;
+		
+		public static final List<double[]> copy(final List<double[]> list) {
+			return list.stream().map((Function<double[], double[]>) double[]::clone).collect(toList());
+		}
 		
 	}
 	
@@ -99,6 +167,32 @@ public final class AssignmentProblem {
 			return;
 		}
 		
+		if (true) {
+			final LinearProgram lap = new LinearProgram();
+			
+			lap.initialSolution(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
+			lap.objective(-250, -400, -200, -400, -600, -400, -350, -350, -250);
+			lap.hyperplane(1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
+			lap.hyperplane(0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0);
+			lap.hyperplane(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0);
+			lap.hyperplane(1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0);
+			lap.hyperplane(0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0);
+			lap.hyperplane(0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0);
+			
+			lap.halfHyperspace(1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+			lap.halfHyperspace(0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+			lap.halfHyperspace(0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+			lap.halfHyperspace(0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+			lap.halfHyperspace(0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+			lap.halfHyperspace(0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0);
+			lap.halfHyperspace(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0);
+			lap.halfHyperspace(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+			lap.halfHyperspace(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+			
+			Tools.debugPrint(Arrays.toString(lap.optimize()));
+			
+			return;
+		}
 		if (true) {
 			final double[] solution = { 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 };
 			final double[] initialObjective = { -250, -400, -200, -400, -600, -400, -350, -350, -250 };
