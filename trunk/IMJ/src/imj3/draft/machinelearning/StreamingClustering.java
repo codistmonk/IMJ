@@ -12,36 +12,22 @@ import net.sourceforge.aprog.tools.Tools;
  * 
  * @author codistmonk (creation 2015-02-04)
  */
-public final class StreamingClustering implements Clustering<Prototype> {
-	
-	private final Measure measure;
-	
-	private final int clusterCount;
+public final class StreamingClustering extends NearestNeighborClustering {
 	
 	public StreamingClustering(final Measure measure, final int clusterCount) {
-		this.measure = measure;
-		this.clusterCount = clusterCount;
-	}
-	
-	public final Measure getMeasure() {
-		return this.measure;
-	}
-	
-	public final int getClusterCount() {
-		return this.clusterCount;
+		super(measure, clusterCount);
 	}
 	
 	@Override
-	public final NearestNeighborClassifier cluster(final DataSource<Prototype> inputs) {
+	public final void cluster(final DataSource<Prototype> inputs, final NearestNeighborClassifier classifier) {
 		final TicToc timer = new TicToc();
-		final NearestNeighborClassifier result = new NearestNeighborClassifier(this.getMeasure());
 		final int k = this.getClusterCount();
-		final List<Prototype> prototypes = result.getPrototypes();
+		final List<Prototype> prototypes = classifier.getPrototypes();
 		
 		for (final Classification<Prototype> classification : inputs) {
 			final int n = prototypes.size();
 			// XXX should the weights be considered instead of performing a normal classification?
-			final Classification<Prototype> c = result.classify(classification.getInput());
+			final Classification<Prototype> c = classifier.classify(classification.getInput());
 			
 			if (c == null || 0.0 != c.getScore() && n < k) {
 				prototypes.add(new Prototype(c.getInput().clone()).setIndex(n));
@@ -57,8 +43,6 @@ public final class StreamingClustering implements Clustering<Prototype> {
 		}
 		
 		Tools.debugPrint("Clustering done in", timer.toc(), "ms");
-		
-		return result;
 	}
 	
 	private static final long serialVersionUID = 1208345425946241729L;
