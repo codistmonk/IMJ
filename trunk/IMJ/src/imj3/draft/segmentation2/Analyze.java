@@ -97,15 +97,10 @@ public final class Analyze {
 		
 		private final Classifier<Out> classifier;
 		
-		public ClassifiedImageDataSource(final ImageDataSource<In> source, final Classifier<Out> classifier,
-				final int patchSize, final int patchSparsity, final int stride) {
-			super(patchSize, patchSparsity, stride);
+		public ClassifiedImageDataSource(final ImageDataSource<In> source, final Classifier<Out> classifier) {
+			super(source.getPatchSize(), source.getPatchSparsity(), source.getStride());
 			this.source = source;
 			this.classifier = classifier;
-		}
-		
-		public ClassifiedImageDataSource(final ImageDataSource<In> source, final Classifier<Out> classifier, int patchSize) {
-			this(source, classifier, patchSize, 1, 1);
 		}
 		
 		public final ImageDataSource<In> getSource() {
@@ -139,7 +134,8 @@ public final class Analyze {
 				
 				@Override
 				public final Classification<Out> next() {
-					return ClassifiedImageDataSource.this.getClassifier().classify(this.inputs.next().getClassifierClass().toArray());
+					return ClassifiedImageDataSource.this.getClassifier().classify(
+							this.inputs.next().getClassifierClass().toArray());
 				}
 				
 			};
@@ -147,15 +143,15 @@ public final class Analyze {
 		
 		@Override
 		public int getImageWidth() {
-			// TODO Auto-generated method stub
-			return 0;
+			return this.getSource().getImageWidth();
 		}
-
+		
 		@Override
-		public int getImageHeight() {
-			// TODO Auto-generated method stub
-			return 0;
+		public final int getImageHeight() {
+			return this.getSource().getImageHeight();
 		}
+		
+		private static final long serialVersionUID = -4480722678689454042L;
 		
 	}
 	
