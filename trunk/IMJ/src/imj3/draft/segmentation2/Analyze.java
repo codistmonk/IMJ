@@ -3,6 +3,8 @@ package imj3.draft.segmentation2;
 import static imj3.core.Channels.Predefined.blue8;
 import static imj3.core.Channels.Predefined.green8;
 import static imj3.core.Channels.Predefined.red8;
+import static imj3.draft.segmentation2.Analyze.DataSourceArrayProperty.CLASS;
+import static imj3.draft.segmentation2.Analyze.DataSourceArrayProperty.INPUT;
 import static java.lang.Math.max;
 import imj3.core.Channels;
 import imj3.draft.machinelearning.Classification;
@@ -10,6 +12,8 @@ import imj3.draft.machinelearning.Classifier;
 import imj3.draft.machinelearning.ClassifierClass;
 import imj3.draft.machinelearning.DataSource;
 import imj3.draft.machinelearning.KMeansClustering;
+import imj3.draft.machinelearning.Measure;
+import imj3.draft.machinelearning.StreamingClustering;
 import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 import imj3.tools.AwtImage2D;
 
@@ -22,6 +26,7 @@ import java.util.Iterator;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-02-06)
@@ -42,12 +47,20 @@ public final class Analyze {
 		final BufferedImage image = AwtImage2D.awtRead(file.getPath());
 		
 		SwingTools.show(image, file.getName(), false);
-		SwingTools.show(convert(new Mean(image, 2, 1, 2), null), file.getName(), false);
-		SwingTools.show(convert(new Max(image, 2, 1, 2), null), file.getName(), false);
+		final Mean mean = new Mean(image, 2, 1, 2);
+//		SwingTools.show(convert(mean, INPUT), "Mean", false);
+//		SwingTools.show(convert(new Max(image, 2, 1, 2), INPUT), "Max", false);
+		
+		SwingTools.show(convert(new ClassifiedImageDataSource<>(mean, new StreamingClustering(Measure.Predefined.L1_ES, 8).cluster(mean)), CLASS), "Indirect (streaming)", false);
+		SwingTools.show(convert(new ClassifiedImageDataSource<>(mean, new KMeansClustering(Measure.Predefined.L1_ES, 8, 6).cluster(mean)), CLASS), "Indirect (k-means)", false);
 	}
 	
-	public static final BufferedImage convert(final ImageDataSource<Prototype> source, final BufferedImage result) {
-		final int dimension = source.getInputDimension();
+	public static final BufferedImage convert(final ImageDataSource<Prototype> source, final DataSourceArrayProperty property) {
+		return convert(source, property, null);
+	}
+	
+	public static final BufferedImage convert(final ImageDataSource<Prototype> source, final DataSourceArrayProperty property, final BufferedImage result) {
+		final int dimension = property.getDimension(source);
 		
 		if (dimension != 1 && dimension != 3) {
 			throw new IllegalArgumentException();
@@ -63,7 +76,7 @@ public final class Analyze {
 		for (final Classification<Prototype> c : source) {
 			final int x = pixel % width;
 			final int y = pixel / width;
-			final double[] input = c.getInput();
+			final double[] input = property.getArray(c);
 			final int rgb = dimension == 1 ? gray(input) : argb(input);
 			
 			actualResult.setRGB(x, y, rgb);
@@ -86,6 +99,43 @@ public final class Analyze {
 	
 	public static final int int8(final double value0255) {
 		return ((int) value0255) & 0xFF;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-06)
+	 */
+	public static enum DataSourceArrayProperty {
+		
+		INPUT {
+			
+			@Override
+			public final int getDimension(final DataSource<?> source) {
+				return source.getInputDimension();
+			}
+			
+			@Override
+			public final double[] getArray(final Classification<?> classification) {
+				return classification.getInput();
+			}
+			
+		}, CLASS {
+			
+			@Override
+			public final int getDimension(final DataSource<?> source) {
+				return source.getClassDimension();
+			}
+			
+			@Override
+			public final double[] getArray(final Classification<?> classification) {
+				return classification.getClassifierClass().toArray();
+			}
+			
+		};
+		
+		public abstract int getDimension(DataSource<?> source);
+		
+		public abstract double[] getArray(Classification<?> classification);
+		
 	}
 	
 	/**
@@ -134,8 +184,10 @@ public final class Analyze {
 				
 				@Override
 				public final Classification<Out> next() {
-					return ClassifiedImageDataSource.this.getClassifier().classify(
+					final Classification<Out> result = ClassifiedImageDataSource.this.getClassifier().classify(
 							this.inputs.next().getClassifierClass().toArray());
+					
+					return result;
 				}
 				
 			};
@@ -388,6 +440,39 @@ public final class Analyze {
 			private static final long serialVersionUID = -7200337284453859382L;
 			
 		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-06)
+	 */
+	public static final class Raw extends PrototypeSource {
+		
+		public Raw(final BufferedImage image, final int patchSize) {
+			super(image, patchSize);
+		}
+		
+		public Raw(final BufferedImage image, final int patchSize, final int patchSparsity, final int stride) {
+			super(image, patchSize, patchSparsity, stride);
+		}
+		
+		@Override
+		public final int getInputDimension() {
+			return 3 * this.getPatchPixelCount();
+		}
+		
+		@Override
+		protected final void convert(final int x, final int y, final int[] patchValues, final double[] result) {
+			int i = -1;
+			
+			for (final int value : patchValues) {
+				result[++i] = red8(value);
+				result[++i] = green8(value);
+				result[++i] = blue8(value);
+			}
+		}
+		
+		private static final long serialVersionUID = 3938160512172714562L;
 		
 	}
 	
