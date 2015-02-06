@@ -37,17 +37,17 @@ public final class Analyze {
 		
 		SwingTools.show(image, file.getName(), false);
 		
-		if (true) {
-			final Mean mean = new Mean(image, 2, 1, 2);
+		if (false) {
+			final BufferedImageMeanSource mean = new BufferedImageMeanSource(image, 2, 1, 2);
 			SwingTools.show(convert(mean, INPUT), "Mean", false);
-			SwingTools.show(convert(new Max(image, 2, 1, 2), INPUT), "Max", false);
+			SwingTools.show(convert(new BufferedImageMaxSource(image, 2, 1, 2), INPUT), "Max", false);
 			
 			SwingTools.show(convert(new ClassifiedImageDataSource<>(mean, new StreamingClustering(Measure.Predefined.L1_ES, 8).cluster(mean)), CLASS), "Indirect (streaming)", false);
 			SwingTools.show(convert(new ClassifiedImageDataSource<>(mean, new KMeansClustering(Measure.Predefined.L1_ES, 8, 6).cluster(mean)), CLASS), "Indirect (k-means)", false);
 		}
 		
 		if (true) {
-			final Raw source = new Raw(image, 1);
+			final BufferedImageRawSource source = new BufferedImageRawSource(image, 1);
 			
 			SwingTools.show(convert(new ClassifiedImageDataSource<>(source, new StreamingClustering(Measure.Predefined.L1_ES, 8).cluster(source)), CLASS), "Indirect (streaming)", false);
 		}
