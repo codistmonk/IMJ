@@ -93,28 +93,20 @@ public final class Analyze {
 	 */
 	public static abstract class ImageDataSource<C extends ClassifierClass> implements DataSource<C> {
 		
-		private final BufferedImage image;
-		
 		private final int patchSize;
 		
 		private final int patchSparsity;
 		
 		private final int stride;
 		
-		public ImageDataSource(final BufferedImage image, final int patchSize) {
-			this(image, patchSize, 1, 1);
+		public ImageDataSource(final int patchSize) {
+			this(patchSize, 1, 1);
 		}
 		
-		public ImageDataSource(final BufferedImage image, final int patchSize,
-				final int patchSparsity, final int stride) {
-			this.image = image;
+		public ImageDataSource(final int patchSize, final int patchSparsity, final int stride) {
 			this.patchSize = patchSize;
 			this.patchSparsity = patchSparsity;
 			this.stride = stride;
-		}
-		
-		public final BufferedImage getImage() {
-			return this.image;
 		}
 		
 		public final int getPatchSize() {
@@ -130,9 +122,67 @@ public final class Analyze {
 		}
 		
 		@Override
+		public final int size() {
+			return this.sizeX() * this.sizeY();
+		}
+		
+		public final int sizeX() {
+			final int stride = this.getStride();
+			final int offset = stride / 2;
+			
+			return 1 + (this.getImageWidth() - offset) / stride;
+		}
+		
+		public final int sizeY() {
+			final int stride = this.getStride();
+			final int offset = stride / 2;
+			
+			return 1 + (this.getImageHeight() - offset) / stride;
+		}
+		
+		public abstract int getImageWidth();
+		
+		public abstract int getImageHeight();
+		
+		private static final long serialVersionUID = -5424770105639516510L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-06)
+	 */
+	public static abstract class BufferedImageDataSource<C extends ClassifierClass> extends ImageDataSource<C> {
+		
+		private final BufferedImage image;
+		
+		public BufferedImageDataSource(final BufferedImage image, final int patchSize) {
+			this(image, patchSize, 1, 1);
+		}
+		
+		public BufferedImageDataSource(final BufferedImage image, final int patchSize,
+				final int patchSparsity, final int stride) {
+			super(patchSize, patchSparsity, stride);
+			this.image = image;
+		}
+		
+		public final BufferedImage getImage() {
+			return this.image;
+		}
+		
+		@Override
+		public final int getImageWidth() {
+			return this.getImage().getWidth();
+		}
+		
+		@Override
+		public final int getImageHeight() {
+			return this.getImage().getHeight();
+		}
+		
+		@Override
 		public final Iterator<Classification<C>> iterator() {
-			final int imageWidth = this.getImage().getWidth();
-			final int imageHeight = this.getImage().getHeight();
+			final int imageWidth = this.getImageWidth();
+			final int imageHeight = this.getImageHeight();
 			final int stride = this.getStride();
 			final int offset = stride / 2;
 			
@@ -142,9 +192,9 @@ public final class Analyze {
 				
 				private int y = this.x;
 				
-				private final int[] patchData = new int[ImageDataSource.this.getPatchPixelCount()];
+				private final int[] patchData = new int[BufferedImageDataSource.this.getPatchPixelCount()];
 				
-				private final Object context = ImageDataSource.this.newContext();
+				private final Object context = BufferedImageDataSource.this.newContext();
 				
 				@Override
 				public final boolean hasNext() {
@@ -153,9 +203,9 @@ public final class Analyze {
 				
 				@Override
 				public final Classification<C> next() {
-					ImageDataSource.this.extractPatchValues(this.x, this.y, this.patchData);
+					BufferedImageDataSource.this.extractPatchValues(this.x, this.y, this.patchData);
 					
-					final Classification<C> result = ImageDataSource.this.convert(this.x, this.y, this.patchData, this.context);
+					final Classification<C> result = BufferedImageDataSource.this.convert(this.x, this.y, this.patchData, this.context);
 					
 					if (imageWidth <= (this.x += stride)) {
 						this.x = offset;
@@ -166,25 +216,6 @@ public final class Analyze {
 				}
 				
 			};
-		}
-		
-		@Override
-		public final int size() {
-			return this.sizeX() * this.sizeY();
-		}
-		
-		public final int sizeX() {
-			final int stride = this.getStride();
-			final int offset = stride / 2;
-			
-			return 1 + (this.getImage().getWidth() - offset) / stride;
-		}
-		
-		public final int sizeY() {
-			final int stride = this.getStride();
-			final int offset = stride / 2;
-			
-			return 1 + (this.getImage().getHeight() - offset) / stride;
 		}
 		
 		public final void extractPatchValues(final int x, final int y, final int[] result) {
@@ -231,7 +262,7 @@ public final class Analyze {
 	/**
 	 * @author codistmonk (creation 2015-02-06)
 	 */
-	public static abstract class PrototypeSource extends ImageDataSource<Prototype> {
+	public static abstract class PrototypeSource extends BufferedImageDataSource<Prototype> {
 		
 		public PrototypeSource(final BufferedImage image, final int patchSize) {
 			super(image, patchSize);
