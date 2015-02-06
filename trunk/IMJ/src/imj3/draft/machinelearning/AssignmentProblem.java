@@ -160,26 +160,6 @@ public final class AssignmentProblem {
 		
 	}
 	
-	public static final long mantissa(final double value) {
-		final long bits = Double.doubleToLongBits(value);
-		
-		return (exponent(value) == 0) ?
-                (bits & 0xfffffffffffffL) << 1 :
-                (bits & 0xfffffffffffffL) | 0x10000000000000L;
-	}
-	
-	public static final long exponent(final double value) {
-		return ((Double.doubleToLongBits(value) >> 52) & 0x7ffL) - 1075L;
-	}
-	
-	public static final long sign(final double value) {
-		return ((Double.doubleToLongBits(value) >> 63) == 0) ? 1 : -1;
-	}
-	
-	public static final boolean isZero(final double value) {
-		return Math.abs(value) < 1.0E-12;
-	}
-	
 	public static final double round(final int digits, final double value) {
 		final double scale = pow(10.0, digits);
 		
