@@ -1,5 +1,10 @@
 package imj3.draft.segmentation2;
 
+import static imj3.core.Channels.Predefined.blue8;
+import static imj3.core.Channels.Predefined.green8;
+import static imj3.core.Channels.Predefined.red8;
+import static java.lang.Math.max;
+
 import imj3.core.Channels;
 import imj3.draft.machinelearning.Classification;
 import imj3.draft.machinelearning.ClassifierClass;
@@ -27,7 +32,6 @@ public final class Analyze {
 		throw new IllegalInstantiationException();
 	}
 	
-	
 	/**
 	 * @param commandLineArguments
 	 * <br>Unused
@@ -39,10 +43,13 @@ public final class Analyze {
 		
 		SwingTools.show(image, file.getName(), false);
 		SwingTools.show(convert(new Mean(image, 2, 1, 2), null), file.getName(), false);
+		SwingTools.show(convert(new Max(image, 2, 1, 2), null), file.getName(), false);
 	}
 	
 	public static final BufferedImage convert(final ImageDataSource<Prototype> source, final BufferedImage result) {
-		if (source.getDimension() != 3) {
+		final int dimension = source.getDimension();
+		
+		if (dimension != 1 && dimension != 3) {
 			throw new IllegalArgumentException();
 		}
 		
@@ -56,8 +63,10 @@ public final class Analyze {
 		for (final Classification<Prototype> c : source) {
 			final int x = pixel % width;
 			final int y = pixel / width;
+			final double[] input = c.getInput();
+			final int rgb = dimension == 1 ? gray(input) : argb(input);
 			
-			actualResult.setRGB(x, y, argb(c.getInput()));
+			actualResult.setRGB(x, y, rgb);
 			
 			++pixel;
 		}
@@ -67,6 +76,12 @@ public final class Analyze {
 	
 	public static final int argb(final double[] rgb) {
 		return Channels.Predefined.a8r8g8b8(0xFF, int8(rgb[0]), int8(rgb[1]), int8(rgb[2]));
+	}
+	
+	public static final int gray(final double[] rgb) {
+		final int gray = int8(rgb[0]);
+		
+		return Channels.Predefined.a8r8g8b8(0xFF, gray, gray, gray);
 	}
 	
 	public static final int int8(final double value0255) {
@@ -296,15 +311,48 @@ public final class Analyze {
 			Arrays.fill(result, 0.0);
 			
 			for (final int value : patchValues) {
-				result[0] += Channels.Predefined.red8(value);
-				result[1] += Channels.Predefined.green8(value);
-				result[2] += Channels.Predefined.blue8(value);
+				result[0] += red8(value);
+				result[1] += green8(value);
+				result[2] += blue8(value);
 			}
 			
 			KMeansClustering.divide(result, patchValues.length);
 		}
 		
 		private static final long serialVersionUID = 3938160512172714562L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-06)
+	 */
+	public static final class Max extends PrototypeSource {
+		
+		public Max(BufferedImage image, final int patchSize) {
+			super(image, patchSize);
+		}
+		
+		public Max(BufferedImage image, final int patchSize, final int patchSparsity, final int stride) {
+			super(image, patchSize, patchSparsity, stride);
+		}
+		
+		@Override
+		public final int getDimension() {
+			return 1;
+		}
+		
+		@Override
+		protected final void convert(final int x, final int y, final int[] patchValues, final double[] result) {
+			double max = 0.0;
+			
+			for (final int value : patchValues) {
+				max = max(max, max(red8(value), max(green8(value), blue8(value))));
+			}
+			
+			result[0] = max;
+		}
+		
+		private static final long serialVersionUID = -3551891713169505385L;
 		
 	}
 	
