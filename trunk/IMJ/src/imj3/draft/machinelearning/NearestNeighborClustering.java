@@ -1,5 +1,7 @@
 package imj3.draft.machinelearning;
 
+import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 
 /**
@@ -26,9 +28,12 @@ public abstract class NearestNeighborClustering implements Clustering<Prototype>
 	
 	@Override
 	public final NearestNeighborClassifier cluster(final DataSource<Prototype> inputs) {
+		final TicToc timer = new TicToc();
 		final NearestNeighborClassifier result = new NearestNeighborClassifier(this.getMeasure());
 		
 		this.cluster(inputs, result);
+		
+		Tools.debugPrint("Clustering done in", timer.toc(), "ms");
 		
 		return result;
 	}

@@ -20,7 +20,6 @@ public final class StreamingClustering extends NearestNeighborClustering {
 	
 	@Override
 	public final void cluster(final DataSource<Prototype> inputs, final NearestNeighborClassifier classifier) {
-		final TicToc timer = new TicToc();
 		final int k = this.getClusterCount();
 		final List<Prototype> prototypes = classifier.getPrototypes();
 		
@@ -41,8 +40,6 @@ public final class StreamingClustering extends NearestNeighborClustering {
 				prototype.updateWeight(1.0);
 			}
 		}
-		
-		Tools.debugPrint("Clustering done in", timer.toc(), "ms");
 	}
 	
 	private static final long serialVersionUID = 1208345425946241729L;
