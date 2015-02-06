@@ -19,11 +19,12 @@ public final class StreamingClustering extends NearestNeighborClustering {
 	public final void cluster(final DataSource<Prototype> inputs, final NearestNeighborClassifier classifier) {
 		final int k = this.getClusterCount();
 		final List<Prototype> prototypes = classifier.getPrototypes();
+		final Classification<Prototype> tmp = new Classification<>();
 		
 		for (final Classification<Prototype> classification : inputs) {
 			final int n = prototypes.size();
 			// XXX should the weights be considered instead of performing a normal classification?
-			final Classification<Prototype> c = classifier.classify(classification.getInput());
+			final Classification<Prototype> c = classifier.classify(tmp, classification.getInput());
 			
 			if (c == null || 0.0 != c.getScore() && n < k) {
 				prototypes.add(new Prototype(c.getInput().clone()).setIndex(n));

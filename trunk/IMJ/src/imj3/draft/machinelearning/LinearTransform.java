@@ -34,7 +34,7 @@ public final class LinearTransform implements Classifier<LinearTransform.Transfo
 	}
 	
 	@Override
-	public final Classification<LinearTransform.Transformed> classify(final double... input) {
+	public final Classification<Transformed> classify(final Classification<Transformed> result, final double... input) {
 		final int n = this.getMatrixRowCount();
 		final double[] datum = new double[n];
 		
@@ -42,7 +42,7 @@ public final class LinearTransform implements Classifier<LinearTransform.Transfo
 			datum[i] = dot(this.getMatrix()[i], input);
 		}
 		
-		return new Classification<>(input, new Transformed(datum), 0.0);
+		return result.setInput(input).setClassifierClass(new Transformed(datum)).setScore(0.0);
 	}
 	
 	@Override

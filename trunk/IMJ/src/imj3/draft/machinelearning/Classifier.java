@@ -9,7 +9,11 @@ public abstract interface Classifier<C extends ClassifierClass> extends Serializ
 	
 	public abstract ClassifierClass.Measure<C> getClassMeasure();
 	
-	public abstract Classification<C> classify(double... input);
+	public default Classification<C> classify(final double... input) {
+		return this.classify(new Classification<>(), input);
+	}
+	
+	public abstract Classification<C> classify(Classification<C> result, double... input);
 	
 	public abstract int getClassDimension(int inputDimension);
 	

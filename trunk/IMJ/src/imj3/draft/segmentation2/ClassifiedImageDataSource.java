@@ -45,6 +45,8 @@ public final class ClassifiedImageDataSource<In extends ClassifierClass, Out ext
 			
 			private final Iterator<Classification<In>> inputs = ClassifiedImageDataSource.this.getSource().iterator();
 			
+			private final Classification<Out> tmp = new Classification<>();
+			
 			@Override
 			public final boolean hasNext() {
 				return this.inputs.hasNext();
@@ -52,7 +54,7 @@ public final class ClassifiedImageDataSource<In extends ClassifierClass, Out ext
 			
 			@Override
 			public final Classification<Out> next() {
-				final Classification<Out> result = ClassifiedImageDataSource.this.getClassifier().classify(
+				final Classification<Out> result = ClassifiedImageDataSource.this.getClassifier().classify(this.tmp,
 						this.inputs.next().getClassifierClass().toArray());
 				
 				return result;
