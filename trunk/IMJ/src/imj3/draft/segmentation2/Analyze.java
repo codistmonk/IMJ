@@ -4,9 +4,9 @@ import static imj3.core.Channels.Predefined.blue8;
 import static imj3.core.Channels.Predefined.green8;
 import static imj3.core.Channels.Predefined.red8;
 import static java.lang.Math.max;
-
 import imj3.core.Channels;
 import imj3.draft.machinelearning.Classification;
+import imj3.draft.machinelearning.Classifier;
 import imj3.draft.machinelearning.ClassifierClass;
 import imj3.draft.machinelearning.DataSource;
 import imj3.draft.machinelearning.KMeansClustering;
@@ -47,7 +47,7 @@ public final class Analyze {
 	}
 	
 	public static final BufferedImage convert(final ImageDataSource<Prototype> source, final BufferedImage result) {
-		final int dimension = source.getDimension();
+		final int dimension = source.getInputDimension();
 		
 		if (dimension != 1 && dimension != 3) {
 			throw new IllegalArgumentException();
@@ -86,6 +86,77 @@ public final class Analyze {
 	
 	public static final int int8(final double value0255) {
 		return ((int) value0255) & 0xFF;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-06)
+	 */
+	public static final class ClassifiedImageDataSource<In extends ClassifierClass, Out extends ClassifierClass> extends ImageDataSource<Out> {
+		
+		private final ImageDataSource<In> source;
+		
+		private final Classifier<Out> classifier;
+		
+		public ClassifiedImageDataSource(final ImageDataSource<In> source, final Classifier<Out> classifier,
+				final int patchSize, final int patchSparsity, final int stride) {
+			super(patchSize, patchSparsity, stride);
+			this.source = source;
+			this.classifier = classifier;
+		}
+		
+		public ClassifiedImageDataSource(final ImageDataSource<In> source, final Classifier<Out> classifier, int patchSize) {
+			this(source, classifier, patchSize, 1, 1);
+		}
+		
+		public final ImageDataSource<In> getSource() {
+			return this.source;
+		}
+		
+		public final Classifier<Out> getClassifier() {
+			return this.classifier;
+		}
+		
+		@Override
+		public final int getInputDimension() {
+			return this.getSource().getClassDimension();
+		}
+		
+		@Override
+		public final int getClassDimension() {
+			return this.getClassifier().getClassDimension(this.getInputDimension());
+		}
+		
+		@Override
+		public final Iterator<Classification<Out>> iterator() {
+			return new Iterator<Classification<Out>>() {
+				
+				private final Iterator<Classification<In>> inputs = ClassifiedImageDataSource.this.getSource().iterator();
+				
+				@Override
+				public final boolean hasNext() {
+					return this.inputs.hasNext();
+				}
+				
+				@Override
+				public final Classification<Out> next() {
+					return ClassifiedImageDataSource.this.getClassifier().classify(this.inputs.next().getClassifierClass().toArray());
+				}
+				
+			};
+		}
+		
+		@Override
+		public int getImageWidth() {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+
+		@Override
+		public int getImageHeight() {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+		
 	}
 	
 	/**
@@ -138,6 +209,12 @@ public final class Analyze {
 			final int offset = stride / 2;
 			
 			return 1 + (this.getImageHeight() - offset) / stride;
+		}
+		
+		public final int getPatchPixelCount() {
+			final int n = this.getPatchSize() / this.getPatchSparsity();
+			
+			return n * n;
 		}
 		
 		public abstract int getImageWidth();
@@ -245,12 +322,6 @@ public final class Analyze {
 			}
 		}
 		
-		public final int getPatchPixelCount() {
-			final int x = this.getPatchSize() / this.getPatchSparsity();
-			
-			return x * x;
-		}
-		
 		protected abstract Object newContext();
 		
 		protected abstract Classification<C> convert(int x, int y, int[] patchValues, Object context);
@@ -271,6 +342,11 @@ public final class Analyze {
 		public PrototypeSource(final BufferedImage image, final int patchSize,
 				final int patchSparsity, final int stride) {
 			super(image, patchSize, patchSparsity, stride);
+		}
+		
+		@Override
+		public final int getClassDimension() {
+			return this.getInputDimension();
 		}
 		
 		@Override
@@ -301,7 +377,7 @@ public final class Analyze {
 			private final Classification<Prototype> classification;
 			
 			public Context() {
-				this.datum = new double[PrototypeSource.this.getDimension()];
+				this.datum = new double[PrototypeSource.this.getInputDimension()];
 				this.classification = new Classification<>(this.datum, new Prototype(this.datum), 0.0);
 			}
 			
@@ -324,16 +400,16 @@ public final class Analyze {
 	 */
 	public static final class Mean extends PrototypeSource {
 		
-		public Mean(BufferedImage image, final int patchSize) {
+		public Mean(final BufferedImage image, final int patchSize) {
 			super(image, patchSize);
 		}
 		
-		public Mean(BufferedImage image, final int patchSize, final int patchSparsity, final int stride) {
+		public Mean(final BufferedImage image, final int patchSize, final int patchSparsity, final int stride) {
 			super(image, patchSize, patchSparsity, stride);
 		}
 		
 		@Override
-		public final int getDimension() {
+		public final int getInputDimension() {
 			return 3;
 		}
 		
@@ -359,16 +435,16 @@ public final class Analyze {
 	 */
 	public static final class Max extends PrototypeSource {
 		
-		public Max(BufferedImage image, final int patchSize) {
+		public Max(final BufferedImage image, final int patchSize) {
 			super(image, patchSize);
 		}
 		
-		public Max(BufferedImage image, final int patchSize, final int patchSparsity, final int stride) {
+		public Max(final BufferedImage image, final int patchSize, final int patchSparsity, final int stride) {
 			super(image, patchSize, patchSparsity, stride);
 		}
 		
 		@Override
-		public final int getDimension() {
+		public final int getInputDimension() {
 			return 1;
 		}
 		

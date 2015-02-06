@@ -11,4 +11,6 @@ public abstract interface Classifier<C extends ClassifierClass> extends Serializ
 	
 	public abstract Classification<C> classify(double... input);
 	
+	public abstract int getClassDimension(int inputDimension);
+	
 }

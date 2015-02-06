@@ -35,7 +35,7 @@ public final class StreamingClustering extends NearestNeighborClustering {
 			} else {
 				final Prototype prototype = c.getClassifierClass();
 				
-				mergeInto(prototype.getDatum(), prototype.getWeight(), c.getInput(), 1.0);
+				mergeInto(prototype.toArray(), prototype.getWeight(), c.getInput(), 1.0);
 				
 				prototype.updateWeight(1.0);
 			}

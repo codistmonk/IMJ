@@ -49,7 +49,7 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 		double bestDistance = Double.POSITIVE_INFINITY;
 		
 		for (final NearestNeighborClassifier.Prototype prototype : this.getPrototypes()) {
-			final double d = this.getMeasure().compute(prototype.getDatum(), input, bestDistance);
+			final double d = this.getMeasure().compute(prototype.toArray(), input, bestDistance);
 			
 			if (d < bestDistance) {
 				bestPrototype = prototype;
@@ -58,6 +58,11 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 		}
 		
 		return new Classification<>(input, bestPrototype, bestDistance);
+	}
+	
+	@Override
+	public final int getClassDimension(final int inputDimension) {
+		return inputDimension;
 	}
 	
 	private static final long serialVersionUID = 8724283262153100459L;
@@ -92,7 +97,8 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 			return this;
 		}
 		
-		public final double[] getDatum() {
+		@Override
+		public final double[] toArray() {
 			return this.datum;
 		}
 		
@@ -127,7 +133,7 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 			
 			@Override
 			public final double compute(final Prototype c1, final Prototype c2) {
-				return this.inputMeasure.compute(c1.getDatum(), c2.getDatum(), Double.POSITIVE_INFINITY);
+				return this.inputMeasure.compute(c1.toArray(), c2.toArray(), Double.POSITIVE_INFINITY);
 			}
 			
 			private static final long serialVersionUID = -1398649605392286153L;

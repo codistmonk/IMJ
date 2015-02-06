@@ -9,7 +9,9 @@ import java.io.Serializable;
  */
 public abstract interface DataSource<C extends ClassifierClass> extends Serializable, Iterable<Classification<C>> {
 	
-	public abstract int getDimension();
+	public abstract int getInputDimension();
+	
+	public abstract int getClassDimension();
 	
 	public default int size() {
 		int result = 0;
