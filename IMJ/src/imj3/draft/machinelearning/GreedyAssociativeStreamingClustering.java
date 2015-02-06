@@ -38,7 +38,7 @@ public final class GreedyAssociativeStreamingClustering extends NearestNeighborC
 			
 			for (final GreedyAssociativeStreamingClustering.EndPoint<Prototype> source : sources) {
 				for (final GreedyAssociativeStreamingClustering.EndPoint<Prototype> target: targets) {
-					final double cost = Measure.Predefined.L1.compute(source.getObject().getDatum(), target.getObject().getDatum());
+					final double cost = Measure.Predefined.L1.compute(source.getObject().toArray(), target.getObject().toArray());
 					
 					associations.add(new GreedyAssociativeStreamingClustering.Association<>(source, target, cost));
 				}
@@ -55,8 +55,8 @@ public final class GreedyAssociativeStreamingClustering extends NearestNeighborC
 					final Prototype sourcePrototype = source.getObject();
 					final Prototype targetPrototype = target.getObject();
 					
-					StreamingClustering.mergeInto(sourcePrototype.getDatum(), sourcePrototype.getWeight(),
-							targetPrototype.getDatum(), targetPrototype.getWeight());
+					StreamingClustering.mergeInto(sourcePrototype.toArray(), sourcePrototype.getWeight(),
+							targetPrototype.toArray(), targetPrototype.getWeight());
 				}
 			}
 			

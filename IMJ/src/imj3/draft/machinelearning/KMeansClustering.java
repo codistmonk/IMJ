@@ -32,7 +32,7 @@ public final class KMeansClustering extends NearestNeighborClustering {
 	protected final void cluster(final DataSource<Prototype> inputs, final NearestNeighborClassifier classifier) {
 		final TicToc timer = new TicToc();
 		final int k = this.getClusterCount();
-		final double[][] means = new double[k][inputs.getDimension()];
+		final double[][] means = new double[k][inputs.getInputDimension()];
 		
 		for (int i = 0; i < k; ++i) {
 			classifier.getPrototypes().add(new Prototype(means[i]));

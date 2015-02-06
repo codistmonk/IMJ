@@ -51,7 +51,7 @@ public final class GaussianMixturePrototypeSource implements DataSource<Prototyp
 	
 	@Override
 	public final Iterator<Classification<Prototype>> iterator() {
-		final int d = this.getDimension();
+		final int d = this.getInputDimension();
 		
 		return new Iterator<Classification<Prototype>>() {
 			
@@ -88,7 +88,12 @@ public final class GaussianMixturePrototypeSource implements DataSource<Prototyp
 	}
 	
 	@Override
-	public final int getDimension() {
+	public final int getInputDimension() {
+		return this.dimension;
+	}
+	
+	@Override
+	public final int getClassDimension() {
 		return this.dimension;
 	}
 	

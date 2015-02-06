@@ -14,13 +14,16 @@ import net.sourceforge.aprog.tools.Tools;
  */
 public final class BufferedDataSource<C extends ClassifierClass> implements DataSource<C> {
 	
-	private final int dimension;
+	private final int inputDimension;
+	
+	private final int classDimension;
 	
 	private final List<Classification<C>> dataset;
 	
 	@SuppressWarnings("unchecked")
 	public BufferedDataSource(final DataSource<C> source) {
-		this.dimension = source.getDimension();
+		this.inputDimension = source.getInputDimension();
+		this.classDimension = source.getClassDimension();
 		this.dataset = new ArrayList<>();
 		
 		Tools.debugPrint("Buffering...");
@@ -28,7 +31,7 @@ public final class BufferedDataSource<C extends ClassifierClass> implements Data
 		for (final Classification<C> classification : source) {
 			final Prototype prototype = Tools.cast(Prototype.class, classification.getClassifierClass());
 			
-			if (prototype != null && classification.getInput() == prototype.getDatum()) {
+			if (prototype != null && classification.getInput() == prototype.toArray()) {
 				final double[] input = classification.getInput().clone();
 				
 				this.dataset.add(new Classification<>(input,
@@ -52,8 +55,13 @@ public final class BufferedDataSource<C extends ClassifierClass> implements Data
 	}
 	
 	@Override
-	public final int getDimension() {
-		return this.dimension;
+	public final int getInputDimension() {
+		return this.inputDimension;
+	}
+	
+	@Override
+	public final int getClassDimension() {
+		return this.classDimension;
 	}
 	
 	private static final long serialVersionUID = -3379089397400242050L;

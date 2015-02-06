@@ -7,6 +7,8 @@ import java.io.Serializable;
  */
 public abstract interface ClassifierClass extends Serializable {
 	
+	public abstract double[] toArray();
+	
 	/**
 	 * @author codistmonk (creation 2015-02-04)
 	 */
