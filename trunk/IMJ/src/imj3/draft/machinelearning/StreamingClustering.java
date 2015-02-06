@@ -4,9 +4,6 @@ import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 
 import java.util.List;
 
-import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
-
 /**
  * Clusters data by reading each element only once.
  * 
