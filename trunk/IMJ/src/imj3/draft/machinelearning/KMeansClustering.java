@@ -11,11 +11,7 @@ import net.sourceforge.aprog.tools.Tools;
 /**
  * @author codistmonk (creation 2015-02-04)
  */
-public final class KMeansClustering implements Clustering<NearestNeighborClassifier.Prototype> {
-	
-	private final Measure measure;
-	
-	private final int k;
+public final class KMeansClustering extends NearestNeighborClustering {
 	
 	private final int iterations;
 	
@@ -24,37 +20,25 @@ public final class KMeansClustering implements Clustering<NearestNeighborClassif
 	}
 	
 	public KMeansClustering(final Measure measure, final int k, final int iterations) {
-		this.measure = measure;
-		this.k = k;
+		super(measure, k);
 		this.iterations = iterations;
-	}
-	
-	public final Measure getMeasure() {
-		return this.measure;
-	}
-	
-	public final int getK() {
-		return this.k;
 	}
 	
 	public final int getIterations() {
 		return this.iterations;
 	}
 	
-	static final Random random = new Random(0L);
-	
 	@Override
-	public final NearestNeighborClassifier cluster(final DataSource<Prototype> inputs) {
+	protected final void cluster(final DataSource<Prototype> inputs, final NearestNeighborClassifier classifier) {
 		final TicToc timer = new TicToc();
-		final NearestNeighborClassifier result = new NearestNeighborClassifier(this.getMeasure());
-		final int k = this.getK();
+		final int k = this.getClusterCount();
 		final double[][] means = new double[k][inputs.getDimension()];
 		
 		for (int i = 0; i < k; ++i) {
-			result.getPrototypes().add(new Prototype(means[i]));
+			classifier.getPrototypes().add(new Prototype(means[i]));
 		}
 		
-		result.updatePrototypeIndices();
+		classifier.updatePrototypeIndices();
 		
 		final int n = inputs.size();
 		final int[] clusterIndices = new int[n];
@@ -70,13 +54,11 @@ public final class KMeansClustering implements Clustering<NearestNeighborClassif
 		final int iterations = this.getIterations();
 		
 		for (int i = 0; i < iterations; ++i) {
-			this.recluster(inputs, result, clusterIndices);
+			this.recluster(inputs, classifier, clusterIndices);
 			this.computeMeans(inputs, clusterIndices, means);
 		}
 		
 		Tools.debugPrint("Clustering done in", timer.toc(), "ms");
-		
-		return result;
 	}
 	
 	private final void computeMeans(final DataSource<Prototype> inputs, final int[] clusterIndices, final double[][] means) {
@@ -113,6 +95,8 @@ public final class KMeansClustering implements Clustering<NearestNeighborClassif
 	}
 	
 	private static final long serialVersionUID = -1094744384472577208L;
+	
+	static final Random random = new Random(0L);
 	
 	public static final void addTo(final double[] v1, final double[] v2) {
 		final int n = v1.length;

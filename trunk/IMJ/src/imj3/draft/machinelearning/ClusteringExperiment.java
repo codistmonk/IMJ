@@ -20,10 +20,10 @@ public final class ClusteringExperiment {
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) {
-		final int s = 8;
+		final int s = 16;
 		final int d = s * s * 3;
 		final int n = 10_000;
-		final int k = 32;
+		final int k = 128;
 		
 		Tools.debugPrint("dimension:", d);
 		
