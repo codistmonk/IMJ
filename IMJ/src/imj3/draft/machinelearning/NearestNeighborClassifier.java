@@ -12,12 +12,12 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 	
 	private final Measure measure;
 	
-	private final Prototype.Measure prototypeMeasure;
+	private final ClassifierClass.Measure<Prototype> prototypeMeasure;
 	
 	public NearestNeighborClassifier(final Measure measure) {
 		this.prototypes = new ArrayList<>();
 		this.measure = measure;
-		this.prototypeMeasure = new Prototype.Measure(measure);
+		this.prototypeMeasure = new ClassifierClass.Measure.Default<>(measure);
 	}
 	
 	public final NearestNeighborClassifier updatePrototypeIndices() {
@@ -39,7 +39,7 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 	}
 	
 	@Override
-	public final Prototype.Measure getClassMeasure() {
+	public final ClassifierClass.Measure<Prototype> getClassMeasure() {
 		return this.prototypeMeasure;
 	}
 	
@@ -119,26 +119,6 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 		}
 		
 		private static final long serialVersionUID = 2041173451916012723L;
-		
-		/**
-		 * @author codistmonk (creation 2015-02-04)
-		 */
-		public static final class Measure implements ClassifierClass.Measure<Prototype> {
-			
-			private final imj3.draft.machinelearning.Measure inputMeasure;
-			
-			public Measure(final imj3.draft.machinelearning.Measure inputMeasure) {
-				this.inputMeasure = inputMeasure;
-			}
-			
-			@Override
-			public final double compute(final Prototype c1, final Prototype c2) {
-				return this.inputMeasure.compute(c1.toArray(), c2.toArray(), Double.POSITIVE_INFINITY);
-			}
-			
-			private static final long serialVersionUID = -1398649605392286153L;
-			
-		}
 		
 	}
 	

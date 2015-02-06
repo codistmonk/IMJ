@@ -3,7 +3,7 @@ package imj3.draft.machinelearning;
 import static java.lang.Math.min;
 import static java.lang.Math.pow;
 import static java.util.stream.Collectors.toList;
-import imj3.draft.machinelearning.GreedyAssociativeStreamingClustering;
+
 import imj3.draft.machinelearning.GreedyAssociativeStreamingClustering.Association;
 import imj3.draft.machinelearning.GreedyAssociativeStreamingClustering.EndPoint;
 import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
@@ -17,6 +17,7 @@ import java.util.Random;
 import java.util.function.Function;
 
 import jgencode.primitivelists.DoubleList;
+
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 

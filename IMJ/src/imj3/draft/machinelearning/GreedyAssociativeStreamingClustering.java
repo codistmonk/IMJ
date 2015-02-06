@@ -7,8 +7,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import net.sourceforge.aprog.tools.Tools;
-
 /**
  * @author codistmonk (creation 2015-02-06)
  */
