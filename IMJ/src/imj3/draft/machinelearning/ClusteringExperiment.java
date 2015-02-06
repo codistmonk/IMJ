@@ -43,10 +43,11 @@ public final class ClusteringExperiment {
 	public static final <C extends ClassifierClass> double evaluate(final Classifier<C> classifier, final DataSource<C> inputs) {
 		final TicToc timer = new TicToc();
 		double result = 0.0;
+		final Classification<C> tmp = new Classification<>();
 		
 		for (final Classification<C> classification : inputs) {
 			result += classifier.getClassMeasure().compute(
-					classification.getClassifierClass(), classifier.classify(classification.getInput()).getClassifierClass());
+					classification.getClassifierClass(), classifier.classify(tmp, classification.getInput()).getClassifierClass());
 		}
 		
 		Tools.debugPrint("Evaluation done in", timer.toc(), "ms");

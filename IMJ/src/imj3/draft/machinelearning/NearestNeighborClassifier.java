@@ -44,7 +44,7 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 	}
 	
 	@Override
-	public final Classification<Prototype> classify(final double... input) {
+	public final Classification<Prototype> classify(final Classification<Prototype> result, final double... input) {
 		NearestNeighborClassifier.Prototype bestPrototype = null;
 		double bestDistance = Double.POSITIVE_INFINITY;
 		
@@ -57,7 +57,7 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 			}
 		}
 		
-		return new Classification<>(input, bestPrototype, bestDistance);
+		return result.setInput(input).setClassifierClass(bestPrototype).setScore(bestDistance);
 	}
 	
 	@Override

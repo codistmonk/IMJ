@@ -89,8 +89,10 @@ public final class KMeansClustering extends NearestNeighborClustering {
 	private final void recluster(final DataSource<Prototype> inputs, final NearestNeighborClassifier classifier, final int[] clusterIndices) {
 		int i = -1;
 		
+		final Classification<Prototype> tmp = new Classification<>();
+		
 		for (final Classification<Prototype> classification : inputs) {
-			clusterIndices[++i] = classifier.classify(classification.getInput()).getClassifierClass().getIndex();
+			clusterIndices[++i] = classifier.classify(tmp, classification.getInput()).getClassifierClass().getIndex();
 		}
 	}
 	
