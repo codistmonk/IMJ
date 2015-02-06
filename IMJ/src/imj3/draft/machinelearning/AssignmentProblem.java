@@ -3,6 +3,10 @@ package imj3.draft.machinelearning;
 import static java.lang.Math.min;
 import static java.lang.Math.pow;
 import static java.util.stream.Collectors.toList;
+import imj3.draft.machinelearning.GreedyAssociativeStreamingClustering;
+import imj3.draft.machinelearning.GreedyAssociativeStreamingClustering.Association;
+import imj3.draft.machinelearning.GreedyAssociativeStreamingClustering.EndPoint;
+import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -177,6 +181,26 @@ public final class AssignmentProblem {
 	}
 	
 	/**
+	 * @author codistmonk (creation 2015-02-06)
+	 */
+	public static final class SimplexAssociativeStreamingClustering extends NearestNeighborClustering {
+		
+		public SimplexAssociativeStreamingClustering(final Measure measure, final int clusterCount) {
+			super(measure, clusterCount);
+		}
+		
+		@Override
+		protected final void cluster(final DataSource<Prototype> inputs,
+				final NearestNeighborClassifier classifier) {
+			// TODO Auto-generated method stub
+			
+		}
+		
+		private static final long serialVersionUID = -39181974892348593L;
+		
+	}
+	
+	/**
 	 * @param commandLineArguments
 	 * <br>Unused
 	 */
@@ -184,8 +208,8 @@ public final class AssignmentProblem {
 		if (true) {
 			final LinearProgram lap = new LinearProgram();
 			
-//			lap.initialSolution(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
-			lap.initialSolution(0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+			lap.initialSolution(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
+//			lap.initialSolution(0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 			lap.objective(-250, -400, -200, -400, -600, -400, -350, -350, -250);
 			lap.hyperplane(1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
 			lap.hyperplane(0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0);
@@ -204,7 +228,10 @@ public final class AssignmentProblem {
 			lap.halfHyperspace(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
 			lap.halfHyperspace(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 			
-			Tools.debugPrint(Arrays.toString(round(1, lap.optimize())));
+			final TicToc timer = new TicToc();
+			final double[] solution = lap.optimize();
+			final long t = timer.toc();
+			Tools.debugPrint(Arrays.toString(round(1, solution)), t);
 			
 			return;
 		}
@@ -298,12 +325,12 @@ public final class AssignmentProblem {
 			final int nextI = i + 1;
 			
 			if (nextI < n) {
-				association.getEndPoint1().setLocked(true);
-				association.getEndPoint2().setLocked(true);
+				association.getSource().setLocked(true);
+				association.getTarget().setLocked(true);
 				final boolean b = findBestAssignment(associations, bestAssociation, bestCost,
 						currentAssociation, currentCost, nextI, timer, limit);
-				association.getEndPoint1().setLocked(false);
-				association.getEndPoint2().setLocked(false);
+				association.getSource().setLocked(false);
+				association.getTarget().setLocked(false);
 				
 				if (!b) {
 					return false;
@@ -318,75 +345,6 @@ public final class AssignmentProblem {
 		}
 		
 		return true;
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-02-05)
-	 */
-	public static final class Association<T> implements Serializable, Comparable<Association<T>> {
-		
-		private final EndPoint<T> endPoint1, endPoint2;
-		
-		private final double cost;
-		
-		public Association(final EndPoint<T> endPoint1, final EndPoint<T> endPoint2, final double cost) {
-			this.endPoint1 = endPoint1;
-			this.endPoint2 = endPoint2;
-			this.cost = cost;
-		}
-		
-		public final EndPoint<T> getEndPoint1() {
-			return this.endPoint1;
-		}
-		
-		public final EndPoint<T> getEndPoint2() {
-			return this.endPoint2;
-		}
-		
-		public final double getCost() {
-			return this.cost;
-		}
-		
-		public final boolean isLocked() {
-			return this.getEndPoint1().isLocked() || this.getEndPoint2().isLocked();
-		}
-		
-		private static final long serialVersionUID = 7836354402558855202L;
-		
-		@Override
-		public final int compareTo(final Association<T> that) {
-			return Double.compare(this.getCost(), that.getCost());
-		}
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-02-05)
-	 */
-	public static final class EndPoint<T> implements Serializable {
-		
-		private final T object;
-		
-		private boolean locked;
-		
-		public EndPoint(final T object) {
-			this.object = object;
-		}
-		
-		public final boolean isLocked() {
-			return this.locked;
-		}
-		
-		public final void setLocked(final boolean locked) {
-			this.locked = locked;
-		}
-		
-		public final T getObject() {
-			return this.object;
-		}
-		
-		private static final long serialVersionUID = 1490439068402247668L;
-		
 	}
 	
 }
