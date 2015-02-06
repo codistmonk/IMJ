@@ -1,8 +1,10 @@
 package imj3.draft.segmentation2;
 
+import imj3.core.Channels;
 import imj3.draft.machinelearning.Classification;
 import imj3.draft.machinelearning.ClassifierClass;
 import imj3.draft.machinelearning.DataSource;
+import imj3.draft.machinelearning.KMeansClustering;
 import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 import imj3.tools.AwtImage2D;
 
@@ -36,6 +38,39 @@ public final class Analyze {
 		final BufferedImage image = AwtImage2D.awtRead(file.getPath());
 		
 		SwingTools.show(image, file.getName(), false);
+		SwingTools.show(convert(new Mean(image, 2, 1, 2), null), file.getName(), false);
+	}
+	
+	public static final BufferedImage convert(final ImageDataSource<Prototype> source, final BufferedImage result) {
+		if (source.getDimension() != 3) {
+			throw new IllegalArgumentException();
+		}
+		
+		final int width = source.sizeX();
+		final int height = source.sizeY();
+		final BufferedImage actualResult = result != null ? result : new BufferedImage(
+				width, height, BufferedImage.TYPE_INT_ARGB);
+		
+		int pixel = 0;
+		
+		for (final Classification<Prototype> c : source) {
+			final int x = pixel % width;
+			final int y = pixel / width;
+			
+			actualResult.setRGB(x, y, argb(c.getInput()));
+			
+			++pixel;
+		}
+		
+		return actualResult;
+	}
+	
+	public static final int argb(final double[] rgb) {
+		return Channels.Predefined.a8r8g8b8(0xFF, int8(rgb[0]), int8(rgb[1]), int8(rgb[2]));
+	}
+	
+	public static final int int8(final double value0255) {
+		return ((int) value0255) & 0xFF;
 	}
 	
 	/**
@@ -83,10 +118,12 @@ public final class Analyze {
 		public final Iterator<Classification<C>> iterator() {
 			final int imageWidth = this.getImage().getWidth();
 			final int imageHeight = this.getImage().getHeight();
+			final int stride = this.getStride();
+			final int offset = stride / 2;
 			
 			return new Iterator<Classification<C>>() {
 				
-				private int x = ImageDataSource.this.getStride() / 2;
+				private int x = offset;
 				
 				private int y = this.x;
 				
@@ -105,9 +142,9 @@ public final class Analyze {
 					
 					final Classification<C> result = ImageDataSource.this.convert(this.x, this.y, this.patchData, this.context);
 					
-					if (++this.x == imageWidth) {
-						this.x = 0;
-						++this.y;
+					if (imageWidth <= (this.x += stride)) {
+						this.x = offset;
+						this.y += stride;
 					}
 					
 					return result;
@@ -118,10 +155,21 @@ public final class Analyze {
 		
 		@Override
 		public final int size() {
+			return this.sizeX() * this.sizeY();
+		}
+		
+		public final int sizeX() {
 			final int stride = this.getStride();
 			final int offset = stride / 2;
 			
-			return ((this.getImage().getWidth() - offset) / stride) * ((this.getImage().getHeight() - offset) / stride);
+			return 1 + (this.getImage().getWidth() - offset) / stride;
+		}
+		
+		public final int sizeY() {
+			final int stride = this.getStride();
+			final int offset = stride / 2;
+			
+			return 1 + (this.getImage().getHeight() - offset) / stride;
 		}
 		
 		public final void extractPatchValues(final int x, final int y, final int[] result) {
@@ -245,7 +293,15 @@ public final class Analyze {
 		
 		@Override
 		protected final void convert(final int x, final int y, final int[] patchValues, final double[] result) {
-			// TODO Auto-generated method stub
+			Arrays.fill(result, 0.0);
+			
+			for (final int value : patchValues) {
+				result[0] += Channels.Predefined.red8(value);
+				result[1] += Channels.Predefined.green8(value);
+				result[2] += Channels.Predefined.blue8(value);
+			}
+			
+			KMeansClustering.divide(result, patchValues.length);
 		}
 		
 		private static final long serialVersionUID = 3938160512172714562L;
