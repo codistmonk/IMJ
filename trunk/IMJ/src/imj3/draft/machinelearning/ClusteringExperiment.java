@@ -30,7 +30,8 @@ public final class ClusteringExperiment {
 //		final DataSource<?, Prototype> inputs = new RandomPrototypeSource(d, n, 0L);
 //		final DataSource<?, Prototype> inputs = new BufferedDataSource<>(new RandomPrototypeSource(d, n, 0L));
 //		final DataSource<?, Prototype> inputs = new GaussianMixturePrototypeSource(k, d, n, 0L);
-		final DataSource<?, Prototype> inputs = new BufferedDataSource<>(new GaussianMixturePrototypeSource(k, d, n, 0L));
+//		final DataSource<?, Prototype> inputs = new BufferedDataSource<>(new GaussianMixturePrototypeSource(k, d, n, 0L));
+		final DataSource<?, Prototype> inputs = new ShuffledDataSource<>(new GaussianMixturePrototypeSource(k, d, n, 0L), 0, 0L);
 		
 //		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L1, n).cluster(inputs), inputs));
 		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L1, k).cluster(inputs), inputs));
