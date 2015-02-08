@@ -10,6 +10,7 @@ import imj3.draft.machinelearning.KMeansClustering;
 import imj3.draft.machinelearning.LinearTransform;
 import imj3.draft.machinelearning.Measure;
 import imj3.draft.machinelearning.NearestNeighborClassifier;
+import imj3.draft.machinelearning.NearestNeighborClustering;
 import imj3.draft.machinelearning.StreamingClustering;
 import imj3.draft.machinelearning.LinearTransform.Transformed;
 import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
@@ -52,14 +53,17 @@ public final class Analyze {
 		}
 		
 		if (true) {
-			final BufferedImageRawSource source = new BufferedImageRawSource(image, 4);
+			final BufferedImageRawSource source = new BufferedImageRawSource(image, 8);
 			final DataSource<Prototype> trainingSet = source;
-			final NearestNeighborClassifier quantizer = new StreamingClustering(Measure.Predefined.L1_ES, 8).cluster(trainingSet);
+			
+			final NearestNeighborClustering clustering = new KMeansClustering(Measure.Predefined.L1_ES, 3);
+//			final NearestNeighborClustering clustering = new StreamingClustering(Measure.Predefined.L1_ES, 3);
+			final NearestNeighborClassifier quantizer = clustering.cluster(trainingSet);
 			final ClassifiedImageDataSource<Prototype, Prototype> quantized = new ClassifiedImageDataSource<>(source, quantizer);
 			final LinearTransform rgbRenderer = new LinearTransform(Measure.Predefined.L1_ES, newRGBRenderingMatrix(source.getPatchPixelCount()));
 			final ClassifiedImageDataSource<Prototype, Transformed> rendered = new ClassifiedImageDataSource<>(quantized, rgbRenderer);
 			
-			SwingTools.show(awtImage(rendered, CLASS), "Quantized (streaming) -> rendered", false);
+			SwingTools.show(awtImage(rendered, CLASS), clustering.getClass().getSimpleName() + " -> rendered", false);
 		}
 	}
 	
