@@ -191,7 +191,7 @@ public final class AssignmentProblem {
 		}
 		
 		@Override
-		protected final void cluster(final DataSource<Prototype> inputs,
+		protected final void cluster(final DataSource<?, Prototype> inputs,
 				final NearestNeighborClassifier classifier) {
 			// TODO Auto-generated method stub
 			

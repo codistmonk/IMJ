@@ -17,7 +17,7 @@ public final class GreedyAssociativeStreamingClustering extends NearestNeighborC
 	}
 	
 	@Override
-	protected final void cluster(final DataSource<Prototype> inputs, final NearestNeighborClassifier classifier) {
+	protected final void cluster(final DataSource<?, Prototype> inputs, final NearestNeighborClassifier classifier) {
 		final int k = this.getClusterCount();
 		final List<GreedyAssociativeStreamingClustering.EndPoint<Prototype>> sources = new ArrayList<>(k);
 		final List<GreedyAssociativeStreamingClustering.EndPoint<Prototype>> targets = new ArrayList<>(k);

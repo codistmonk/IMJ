@@ -10,39 +10,17 @@ import java.util.Iterator;
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public abstract class BufferedImageDataSource<C extends ClassifierClass> extends ImageDataSource<C> {
+public abstract class BufferedImageDataSource<M extends BufferedImageDataSource.Metadata, C extends ClassifierClass> extends ImageDataSource<M, C> {
 	
-	private final BufferedImage image;
-	
-	public BufferedImageDataSource(final BufferedImage image, final int patchSize) {
-		this(image, patchSize, 1, 1);
-	}
-	
-	public BufferedImageDataSource(final BufferedImage image, final int patchSize,
-			final int patchSparsity, final int stride) {
-		super(patchSize, patchSparsity, stride);
-		this.image = image;
-	}
-	
-	public final BufferedImage getImage() {
-		return this.image;
-	}
-	
-	@Override
-	public final int getImageWidth() {
-		return this.getImage().getWidth();
-	}
-	
-	@Override
-	public final int getImageHeight() {
-		return this.getImage().getHeight();
+	protected BufferedImageDataSource(final M metadata) {
+		super(metadata);
 	}
 	
 	@Override
 	public final Iterator<Classification<C>> iterator() {
-		final int imageWidth = this.getImageWidth();
-		final int imageHeight = this.getImageHeight();
-		final int stride = this.getStride();
+		final int imageWidth = this.getMetadata().getImageWidth();
+		final int imageHeight = this.getMetadata().getImageHeight();
+		final int stride = this.getMetadata().getStride();
 		final int offset = stride / 2;
 		
 		return new Iterator<Classification<C>>() {
@@ -51,7 +29,7 @@ public abstract class BufferedImageDataSource<C extends ClassifierClass> extends
 			
 			private int y = this.x;
 			
-			private final int[] patchData = new int[BufferedImageDataSource.this.getPatchPixelCount()];
+			private final int[] patchData = new int[BufferedImageDataSource.this.getMetadata().getPatchPixelCount()];
 			
 			private final Object context = BufferedImageDataSource.this.newContext();
 			
@@ -79,15 +57,15 @@ public abstract class BufferedImageDataSource<C extends ClassifierClass> extends
 	
 	public final void extractPatchValues(final int x, final int y, final int[] result) {
 		Arrays.fill(result, 0);
-		final int s = this.getPatchSize();
+		final int s = this.getMetadata().getPatchSize();
 		final int half = s / 2;
 		final int x0 = x - half;
 		final int x1 = x0 + s;
 		final int y0 = y - half;
 		final int y1 = y0 + s;
-		final int step = this.getPatchSparsity();
+		final int step = this.getMetadata().getPatchSparsity();
 		final int bufferWidth = s / step;
-		final BufferedImage image = this.getImage();
+		final BufferedImage image = this.getMetadata().getImage();
 		final int imageWidth = image.getWidth();
 		final int imageHeight = image.getHeight();
 		
@@ -109,5 +87,50 @@ public abstract class BufferedImageDataSource<C extends ClassifierClass> extends
 	protected abstract Classification<C> convert(int x, int y, int[] patchValues, Object context);
 	
 	private static final long serialVersionUID = -774979627942684978L;
+	
+	/**
+	 * @author codistmonk (creation 2015-02-08)
+	 */
+	public static abstract class Metadata extends ImageDataSource.Metadata {
+		
+		private final BufferedImage image;
+		
+		public Metadata(final BufferedImage image, final int patchSize,
+				final int patchSparsity, final int stride) {
+			super(patchSize, patchSparsity, stride);
+			this.image = image;
+		}
+		
+		public final BufferedImage getImage() {
+			return this.image;
+		}
+		
+		@Override
+		public final int getImageWidth() {
+			return this.getImage().getWidth();
+		}
+		
+		@Override
+		public final int getImageHeight() {
+			return this.getImage().getHeight();
+		}
+		
+		private static final long serialVersionUID = 5722451664995251006L;
+		
+		/**
+		 * @author codistmonk (creation 2015-02-08)
+		 */
+		public static final class Default extends Metadata {
+			
+			public Default(final BufferedImage image, final int patchSize,
+					final int patchSparsity, final int stride) {
+				super(image, patchSize, patchSparsity, stride);
+			}
+			
+			private static final long serialVersionUID = 69449219027263879L;
+			
+		}
+		
+	}
 	
 }

@@ -16,7 +16,7 @@ public final class StreamingClustering extends NearestNeighborClustering {
 	}
 	
 	@Override
-	public final void cluster(final DataSource<Prototype> inputs, final NearestNeighborClassifier classifier) {
+	public final void cluster(final DataSource<?, Prototype> inputs, final NearestNeighborClassifier classifier) {
 		final int k = this.getClusterCount();
 		final List<Prototype> prototypes = classifier.getPrototypes();
 		final Classification<Prototype> tmp = new Classification<>();

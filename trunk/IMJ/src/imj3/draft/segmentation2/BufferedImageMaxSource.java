@@ -10,14 +10,14 @@ import java.awt.image.BufferedImage;
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public final class BufferedImageMaxSource extends BufferedImagePrototypeSource {
+public final class BufferedImageMaxSource extends BufferedImagePrototypeSource<BufferedImageDataSource.Metadata> {
 	
 	public BufferedImageMaxSource(final BufferedImage image, final int patchSize) {
-		super(image, patchSize);
+		this(image, patchSize, 1, 1);
 	}
 	
 	public BufferedImageMaxSource(final BufferedImage image, final int patchSize, final int patchSparsity, final int stride) {
-		super(image, patchSize, patchSparsity, stride);
+		super(new BufferedImageDataSource.Metadata.Default(image, patchSize, patchSparsity, stride));
 	}
 	
 	@Override

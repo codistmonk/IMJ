@@ -1,5 +1,6 @@
 package imj3.draft.machinelearning;
 
+import imj3.draft.machinelearning.DataSource.Metadata;
 import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 
 import java.util.ArrayList;
@@ -12,7 +13,7 @@ import net.sourceforge.aprog.tools.Tools;
  * @author codistmonk (creation 2015-02-04)
  * @param <C>
  */
-public final class BufferedDataSource<C extends ClassifierClass> implements DataSource<C> {
+public final class BufferedDataSource<M extends Metadata, C extends ClassifierClass> extends DataSource.Abstract<M, C> {
 	
 	private final int inputDimension;
 	
@@ -21,7 +22,8 @@ public final class BufferedDataSource<C extends ClassifierClass> implements Data
 	private final List<Classification<C>> dataset;
 	
 	@SuppressWarnings("unchecked")
-	public BufferedDataSource(final DataSource<C> source) {
+	public BufferedDataSource(final DataSource<M, C> source) {
+		super(source.getMetadata());
 		this.inputDimension = source.getInputDimension();
 		this.classDimension = source.getClassDimension();
 		this.dataset = new ArrayList<>();
