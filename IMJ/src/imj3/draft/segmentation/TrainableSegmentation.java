@@ -59,6 +59,7 @@ import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
@@ -71,7 +72,9 @@ import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeExpansionListener;
+import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreeCellRenderer;
 import javax.swing.tree.TreePath;
 
 import jgencode.primitivelists.IntList;
@@ -136,6 +139,7 @@ public final class TrainableSegmentation {
 						final Context context = context(mainFrame);
 						
 						writeXML(context.getClassifier());
+						preferences.put("classifierFile", context.getClassifier().getFilePath());
 						write(context.getGroundTruth().getImage(), context.getGroundTruthPath());
 						write(context.getClassification().getImage(), context.getClassificationPath());
 					}
@@ -627,6 +631,45 @@ public final class TrainableSegmentation {
 	public static final JTree newClassifierTree() {
 		final DefaultTreeModel treeModel = loadClassifier();
 		final JTree result = new JTree(treeModel);
+		final TreeCellRenderer defaultCellRenderer = result.getCellRenderer();
+		
+		result.setCellRenderer(new DefaultTreeCellRenderer() {
+			
+			@Override
+			public final Component getTreeCellRendererComponent(final JTree tree, final Object value,
+					final boolean selected, final boolean expanded, final boolean leaf, final int row,
+					final boolean hasFocus) {
+				final TreePath path = tree.getPathForRow(row);
+				
+				if (path != null) {
+					final ClassifierRawPrototype prototype = cast(ClassifierRawPrototype.class,
+							path.getLastPathComponent());
+					
+					if (prototype != null) {
+						final int scale = prototype.getClassifier().getScale();
+						tree.setRowHeight(scale + 1);
+						final BufferedImage prototypeImage = new BufferedImage(scale, scale, BufferedImage.TYPE_INT_ARGB);
+						final int[] data = prototype.getData();
+						
+						for (int y = 0, pixel = 0; y < scale; ++y) {
+							for (int x = 0; x < scale; ++x, ++pixel) {
+								prototypeImage.setRGB(x, y, 0xFF000000 | data[pixel]);
+							}
+						}
+						
+						final Component result = super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
+						
+						this.setIcon(new ImageIcon(prototypeImage));
+						
+//						return new JLabel(new ImageIcon(prototypeImage));
+						return result;
+					}
+				}
+				
+				return defaultCellRenderer.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
+			}
+			
+		});
 		
 		result.addMouseListener(new MouseAdapter() {
 			
@@ -747,6 +790,7 @@ public final class TrainableSegmentation {
 		final String classifierPath = preferences.get("classifierFile", Classifier.DEFAULT_FILE_PATH);
 		
 		try {
+			Tools.debugPrint(classifierPath);
 			final Classifier classifier = ClassifierNode.fromXML(getResourceAsStream(classifierPath))
 					.setFilePath(classifierPath);
 			
