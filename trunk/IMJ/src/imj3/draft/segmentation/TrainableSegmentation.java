@@ -4,6 +4,7 @@ import static imj3.draft.segmentation.CommonSwingTools.*;
 import static imj3.draft.segmentation.CommonTools.*;
 import static imj3.draft.segmentation.SegmentationTools.*;
 import static imj3.draft.segmentation.TrainableSegmentation.Context.context;
+import static java.lang.Math.max;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
@@ -74,7 +75,6 @@ import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeExpansionListener;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.TreeCellRenderer;
 import javax.swing.tree.TreePath;
 
 import jgencode.primitivelists.IntList;
@@ -631,7 +631,6 @@ public final class TrainableSegmentation {
 	public static final JTree newClassifierTree() {
 		final DefaultTreeModel treeModel = loadClassifier();
 		final JTree result = new JTree(treeModel);
-		final TreeCellRenderer defaultCellRenderer = result.getCellRenderer();
 		
 		result.setCellRenderer(new DefaultTreeCellRenderer() {
 			
@@ -639,6 +638,7 @@ public final class TrainableSegmentation {
 			public final Component getTreeCellRendererComponent(final JTree tree, final Object value,
 					final boolean selected, final boolean expanded, final boolean leaf, final int row,
 					final boolean hasFocus) {
+				final Component result = super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
 				final TreePath path = tree.getPathForRow(row);
 				
 				if (path != null) {
@@ -647,7 +647,7 @@ public final class TrainableSegmentation {
 					
 					if (prototype != null) {
 						final int scale = prototype.getClassifier().getScale();
-						tree.setRowHeight(scale + 1);
+						tree.setRowHeight(max(16, scale + 1));
 						final BufferedImage prototypeImage = new BufferedImage(scale, scale, BufferedImage.TYPE_INT_ARGB);
 						final int[] data = prototype.getData();
 						
@@ -657,17 +657,14 @@ public final class TrainableSegmentation {
 							}
 						}
 						
-						final Component result = super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
-						
 						this.setIcon(new ImageIcon(prototypeImage));
-						
-//						return new JLabel(new ImageIcon(prototypeImage));
-						return result;
 					}
 				}
 				
-				return defaultCellRenderer.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
+				return result;
 			}
+			
+			private static final long serialVersionUID = 8039308403868530360L;
 			
 		});
 		
