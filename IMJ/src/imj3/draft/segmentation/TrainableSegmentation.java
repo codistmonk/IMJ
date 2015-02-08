@@ -80,7 +80,6 @@ import javax.swing.tree.TreePath;
 import jgencode.primitivelists.IntList;
 
 import net.sourceforge.aprog.swing.SwingTools;
-import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
@@ -109,11 +108,9 @@ public final class TrainableSegmentation {
 	
 	/**
 	 * @param commandLineArguments
-	 * <br>Must not be null
+	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) {
-		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
-		
 		SwingTools.useSystemLookAndFeel();
 		
 		SwingUtilities.invokeLater(new Runnable() {

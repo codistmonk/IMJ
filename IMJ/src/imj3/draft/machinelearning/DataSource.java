@@ -54,7 +54,7 @@ public abstract interface DataSource<M extends DataSource.Metadata, C extends Cl
 	 * @author codistmonk (creation 2015-02-08)
 	 */
 	public static abstract interface Metadata extends Serializable {
-		
+		// Deliberately left empty
 	}
 	
 }
