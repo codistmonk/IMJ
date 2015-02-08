@@ -3,21 +3,15 @@ package imj3.draft.segmentation2;
 import imj3.draft.machinelearning.Classification;
 import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 
-import java.awt.image.BufferedImage;
 import java.io.Serializable;
 
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public abstract class BufferedImagePrototypeSource extends BufferedImageDataSource<Prototype> {
+public abstract class BufferedImagePrototypeSource<M extends BufferedImageDataSource.Metadata> extends BufferedImageDataSource<M, Prototype> {
 	
-	public BufferedImagePrototypeSource(final BufferedImage image, final int patchSize) {
-		super(image, patchSize);
-	}
-	
-	public BufferedImagePrototypeSource(final BufferedImage image, final int patchSize,
-			final int patchSparsity, final int stride) {
-		super(image, patchSize, patchSparsity, stride);
+	protected BufferedImagePrototypeSource(final M metadata) {
+		super(metadata);
 	}
 	
 	@Override
@@ -32,6 +26,7 @@ public abstract class BufferedImagePrototypeSource extends BufferedImageDataSour
 	
 	@Override
 	protected final Classification<Prototype> convert(final int x, final int y, final int[] patchValues, final Object context) {
+		@SuppressWarnings("unchecked")
 		final Context c = (Context) context;
 		
 		this.convert(x, y, patchValues, c.getDatum());

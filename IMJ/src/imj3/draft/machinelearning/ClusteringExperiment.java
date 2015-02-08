@@ -29,7 +29,7 @@ public final class ClusteringExperiment {
 		
 //		final DataSource<Prototype> inputs = new RandomPrototypeSource(d, n, 0L);
 //		final DataSource<Prototype> inputs = new BufferedDataSource<>(new RandomPrototypeSource(d, n, 0L));
-		final DataSource<Prototype> inputs = new GaussianMixturePrototypeSource(k, d, n, 0L);
+		final DataSource<?, Prototype> inputs = new GaussianMixturePrototypeSource(k, d, n, 0L);
 //		final DataSource<Prototype> inputs = new BufferedDataSource<>(new GaussianMixturePrototypeSource(k, d, n, 0L));
 		
 //		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L1, n).cluster(inputs), inputs));
@@ -40,7 +40,7 @@ public final class ClusteringExperiment {
 	}
 	
 	// XXX rename this method to evaluateReconstructionError?
-	public static final <C extends ClassifierClass> double evaluate(final Classifier<C> classifier, final DataSource<C> inputs) {
+	public static final <C extends ClassifierClass> double evaluate(final Classifier<C> classifier, final DataSource<?, C> inputs) {
 		final TicToc timer = new TicToc();
 		double result = 0.0;
 		final Classification<C> tmp = new Classification<>();

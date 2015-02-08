@@ -11,7 +11,7 @@ public enum DataSourceArrayProperty {
 	INPUT {
 		
 		@Override
-		public final int getDimension(final DataSource<?> source) {
+		public final int getDimension(final DataSource<?, ?> source) {
 			return source.getInputDimension();
 		}
 		
@@ -23,7 +23,7 @@ public enum DataSourceArrayProperty {
 	}, CLASS {
 		
 		@Override
-		public final int getDimension(final DataSource<?> source) {
+		public final int getDimension(final DataSource<?, ?> source) {
 			return source.getClassDimension();
 		}
 		
@@ -34,7 +34,7 @@ public enum DataSourceArrayProperty {
 		
 	};
 	
-	public abstract int getDimension(DataSource<?> source);
+	public abstract int getDimension(DataSource<?, ?> source);
 	
 	public abstract double[] getArray(Classification<?> classification);
 	

@@ -13,49 +13,26 @@ import java.util.Random;
 /**
  * @author codistmonk (creation 2015-02-04)
  */
-public final class GaussianMixturePrototypeSource implements DataSource<Prototype> {
+public final class GaussianMixturePrototypeSource extends DataSource.Abstract<GaussianMixturePrototypeSource.Metadata, Prototype> {
 	
 	private final int dimension;
 	
 	private final int size;
 	
-	private final List<GaussianMixturePrototypeSource.Gaussian> gaussians;
-	
-	private final long seed;
-	
 	public GaussianMixturePrototypeSource(final int n, final int dimension, final int size, final long seed) {
+		super(new Metadata(n, dimension, size, seed));
 		this.dimension = dimension;
 		this.size = size;
-		this.gaussians = new ArrayList<>(n);
-		
-		final Random random = new Random(seed);
-		
-		for (int i = 0; i < n; ++i) {
-			this.gaussians.add(new Gaussian(random.doubles(dimension).toArray(), random.nextDouble()));
-		}
-		
-		this.seed = random.nextLong();
-	}
-	
-	public final int getSize() {
-		return this.size;
-	}
-	
-	public final List<GaussianMixturePrototypeSource.Gaussian> getGaussians() {
-		return this.gaussians;
-	}
-	
-	public final long getSeed() {
-		return this.seed;
 	}
 	
 	@Override
 	public final Iterator<Classification<Prototype>> iterator() {
 		final int d = this.getInputDimension();
+		final List<GaussianMixturePrototypeSource.Gaussian> gaussians = GaussianMixturePrototypeSource.this.getMetadata().getGaussians();
 		
 		return new Iterator<Classification<Prototype>>() {
 			
-			private final Random random = new Random(GaussianMixturePrototypeSource.this.getSeed());
+			private final Random random = new Random(GaussianMixturePrototypeSource.this.getMetadata().getSeed());
 			
 			private final double[] datum = new double[d];
 			
@@ -73,7 +50,6 @@ public final class GaussianMixturePrototypeSource implements DataSource<Prototyp
 			public final Classification<Prototype> next() {
 				++this.i;
 				
-				final List<GaussianMixturePrototypeSource.Gaussian> gaussians = GaussianMixturePrototypeSource.this.getGaussians();
 				final GaussianMixturePrototypeSource.Gaussian gaussian = gaussians.get(this.random.nextInt(gaussians.size()));
 				final double sigma2 = square(gaussian.getSigma());
 				
@@ -127,6 +103,39 @@ public final class GaussianMixturePrototypeSource implements DataSource<Prototyp
 		}
 		
 		private static final long serialVersionUID = 7955299362209802947L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-08)
+	 */
+	public static final class Metadata implements DataSource.Metadata {
+		
+		private final List<GaussianMixturePrototypeSource.Gaussian> gaussians;
+		
+		private final long seed;
+		
+		public Metadata(final int n, final int dimension, final int size, final long seed) {
+			this.gaussians = new ArrayList<>(n);
+			
+			final Random random = new Random(seed);
+			
+			for (int i = 0; i < n; ++i) {
+				this.gaussians.add(new Gaussian(random.doubles(dimension).toArray(), random.nextDouble()));
+			}
+			
+			this.seed = random.nextLong();
+		}
+		
+		public final List<GaussianMixturePrototypeSource.Gaussian> getGaussians() {
+			return this.gaussians;
+		}
+		
+		public final long getSeed() {
+			return this.seed;
+		}
+		
+		private static final long serialVersionUID = -8871661234430522022L;
 		
 	}
 	

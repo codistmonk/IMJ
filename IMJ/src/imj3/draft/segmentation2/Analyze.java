@@ -2,9 +2,9 @@ package imj3.draft.segmentation2;
 
 import static imj3.draft.segmentation2.DataSourceArrayProperty.CLASS;
 import static imj3.draft.segmentation2.DataSourceArrayProperty.INPUT;
-
 import imj3.core.Channels;
 import imj3.draft.machinelearning.Classification;
+import imj3.draft.machinelearning.ClassifiedDataSource;
 import imj3.draft.machinelearning.DataSource;
 import imj3.draft.machinelearning.KMeansClustering;
 import imj3.draft.machinelearning.LinearTransform;
@@ -48,20 +48,20 @@ public final class Analyze {
 			SwingTools.show(awtImage(mean, INPUT), "Mean", false);
 			SwingTools.show(awtImage(new BufferedImageMaxSource(image, 2, 1, 2), INPUT), "Max", false);
 			
-			SwingTools.show(awtImage(new ClassifiedImageDataSource<>(mean, new StreamingClustering(Measure.Predefined.L1_ES, 8).cluster(mean)), CLASS), "Indirect (streaming)", false);
-			SwingTools.show(awtImage(new ClassifiedImageDataSource<>(mean, new KMeansClustering(Measure.Predefined.L1_ES, 8, 6).cluster(mean)), CLASS), "Indirect (k-means)", false);
+			SwingTools.show(awtImage(new ClassifiedDataSource<>(mean, new StreamingClustering(Measure.Predefined.L1_ES, 8).cluster(mean)), CLASS), "Indirect (streaming)", false);
+			SwingTools.show(awtImage(new ClassifiedDataSource<>(mean, new KMeansClustering(Measure.Predefined.L1_ES, 8, 6).cluster(mean)), CLASS), "Indirect (k-means)", false);
 		}
 		
 		if (true) {
-			final BufferedImageRawSource source = new BufferedImageRawSource(image, 8);
-			final DataSource<Prototype> trainingSet = source;
+			final DataSource<? extends ImageDataSource.Metadata, Prototype> source = new BufferedImageRawSource(image, 8);
+			final DataSource<? extends ImageDataSource.Metadata, Prototype> trainingSet = source;
 			
 			final NearestNeighborClustering clustering = new KMeansClustering(Measure.Predefined.L1_ES, 3);
 //			final NearestNeighborClustering clustering = new StreamingClustering(Measure.Predefined.L1_ES, 3);
 			final NearestNeighborClassifier quantizer = clustering.cluster(trainingSet);
-			final ClassifiedImageDataSource<Prototype, Prototype> quantized = new ClassifiedImageDataSource<>(source, quantizer);
-			final LinearTransform rgbRenderer = new LinearTransform(Measure.Predefined.L1_ES, newRGBRenderingMatrix(source.getPatchPixelCount()));
-			final ClassifiedImageDataSource<Prototype, Transformed> rendered = new ClassifiedImageDataSource<>(quantized, rgbRenderer);
+			final DataSource<? extends ImageDataSource.Metadata, Prototype> quantized = new ClassifiedDataSource<>(source, quantizer);
+			final LinearTransform rgbRenderer = new LinearTransform(Measure.Predefined.L1_ES, newRGBRenderingMatrix(source.getMetadata().getPatchPixelCount()));
+			final DataSource<? extends ImageDataSource.Metadata, Transformed> rendered = new ClassifiedDataSource<>(quantized, rgbRenderer);
 			
 			SwingTools.show(awtImage(rendered, CLASS), clustering.getClass().getSimpleName() + " -> rendered", false);
 		}
@@ -84,19 +84,19 @@ public final class Analyze {
 		return result;
 	}
 	
-	public static final BufferedImage awtImage(final ImageDataSource<?> source, final DataSourceArrayProperty property) {
+	public static final BufferedImage awtImage(final DataSource<? extends ImageDataSource.Metadata, ?> source, final DataSourceArrayProperty property) {
 		return awtImage(source, property, null);
 	}
 	
-	public static final BufferedImage awtImage(final ImageDataSource<?> source, final DataSourceArrayProperty property, final BufferedImage result) {
+	public static final BufferedImage awtImage(final DataSource<? extends ImageDataSource.Metadata, ?> source, final DataSourceArrayProperty property, final BufferedImage result) {
 		final int dimension = property.getDimension(source);
 		
 		if (dimension != 1 && dimension != 3) {
 			throw new IllegalArgumentException();
 		}
 		
-		final int width = source.sizeX();
-		final int height = source.sizeY();
+		final int width = source.getMetadata().sizeX();
+		final int height = source.getMetadata().sizeY();
 		final BufferedImage actualResult = result != null ? result : new BufferedImage(
 				width, height, BufferedImage.TYPE_INT_ARGB);
 		

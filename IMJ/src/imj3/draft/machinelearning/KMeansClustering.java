@@ -26,7 +26,7 @@ public final class KMeansClustering extends NearestNeighborClustering {
 	}
 	
 	@Override
-	protected final void cluster(final DataSource<Prototype> inputs, final NearestNeighborClassifier classifier) {
+	protected final void cluster(final DataSource<?, Prototype> inputs, final NearestNeighborClassifier classifier) {
 		final int k = this.getClusterCount();
 		final double[][] means = new double[k][inputs.getInputDimension()];
 		
@@ -55,7 +55,7 @@ public final class KMeansClustering extends NearestNeighborClustering {
 		}
 	}
 	
-	private final void computeMeans(final DataSource<Prototype> inputs, final int[] clusterIndices, final double[][] means) {
+	private final void computeMeans(final DataSource<?, Prototype> inputs, final int[] clusterIndices, final double[][] means) {
 		for (final double[] mean : means) {
 			Arrays.fill(mean, 0.0);
 		}
@@ -80,7 +80,7 @@ public final class KMeansClustering extends NearestNeighborClustering {
 		}
 	}
 	
-	private final void recluster(final DataSource<Prototype> inputs, final NearestNeighborClassifier classifier, final int[] clusterIndices) {
+	private final void recluster(final DataSource<?, Prototype> inputs, final NearestNeighborClassifier classifier, final int[] clusterIndices) {
 		int i = -1;
 		
 		final Classification<Prototype> tmp = new Classification<>();
