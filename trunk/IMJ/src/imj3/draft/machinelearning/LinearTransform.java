@@ -5,11 +5,11 @@ import net.sourceforge.aprog.tools.Tools;
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public final class LinearTransform implements Classifier<LinearTransform.Transformed> {
+public final class LinearTransform implements Classifier<ClassifierClass> {
 	
 	private final double[][] matrix;
 	
-	private final ClassifierClass.Measure<LinearTransform.Transformed> transformedMeasure;
+	private final ClassifierClass.Measure<ClassifierClass> transformedMeasure;
 	
 	public LinearTransform(final Measure measure, double[][] matrix) {
 		this.matrix = matrix;
@@ -29,12 +29,12 @@ public final class LinearTransform implements Classifier<LinearTransform.Transfo
 	}
 	
 	@Override
-	public final ClassifierClass.Measure<LinearTransform.Transformed> getClassMeasure() {
+	public final ClassifierClass.Measure<ClassifierClass> getClassMeasure() {
 		return this.transformedMeasure;
 	}
 	
 	@Override
-	public final Classification<Transformed> classify(final Classification<Transformed> result, final double... input) {
+	public final Classification<ClassifierClass> classify(final Classification<ClassifierClass> result, final double... input) {
 		final int n = this.getMatrixRowCount();
 		final double[] datum = new double[n];
 		
@@ -42,7 +42,7 @@ public final class LinearTransform implements Classifier<LinearTransform.Transfo
 			datum[i] = dot(this.getMatrix()[i], input);
 		}
 		
-		return result.setInput(input).setClassifierClass(new Transformed(datum)).setScore(0.0);
+		return result.setInput(input).setClassifierClass(new ClassifierClass.Default(datum)).setScore(0.0);
 	}
 	
 	@Override
@@ -67,26 +67,6 @@ public final class LinearTransform implements Classifier<LinearTransform.Transfo
 		}
 		
 		return result;
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-02-06)
-	 */
-	public static final class Transformed implements ClassifierClass {
-		
-		private final double[] datum;
-		
-		public Transformed(final double[] datum) {
-			this.datum = datum;
-		}
-		
-		@Override
-		public final double[] toArray() {
-			return this.datum;
-		}
-		
-		private static final long serialVersionUID = 5806137995866347277L;
-		
 	}
 	
 }

@@ -10,6 +10,26 @@ public abstract interface ClassifierClass extends Serializable {
 	public abstract double[] toArray();
 	
 	/**
+	 * @author codistmonk (creation 2015-02-06)
+	 */
+	public static final class Default implements ClassifierClass {
+		
+		private final double[] datum;
+		
+		public Default(final double[] datum) {
+			this.datum = datum;
+		}
+		
+		@Override
+		public final double[] toArray() {
+			return this.datum;
+		}
+		
+		private static final long serialVersionUID = 5806137995866347277L;
+		
+	}
+	
+	/**
 	 * @author codistmonk (creation 2015-02-04)
 	 */
 	public static abstract interface Measure<C extends ClassifierClass> extends Serializable {
