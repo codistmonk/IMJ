@@ -2,8 +2,6 @@ package imj3.draft.segmentation;
 
 import java.util.Locale;
 
-import net.sourceforge.aprog.tools.Tools;
-
 /**
  * @author codistmonk (creation 2015-01-16)
  */
