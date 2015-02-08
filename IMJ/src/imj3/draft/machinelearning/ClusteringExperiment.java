@@ -22,15 +22,15 @@ public final class ClusteringExperiment {
 	public static final void main(final String[] commandLineArguments) {
 		final int s = 16;
 		final int d = s * s * 3;
-		final int n = 10_000;
+		final int n = 100_000;
 		final int k = 128;
 		
 		Tools.debugPrint("dimension:", d);
 		
-//		final DataSource<Prototype> inputs = new RandomPrototypeSource(d, n, 0L);
-//		final DataSource<Prototype> inputs = new BufferedDataSource<>(new RandomPrototypeSource(d, n, 0L));
-		final DataSource<?, Prototype> inputs = new GaussianMixturePrototypeSource(k, d, n, 0L);
-//		final DataSource<Prototype> inputs = new BufferedDataSource<>(new GaussianMixturePrototypeSource(k, d, n, 0L));
+//		final DataSource<?, Prototype> inputs = new RandomPrototypeSource(d, n, 0L);
+//		final DataSource<?, Prototype> inputs = new BufferedDataSource<>(new RandomPrototypeSource(d, n, 0L));
+//		final DataSource<?, Prototype> inputs = new GaussianMixturePrototypeSource(k, d, n, 0L);
+		final DataSource<?, Prototype> inputs = new BufferedDataSource<>(new GaussianMixturePrototypeSource(k, d, n, 0L));
 		
 //		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L1, n).cluster(inputs), inputs));
 		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L1, k).cluster(inputs), inputs));
