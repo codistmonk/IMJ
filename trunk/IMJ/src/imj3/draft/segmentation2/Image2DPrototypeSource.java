@@ -8,9 +8,9 @@ import java.io.Serializable;
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public abstract class BufferedImagePrototypeSource<M extends BufferedImageDataSource.Metadata> extends BufferedImageDataSource<M, Prototype> {
+public abstract class Image2DPrototypeSource<M extends Image2DDataSource.Metadata> extends Image2DDataSource<M, Prototype> {
 	
-	protected BufferedImagePrototypeSource(final M metadata) {
+	protected Image2DPrototypeSource(final M metadata) {
 		super(metadata);
 	}
 	
@@ -48,7 +48,7 @@ public abstract class BufferedImagePrototypeSource<M extends BufferedImageDataSo
 		private final Classification<Prototype> classification;
 		
 		public Context() {
-			this.datum = new double[BufferedImagePrototypeSource.this.getInputDimension()];
+			this.datum = new double[Image2DPrototypeSource.this.getInputDimension()];
 			this.classification = new Classification<>(this.datum, new Prototype(this.datum), 0.0);
 		}
 		

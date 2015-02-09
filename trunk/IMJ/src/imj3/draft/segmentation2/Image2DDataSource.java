@@ -1,18 +1,18 @@
 package imj3.draft.segmentation2;
 
+import imj3.core.Image2D;
 import imj3.draft.machinelearning.Classification;
 import imj3.draft.machinelearning.ClassifierClass;
 
-import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.Iterator;
 
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public abstract class BufferedImageDataSource<M extends BufferedImageDataSource.Metadata, C extends ClassifierClass> extends ImageDataSource<M, C> {
+public abstract class Image2DDataSource<M extends Image2DDataSource.Metadata, C extends ClassifierClass> extends ImageDataSource<M, C> {
 	
-	protected BufferedImageDataSource(final M metadata) {
+	protected Image2DDataSource(final M metadata) {
 		super(metadata);
 	}
 	
@@ -29,9 +29,9 @@ public abstract class BufferedImageDataSource<M extends BufferedImageDataSource.
 			
 			private int y = this.x;
 			
-			private final int[] patchData = new int[BufferedImageDataSource.this.getMetadata().getPatchPixelCount()];
+			private final int[] patchData = new int[Image2DDataSource.this.getMetadata().getPatchPixelCount()];
 			
-			private final Object context = BufferedImageDataSource.this.newContext();
+			private final Object context = Image2DDataSource.this.newContext();
 			
 			@Override
 			public final boolean hasNext() {
@@ -40,9 +40,9 @@ public abstract class BufferedImageDataSource<M extends BufferedImageDataSource.
 			
 			@Override
 			public final Classification<C> next() {
-				BufferedImageDataSource.this.extractPatchValues(this.x, this.y, this.patchData);
+				Image2DDataSource.this.extractPatchValues(this.x, this.y, this.patchData);
 				
-				final Classification<C> result = BufferedImageDataSource.this.convert(this.x, this.y, this.patchData, this.context);
+				final Classification<C> result = Image2DDataSource.this.convert(this.x, this.y, this.patchData, this.context);
 				
 				if (imageWidth <= (this.x += stride)) {
 					this.x = offset;
@@ -65,7 +65,7 @@ public abstract class BufferedImageDataSource<M extends BufferedImageDataSource.
 		final int y1 = y0 + s;
 		final int step = this.getMetadata().getPatchSparsity();
 		final int bufferWidth = s / step;
-		final BufferedImage image = this.getMetadata().getImage();
+		final Image2D image = this.getMetadata().getImage();
 		final int imageWidth = image.getWidth();
 		final int imageHeight = image.getHeight();
 		
@@ -73,7 +73,7 @@ public abstract class BufferedImageDataSource<M extends BufferedImageDataSource.
 			if (0 <= yy && yy < imageHeight) {
 				for (int xx = x0; xx < x1; xx += step, ++i) {
 					if (0 <= xx && xx < imageWidth) {
-						result[i] = image.getRGB(xx, yy);
+						result[i] = (int) image.getPixelValue(xx, yy);
 					}
 				}
 			} else {
@@ -93,15 +93,15 @@ public abstract class BufferedImageDataSource<M extends BufferedImageDataSource.
 	 */
 	public static abstract class Metadata extends ImageDataSource.Metadata {
 		
-		private final BufferedImage image;
+		private final Image2D image;
 		
-		public Metadata(final BufferedImage image, final int patchSize,
+		public Metadata(final Image2D image, final int patchSize,
 				final int patchSparsity, final int stride) {
 			super(patchSize, patchSparsity, stride);
 			this.image = image;
 		}
 		
-		public final BufferedImage getImage() {
+		public final Image2D getImage() {
 			return this.image;
 		}
 		
@@ -122,7 +122,7 @@ public abstract class BufferedImageDataSource<M extends BufferedImageDataSource.
 		 */
 		public static final class Default extends Metadata {
 			
-			public Default(final BufferedImage image, final int patchSize,
+			public Default(final Image2D image, final int patchSize,
 					final int patchSparsity, final int stride) {
 				super(image, patchSize, patchSparsity, stride);
 			}

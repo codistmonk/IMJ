@@ -4,19 +4,19 @@ import static imj3.core.Channels.Predefined.blue8;
 import static imj3.core.Channels.Predefined.green8;
 import static imj3.core.Channels.Predefined.red8;
 
-import java.awt.image.BufferedImage;
+import imj3.core.Image2D;
 
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public final class BufferedImageRawSource extends BufferedImagePrototypeSource<BufferedImageDataSource.Metadata> {
+public final class Image2DRawSource extends Image2DPrototypeSource<Image2DDataSource.Metadata> {
 	
-	public BufferedImageRawSource(final BufferedImage image, final int patchSize) {
+	public Image2DRawSource(final Image2D image, final int patchSize) {
 		this(image, patchSize, 1, 1);
 	}
 	
-	public BufferedImageRawSource(final BufferedImage image, final int patchSize, final int patchSparsity, final int stride) {
-		super(new BufferedImageDataSource.Metadata.Default(image, patchSize, patchSparsity, stride));
+	public Image2DRawSource(final Image2D image, final int patchSize, final int patchSparsity, final int stride) {
+		super(new Image2DDataSource.Metadata.Default(image, patchSize, patchSparsity, stride));
 	}
 	
 	@Override

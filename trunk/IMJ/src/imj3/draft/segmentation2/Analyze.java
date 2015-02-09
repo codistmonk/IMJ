@@ -1,6 +1,7 @@
 package imj3.draft.segmentation2;
 
 import imj3.core.Channels;
+import imj3.core.Image2D;
 import imj3.draft.machinelearning.ClassDataSource;
 import imj3.draft.machinelearning.Classification;
 import imj3.draft.machinelearning.ClassifiedDataSource;
@@ -15,9 +16,12 @@ import imj3.draft.machinelearning.NearestNeighborClustering;
 import imj3.draft.machinelearning.StreamingClustering;
 import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 import imj3.tools.AwtImage2D;
+import imj3.tools.IMJTools;
 
 import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
 import java.io.File;
+import java.util.Random;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
@@ -41,21 +45,23 @@ public final class Analyze {
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final File file = new File(arguments.get("file", ""));
-		final BufferedImage image = AwtImage2D.awtRead(file.getPath());
+		final AwtImage2D image = new AwtImage2D(file.getPath());
 		
-		SwingTools.show(image, file.getName(), false);
+//		new BufferedImage(null, new WritableRaster
+		
+		SwingTools.show(image.getSource(), file.getName(), false);
 		
 		if (false) {
-			final BufferedImageMeanSource mean = new BufferedImageMeanSource(image, 2, 1, 2);
-			SwingTools.show(awtImage(mean), "Mean", false);
-			SwingTools.show(awtImage(new BufferedImageMaxSource(image, 2, 1, 2)), "Max", false);
+			final Image2DMeanSource mean = new Image2DMeanSource(image, 2, 1, 2);
+			SwingTools.show(image(mean).getSource(), "Mean", false);
+			SwingTools.show(image(new Image2DMaxSource(image, 2, 1, 2)).getSource(), "Max", false);
 			
-			SwingTools.show(awtImage(classes(classify(mean, new StreamingClustering(Measure.Predefined.L1_ES, 8).cluster(mean)))), "Indirect (streaming)", false);
-			SwingTools.show(awtImage(classes(classify(mean, new KMeansClustering(Measure.Predefined.L1_ES, 8, 6).cluster(mean)))), "Indirect (k-means)", false);
+			SwingTools.show(image(classes(classify(mean, new StreamingClustering(Measure.Predefined.L1_ES, 8).cluster(mean)))).getSource(), "Indirect (streaming)", false);
+			SwingTools.show(image(classes(classify(mean, new KMeansClustering(Measure.Predefined.L1_ES, 8, 6).cluster(mean)))).getSource(), "Indirect (k-means)", false);
 		}
 		
 		if (true) {
-			final DataSource<? extends ImageDataSource.Metadata, Prototype> source = new BufferedImageRawSource(image, 8);
+			final DataSource<? extends ImageDataSource.Metadata, Prototype> source = new Image2DRawSource(image, 8);
 			final DataSource<? extends ImageDataSource.Metadata, Prototype> trainingSet = source;
 			
 			final NearestNeighborClustering clustering = new KMeansClustering(Measure.Predefined.L1_ES, 3);
@@ -65,7 +71,7 @@ public final class Analyze {
 			final LinearTransform rgbRenderer = new LinearTransform(Measure.Predefined.L1_ES, newRGBRenderingMatrix(source.getMetadata().getPatchPixelCount()));
 			final DataSource<? extends ImageDataSource.Metadata, ?> rendered = classify(quantized, rgbRenderer);
 			
-			SwingTools.show(awtImage(classes(rendered)), clustering.getClass().getSimpleName() + " -> rendered", false);
+			SwingTools.show(image(classes(rendered)).getSource(), clustering.getClass().getSimpleName() + " -> rendered", false);
 		}
 	}
 	
@@ -95,11 +101,12 @@ public final class Analyze {
 		return result;
 	}
 	
-	public static final BufferedImage awtImage(final DataSource<? extends ImageDataSource.Metadata, ?> source) {
-		return awtImage(source, null);
+	public static final AwtImage2D image(final DataSource<? extends ImageDataSource.Metadata, ?> source) {
+		return image(source, new AwtImage2D(Long.toHexString(new Random().nextLong()),
+				source.getMetadata().sizeX(), source.getMetadata().sizeY()));
 	}
 	
-	public static final BufferedImage awtImage(final DataSource<? extends ImageDataSource.Metadata, ?> source, final BufferedImage result) {
+	public static final AwtImage2D image(final DataSource<? extends ImageDataSource.Metadata, ?> source, final AwtImage2D result) {
 		final TicToc timer = new TicToc();
 		final int dimension = source.getInputDimension();
 		
@@ -108,9 +115,6 @@ public final class Analyze {
 		}
 		
 		final int width = source.getMetadata().sizeX();
-		final int height = source.getMetadata().sizeY();
-		final BufferedImage actualResult = result != null ? result : new BufferedImage(
-				width, height, BufferedImage.TYPE_INT_ARGB);
 		
 		int pixel = 0;
 		
@@ -120,14 +124,14 @@ public final class Analyze {
 			final double[] input = c.getInput();
 			final int rgb = dimension == 1 ? gray(input) : argb(input);
 			
-			actualResult.setRGB(x, y, rgb);
+			result.setPixelValue(x, y, rgb);
 			
 			++pixel;
 		}
 		
 		Tools.debugPrint("Awt image created in", timer.toc(), "ms");
 		
-		return actualResult;
+		return result;
 	}
 	
 	public static final int argb(final double[] rgb) {
