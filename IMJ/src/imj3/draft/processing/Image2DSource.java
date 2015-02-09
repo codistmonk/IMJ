@@ -10,9 +10,9 @@ import java.util.Iterator;
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public abstract class Image2DDataSource<M extends Image2DDataSource.Metadata, C extends ClassifierClass> extends ImageDataSource<M, C> {
+public abstract class Image2DSource<M extends Image2DSource.Metadata, C extends ClassifierClass> extends Patch2DSource<M, C> {
 	
-	protected Image2DDataSource(final M metadata) {
+	protected Image2DSource(final M metadata) {
 		super(metadata);
 	}
 	
@@ -29,9 +29,9 @@ public abstract class Image2DDataSource<M extends Image2DDataSource.Metadata, C 
 			
 			private int y = this.x;
 			
-			private final int[] patchData = new int[Image2DDataSource.this.getMetadata().getPatchPixelCount()];
+			private final int[] patchData = new int[Image2DSource.this.getMetadata().getPatchPixelCount()];
 			
-			private final Object context = Image2DDataSource.this.newContext();
+			private final Object context = Image2DSource.this.newContext();
 			
 			@Override
 			public final boolean hasNext() {
@@ -40,9 +40,9 @@ public abstract class Image2DDataSource<M extends Image2DDataSource.Metadata, C 
 			
 			@Override
 			public final Classification<C> next() {
-				Image2DDataSource.this.extractPatchValues(this.x, this.y, this.patchData);
+				Image2DSource.this.extractPatchValues(this.x, this.y, this.patchData);
 				
-				final Classification<C> result = Image2DDataSource.this.convert(this.x, this.y, this.patchData, this.context);
+				final Classification<C> result = Image2DSource.this.convert(this.x, this.y, this.patchData, this.context);
 				
 				if (imageWidth <= (this.x += stride)) {
 					this.x = offset;
@@ -91,7 +91,7 @@ public abstract class Image2DDataSource<M extends Image2DDataSource.Metadata, C 
 	/**
 	 * @author codistmonk (creation 2015-02-08)
 	 */
-	public static abstract class Metadata extends ImageDataSource.Metadata {
+	public static abstract class Metadata extends Patch2DSource.Metadata {
 		
 		private final Image2D image;
 		

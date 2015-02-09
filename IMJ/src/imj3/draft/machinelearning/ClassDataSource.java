@@ -40,9 +40,10 @@ public final class ClassDataSource<M extends DataSource.Metadata> extends Transf
 			@SuppressWarnings("unchecked")
 			@Override
 			public final Classification<ClassifierClass> next() {
+				final double[] array = this.i.next().getClassifierClass().toArray();
+				
 				return (Classification) this.result.setInput(
-						this.result.getClassifierClass().setArray(
-								this.i.next().getClassifierClass().toArray()).toArray());
+						this.result.getClassifierClass().setArray(array).toArray());
 			}
 			
 		};
