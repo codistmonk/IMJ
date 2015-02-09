@@ -17,11 +17,11 @@ public final class GreedyAssociativeStreamingClustering extends NearestNeighborC
 	}
 	
 	@Override
-	protected final void cluster(final DataSource<?, Prototype> inputs, final NearestNeighborClassifier classifier) {
+	protected final void cluster(final DataSource<?, ?> inputs, final NearestNeighborClassifier classifier) {
 		final int k = this.getClusterCount();
 		final List<GreedyAssociativeStreamingClustering.EndPoint<Prototype>> sources = new ArrayList<>(k);
 		final List<GreedyAssociativeStreamingClustering.EndPoint<Prototype>> targets = new ArrayList<>(k);
-		final Iterator<Classification<Prototype>> i = inputs.iterator();
+		final Iterator<Classification<ClassifierClass>> i = (Iterator) inputs.iterator();
 		
 		for (int j = 0; j < k && i.hasNext(); ++j) {
 			sources.add(new GreedyAssociativeStreamingClustering.EndPoint<>(new Prototype(i.next().getInput().clone())));

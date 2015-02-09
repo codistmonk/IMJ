@@ -1,7 +1,7 @@
 package imj3.draft.machinelearning;
 
 /**
- * @author codistmonk (creation 2015-02-08)
+ * @author codistmonk (creation 2015-02-09)
  *
  * @param <M>
  * @param <In>
