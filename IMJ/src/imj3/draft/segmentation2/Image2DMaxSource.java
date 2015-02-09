@@ -5,19 +5,19 @@ import static imj3.core.Channels.Predefined.green8;
 import static imj3.core.Channels.Predefined.red8;
 import static java.lang.Math.max;
 
-import java.awt.image.BufferedImage;
+import imj3.core.Image2D;
 
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public final class BufferedImageMaxSource extends BufferedImagePrototypeSource<BufferedImageDataSource.Metadata> {
+public final class Image2DMaxSource extends Image2DPrototypeSource<Image2DDataSource.Metadata> {
 	
-	public BufferedImageMaxSource(final BufferedImage image, final int patchSize) {
+	public Image2DMaxSource(final Image2D image, final int patchSize) {
 		this(image, patchSize, 1, 1);
 	}
 	
-	public BufferedImageMaxSource(final BufferedImage image, final int patchSize, final int patchSparsity, final int stride) {
-		super(new BufferedImageDataSource.Metadata.Default(image, patchSize, patchSparsity, stride));
+	public Image2DMaxSource(final Image2D image, final int patchSize, final int patchSparsity, final int stride) {
+		super(new Image2DDataSource.Metadata.Default(image, patchSize, patchSparsity, stride));
 	}
 	
 	@Override
