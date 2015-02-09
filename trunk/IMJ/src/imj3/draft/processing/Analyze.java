@@ -49,7 +49,7 @@ public final class Analyze {
 		
 		SwingTools.show(image.getSource(), file.getName(), false);
 		
-		if (true) {
+		if (false) {
 			final DataSource<Image2DSource.Metadata, ?> raw = raw(image, 2, 1, 2);
 			
 			SwingTools.show(image(classes(mean(raw, 3))).getSource(), "Mean", false);
@@ -59,7 +59,7 @@ public final class Analyze {
 			SwingTools.show(image(classes(mean(classes(classify(raw, new KMeansClustering(Measure.Predefined.L1_ES, 8, 6).cluster(raw))), 3))).getSource(), "Indirect (k-means)", false);
 		}
 		
-		if (false) {
+		if (true) {
 			final DataSource<? extends Patch2DSource.Metadata, ?> source = raw(image, 8);
 			final DataSource<? extends Patch2DSource.Metadata, ?> trainingSet = source;
 			
@@ -68,8 +68,9 @@ public final class Analyze {
 			final NearestNeighborClassifier quantizer = clustering.cluster(trainingSet);
 			final DataSource<? extends Patch2DSource.Metadata, Prototype> quantized = classify(source, quantizer);
 			final LinearTransform rgbRenderer = new LinearTransform(Measure.Predefined.L1_ES, newRGBRenderingMatrix(source.getMetadata().getPatchPixelCount()));
-			final DataSource<? extends Patch2DSource.Metadata, ?> rendered = classify(quantized, rgbRenderer);
+			final DataSource<? extends Patch2DSource.Metadata, ?> rendered = classify(classes(quantized), rgbRenderer);
 			
+//			SwingTools.show(image(classes(mean(classes(quantized), 3))).getSource(), clustering.getClass().getSimpleName() + " -> rendered", false);
 			SwingTools.show(image(classes(rendered)).getSource(), clustering.getClass().getSimpleName() + " -> rendered", false);
 		}
 	}
