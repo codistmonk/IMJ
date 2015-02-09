@@ -6,7 +6,6 @@ import static java.util.stream.Collectors.toList;
 
 import imj3.draft.machinelearning.GreedyAssociativeStreamingClustering.Association;
 import imj3.draft.machinelearning.GreedyAssociativeStreamingClustering.EndPoint;
-import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -191,7 +190,7 @@ public final class AssignmentProblem {
 		}
 		
 		@Override
-		protected final void cluster(final DataSource<?, Prototype> inputs,
+		protected final void cluster(final DataSource<?, ?> inputs,
 				final NearestNeighborClassifier classifier) {
 			// TODO Auto-generated method stub
 			

@@ -11,10 +11,6 @@ import imj3.core.Image2D;
  */
 public final class Image2DRawSource extends Image2DPrototypeSource<Image2DDataSource.Metadata> {
 	
-	public Image2DRawSource(final Image2D image, final int patchSize) {
-		this(image, patchSize, 1, 1);
-	}
-	
 	public Image2DRawSource(final Image2D image, final int patchSize, final int patchSparsity, final int stride) {
 		super(new Image2DDataSource.Metadata.Default(image, patchSize, patchSparsity, stride));
 	}
@@ -36,5 +32,17 @@ public final class Image2DRawSource extends Image2DPrototypeSource<Image2DDataSo
 	}
 	
 	private static final long serialVersionUID = 3938160512172714562L;
+	
+	public static final Image2DRawSource raw(final Image2D image) {
+		return raw(image, 1);
+	}
+	
+	public static final Image2DRawSource raw(final Image2D image, final int patchSize) {
+		return raw(image, patchSize, 1, 1);
+	}
+	
+	public static final Image2DRawSource raw(final Image2D image, final int patchSize, final int patchSparsity, final int stride) {
+		return new Image2DRawSource(image, patchSize, patchSparsity, stride);
+	}
 	
 }
