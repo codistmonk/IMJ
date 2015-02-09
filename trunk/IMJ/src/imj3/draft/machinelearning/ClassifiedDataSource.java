@@ -8,15 +8,12 @@ import java.util.Iterator;
  * @param <M>
  * @param <C>
  */
-public final class ClassifiedDataSource<M extends DataSource.Metadata, In extends ClassifierClass, Out extends ClassifierClass> extends DataSource.Abstract<M, Out> {
-	
-	private final DataSource<M, In> source;
+public final class ClassifiedDataSource<M extends DataSource.Metadata, In extends ClassifierClass, Out extends ClassifierClass> extends TransformedDataSource<M, In, Out> {
 	
 	private final Classifier<Out> classifier;
 	
 	public ClassifiedDataSource(final DataSource<M, In> source, final Classifier<Out> classifier) {
-		super(source.getMetadata());
-		this.source = source;
+		super(source);
 		this.classifier = classifier;
 	}
 	
@@ -52,10 +49,6 @@ public final class ClassifiedDataSource<M extends DataSource.Metadata, In extend
 			}
 			
 		};
-	}
-	
-	final DataSource<M, In> getSource() {
-		return this.source;
 	}
 	
 	final Classifier<Out> getClassifier() {
