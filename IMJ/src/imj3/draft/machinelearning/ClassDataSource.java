@@ -8,14 +8,10 @@ import java.util.Iterator;
  * @param <M>
  * @param <C>
  */
-public final class ClassDataSource<M extends DataSource.Metadata> extends DataSource.Abstract<M, ClassifierClass> {
+public final class ClassDataSource<M extends DataSource.Metadata> extends TransformedDataSource<M, ClassifierClass, ClassifierClass> {
 	
-	private final DataSource<M, ClassifierClass> source;
-	
-	@SuppressWarnings("unchecked")
 	public ClassDataSource(final DataSource<M, ?> source) {
-		super(source.getMetadata());
-		this.source = (DataSource<M, ClassifierClass>) source;
+		super(source);
 	}
 	
 	@Override
@@ -50,10 +46,6 @@ public final class ClassDataSource<M extends DataSource.Metadata> extends DataSo
 			}
 			
 		};
-	}
-	
-	final DataSource<M, ClassifierClass> getSource() {
-		return this.source;
 	}
 	
 	private static final long serialVersionUID = -4926248507282321872L;
