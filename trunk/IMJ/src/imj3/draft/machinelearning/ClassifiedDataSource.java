@@ -42,8 +42,8 @@ public final class ClassifiedDataSource<M extends DataSource.Metadata, In extend
 			
 			@Override
 			public final Classification<Out> next() {
-				final Classification<Out> result = ClassifiedDataSource.this.getClassifier().classify(this.tmp,
-						this.inputs.next().getClassifierClass().toArray());
+				final Classification<Out> result = ClassifiedDataSource.this.getClassifier().classify(
+						this.tmp, this.inputs.next().getInput());
 				
 				return result;
 			}

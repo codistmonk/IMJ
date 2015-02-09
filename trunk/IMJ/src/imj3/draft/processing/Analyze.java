@@ -1,11 +1,11 @@
 package imj3.draft.processing;
 
-import static imj3.draft.processing.Analyze.Max.max;
-import static imj3.draft.processing.Analyze.Mean.mean;
+import static imj3.draft.machinelearning.Max.max;
+import static imj3.draft.machinelearning.Mean.mean;
 import static imj3.draft.processing.Image2DRawSource.raw;
+
 import imj3.core.Channels;
 import imj3.draft.machinelearning.ClassDataSource;
-import imj3.draft.machinelearning.ClassDataSource.MutableClassifierClass;
 import imj3.draft.machinelearning.Classification;
 import imj3.draft.machinelearning.ClassifiedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -18,12 +18,9 @@ import imj3.draft.machinelearning.NearestNeighborClassifier;
 import imj3.draft.machinelearning.NearestNeighborClustering;
 import imj3.draft.machinelearning.StreamingClustering;
 import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
-import imj3.draft.machinelearning.TransformedDataSource;
 import imj3.tools.AwtImage2D;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.Iterator;
 import java.util.Random;
 
 import net.sourceforge.aprog.swing.SwingTools;
@@ -50,29 +47,28 @@ public final class Analyze {
 		final File file = new File(arguments.get("file", ""));
 		final AwtImage2D image = new AwtImage2D(file.getPath());
 		
-//		new BufferedImage(null, new WritableRaster
-		
 		SwingTools.show(image.getSource(), file.getName(), false);
 		
 		if (true) {
-			final Mean<ImageDataSource.Metadata> mean = mean(raw(image, 2, 1, 2), 3);
-			SwingTools.show(image(classes(mean)).getSource(), "Mean", false);
-			SwingTools.show(image(classes(max(raw(image, 2, 1, 2)))).getSource(), "Max", false);
+			final DataSource<Image2DSource.Metadata, ?> raw = raw(image, 2, 1, 2);
 			
-			SwingTools.show(image(classes(classify(mean, new StreamingClustering(Measure.Predefined.L1_ES, 8).cluster(mean)))).getSource(), "Indirect (streaming)", false);
-			SwingTools.show(image(classes(classify(mean, new KMeansClustering(Measure.Predefined.L1_ES, 8, 6).cluster(mean)))).getSource(), "Indirect (k-means)", false);
+			SwingTools.show(image(classes(mean(raw, 3))).getSource(), "Mean", false);
+			SwingTools.show(image(classes(max(raw))).getSource(), "Max", false);
+			
+			SwingTools.show(image(classes(mean(classes(classify(raw, new StreamingClustering(Measure.Predefined.L1_ES, 8).cluster(raw))), 3))).getSource(), "Indirect (streaming)", false);
+			SwingTools.show(image(classes(mean(classes(classify(raw, new KMeansClustering(Measure.Predefined.L1_ES, 8, 6).cluster(raw))), 3))).getSource(), "Indirect (k-means)", false);
 		}
 		
 		if (false) {
-			final DataSource<? extends ImageDataSource.Metadata, Prototype> source = raw(image, 8);
-			final DataSource<? extends ImageDataSource.Metadata, Prototype> trainingSet = source;
+			final DataSource<? extends Patch2DSource.Metadata, ?> source = raw(image, 8);
+			final DataSource<? extends Patch2DSource.Metadata, ?> trainingSet = source;
 			
 			final NearestNeighborClustering clustering = new KMeansClustering(Measure.Predefined.L1_ES, 3);
 //			final NearestNeighborClustering clustering = new StreamingClustering(Measure.Predefined.L1_ES, 3);
 			final NearestNeighborClassifier quantizer = clustering.cluster(trainingSet);
-			final DataSource<? extends ImageDataSource.Metadata, Prototype> quantized = classify(source, quantizer);
+			final DataSource<? extends Patch2DSource.Metadata, Prototype> quantized = classify(source, quantizer);
 			final LinearTransform rgbRenderer = new LinearTransform(Measure.Predefined.L1_ES, newRGBRenderingMatrix(source.getMetadata().getPatchPixelCount()));
-			final DataSource<? extends ImageDataSource.Metadata, ?> rendered = classify(quantized, rgbRenderer);
+			final DataSource<? extends Patch2DSource.Metadata, ?> rendered = classify(quantized, rgbRenderer);
 			
 			SwingTools.show(image(classes(rendered)).getSource(), clustering.getClass().getSimpleName() + " -> rendered", false);
 		}
@@ -104,12 +100,12 @@ public final class Analyze {
 		return result;
 	}
 	
-	public static final AwtImage2D image(final DataSource<? extends ImageDataSource.Metadata, ?> source) {
+	public static final AwtImage2D image(final DataSource<? extends Patch2DSource.Metadata, ?> source) {
 		return image(source, new AwtImage2D(Long.toHexString(new Random().nextLong()),
 				source.getMetadata().sizeX(), source.getMetadata().sizeY()));
 	}
 	
-	public static final AwtImage2D image(final DataSource<? extends ImageDataSource.Metadata, ?> source, final AwtImage2D result) {
+	public static final AwtImage2D image(final DataSource<? extends Patch2DSource.Metadata, ?> source, final AwtImage2D result) {
 		final TicToc timer = new TicToc();
 		final int dimension = source.getInputDimension();
 		
@@ -150,189 +146,6 @@ public final class Analyze {
 	
 	public static final int int8(final double value0255) {
 		return ((int) value0255) & 0xFF;
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-02-09)
-	 * 
-	 * @param <M>
-	 */
-	public static final class Max<M extends DataSource.Metadata> extends TransformedDataSource<M, ClassifierClass, ClassifierClass> {
-		
-		private final int stride;
-		
-		public Max(final DataSource<? extends M, ? extends ClassifierClass> source, final int stride) {
-			super(source);
-			this.stride = stride;
-		}
-		
-		@Override
-		public final int getInputDimension() {
-			return this.getSource().getInputDimension();
-		}
-		
-		@Override
-		public final int getClassDimension() {
-			return this.stride;
-		}
-		
-		@Override
-		public final Iterator<Classification<ClassifierClass>> iterator() {
-			final int n = this.getInputDimension();
-			final int stride = this.getClassDimension();
-			
-			return new Iterator<Classification<ClassifierClass>>() {
-				
-				private final Iterator<Classification<ClassifierClass>> i = Max.this.getSource().iterator();
-				
-				private final double[] datum = new double[Max.this.getClassDimension()];
-				
-				private final Classification<ClassifierClass> result = new Classification<ClassifierClass>(this.datum, new ClassifierClass.Default(this.datum), 0.0);
-				
-				@Override
-				public final boolean hasNext() {
-					return this.i.hasNext();
-				}
-				
-				@Override
-				public final Classification<ClassifierClass> next() {
-					Arrays.fill(this.datum, Double.NEGATIVE_INFINITY);
-					
-					final double[] input = this.i.next().getInput();
-					
-					for (int j = 0; j < n; j += stride) {
-						for (int k = 0; k < stride; ++k) {
-							final double value = input[j + k];
-							
-							if (this.datum[k] < value) {
-								this.datum[k] = value;
-							}
-						}
-					}
-					
-					return this.result;
-				}
-				
-			};
-		}
-		
-		private static final long serialVersionUID = -2472244801933971495L;
-		
-		public static final <M extends DataSource.Metadata> Max<M> max(final DataSource<? extends M, ? extends ClassifierClass> source) {
-			return max(source, 1);
-		}
-		
-		public static final <M extends DataSource.Metadata> Max<M> max(final DataSource<? extends M, ? extends ClassifierClass> source, final int stride) {
-			return new Max<>(source, stride);
-		}
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-02-09)
-	 * 
-	 * @param <M>
-	 */
-	public static final class Mean<M extends DataSource.Metadata> extends TransformedDataSource<M, ClassifierClass, ClassifierClass> {
-		
-		private final int stride;
-		
-		public Mean(final DataSource<? extends M, ? extends ClassifierClass> source, final int stride) {
-			super(source);
-			this.stride = stride;
-		}
-		
-		@Override
-		public final int getInputDimension() {
-			return this.getSource().getInputDimension();
-		}
-		
-		@Override
-		public final int getClassDimension() {
-			return this.stride;
-		}
-		
-		@Override
-		public final Iterator<Classification<ClassifierClass>> iterator() {
-			final int n = this.getInputDimension();
-			final int stride = this.getClassDimension();
-			
-			return new Iterator<Classification<ClassifierClass>>() {
-				
-				private final Iterator<Classification<ClassifierClass>> i = Mean.this.getSource().iterator();
-				
-				private final double[] datum = new double[Mean.this.getClassDimension()];
-				
-				private final Classification<ClassifierClass> result = new Classification<ClassifierClass>(this.datum, new ClassifierClass.Default(this.datum), 0.0);
-				
-				@Override
-				public final boolean hasNext() {
-					return this.i.hasNext();
-				}
-				
-				@Override
-				public final Classification<ClassifierClass> next() {
-					Arrays.fill(this.datum, 0.0);
-					
-					final double[] input = this.i.next().getInput();
-					
-					for (int j = 0; j < n; j += stride) {
-						for (int k = 0; k < stride; ++k) {
-							this.datum[k] += input[j + k];
-						}
-					}
-					
-					for (int k = 0; k < stride; ++k) {
-						this.datum[k] = this.datum[k] * stride / n;
-					}
-					
-					return this.result;
-				}
-				
-			};
-		}
-		
-		private static final long serialVersionUID = -5585195651747133856L;
-		
-		public static final <M extends DataSource.Metadata> Mean<M> mean(final DataSource<? extends M, ? extends ClassifierClass> source) {
-			return mean(source, 1);
-		}
-		
-		public static final <M extends DataSource.Metadata> Mean<M> mean(final DataSource<? extends M, ? extends ClassifierClass> source, final int stride) {
-			return new Mean<>(source, stride);
-		}
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-02-09)
-	 *
-	 * @param <M>
-	 */
-	public static final class PrototypeDataSource<M extends DataSource.Metadata> extends TransformedDataSource<M, ClassifierClass, Prototype> {
-		
-		public PrototypeDataSource(final DataSource<? extends M, ? extends ClassifierClass> source) {
-			super(source);
-		}
-		
-		@Override
-		public final int getInputDimension() {
-			return this.getSource().getInputDimension();
-		}
-		
-		@Override
-		public final int getClassDimension() {
-			return this.getSource().getClassDimension();
-		}
-		
-		@Override
-		public Iterator<Classification<Prototype>> iterator() {
-			// TODO Auto-generated method stub
-			return null;
-		}
-		
-		private static final long serialVersionUID = -5644378787046602421L;
-		
 	}
 	
 }

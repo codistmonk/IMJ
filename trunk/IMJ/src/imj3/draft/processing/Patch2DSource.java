@@ -6,9 +6,9 @@ import imj3.draft.machinelearning.DataSource;
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public abstract class ImageDataSource<M extends ImageDataSource.Metadata, C extends ClassifierClass> extends DataSource.Abstract<M, C> {
+public abstract class Patch2DSource<M extends Patch2DSource.Metadata, C extends ClassifierClass> extends DataSource.Abstract<M, C> {
 	
-	public ImageDataSource(final M metadata) {
+	public Patch2DSource(final M metadata) {
 		super(metadata);
 	}
 	

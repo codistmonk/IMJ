@@ -8,7 +8,7 @@ import java.io.Serializable;
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public abstract class Image2DPrototypeSource<M extends Image2DDataSource.Metadata> extends Image2DDataSource<M, Prototype> {
+public abstract class Image2DPrototypeSource<M extends Image2DSource.Metadata> extends Image2DSource<M, Prototype> {
 	
 	protected Image2DPrototypeSource(final M metadata) {
 		super(metadata);
