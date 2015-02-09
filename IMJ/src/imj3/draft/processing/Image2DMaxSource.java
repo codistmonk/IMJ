@@ -1,4 +1,4 @@
-package imj3.draft.segmentation2;
+package imj3.draft.processing;
 
 import static imj3.core.Channels.Predefined.blue8;
 import static imj3.core.Channels.Predefined.green8;

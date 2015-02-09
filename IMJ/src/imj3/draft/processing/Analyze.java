@@ -1,7 +1,6 @@
-package imj3.draft.segmentation2;
+package imj3.draft.processing;
 
 import imj3.core.Channels;
-import imj3.core.Image2D;
 import imj3.draft.machinelearning.ClassDataSource;
 import imj3.draft.machinelearning.Classification;
 import imj3.draft.machinelearning.ClassifiedDataSource;
@@ -16,10 +15,7 @@ import imj3.draft.machinelearning.NearestNeighborClustering;
 import imj3.draft.machinelearning.StreamingClustering;
 import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 import imj3.tools.AwtImage2D;
-import imj3.tools.IMJTools;
 
-import java.awt.image.BufferedImage;
-import java.awt.image.WritableRaster;
 import java.io.File;
 import java.util.Random;
 

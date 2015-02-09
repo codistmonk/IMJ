@@ -1,4 +1,4 @@
-package imj3.draft.segmentation2;
+package imj3.draft.processing;
 
 import imj3.draft.machinelearning.Classification;
 import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;

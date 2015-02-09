@@ -1,4 +1,4 @@
-package imj3.draft.segmentation2;
+package imj3.draft.processing;
 
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.Classification;
