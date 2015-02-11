@@ -7,6 +7,8 @@ import java.io.Serializable;
  */
 public abstract interface ClassifierClass extends Serializable {
 	
+	public abstract int getClassIndex();
+	
 	public abstract double[] toArray();
 	
 	/**
@@ -14,10 +16,22 @@ public abstract interface ClassifierClass extends Serializable {
 	 */
 	public static final class Default implements ClassifierClass {
 		
+		private final int classIndex;
+		
 		private final double[] datum;
 		
 		public Default(final double[] datum) {
+			this(-1, datum);
+		}
+		
+		public Default(final int classIndex, final double[] datum) {
+			this.classIndex = classIndex;
 			this.datum = datum;
+		}
+		
+		@Override
+		public final int getClassIndex() {
+			return this.classIndex;
 		}
 		
 		@Override

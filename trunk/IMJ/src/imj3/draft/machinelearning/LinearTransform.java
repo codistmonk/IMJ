@@ -29,6 +29,11 @@ public final class LinearTransform implements Classifier<ClassifierClass> {
 	}
 	
 	@Override
+	public final int getClassCount() {
+		return 0;
+	}
+	
+	@Override
 	public final ClassifierClass.Measure<ClassifierClass> getClassMeasure() {
 		return this.transformedMeasure;
 	}
