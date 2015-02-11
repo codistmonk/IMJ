@@ -27,7 +27,7 @@ public final class StreamingClustering extends NearestNeighborClustering {
 			final Classification<Prototype> c = classifier.classify(tmp, classification.getInput());
 			
 			if (c == null || 0.0 != c.getScore() && n < k) {
-				prototypes.add(new Prototype(c.getInput().clone()).setIndex(n));
+				prototypes.add(new Prototype(c.getInput().clone()).setClassIndex(n));
 			} else if (0.0 == c.getScore()) {
 				c.getClassifierClass().updateWeight(1.0);
 			} else {

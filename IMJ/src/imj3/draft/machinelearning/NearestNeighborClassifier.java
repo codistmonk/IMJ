@@ -24,7 +24,7 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 		final int n = this.getPrototypes().size();
 		
 		for (int i = 0; i < n; ++i) {
-			this.getPrototypes().get(i).setIndex(i);
+			this.getPrototypes().get(i).setClassIndex(i);
 		}
 		
 		return this;
@@ -36,6 +36,11 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 	
 	public final Measure getMeasure() {
 		return this.measure;
+	}
+	
+	@Override
+	public final int getClassCount() {
+		return this.getPrototypes().size();
 	}
 	
 	@Override
@@ -72,7 +77,7 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 	 */
 	public static final class Prototype implements ClassifierClass {
 		
-		private int index;
+		private int classIndex;
 		
 		private final double[] datum;
 		
@@ -87,12 +92,13 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 			this.weight = weight;
 		}
 		
-		public final int getIndex() {
-			return this.index;
+		@Override
+		public final int getClassIndex() {
+			return this.classIndex;
 		}
 		
-		public final Prototype setIndex(final int index) {
-			this.index = index;
+		public final Prototype setClassIndex(final int index) {
+			this.classIndex = index;
 			
 			return this;
 		}

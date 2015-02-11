@@ -7,6 +7,8 @@ import java.io.Serializable;
  */
 public abstract interface Classifier<C extends ClassifierClass> extends Serializable {
 	
+	public abstract int getClassCount();
+	
 	public abstract ClassifierClass.Measure<C> getClassMeasure();
 	
 	public default Classification<C> classify(final double... input) {

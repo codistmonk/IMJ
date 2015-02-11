@@ -56,9 +56,22 @@ public final class ClassDataSource<M extends DataSource.Metadata> extends Transf
 	 */
 	public static final class MutableClassifierClass implements ClassifierClass {
 		
+		private int classIndex;
+		
 		private double[] array;
 		
-		public final ClassDataSource.MutableClassifierClass setArray(final double[] array) {
+		@Override
+		public final int getClassIndex() {
+			return this.classIndex;
+		}
+		
+		public final MutableClassifierClass setClassIndex(final int classIndex) {
+			this.classIndex = classIndex;
+			
+			return this;
+		}
+		
+		public final MutableClassifierClass setArray(final double[] array) {
 			this.array = array;
 			
 			return this;
