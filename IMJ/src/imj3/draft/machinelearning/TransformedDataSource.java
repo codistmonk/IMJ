@@ -25,6 +25,11 @@ public abstract class TransformedDataSource<M extends DataSource.Metadata, In ex
 		return this.getSource().getMetadata();
 	}
 	
+	@Override
+	public final int size() {
+		return this.getSource().size();
+	}
+	
 	private static final long serialVersionUID = -1318008499856095525L;
 	
 }

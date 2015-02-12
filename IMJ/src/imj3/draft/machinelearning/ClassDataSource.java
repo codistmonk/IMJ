@@ -30,7 +30,7 @@ public final class ClassDataSource<M extends DataSource.Metadata> extends Transf
 			
 			private final Iterator<Classification<ClassifierClass>> i = ClassDataSource.this.getSource().iterator();
 			
-			private final Classification<ClassDataSource.MutableClassifierClass> result = new Classification<>(null, new MutableClassifierClass(), 0.0);
+			private final Classification<MutableClassifierClass> result = new Classification<>(null, new MutableClassifierClass(), 0.0);
 			
 			@Override
 			public final boolean hasNext() {
@@ -50,6 +50,10 @@ public final class ClassDataSource<M extends DataSource.Metadata> extends Transf
 	}
 	
 	private static final long serialVersionUID = -4926248507282321872L;
+	
+	public static final <M extends DataSource.Metadata> ClassDataSource<M> classes(final DataSource<M, ?> inputs) {
+		return new ClassDataSource<>(inputs);
+	}
 	
 	/**
 	 * @author codistmonk (creation 2015-02-08)
