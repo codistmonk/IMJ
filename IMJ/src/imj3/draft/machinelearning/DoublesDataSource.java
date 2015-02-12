@@ -71,7 +71,7 @@ public final class DoublesDataSource extends Abstract<DataSource.Metadata, Class
 	
 	private static final long serialVersionUID = -4127598593568333362L;
 	
-	public static final DoublesDataSource source(final double... inputs) {
+	public static final DoublesDataSource source1(final double... inputs) {
 		return source(1, inputs);
 	}
 	
