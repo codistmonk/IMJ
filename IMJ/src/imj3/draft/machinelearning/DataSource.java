@@ -54,7 +54,16 @@ public abstract interface DataSource<M extends DataSource.Metadata, C extends Cl
 	 * @author codistmonk (creation 2015-02-08)
 	 */
 	public static abstract interface Metadata extends Serializable {
-		// Deliberately left empty
+		
+		/**
+		 * @author codistmonk (creation 2015-02-12)
+		 */
+		public static final class Default implements Metadata {
+			
+			private static final long serialVersionUID = 8983882340890506466L;
+			
+		}
+		
 	}
 	
 }
