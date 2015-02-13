@@ -22,10 +22,6 @@ public final class BufferedDataSource<M extends Metadata, C extends ClassifierCl
 	
 	private final int bufferLimit;
 	
-	public BufferedDataSource(final DataSource<M, C> source) {
-		this(source, 0);
-	}
-	
 	public BufferedDataSource(final DataSource<M, C> source, final int bufferLimit) {
 		this.source = source;
 		
@@ -133,6 +129,14 @@ public final class BufferedDataSource<M extends Metadata, C extends ClassifierCl
 			buffer.add(new Classification<>(classification.getInput().clone(),
 					classification.getClassifierClass(), classification.getScore()));
 		}
+	}
+	
+	public static final <M extends Metadata, C extends ClassifierClass> BufferedDataSource<M, C> buffer(final DataSource<M, C> source) {
+		return buffer(source, 0);
+	}
+	
+	public static final <M extends Metadata, C extends ClassifierClass> BufferedDataSource<M, C> buffer(final DataSource<M, C> source, final int bufferLimit) {
+		return new BufferedDataSource<>(source, bufferLimit);
 	}
 	
 }
