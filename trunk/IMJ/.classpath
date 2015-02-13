@@ -8,6 +8,7 @@
 	<classpathentry kind="lib" path="lib/jsch-0.1.50.jar" sourcepath="lib/jsch-0.1.50.zip"/>
 	<classpathentry kind="lib" path="lib/jgencode.jar"/>
 	<classpathentry kind="lib" path="lib/commons-compress-1.8.1.jar" sourcepath="/Libraries/commons-compress-1.8.1-src.zip"/>
+	<classpathentry kind="lib" path="lib/xstream-1.4.7.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="lib/bioformats_package.jar" sourcepath="/Libraries/bioformats-5.0.1-src.zip"/>
 	<classpathentry kind="output" path="bin"/>
