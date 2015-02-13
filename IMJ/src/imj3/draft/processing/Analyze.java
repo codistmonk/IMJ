@@ -1,11 +1,12 @@
 package imj3.draft.processing;
 
+import static imj3.draft.machinelearning.BufferedDataSource.buffer;
 import static imj3.draft.machinelearning.ClassDataSource.classes;
 import static imj3.draft.machinelearning.Max.max;
 import static imj3.draft.machinelearning.Mean.mean;
 import static imj3.draft.processing.Image2DRawSource.raw;
+
 import imj3.core.Channels;
-import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classification;
 import imj3.draft.machinelearning.ClassifiedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -24,9 +25,6 @@ import imj3.tools.AwtImage2D;
 
 import java.io.File;
 import java.util.Random;
-
-import com.thoughtworks.xstream.XStream;
-import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
@@ -65,7 +63,7 @@ public final class Analyze {
 		}
 		
 		if (true) {
-			final DataSource<? extends Patch2DSource.Metadata, ?> source = new BufferedDataSource<>(raw(image, 1, 1, 1));
+			final DataSource<? extends Patch2DSource.Metadata, ?> source = buffer(raw(image, 8, 1, 8));
 			
 			Tools.debugPrint(new Histogram().add(source).getCounts().size());
 			
@@ -78,14 +76,6 @@ public final class Analyze {
 			final DataSource<? extends Patch2DSource.Metadata, Prototype> quantized = classify(source, quantizer);
 			final LinearTransform rgbRenderer = new LinearTransform(Measure.Predefined.L2_ES, newRGBRenderingMatrix(source.getMetadata().getPatchPixelCount()));
 			final DataSource<? extends Patch2DSource.Metadata, ?> rendered = classify(classes(quantized), rgbRenderer);
-			
-			{
-				final XStream xStream = new XStream(new StaxDriver());
-				final String xml = xStream.toXML(quantizer);
-				
-				Tools.debugPrint("\n", xml);
-				Tools.debugPrint("\n", xStream.fromXML(xml));
-			}
 			
 //			SwingTools.show(image(classes(mean(classes(quantized), 3))).getSource(), clustering.getClass().getSimpleName() + " -> rendered", false);
 			SwingTools.show(image(classes(rendered)).getSource(), clustering.getClass().getSimpleName() + " -> rendered", false);
@@ -119,7 +109,8 @@ public final class Analyze {
 				source.getMetadata().sizeX(), source.getMetadata().sizeY()));
 	}
 	
-	public static final AwtImage2D image(final DataSource<? extends Patch2DSource.Metadata, ?> source, final AwtImage2D result) {
+	public static final AwtImage2D image(final DataSource<? extends Patch2DSource.Metadata, ?> source,
+			final AwtImage2D result) {
 		final TicToc timer = new TicToc();
 		final int dimension = source.getInputDimension();
 		
@@ -152,10 +143,23 @@ public final class Analyze {
 		return Channels.Predefined.a8r8g8b8(0xFF, int8(rgb[0]), int8(rgb[1]), int8(rgb[2]));
 	}
 	
-	public static final int gray(final double[] rgb) {
-		final int gray = int8(rgb[0]);
+	public static final int gray(final double[] value) {
+		final int gray = int8(value[0]);
 		
 		return Channels.Predefined.a8r8g8b8(0xFF, gray, gray, gray);
+	}
+	
+	public static final int labelColor(final double[] value) {
+		final int label = (int) value[0];
+		int result = 0xFF000000;
+		
+		for (int i = 0, m = 1; i < 3; ++i, m <<= 3) {
+			result |= (label & (m << 0)) << (5 + 8 * 0 + i);
+			result |= (label & (m << 1)) << (5 + 8 * 1 + i);
+			result |= (label & (m << 2)) << (5 + 8 * 2 + i);
+		}
+		
+		return result;
 	}
 	
 	public static final int int8(final double value0255) {
