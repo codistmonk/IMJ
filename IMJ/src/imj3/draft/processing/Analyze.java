@@ -4,7 +4,6 @@ import static imj3.draft.machinelearning.ClassDataSource.classes;
 import static imj3.draft.machinelearning.Max.max;
 import static imj3.draft.machinelearning.Mean.mean;
 import static imj3.draft.processing.Image2DRawSource.raw;
-
 import imj3.core.Channels;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classification;
@@ -25,6 +24,9 @@ import imj3.tools.AwtImage2D;
 
 import java.io.File;
 import java.util.Random;
+
+import com.thoughtworks.xstream.XStream;
+import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
@@ -76,6 +78,14 @@ public final class Analyze {
 			final DataSource<? extends Patch2DSource.Metadata, Prototype> quantized = classify(source, quantizer);
 			final LinearTransform rgbRenderer = new LinearTransform(Measure.Predefined.L2_ES, newRGBRenderingMatrix(source.getMetadata().getPatchPixelCount()));
 			final DataSource<? extends Patch2DSource.Metadata, ?> rendered = classify(classes(quantized), rgbRenderer);
+			
+			{
+				final XStream xStream = new XStream(new StaxDriver());
+				final String xml = xStream.toXML(quantizer);
+				
+				Tools.debugPrint("\n", xml);
+				Tools.debugPrint("\n", xStream.fromXML(xml));
+			}
 			
 //			SwingTools.show(image(classes(mean(classes(quantized), 3))).getSource(), clustering.getClass().getSimpleName() + " -> rendered", false);
 			SwingTools.show(image(classes(rendered)).getSource(), clustering.getClass().getSimpleName() + " -> rendered", false);
