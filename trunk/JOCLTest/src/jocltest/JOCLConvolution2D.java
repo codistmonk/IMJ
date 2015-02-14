@@ -49,6 +49,28 @@ public final class JOCLConvolution2D {
 		private static final long serialVersionUID = -956670618965318967L;
 		
 	};
+	
+	public static final Convolutions2D setInput(final Convolutions2D convolutions, final BufferedImage image) {
+		final int imageWidth = image.getWidth();
+		final int imageHeight = image.getHeight();
+		final int pixelCount = imageWidth * imageHeight;
+		
+		Tools.debugPrint(imageWidth, imageHeight, pixelCount);
+		
+		final int channelCount = 3;
+		final float[] input = new float[pixelCount * channelCount];
+		
+		for (int pixel = 0; pixel < pixelCount; ++pixel) {
+			final int rgb = image.getRGB(pixel % imageWidth, pixel / imageWidth);
+			input[pixelCount * 0 + pixel] = (rgb >> 16) & 0xFF;
+			input[pixelCount * 1 + pixel] = (rgb >> 8) & 0xFF;
+			input[pixelCount * 2 + pixel] = (rgb >> 0) & 0xFF;
+		}
+		
+		convolutions.setInput(input).setInputDimensions(channelCount, imageWidth, imageHeight);
+		
+		return convolutions;
+	}
     
 	/**
 	 * @param commandLineArguments
@@ -62,13 +84,12 @@ public final class JOCLConvolution2D {
 		
 		Tools.debugPrint(file);
 		
-		final BufferedImage image = ImageIO.read(file);
-		final int imageWidth = image.getWidth();
-		final int imageHeight = image.getHeight();
-		final int pixelCount = imageWidth * imageHeight;
-		final int channelCount = 3;
-		final float[] input = new float[pixelCount * channelCount];
-		final int stride = 2;
+		CL.setExceptionsEnabled(true);
+		
+		final Convolutions2D c = new Convolutions2D(temporaryContext.get());
+		
+		setInput(c, ImageIO.read(file)).setStepping(1, 2);
+		
 		final float[] convolutions = {
 				1F, 0F, 0F, 1F, 0F, 0F,
 				1F, 0F, 0F, 1F, 0F, 0F,
@@ -80,21 +101,8 @@ public final class JOCLConvolution2D {
 				0F, 0F, 1F, 0F, 0F, 1F
 		};
 		final int convolutionSize = 2;
-		final int convolutionCount = convolutions.length / (convolutionSize * convolutionSize * channelCount);
-		Tools.debugPrint(pixelCount, convolutionSize, convolutionCount);
+		final int convolutionCount = convolutions.length / (convolutionSize * convolutionSize * c.getInputChannelCount());
 		
-		for (int pixel = 0; pixel < pixelCount; ++pixel) {
-			final int rgb = image.getRGB(pixel % imageWidth, pixel / imageWidth);
-			input[pixelCount * 0 + pixel] = (rgb >> 16) & 0xFF;
-			input[pixelCount * 1 + pixel] = (rgb >> 8) & 0xFF;
-			input[pixelCount * 2 + pixel] = (rgb >> 0) & 0xFF;
-		}
-		
-		CL.setExceptionsEnabled(true);
-		
-		final Convolutions2D c = new Convolutions2D(temporaryContext.get());
-		
-		c.setInput(input).setInputDimensions(channelCount, imageWidth, imageHeight).setStepping(1, stride);
 		c.setConvolutions(convolutions).setConvolutionsDimensions(convolutionCount, convolutionSize, convolutionSize);
 		c.setOutput();
 		
@@ -350,7 +358,7 @@ public final class JOCLConvolution2D {
 		
 		private final CLKernel kernel;
 		
-		private int inputWidth, inputHeight, stride, convolutionCount;
+		private int inputChannelCount, inputWidth, inputHeight, stride, outputChannelCount;
 		
 		private long outputLength;
 		
@@ -368,6 +376,10 @@ public final class JOCLConvolution2D {
 			return this.kernel;
 		}
 		
+		public final int getInputChannelCount() {
+			return this.inputChannelCount;
+		}
+		
 		public final int getInputWidth() {
 			return this.inputWidth;
 		}
@@ -380,8 +392,8 @@ public final class JOCLConvolution2D {
 			return this.stride;
 		}
 		
-		public final int getConvolutionCount() {
-			return this.convolutionCount;
+		public final int getOutputChannelCount() {
+			return this.outputChannelCount;
 		}
 		
 		public final long getOutputLength() {
@@ -394,9 +406,10 @@ public final class JOCLConvolution2D {
 			return this;
 		}
 		
-		public final Convolutions2D setInputDimensions(final int channelCount, final int inputWidth, final int inputHeight) {
-			this.getKernel().setArg(1, this.getContext().createInputBuffer(channelCount, inputWidth, inputHeight));
+		public final Convolutions2D setInputDimensions(final int inputChannelCount, final int inputWidth, final int inputHeight) {
+			this.getKernel().setArg(1, this.getContext().createInputBuffer(inputChannelCount, inputWidth, inputHeight));
 			
+			this.inputChannelCount = inputChannelCount;
 			this.inputWidth = inputWidth;
 			this.inputHeight = inputHeight;
 			
@@ -420,13 +433,13 @@ public final class JOCLConvolution2D {
 		public final Convolutions2D setConvolutionsDimensions(final int convolutionCount, final int convolutionWidth, final int convolutionHeight) {
 			this.getKernel().setArg(4, this.getContext().createInputBuffer(convolutionCount, convolutionWidth, convolutionHeight));
 			
-			this.convolutionCount = convolutionCount;
+			this.outputChannelCount = convolutionCount;
 			
 			return this;
 		}
 		
 		public final Convolutions2D setOutput() {
-			this.outputLength = (long) this.getOutputWidth() * this.getOutputHeight() * this.getConvolutionCount();
+			this.outputLength = (long) this.getOutputWidth() * this.getOutputHeight() * this.getOutputChannelCount();
 			
 			this.getKernel().setArg(5, this.getContext().createOutputBuffer(Sizeof.cl_float, this.getOutputLength()));
 			
@@ -450,7 +463,7 @@ public final class JOCLConvolution2D {
 		}
 		
 		public final Convolutions2D compute(final float[] output) {
-			getKernel().enqueueNDRange(this.getOutputLength() / this.getConvolutionCount());
+			getKernel().enqueueNDRange(this.getOutputLength() / this.getOutputChannelCount());
 			
 			if (output != null) {
 				this.getKernel().enqueueReadArg(5, output);
