@@ -71,6 +71,14 @@ public final class JOCLConvolution2D {
 		
 		return convolutions;
 	}
+	
+	public static final Convolutions2D setConvolutions(final Convolutions2D c, final int convolutionSize, final float... convolutions) {
+		final int convolutionCount = convolutions.length / (convolutionSize * convolutionSize * c.getInputChannelCount());
+		
+		c.setConvolutions(convolutions).setConvolutionsDimensions(convolutionCount, convolutionSize, convolutionSize);
+		
+		return c;
+	}
     
 	/**
 	 * @param commandLineArguments
@@ -86,11 +94,9 @@ public final class JOCLConvolution2D {
 		
 		CL.setExceptionsEnabled(true);
 		
-		final Convolutions2D c = new Convolutions2D(temporaryContext.get());
+		final Convolutions2D c = setInput(new Convolutions2D(temporaryContext.get()), ImageIO.read(file)).setStepping(1, 2);
 		
-		setInput(c, ImageIO.read(file)).setStepping(1, 2);
-		
-		final float[] convolutions = {
+		setConvolutions(c, 2, 
 				1F, 0F, 0F, 1F, 0F, 0F,
 				1F, 0F, 0F, 1F, 0F, 0F,
 				
@@ -98,38 +104,39 @@ public final class JOCLConvolution2D {
 				0F, 1F, 0F, 0F, 1F, 0F,
 				
 				0F, 0F, 1F, 0F, 0F, 1F,
-				0F, 0F, 1F, 0F, 0F, 1F
-		};
-		final int convolutionSize = 2;
-		final int convolutionCount = convolutions.length / (convolutionSize * convolutionSize * c.getInputChannelCount());
+				0F, 0F, 1F, 0F, 0F, 1F);
 		
-		c.setConvolutions(convolutions).setConvolutionsDimensions(convolutionCount, convolutionSize, convolutionSize);
 		c.setOutput();
 		
 		Tools.debugPrint();
 		
 		final float[] output = c.compute();
-		final int outputWidth = c.getOutputWidth();
-		final int outputHeight = c.getOutputHeight();
-		final int outputPixelCount = outputWidth * outputHeight;
 		
 		Tools.debugPrint();
 		
-		final BufferedImage outputImage = new BufferedImage(outputWidth, outputHeight, BufferedImage.TYPE_INT_ARGB);
-		final ToInt<?> toRed = denormalizeTo(0, 255).using(output, outputPixelCount * 0, outputPixelCount * 1);
-		final ToInt<?> toGreen = denormalizeTo(0, 255).using(output, outputPixelCount * 1, outputPixelCount * 2);
-		final ToInt<?> toBlue = denormalizeTo(0, 255).using(output, outputPixelCount * 2, outputPixelCount * 3);
-		
-		for (int pixel = 0; pixel < outputPixelCount; ++pixel) {
-			outputImage.setRGB(pixel % outputWidth, pixel / outputWidth,
-					a8r8g8b8(0xFF,
-							toRed.convert(output[pixel + outputPixelCount * 0]),
-							toGreen.convert(output[pixel + outputPixelCount * 1]),
-							toBlue.convert(output[pixel + outputPixelCount * 2])));
-		}
+		final BufferedImage outputImage = awtImage(output, c.getOutputWidth(), c.getOutputHeight());
 		
 		Tools.debugPrint("Writing", outputFile);
 		ImageIO.write(outputImage, "png", outputFile);
+	}
+	
+	public static final BufferedImage awtImage(final float[] rgbs, final int width, final int height) {
+		final int outputPixelCount = width * height;
+		
+		final BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+		final ToInt<?> toRed = denormalizeTo(0, 255).using(rgbs, outputPixelCount * 0, outputPixelCount * 1);
+		final ToInt<?> toGreen = denormalizeTo(0, 255).using(rgbs, outputPixelCount * 1, outputPixelCount * 2);
+		final ToInt<?> toBlue = denormalizeTo(0, 255).using(rgbs, outputPixelCount * 2, outputPixelCount * 3);
+		
+		for (int pixel = 0; pixel < outputPixelCount; ++pixel) {
+			result.setRGB(pixel % width, pixel / width,
+					a8r8g8b8(0xFF,
+							toRed.convert(rgbs[pixel + outputPixelCount * 0]),
+							toGreen.convert(rgbs[pixel + outputPixelCount * 1]),
+							toBlue.convert(rgbs[pixel + outputPixelCount * 2])));
+		}
+		
+		return result;
 	}
 	
 	public static final int a8r8g8b8(final int a8, final int r8, final int g8, final int b8) {
