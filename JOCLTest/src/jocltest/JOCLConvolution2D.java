@@ -35,7 +35,7 @@ public final class JOCLConvolution2D {
             "__kernel void "
             + "convolution2D(__global const float * input,"
             + "             __global const int * inputDimensions,"
-            + "             __global const int * step,"
+            + "             __global const int * stepping,"
             + "             __global const float * convolutions,"
             + "             __global const int * convolutionsDimensions,"
             + "             __global float * output)"
@@ -45,13 +45,14 @@ public final class JOCLConvolution2D {
             + "	const int inputWidth = inputDimensions[1];\n"
             + "	const int inputHeight = inputDimensions[2];\n"
             + "	const int inputPlaneSize = inputWidth * inputHeight;\n"
-            + "	const int s = *step;\n"
+            + "	const int sparsity = stepping[0];\n"
+            + "	const int stride = stepping[1];\n"
             + "	const int convolutionCount = convolutionsDimensions[0];\n"
             + "	const int convolutionWidth = convolutionsDimensions[1];\n"
             + "	const int convolutionHeight = convolutionsDimensions[2];\n"
             + "	const int convolutionSize = convolutionWidth * convolutionHeight * inputChannels;\n"
-            + "	const int x = s * (gid % (inputWidth / s));\n"
-            + "	const int y = s * (gid / (inputWidth / s));\n"
+            + "	const int x = stride * (gid % (inputWidth / stride));\n"
+            + "	const int y = stride * (gid / (inputWidth / stride));\n"
             + "	const int virtualLeft = x + 1 - (convolutionWidth / 2);\n"
             + "	const int virtualRight = virtualLeft + convolutionWidth;\n"
             + "	const int virtualTop = y + 1 - (convolutionHeight / 2);\n"
@@ -64,14 +65,14 @@ public final class JOCLConvolution2D {
             + "	const int cright = (virtualRight - 1) - right;\n"
             + "	const int ctop = top - virtualTop;\n"
             + "	const int cbottom = (virtualBottom - 1) - bottom;\n"
-            + "	const int outputPlaneSize = (inputWidth / s) * (inputHeight / s);\n"
+            + "	const int outputPlaneSize = (inputWidth / stride) * (inputHeight / stride);\n"
             + "	for (int o = 0; o < convolutionCount; ++o)\n"
             + "	{\n"
             + "		output[outputPlaneSize * o + gid] = 0;\n"
             + "	}\n"
-            + "	for (int yy = top, cy = ctop; yy <= bottom; ++yy, ++cy)\n"
+            + "	for (int yy = top, cy = ctop; yy <= bottom; yy += sparsity, ++cy)\n"
             + "	{\n"
-            + "		for (int xx = left, cx = cleft; xx <= right; ++xx, ++cx)\n"
+            + "		for (int xx = left, cx = cleft; xx <= right; xx += sparsity, ++cx)\n"
             + "		{\n"
             + "			const int inputOffset = (yy * inputWidth + xx);\n"
             + "			const int convolutionOffset = (cy * convolutionWidth + cx) * inputChannels;\n"
@@ -86,7 +87,7 @@ public final class JOCLConvolution2D {
             + "		}\n"
             + "	}\n"
             + "}";
-	
+    
 	/**
 	 * @param commandLineArguments
 	 * <br>must not be null
@@ -105,7 +106,7 @@ public final class JOCLConvolution2D {
 		final int pixelCount = imageWidth * imageHeight;
 		final int channelCount = 3;
 		final float[] input = new float[pixelCount * channelCount];
-		final int step = 2;
+		final int stride = 2;
 		final float[] convolutions = {
 				1F, 0F, 0F, 1F, 0F, 0F,
 				1F, 0F, 0F, 1F, 0F, 0F,
@@ -132,14 +133,14 @@ public final class JOCLConvolution2D {
 		final CLContext context = new CLContext(CL.CL_DEVICE_TYPE_GPU, 0);
 		final CLKernel kernel = context.createAndBuildProgram(PROGRAM_SOURCE)
 				.createKernel("convolution2D");
-		final int outputWidth = imageWidth / step;
-		final int outputHeight = imageHeight / step;
+		final int outputWidth = imageWidth / stride;
+		final int outputHeight = imageHeight / stride;
 		final int outputPixelCount = outputWidth * outputHeight;
 		final float[] output = new float[outputPixelCount * convolutionCount];
 		
 		kernel.setArg(0, context.createInputBuffer(input));
 		kernel.setArg(1, context.createInputBuffer(channelCount, imageWidth, imageHeight));
-		kernel.setArg(2, context.createInputBuffer(step));
+		kernel.setArg(2, context.createInputBuffer(1, stride));
 		kernel.setArg(3, context.createInputBuffer(convolutions));
 		kernel.setArg(4, context.createInputBuffer(convolutionCount, convolutionSize, convolutionSize));
 		kernel.setArg(5, context.createOutputBuffer(Sizeof.cl_float, output.length));
