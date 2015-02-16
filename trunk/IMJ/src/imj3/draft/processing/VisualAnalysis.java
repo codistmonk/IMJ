@@ -1,13 +1,13 @@
 package imj3.draft.processing;
 
 import static imj3.draft.segmentation.CommonSwingTools.item;
+import static imj3.draft.segmentation.CommonSwingTools.showEditDialog;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.pixel3d.MouseHandler;
-
+import imj3.draft.processing.VisualAnalysis.Session.ClassDescription;
 import imj3.draft.segmentation.CommonSwingTools;
 import imj3.draft.segmentation.CommonTools.Property;
 import imj3.draft.segmentation.ImageComponent;
@@ -41,6 +41,8 @@ import javax.swing.JTree;
 import javax.swing.SwingUtilities;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.MutableTreeNode;
+import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
 import net.sourceforge.aprog.swing.SwingTools;
@@ -136,48 +138,125 @@ public final class VisualAnalysis {
 		
 	}
 	
-	public static final void setModel(final JTree tree, final Object object) {
-		final DefaultMutableTreeNode root = new DefaultMutableTreeNode();
-		final DefaultTreeModel model = new DefaultTreeModel(root);
-		final Method[] stringGetter = { null };
-		final Map<String, Method> propertyGetters = new LinkedHashMap<>();
-		final Map<String, Method> propertySetters = new LinkedHashMap<>();
-		final List<Method> inlineLists = new ArrayList<>();
-		final Map<String, Method> nestedLists = new LinkedHashMap<>();
+	/**
+	 * @author codistmonk (creation 2015-02-16)
+	 */
+	public static final class UIScaffold implements Serializable {
 		
-		tree.setModel(model);
+		private final Object object;
 		
-		for (final Method method : object.getClass().getMethods()) {
-			for (final Annotation annotation : method.getAnnotations()) {
-				final StringGetter stringGetter0 = cast(StringGetter.class, annotation);
-				final PropertyGetter propertyGetter = cast(PropertyGetter.class, annotation);
-				final PropertySetter propertySetter = cast(PropertySetter.class, annotation);
-				final InlineList inlineList = cast(InlineList.class, annotation);
-				final NestedList nestedList = cast(NestedList.class, annotation);
-				
-				if (stringGetter0 != null) {
-					stringGetter[0] = method;
-				}
-				
-				if (propertyGetter != null) {
-					propertyGetters.put(propertyGetter.value(), method);
-				}
-				
-				if (propertySetter != null) {
-					propertySetters.put(propertySetter.value(), method);
-				}
-				
-				if (inlineList != null) {
-					inlineLists.add(method);
-				}
-				
-				if (nestedList != null) {
-					nestedLists.put(nestedList.value(), method);
+		private final Method[] stringGetter;
+		
+		private final Map<String, Method> propertyGetters;
+		
+		private final Map<String, Method> propertySetters;
+		
+		private final List<Method> inlineLists;
+		
+		private final Map<String, Method> nestedLists;
+		
+		public UIScaffold(final Object object) {
+			this.object = object;
+			this.stringGetter = new Method[1];
+			this.propertyGetters = new LinkedHashMap<>();
+			this.propertySetters = new LinkedHashMap<>();
+			this.inlineLists = new ArrayList<>();
+			this.nestedLists = new LinkedHashMap<>();
+			
+			for (final Method method : object.getClass().getMethods()) {
+				for (final Annotation annotation : method.getAnnotations()) {
+					final StringGetter stringGetter0 = cast(StringGetter.class, annotation);
+					final PropertyGetter propertyGetter = cast(PropertyGetter.class, annotation);
+					final PropertySetter propertySetter = cast(PropertySetter.class, annotation);
+					final InlineList inlineList = cast(InlineList.class, annotation);
+					final NestedList nestedList = cast(NestedList.class, annotation);
+					
+					if (stringGetter0 != null) {
+						this.stringGetter[0] = method;
+					}
+					
+					if (propertyGetter != null) {
+						this.propertyGetters.put(propertyGetter.value(), method);
+					}
+					
+					if (propertySetter != null) {
+						this.propertySetters.put(propertySetter.value(), method);
+					}
+					
+					if (inlineList != null) {
+						this.inlineLists.add(method);
+					}
+					
+					if (nestedList != null) {
+						this.nestedLists.put(nestedList.name(), method);
+					}
 				}
 			}
 		}
 		
-		if (stringGetter[0] != null) {
+		public final Object getObject() {
+			return this.object;
+		}
+		
+		public final Method getStringGetter() {
+			return this.stringGetter[0];
+		}
+		
+		public final Map<String, Method> getPropertyGetters() {
+			return this.propertyGetters;
+		}
+		
+		public final Map<String, Method> getPropertySetters() {
+			return this.propertySetters;
+		}
+		
+		public final List<Method> getInlineLists() {
+			return this.inlineLists;
+		}
+		
+		public final Map<String, Method> getNestedLists() {
+			return this.nestedLists;
+		}
+		
+		public final void edit(final String title, final Runnable actionIfOk) {
+			final List<Property> properties = new ArrayList<>();
+			
+			for (final Map.Entry<String, Method> entry : this.getPropertyGetters().entrySet()) {
+				final Method setter = this.getPropertySetters().get(entry.getKey());
+				
+				if (setter != null) {
+					properties.add(new Property(entry.getKey(), () -> {
+						try {
+							return entry.getValue().invoke(this.getObject());
+						} catch (final Exception exception) {
+							throw unchecked(exception);
+						}
+					}, string -> {
+						try {
+							return setter.invoke(this.getObject(), string);
+						} catch (final Exception exception) {
+							throw unchecked(exception);
+						}
+					}));
+				}
+			}
+			
+			showEditDialog(title, actionIfOk, properties.toArray(new Property[properties.size()]));
+		}
+		
+		private static final long serialVersionUID = -5160722477511458349L;
+		
+	}
+	
+	public static final void setModel(final JTree tree, final Object object) {
+		final DefaultMutableTreeNode root = new DefaultMutableTreeNode();
+		final DefaultTreeModel model = new DefaultTreeModel(root);
+		final UIScaffold scaffold = new UIScaffold(object);
+		
+		tree.setModel(model);
+		
+		
+		if (scaffold.getStringGetter() != null) {
 			final TreePath path = new TreePath(model.getPathToRoot(root));
 			
 			model.valueForPathChanged(path, new EditableUserObject() {
@@ -185,7 +264,7 @@ public final class VisualAnalysis {
 				@Override
 				public final String toString() {
 					try {
-						return (String) stringGetter[0].invoke(object);
+						return (String) scaffold.getStringGetter().invoke(object);
 					} catch (final Exception exception) {
 						throw Tools.unchecked(exception);
 					}
@@ -193,29 +272,9 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void edit() {
-					final List<Property> properties = new ArrayList<>();
+					final String title = "Session";
 					
-					for (final Map.Entry<String, Method> entry : propertyGetters.entrySet()) {
-						final Method setter = propertySetters.get(entry.getKey());
-						
-						if (setter != null) {
-							properties.add(new Property(entry.getKey(), () -> {
-								try {
-									return entry.getValue().invoke(object);
-								} catch (final Exception exception) {
-									throw unchecked(exception);
-								}
-							}, string -> {
-								try {
-									return setter.invoke(object, string);
-								} catch (final Exception exception) {
-									throw unchecked(exception);
-								}
-							}));
-						}
-					}
-					
-					CommonSwingTools.showEditDialog("Session", new Runnable() {
+					scaffold.edit("Session", new Runnable() {
 						
 						@Override
 						public final void run() {
@@ -223,7 +282,7 @@ public final class VisualAnalysis {
 							tree.getRootPane().validate();
 						}
 						
-					}, properties.toArray(new Property[properties.size()]));
+					});
 				}
 				
 				private static final long serialVersionUID = 3506822059086373426L;
@@ -231,10 +290,7 @@ public final class VisualAnalysis {
 			});
 		}
 		
-		Tools.debugPrint(propertyGetters.keySet());
-		Tools.debugPrint(propertySetters.keySet());
-		
-		for (final Map.Entry<String, Method> entry : nestedLists.entrySet()) {
+		for (final Map.Entry<String, Method> entry : scaffold.getNestedLists().entrySet()) {
 			model.insertNodeInto(new DefaultMutableTreeNode(entry.getKey()), root, model.getChildCount(root));
 		}
 		
@@ -265,12 +321,37 @@ public final class VisualAnalysis {
 						
 						popup.add(item("Edit...", e -> editable.edit()));
 						
-						for (final Method inlineList : inlineLists) {
-							popup.add(item("Add " + "?" + "...", e -> {}));
+						for (final Method inlineList : scaffold.getInlineLists()) {
+							popup.add(item("Add " + inlineList.getAnnotation(InlineList.class).element() + "...", e -> {
+								
+							}));
 						}
 						
-						for (final Map.Entry<String, Method> entry : nestedLists.entrySet()) {
-							popup.add(item("Add " + "?" + "...", e -> {}));
+						for (final Map.Entry<String, Method> entry : scaffold.getNestedLists().entrySet()) {
+							popup.add(item("Add " + entry.getValue().getAnnotation(NestedList.class).element() + "...", e -> {
+								final ClassDescription newClassDescription = new ClassDescription();
+								final UIScaffold newClassDescriptionScaffold = new UIScaffold(newClassDescription);
+								
+								newClassDescriptionScaffold.edit("New class", new Runnable() {
+									
+									@Override
+									public final void run() {
+										final MutableTreeNode classesNode = (MutableTreeNode) model.getChild(root, 0);
+										
+										model.insertNodeInto(new DefaultMutableTreeNode(new EditableUserObject() {
+
+											@Override
+											public final void edit() {
+												model.valueForPathChanged(new TreePath(model.getPathToRoot(classesNode)), this);
+											}
+											
+											private static final long serialVersionUID = -3105991721448384700L;
+											
+										}),classesNode, model.getChildCount(classesNode));
+									}
+									
+								});
+							}));
 						}
 						
 						popup.show(tree, event.getX(), event.getY());
@@ -359,7 +440,7 @@ public final class VisualAnalysis {
 			return this;
 		}
 		
-		@NestedList("classes")
+		@NestedList(name="classes", element="class")
 		public final List<ClassDescription> getClassDescriptions() {
 			return this.classDescriptions;
 		}
@@ -371,9 +452,9 @@ public final class VisualAnalysis {
 		 */
 		public static final class ClassDescription implements Serializable {
 			
-			private String name;
+			private String name = "class";
 			
-			private int label;
+			private int label = 0xFF000000;
 			
 			@StringGetter
 			@PropertyGetter("name")
@@ -405,7 +486,7 @@ public final class VisualAnalysis {
 			
 			@PropertySetter("label")
 			public final ClassDescription setLabel(final String labelAsString) {
-				return this.setLabel(Integer.parseInt(labelAsString.substring(1), 16));
+				return this.setLabel((int) Long.parseLong(labelAsString.substring(1), 16));
 			}
 			
 			private static final long serialVersionUID = 4974707407567297906L;
@@ -448,6 +529,8 @@ public final class VisualAnalysis {
 	@Retention(RetentionPolicy.RUNTIME)
 	public static abstract @interface InlineList {
 		
+		public abstract String element();
+		
 	}
 	
 	/**
@@ -456,7 +539,9 @@ public final class VisualAnalysis {
 	@Retention(RetentionPolicy.RUNTIME)
 	public static abstract @interface NestedList {
 		
-		public abstract String value();
+		public abstract String name();
+		
+		public abstract String element();
 		
 	}
 	
