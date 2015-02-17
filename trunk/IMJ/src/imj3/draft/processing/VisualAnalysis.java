@@ -261,11 +261,10 @@ public final class VisualAnalysis {
 		
 		tree.setModel(model);
 		
-		
 		if (scaffold.getStringGetter() != null) {
 			final TreePath path = new TreePath(model.getPathToRoot(root));
 			
-			model.valueForPathChanged(path, new UserObject(scaffold, rootEdtiTitle, tree, root));
+			model.valueForPathChanged(path, new UserObject(scaffold, rootEdtiTitle, tree, root, false));
 		}
 		
 		for (final Map.Entry<String, Method> entry : scaffold.getNestedLists().entrySet()) {
@@ -299,6 +298,10 @@ public final class VisualAnalysis {
 						
 						popup.add(item("Edit...", e -> editable.edit()));
 						
+						if (editable.isRemovable()) {
+							popup.add(item("Remove", e -> model.removeNodeFromParent((MutableTreeNode) path.getLastPathComponent())));
+						}
+						
 						for (final Method inlineList : scaffold.getInlineLists()) {
 							final InlineList annotation = inlineList.getAnnotation(InlineList.class);
 							
@@ -323,6 +326,7 @@ public final class VisualAnalysis {
 			
 			final void addListItem(final JPopupMenu popup, final JTree tree, final MutableTreeNode nestingNode, final String element, final Class<?> elementClass) {
 				final DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+				
 				popup.add(item("Add " + element + "...", e -> {
 					final UIScaffold newElementScaffold = new UIScaffold(newInstanceOf(elementClass));
 					
@@ -332,7 +336,7 @@ public final class VisualAnalysis {
 						public final void run() {
 							final DefaultMutableTreeNode newElementNode = new DefaultMutableTreeNode();
 							
-							newElementNode.setUserObject(new UserObject(newElementScaffold, element, tree, newElementNode));
+							newElementNode.setUserObject(new UserObject(newElementScaffold, element, tree, newElementNode, true));
 							
 							model.insertNodeInto(newElementNode, nestingNode, model.getChildCount(nestingNode));
 						}
@@ -357,12 +361,13 @@ public final class VisualAnalysis {
 		
 		private final Runnable afterEdit;
 		
-		public UserObject(final UIScaffold uiScaffold, final String editTitle, final JTree tree, final TreeNode node) {
+		private final boolean removable;
+		
+		public UserObject(final UIScaffold uiScaffold, final String editTitle, final JTree tree, final TreeNode node, final boolean removable) {
 			this.uiScaffold = uiScaffold;
 			this.editTitle = editTitle;
 			final DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
 			final TreePath path = new TreePath(model.getPathToRoot(node));
-			
 			this.afterEdit = new Runnable() {
 				
 				@Override
@@ -372,6 +377,12 @@ public final class VisualAnalysis {
 				}
 				
 			};
+			this.removable = removable;
+		}
+		
+		@Override
+		public final boolean isRemovable() {
+			return this.removable;
 		}
 		
 		@Override
@@ -398,6 +409,8 @@ public final class VisualAnalysis {
 	public static abstract interface Editable extends Serializable {
 		
 		public abstract void edit();
+		
+		public abstract boolean isRemovable();
 		
 	}
 	
