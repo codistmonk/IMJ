@@ -71,18 +71,21 @@ public final class CommonSwingTools {
 	public static final void setModel(final JTree tree, final Object object, final String rootEdtiTitle) {
 		final DefaultMutableTreeNode root = new DefaultMutableTreeNode();
 		final DefaultTreeModel model = new DefaultTreeModel(root);
-		final UIScaffold scaffold = new UIScaffold(object);
 		
 		tree.setModel(model);
 		
-		if (scaffold.getStringGetter() != null) {
-			final TreePath path = new TreePath(model.getPathToRoot(root));
+		{
+			final UIScaffold scaffold = new UIScaffold(object);
 			
-			model.valueForPathChanged(path, new UserObject(scaffold, rootEdtiTitle, tree, root, false));
-		}
-		
-		for (final Map.Entry<String, Method> entry : scaffold.getNestedLists().entrySet()) {
-			model.insertNodeInto(new DefaultMutableTreeNode(entry.getKey()), root, model.getChildCount(root));
+			if (scaffold.getStringGetter() != null) {
+				final TreePath path = new TreePath(model.getPathToRoot(root));
+				
+				model.valueForPathChanged(path, new UserObject(scaffold, rootEdtiTitle, tree, root, false));
+			}
+			
+			for (final Map.Entry<String, Method> entry : scaffold.getNestedLists().entrySet()) {
+				model.insertNodeInto(new DefaultMutableTreeNode(entry.getKey()), root, model.getChildCount(root));
+			}
 		}
 		
 		new MouseHandler(null) {
@@ -105,14 +108,15 @@ public final class CommonSwingTools {
 			private final void mouseUsed(final MouseEvent event) {
 				if (event.isPopupTrigger()) {
 					final TreePath path = tree.getPathForLocation(event.getX(), event.getY());
-					final Editable editable = path == null ? null : cast(Editable.class, ((DefaultMutableTreeNode) path.getLastPathComponent()).getUserObject());
+					final UserObject userObject = path == null ? null : cast(UserObject.class, ((DefaultMutableTreeNode) path.getLastPathComponent()).getUserObject());
 					
-					if (editable != null) {
+					if (userObject != null) {
+						final UIScaffold scaffold = userObject.getUIScaffold();
 						final JPopupMenu popup = new JPopupMenu();
 						
-						popup.add(item("Edit...", e -> editable.edit()));
+						popup.add(item("Edit...", e -> userObject.edit()));
 						
-						if (editable.isRemovable()) {
+						if (userObject.isRemovable()) {
 							popup.add(item("Remove", e -> model.removeNodeFromParent((MutableTreeNode) path.getLastPathComponent())));
 						}
 						
@@ -439,6 +443,18 @@ public final class CommonSwingTools {
 			this.removable = removable;
 		}
 		
+		public final UIScaffold getUIScaffold() {
+			return this.uiScaffold;
+		}
+		
+		public final String getEditTitle() {
+			return this.editTitle;
+		}
+		
+		public final Runnable getAfterEdit() {
+			return this.afterEdit;
+		}
+		
 		@Override
 		public final boolean isRemovable() {
 			return this.removable;
@@ -446,13 +462,16 @@ public final class CommonSwingTools {
 		
 		@Override
 		public final void edit() {
-			this.uiScaffold.edit(this.editTitle, this.afterEdit);
+			this.getUIScaffold().edit(this.getEditTitle(), this.getAfterEdit());
 		}
 		
 		@Override
 		public final String toString() {
 			try {
-				return (String) this.uiScaffold.getStringGetter().invoke(this.uiScaffold.getObject());
+				final UIScaffold scaffold = this.getUIScaffold();
+				final Method stringGetter = scaffold.getStringGetter();
+				
+				return stringGetter != null ? (String) stringGetter.invoke(scaffold.getObject()) : scaffold.getObject().toString();
 			} catch (final Exception exception) {
 				throw Tools.unchecked(exception);
 			}
