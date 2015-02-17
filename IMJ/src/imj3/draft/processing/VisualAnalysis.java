@@ -6,9 +6,7 @@ import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.pixel3d.MouseHandler;
-
 import imj3.draft.segmentation.CommonTools.Property;
 import imj3.draft.segmentation.ImageComponent;
 import imj3.tools.AwtImage2D;
@@ -248,6 +246,14 @@ public final class VisualAnalysis {
 		
 	}
 	
+	public static final <T> T newInstanceOf(final Class<T> cls) {
+		try {
+			return cls.newInstance();
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
 	public static final void setModel(final JTree tree, final Object object, final String rootEdtiTitle) {
 		final DefaultMutableTreeNode root = new DefaultMutableTreeNode();
 		final DefaultTreeModel model = new DefaultTreeModel(root);
@@ -294,41 +300,45 @@ public final class VisualAnalysis {
 						popup.add(item("Edit...", e -> editable.edit()));
 						
 						for (final Method inlineList : scaffold.getInlineLists()) {
-							popup.add(item("Add " + inlineList.getAnnotation(InlineList.class).element() + "...", e -> {
-								
-							}));
+							final InlineList annotation = inlineList.getAnnotation(InlineList.class);
+							
+							this.addListItem(popup, tree, root, annotation.element(), annotation.elementClass());
 						}
 						
-						for (final Map.Entry<String, Method> entry : scaffold.getNestedLists().entrySet()) {
-							final NestedList annotation = entry.getValue().getAnnotation(NestedList.class);
-							final String element = annotation.element();
+						{
+							int i = -1;
 							
-							popup.add(item("Add " + element + "...", e -> {
-								try {
-									final UIScaffold newClassDescriptionScaffold = new UIScaffold(annotation.elementClass().newInstance());
-									
-									newClassDescriptionScaffold.edit("New " + element, new Runnable() {
-										
-										@Override
-										public final void run() {
-											final MutableTreeNode classesNode = (MutableTreeNode) model.getChild(root, 0);
-											final DefaultMutableTreeNode classNode = new DefaultMutableTreeNode();
-											
-											classNode.setUserObject(new UserObject(newClassDescriptionScaffold, element, tree, classNode));
-											
-											model.insertNodeInto(classNode, classesNode, model.getChildCount(classesNode));
-										}
-										
-									});
-								} catch (final Exception exception) {
-									throw unchecked(exception);
-								}
-							}));
+							for (final Map.Entry<String, Method> entry : scaffold.getNestedLists().entrySet()) {
+								final MutableTreeNode nestingNode = (MutableTreeNode) model.getChild(root, ++i);
+								final NestedList annotation = entry.getValue().getAnnotation(NestedList.class);
+								
+								this.addListItem(popup, tree, nestingNode, annotation.element(), annotation.elementClass());
+							}
 						}
 						
 						popup.show(tree, event.getX(), event.getY());
 					}
 				}
+			}
+			
+			final void addListItem(final JPopupMenu popup, final JTree tree, final MutableTreeNode nestingNode, final String element, final Class<?> elementClass) {
+				final DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+				popup.add(item("Add " + element + "...", e -> {
+					final UIScaffold newElementScaffold = new UIScaffold(newInstanceOf(elementClass));
+					
+					newElementScaffold.edit("New " + element, new Runnable() {
+						
+						@Override
+						public final void run() {
+							final DefaultMutableTreeNode newElementNode = new DefaultMutableTreeNode();
+							
+							newElementNode.setUserObject(new UserObject(newElementScaffold, element, tree, newElementNode));
+							
+							model.insertNodeInto(newElementNode, nestingNode, model.getChildCount(nestingNode));
+						}
+						
+					});
+				}));
 			}
 			
 			private static final long serialVersionUID = -475200304537897055L;
@@ -549,7 +559,7 @@ public final class VisualAnalysis {
 		
 		public abstract String element();
 		
-		public abstract String elementSupplier();
+		public abstract Class<?> elementClass();
 		
 	}
 	
