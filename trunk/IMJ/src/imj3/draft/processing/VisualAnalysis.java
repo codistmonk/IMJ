@@ -6,9 +6,9 @@ import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj2.pixel3d.MouseHandler;
-import imj3.draft.processing.VisualAnalysis.Session.ClassDescription;
-import imj3.draft.segmentation.CommonSwingTools;
+
 import imj3.draft.segmentation.CommonTools.Property;
 import imj3.draft.segmentation.ImageComponent;
 import imj3.tools.AwtImage2D;
@@ -30,7 +30,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.function.Supplier;
 import java.util.prefs.Preferences;
 
 import javax.swing.JLabel;
@@ -99,7 +98,7 @@ public final class VisualAnalysis {
 			this.tree = new JTree();
 			this.mainSplitPane = horizontalSplit(scrollable(this.tree), scrollable(new JLabel("Drop file here")));
 			
-			setModel(this.tree, context.setSession(new Session()).getSession());
+			setModel(this.tree, context.setSession(new Session()).getSession(), "Session");
 			
 			final JToolBar toolBar = new JToolBar();
 			
@@ -249,7 +248,7 @@ public final class VisualAnalysis {
 		
 	}
 	
-	public static final void setModel(final JTree tree, final Object object) {
+	public static final void setModel(final JTree tree, final Object object, final String rootEdtiTitle) {
 		final DefaultMutableTreeNode root = new DefaultMutableTreeNode();
 		final DefaultTreeModel model = new DefaultTreeModel(root);
 		final UIScaffold scaffold = new UIScaffold(object);
@@ -260,7 +259,7 @@ public final class VisualAnalysis {
 		if (scaffold.getStringGetter() != null) {
 			final TreePath path = new TreePath(model.getPathToRoot(root));
 			
-			model.valueForPathChanged(path, new UserObject(scaffold, "Session", tree, root));
+			model.valueForPathChanged(path, new UserObject(scaffold, rootEdtiTitle, tree, root));
 		}
 		
 		for (final Map.Entry<String, Method> entry : scaffold.getNestedLists().entrySet()) {
