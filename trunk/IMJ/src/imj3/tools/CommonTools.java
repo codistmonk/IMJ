@@ -1,4 +1,4 @@
-package imj3.draft.segmentation;
+package imj3.tools;
 
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
