@@ -3,6 +3,7 @@ package imj3.draft.processing;
 import static imj3.tools.CommonSwingTools.setModel;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
+import static net.sourceforge.aprog.tools.Tools.join;
 import imj3.draft.segmentation.ImageComponent;
 import imj3.tools.AwtImage2D;
 import imj3.tools.CommonSwingTools.NestedList;
@@ -13,11 +14,13 @@ import imj3.tools.CommonSwingTools.StringGetter;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Rectangle;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.prefs.Preferences;
@@ -31,6 +34,7 @@ import javax.swing.SwingUtilities;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-02-13)
@@ -175,6 +179,8 @@ public final class VisualAnalysis {
 		
 		private final List<ClassDescription> classDescriptions = new ArrayList<>();
 		
+		private final List<TrainingField> trainingFields = new ArrayList<>();
+		
 		@StringGetter
 		@PropertyGetter("name")
 		public final String getName() {
@@ -191,6 +197,11 @@ public final class VisualAnalysis {
 		@NestedList(name="classes", element="class", elementClass=ClassDescription.class)
 		public final List<ClassDescription> getClassDescriptions() {
 			return this.classDescriptions;
+		}
+		
+		@NestedList(name="training", element="training field", elementClass=TrainingField.class)
+		public final List<TrainingField> getTrainingFields() {
+			return this.trainingFields;
 		}
 		
 		private static final long serialVersionUID = -4539259556658072410L;
@@ -238,6 +249,54 @@ public final class VisualAnalysis {
 			}
 			
 			private static final long serialVersionUID = 4974707407567297906L;
+			
+		}
+		
+		/**
+		 * @author codistmonk (creation 2015-02-17)
+		 */
+		public static final class TrainingField implements Serializable {
+			
+			private String imagePath = "";
+			
+			private final Rectangle bounds = new Rectangle();
+			
+			@PropertyGetter("image")
+			public final String getImagePath() {
+				return this.imagePath;
+			}
+			
+			@PropertySetter("image")
+			public final TrainingField setImagePath(final String imagePath) {
+				this.imagePath = imagePath;
+				
+				return this;
+			}
+			
+			public final Rectangle getBounds() {
+				return this.bounds;
+			}
+			
+			@PropertyGetter("bounds")
+			public final String getBoundsAsString() {
+				return join(",", this.getBounds().x, this.getBounds().y, this.getBounds().width, this.getBounds().height);
+			}
+			
+			@PropertySetter("bounds")
+			public final TrainingField setBounds(final String boundsAsString) {
+				final int[] bounds = Arrays.stream(boundsAsString.split(",")).mapToInt(Integer::parseInt).toArray();
+				
+				this.getBounds().setBounds(bounds[0], bounds[1], bounds[2], bounds[3]);
+				
+				return this;
+			}
+			
+			@Override
+			public final String toString() {
+				return new File(this.getImagePath()).getName() + "[" + this.getBoundsAsString() + "]";
+			}
+			
+			private static final long serialVersionUID = 847822079141878928L;
 			
 		}
 		
