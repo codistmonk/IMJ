@@ -30,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.prefs.Preferences;
 
 import javax.swing.JLabel;
@@ -259,7 +260,7 @@ public final class VisualAnalysis {
 		if (scaffold.getStringGetter() != null) {
 			final TreePath path = new TreePath(model.getPathToRoot(root));
 			
-			model.valueForPathChanged(path, new SessionItem(scaffold, "Session", tree, root));
+			model.valueForPathChanged(path, new UserObject(scaffold, "Session", tree, root));
 		}
 		
 		for (final Map.Entry<String, Method> entry : scaffold.getNestedLists().entrySet()) {
@@ -286,7 +287,7 @@ public final class VisualAnalysis {
 			private final void mouseUsed(final MouseEvent event) {
 				if (event.isPopupTrigger()) {
 					final TreePath path = tree.getPathForLocation(event.getX(), event.getY());
-					final EditableUserObject editable = path == null ? null : cast(EditableUserObject.class, ((DefaultMutableTreeNode) path.getLastPathComponent()).getUserObject());
+					final Editable editable = path == null ? null : cast(Editable.class, ((DefaultMutableTreeNode) path.getLastPathComponent()).getUserObject());
 					
 					if (editable != null) {
 						final JPopupMenu popup = new JPopupMenu();
@@ -300,20 +301,29 @@ public final class VisualAnalysis {
 						}
 						
 						for (final Map.Entry<String, Method> entry : scaffold.getNestedLists().entrySet()) {
-							popup.add(item("Add " + entry.getValue().getAnnotation(NestedList.class).element() + "...", e -> {
-								final ClassDescription newClassDescription = new ClassDescription();
-								final UIScaffold newClassDescriptionScaffold = new UIScaffold(newClassDescription);
-								
-								newClassDescriptionScaffold.edit("New class", new Runnable() {
+							final NestedList annotation = entry.getValue().getAnnotation(NestedList.class);
+							final String element = annotation.element();
+							
+							popup.add(item("Add " + element + "...", e -> {
+								try {
+									final UIScaffold newClassDescriptionScaffold = new UIScaffold(annotation.elementClass().newInstance());
 									
-									@Override
-									public final void run() {
-										final MutableTreeNode classesNode = (MutableTreeNode) model.getChild(root, 0);
+									newClassDescriptionScaffold.edit("New " + element, new Runnable() {
 										
-										model.insertNodeInto(new DefaultMutableTreeNode(new SessionItem(newClassDescriptionScaffold, "Class", tree, classesNode)), classesNode, model.getChildCount(classesNode));
-									}
-									
-								});
+										@Override
+										public final void run() {
+											final MutableTreeNode classesNode = (MutableTreeNode) model.getChild(root, 0);
+											final DefaultMutableTreeNode classNode = new DefaultMutableTreeNode();
+											
+											classNode.setUserObject(new UserObject(newClassDescriptionScaffold, element, tree, classNode));
+											
+											model.insertNodeInto(classNode, classesNode, model.getChildCount(classesNode));
+										}
+										
+									});
+								} catch (final Exception exception) {
+									throw unchecked(exception);
+								}
 							}));
 						}
 						
@@ -330,7 +340,7 @@ public final class VisualAnalysis {
 	/**
 	 * @author codistmonk (creation 2015-02-17)
 	 */
-	public static final class SessionItem implements EditableUserObject {
+	public static final class UserObject implements Editable {
 		
 		private final UIScaffold uiScaffold;
 		
@@ -338,7 +348,7 @@ public final class VisualAnalysis {
 		
 		private final Runnable afterEdit;
 		
-		public SessionItem(final UIScaffold uiScaffold, final String editTitle, final JTree tree, final TreeNode node) {
+		public UserObject(final UIScaffold uiScaffold, final String editTitle, final JTree tree, final TreeNode node) {
 			this.uiScaffold = uiScaffold;
 			this.editTitle = editTitle;
 			final DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
@@ -348,7 +358,7 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void run() {
-					model.valueForPathChanged(path, SessionItem.this);
+					model.valueForPathChanged(path, UserObject.this);
 					tree.getRootPane().validate();
 				}
 				
@@ -376,7 +386,7 @@ public final class VisualAnalysis {
 	/**
 	 * @author codistmonk (creation 2015-02-16)
 	 */
-	public static abstract interface EditableUserObject extends Serializable {
+	public static abstract interface Editable extends Serializable {
 		
 		public abstract void edit();
 		
@@ -449,7 +459,7 @@ public final class VisualAnalysis {
 			return this;
 		}
 		
-		@NestedList(name="classes", element="class")
+		@NestedList(name="classes", element="class", elementClass=ClassDescription.class)
 		public final List<ClassDescription> getClassDescriptions() {
 			return this.classDescriptions;
 		}
@@ -540,6 +550,8 @@ public final class VisualAnalysis {
 		
 		public abstract String element();
 		
+		public abstract String elementSupplier();
+		
 	}
 	
 	/**
@@ -551,6 +563,8 @@ public final class VisualAnalysis {
 		public abstract String name();
 		
 		public abstract String element();
+		
+		public abstract Class<?> elementClass();
 		
 	}
 	
