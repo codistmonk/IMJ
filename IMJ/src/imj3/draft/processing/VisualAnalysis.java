@@ -1,15 +1,14 @@
 package imj3.draft.processing;
 
-import static imj3.draft.segmentation.CommonSwingTools.setModel;
+import static imj3.tools.CommonSwingTools.setModel;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
-
-import imj3.draft.segmentation.CommonSwingTools.NestedList;
-import imj3.draft.segmentation.CommonSwingTools.PropertyGetter;
-import imj3.draft.segmentation.CommonSwingTools.PropertySetter;
-import imj3.draft.segmentation.CommonSwingTools.StringGetter;
 import imj3.draft.segmentation.ImageComponent;
 import imj3.tools.AwtImage2D;
+import imj3.tools.CommonSwingTools.NestedList;
+import imj3.tools.CommonSwingTools.PropertyGetter;
+import imj3.tools.CommonSwingTools.PropertySetter;
+import imj3.tools.CommonSwingTools.StringGetter;
 
 import java.awt.BorderLayout;
 import java.awt.Component;

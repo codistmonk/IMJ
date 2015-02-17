@@ -1,13 +1,13 @@
-package imj3.draft.segmentation;
+package imj3.tools;
 
-import static imj3.draft.segmentation.CommonTools.newInstanceOf;
+import static imj3.tools.CommonTools.newInstanceOf;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import imj2.pixel3d.MouseHandler;
 
-import imj3.draft.segmentation.CommonTools.Property;
+import imj3.tools.CommonTools.Property;
 
 import java.awt.Component;
 import java.awt.Composite;
