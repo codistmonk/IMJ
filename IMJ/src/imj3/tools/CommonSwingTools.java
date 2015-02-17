@@ -4,16 +4,17 @@ import static imj3.tools.CommonTools.newInstanceOf;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.pixel3d.MouseHandler;
-
 import imj3.tools.CommonTools.Property;
+
 
 import java.awt.Component;
 import java.awt.Composite;
 import java.awt.CompositeContext;
+import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Window;
@@ -31,15 +32,19 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
+
 import javax.swing.AbstractAction;
 import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
@@ -54,6 +59,7 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
+
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -225,6 +231,12 @@ public final class CommonSwingTools {
 		result.add(component, c);
 		
 		return result;
+	}
+	
+	public static final <C extends Component> C limitHeight(final C component) {
+		component.setMaximumSize(new Dimension(component.getMaximumSize().width, component.getPreferredSize().height));
+		
+		return component;
 	}
 	
 	public static final JMenuItem item(final String text, final ActionListener action) {

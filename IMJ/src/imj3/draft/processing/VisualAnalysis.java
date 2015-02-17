@@ -1,9 +1,12 @@
 package imj3.draft.processing;
 
+import static imj3.tools.CommonSwingTools.limitHeight;
 import static imj3.tools.CommonSwingTools.setModel;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
+import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
 import static net.sourceforge.aprog.tools.Tools.join;
+
 import imj3.draft.segmentation.ImageComponent;
 import imj3.tools.AwtImage2D;
 import imj3.tools.CommonSwingTools.NestedList;
@@ -17,6 +20,8 @@ import java.awt.Dimension;
 import java.awt.Rectangle;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -25,7 +30,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.prefs.Preferences;
 
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JToolBar;
@@ -34,7 +43,6 @@ import javax.swing.SwingUtilities;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-02-13)
@@ -75,6 +83,8 @@ public final class VisualAnalysis {
 	 */
 	public static final class MainPanel extends JPanel {
 		
+		private final JComboBox<String> imageSelector;
+		
 		private final JTree tree;
 		
 		private final JSplitPane mainSplitPane;
@@ -82,8 +92,9 @@ public final class VisualAnalysis {
 		public MainPanel(final Context context) {
 			super(new BorderLayout());
 			
+			this.imageSelector = new JComboBox<>(/*array("-", "Open...")*/);
 			this.tree = new JTree();
-			this.mainSplitPane = horizontalSplit(scrollable(this.tree), scrollable(new JLabel("Drop file here")));
+			this.mainSplitPane = horizontalSplit(verticalBox(limitHeight(this.imageSelector), scrollable(this.tree)), scrollable(new JLabel("Drop file here")));
 			
 			setModel(this.tree, context.setSession(new Session()).getSession(), "Session");
 			
@@ -94,15 +105,54 @@ public final class VisualAnalysis {
 			this.add(toolBar, BorderLayout.NORTH);
 			this.add(this.mainSplitPane, BorderLayout.CENTER);
 			
-			this.mainSplitPane.getRightComponent().setDropTarget(new DropTarget() {
+			{
+				this.imageSelector.setRenderer(new DefaultListCellRenderer() {
+					
+					@Override
+					public final Component getListCellRendererComponent(final JList<?> list,
+							final Object value, final int index, final boolean isSelected,
+							final boolean cellHasFocus) {
+						final Component result = super.getListCellRendererComponent(list, value, index, isSelected,
+								cellHasFocus);
+						
+						if (index < 0 || isSelected) {
+							this.setText(new File(this.getText()).getName());
+						}
+						
+						return result;
+					}
+					
+					private static final long serialVersionUID = -3014056515590258107L;
+					
+				});
+				this.imageSelector.addActionListener(new ActionListener() {
+					
+					@Override
+					public final void actionPerformed(final ActionEvent event) {
+						final int n = imageSelector.getItemCount();
+						final int selectedIndex = imageSelector.getSelectedIndex();
+						
+						if (selectedIndex < n - IMAGE_SELECTOR_RESERVED_SLOTS) {
+							context.setImageFile(new File(imageSelector.getSelectedItem().toString()));
+						} else if (selectedIndex == n - 1) {
+							
+						}
+					}
+					
+				});
+			}
+			
+			this.setDropTarget(new DropTarget() {
 				
 				@Override
 				public final synchronized void drop(final DropTargetDropEvent event) {
 					final File file = SwingTools.getFiles(event).get(0);
 					
-					context.setImageFile(file);
-					
-					preferences.put(IMAGE_FILE_PATH, file.getPath());
+					if (file.getName().toLowerCase(Locale.ENGLISH).endsWith(".xml")) {
+						
+					} else {
+						context.setImageFile(file);
+					}
 				}
 				
 				/**
@@ -117,11 +167,21 @@ public final class VisualAnalysis {
 			context.setMainPanel(this);
 		}
 		
+		public final JComboBox<String> getImageSelector() {
+			return this.imageSelector;
+		}
+		
+		public final JTree getTree() {
+			return this.tree;
+		}
+		
 		public final void setContents(final Component component) {
 			this.mainSplitPane.setRightComponent(scrollable(component));
 		}
 		
 		private static final long serialVersionUID = 2173077945563031333L;
+		
+		public static final int IMAGE_SELECTOR_RESERVED_SLOTS = 0/*2*/;
 		
 	}
 	
@@ -162,14 +222,28 @@ public final class VisualAnalysis {
 			if (imageFile.isFile()) {
 				this.getMainPanel().setContents(new ImageComponent(AwtImage2D.awtRead(imageFile.getPath())));
 				
+				final JComboBox<String> imageSelector = this.getMainPanel().getImageSelector();
+				final DefaultComboBoxModel<String> model = (DefaultComboBoxModel<String>) imageSelector.getModel();
+				
+				model.insertElementAt(imageFile.getPath(), 0);
+				
+				for (int i = model.getSize() - MainPanel.IMAGE_SELECTOR_RESERVED_SLOTS - 1; 0 < i; --i) {
+					if (model.getElementAt(i).equals(imageFile.getPath())) {
+						model.removeElementAt(i);
+					}
+				}
+				imageSelector.setSelectedIndex(0);
+				
 				this.imageFile = imageFile;
+				
+				preferences.put(IMAGE_FILE_PATH, imageFile.getPath());
 			}
 		}
 		
 		private static final long serialVersionUID = -2487965125442868238L;
 		
 	}
-		
+	
 	/**
 	 * @author codistmonk (creation 2015-02-16)
 	 */
