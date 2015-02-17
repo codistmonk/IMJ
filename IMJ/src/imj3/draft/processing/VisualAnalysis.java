@@ -259,35 +259,7 @@ public final class VisualAnalysis {
 		if (scaffold.getStringGetter() != null) {
 			final TreePath path = new TreePath(model.getPathToRoot(root));
 			
-			model.valueForPathChanged(path, new EditableUserObject() {
-				
-				@Override
-				public final String toString() {
-					try {
-						return (String) scaffold.getStringGetter().invoke(object);
-					} catch (final Exception exception) {
-						throw Tools.unchecked(exception);
-					}
-				}
-				
-				@Override
-				public final void edit() {
-					final String title = "Session";
-					
-					scaffold.edit("Session", new Runnable() {
-						
-						@Override
-						public final void run() {
-							model.valueForPathChanged(path, root.getUserObject());
-							tree.getRootPane().validate();
-						}
-						
-					});
-				}
-				
-				private static final long serialVersionUID = 3506822059086373426L;
-				
-			});
+			model.valueForPathChanged(path, new SessionItem(scaffold, "Session", tree, root));
 		}
 		
 		for (final Map.Entry<String, Method> entry : scaffold.getNestedLists().entrySet()) {
@@ -338,16 +310,7 @@ public final class VisualAnalysis {
 									public final void run() {
 										final MutableTreeNode classesNode = (MutableTreeNode) model.getChild(root, 0);
 										
-										model.insertNodeInto(new DefaultMutableTreeNode(new EditableUserObject() {
-
-											@Override
-											public final void edit() {
-												model.valueForPathChanged(new TreePath(model.getPathToRoot(classesNode)), this);
-											}
-											
-											private static final long serialVersionUID = -3105991721448384700L;
-											
-										}),classesNode, model.getChildCount(classesNode));
+										model.insertNodeInto(new DefaultMutableTreeNode(new SessionItem(newClassDescriptionScaffold, "Class", tree, classesNode)), classesNode, model.getChildCount(classesNode));
 									}
 									
 								});
@@ -362,6 +325,52 @@ public final class VisualAnalysis {
 			private static final long serialVersionUID = -475200304537897055L;
 			
 		}.addTo(tree);
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-17)
+	 */
+	public static final class SessionItem implements EditableUserObject {
+		
+		private final UIScaffold uiScaffold;
+		
+		private final String editTitle;
+		
+		private final Runnable afterEdit;
+		
+		public SessionItem(final UIScaffold uiScaffold, final String editTitle, final JTree tree, final TreeNode node) {
+			this.uiScaffold = uiScaffold;
+			this.editTitle = editTitle;
+			final DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+			final TreePath path = new TreePath(model.getPathToRoot(node));
+			
+			this.afterEdit = new Runnable() {
+				
+				@Override
+				public final void run() {
+					model.valueForPathChanged(path, SessionItem.this);
+					tree.getRootPane().validate();
+				}
+				
+			};
+		}
+		
+		@Override
+		public final void edit() {
+			this.uiScaffold.edit(this.editTitle, this.afterEdit);
+		}
+		
+		@Override
+		public final String toString() {
+			try {
+				return (String) this.uiScaffold.getStringGetter().invoke(this.uiScaffold.getObject());
+			} catch (final Exception exception) {
+				throw Tools.unchecked(exception);
+			}
+		}
+		
+		private static final long serialVersionUID = 7406734693107943367L;
+		
 	}
 	
 	/**
