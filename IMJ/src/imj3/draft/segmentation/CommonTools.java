@@ -1,5 +1,7 @@
 package imj3.draft.segmentation;
 
+import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.Collections;
@@ -36,6 +38,14 @@ public final class CommonTools {
 	public static final <T> T getSharedProperty(final Object object, final String key,
 			final Function<? super String, ? extends Object> mappingIfAbsent) {
 		return (T) sharedProperties.computeIfAbsent(object, o -> new HashMap<>()).computeIfAbsent(key, mappingIfAbsent);
+	}
+	
+	public static final <T> T newInstanceOf(final Class<T> cls) {
+		try {
+			return cls.newInstance();
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
 	}
 	
 	public static final Iterable<int[]> cartesian(final int... minMaxes) {
