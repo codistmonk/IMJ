@@ -1,12 +1,14 @@
 package imj3.draft.processing;
 
+import static imj3.tools.AwtImage2D.awtRead;
 import static imj3.tools.CommonSwingTools.limitHeight;
 import static imj3.tools.CommonSwingTools.setModel;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
+import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.join;
-
+import imj2.tools.Canvas;
 import imj3.draft.segmentation.ImageComponent;
 import imj3.tools.AwtImage2D;
 import imj3.tools.CommonSwingTools.NestedList;
@@ -15,6 +17,7 @@ import imj3.tools.CommonSwingTools.PropertySetter;
 import imj3.tools.CommonSwingTools.StringGetter;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Rectangle;
@@ -22,6 +25,7 @@ import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -43,6 +47,7 @@ import javax.swing.SwingUtilities;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-02-13)
@@ -129,11 +134,11 @@ public final class VisualAnalysis {
 					
 					@Override
 					public final void actionPerformed(final ActionEvent event) {
-						final int n = imageSelector.getItemCount();
-						final int selectedIndex = imageSelector.getSelectedIndex();
+						final int n = MainPanel.this.getImageSelector().getItemCount();
+						final int selectedIndex = MainPanel.this.getImageSelector().getSelectedIndex();
 						
 						if (selectedIndex < n - IMAGE_SELECTOR_RESERVED_SLOTS) {
-							context.setImageFile(new File(imageSelector.getSelectedItem().toString()));
+							context.setImageFile(new File(MainPanel.this.getImageSelector().getSelectedItem().toString()));
 						} else if (selectedIndex == n - 1) {
 							
 						}
@@ -192,9 +197,17 @@ public final class VisualAnalysis {
 		
 		private MainPanel mainPanel;
 		
-		private Session session;
+		private File sessionDirectory = new File("");
 		
 		private File imageFile;
+		
+		private Session session;
+		
+		private BufferedImage image;
+		
+		private final Canvas groundTruth = new Canvas();
+		
+		private final Canvas classification = new Canvas();
 		
 		public final MainPanel getMainPanel() {
 			return this.mainPanel;
@@ -202,6 +215,16 @@ public final class VisualAnalysis {
 		
 		public final void setMainPanel(final MainPanel mainPanel) {
 			this.mainPanel = mainPanel;
+		}
+		
+		public final File getSessionDirectory() {
+			return this.sessionDirectory;
+		}
+		
+		public final Context setSessionDirectory(final File sessionDirectory) {
+			this.sessionDirectory = sessionDirectory;
+			
+			return this;
 		}
 		
 		public final Session getSession() {
@@ -214,13 +237,72 @@ public final class VisualAnalysis {
 			return this;
 		}
 		
-		public final File getImageFile() {
-			return this.imageFile;
+		public final BufferedImage getImage() {
+			return this.image;
+		}
+
+		public final Canvas getGroundTruth() {
+			return this.groundTruth;
+		}
+		
+		public final Canvas getClassification() {
+			return this.classification;
+		}
+		
+		public final String getGroundTruthPath() {
+			return baseName(this.imageFile.getPath()) + "_" + this.getSession().getName() + "_groundtruth.png";
+		}
+		
+		public final String getClassificationPath() {
+			return baseName(this.imageFile.getPath()) + "_" + this.getSession().getName() + "_classification.png";
+		}
+		
+		public final void refreshGroundTruthAndClassification(final Refresh refresh) {
+			final int imageWidth = this.getImage().getWidth();
+			final int imageHeight = this.getImage().getHeight();
+			
+			this.getGroundTruth().setFormat(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
+			this.getClassification().setFormat(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
+			
+			switch (refresh) {
+			case CLEAR:
+				this.getGroundTruth().clear(CLEAR);
+				this.getClassification().clear(CLEAR);
+				break;
+			case FROM_FILE:
+			{
+				{
+					final String groundTruthPath = this.getGroundTruthPath();
+					
+					if (new File(groundTruthPath).isFile()) {
+						this.getGroundTruth().getGraphics().drawImage(awtRead(groundTruthPath), 0, 0, null);
+					} else {
+						this.getGroundTruth().clear(CLEAR);
+					}
+				}
+				{
+					final String classificationPath = this.getClassificationPath();
+					
+					if (new File(classificationPath).isFile()) {
+						this.getClassification().getGraphics().drawImage(awtRead(classificationPath), 0, 0, null);
+					} else {
+						this.getClassification().clear(CLEAR);
+					}
+				}
+				break;
+			}
+			case NOP:
+				break;
+			}
 		}
 		
 		public final void setImageFile(final File imageFile) {
 			if (imageFile.isFile()) {
-				this.getMainPanel().setContents(new ImageComponent(AwtImage2D.awtRead(imageFile.getPath())));
+				this.image = awtRead(imageFile.getPath());
+				this.imageFile = imageFile;
+				
+				this.refreshGroundTruthAndClassification(Refresh.FROM_FILE);
+				this.getMainPanel().setContents(new ImageComponent(this.getImage()));
 				
 				final JComboBox<String> imageSelector = this.getMainPanel().getImageSelector();
 				final DefaultComboBoxModel<String> model = (DefaultComboBoxModel<String>) imageSelector.getModel();
@@ -232,15 +314,25 @@ public final class VisualAnalysis {
 						model.removeElementAt(i);
 					}
 				}
-				imageSelector.setSelectedIndex(0);
 				
-				this.imageFile = imageFile;
+				imageSelector.setSelectedIndex(0);
 				
 				preferences.put(IMAGE_FILE_PATH, imageFile.getPath());
 			}
 		}
 		
 		private static final long serialVersionUID = -2487965125442868238L;
+		
+		public static final Color CLEAR = new Color(0, true);
+		
+		/**
+		 * @author codistmonk (creation 2015-02-17)
+		 */
+		public static enum Refresh {
+			
+			NOP, CLEAR, FROM_FILE;
+			
+		}
 		
 	}
 	
