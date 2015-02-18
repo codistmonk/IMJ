@@ -36,8 +36,10 @@ import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.prefs.Preferences;
 
 import javax.swing.Box;
@@ -56,7 +58,7 @@ import javax.swing.JTree;
 import javax.swing.SwingUtilities;
 
 import net.sourceforge.aprog.swing.SwingTools;
-import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.IllegalInstantiationException;import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-02-13)
@@ -69,7 +71,7 @@ public final class VisualAnalysis {
 	
 	static final Preferences preferences = Preferences.userNodeForPackage(VisualAnalysis.class);
 	
-	public static final String IMAGE_FILE_PATH = "image.file.path";
+	public static final String IMAGE_PATH = "image.path";
 	
 	/**
 	 * @param commandLineArguments
@@ -86,7 +88,7 @@ public final class VisualAnalysis {
 			public final void run() {
 				SwingTools.show(new MainPanel(context), VisualAnalysis.class.getSimpleName(), false);
 				
-				context.setImageFile(new File(preferences.get(IMAGE_FILE_PATH, "")));
+				context.setImageFile(new File(preferences.get(IMAGE_PATH, "")));
 			}
 			
 		});
@@ -117,7 +119,7 @@ public final class VisualAnalysis {
 		
 		private final Context context;
 		
-		private final JComboBox<String> imageSelector;
+		private final PathSelector imageSelector;
 		
 		private final JCheckBox imageVisibilitySelector;
 		
@@ -145,7 +147,7 @@ public final class VisualAnalysis {
 			super(new BorderLayout());
 			
 			this.context = context;
-			this.imageSelector = new JComboBox<>(array("-", "Open..."));
+			this.imageSelector = new PathSelector().setOptionListener(PathSelector.Option.OPEN, e -> Tools.debugPrint("TODO"));
 			this.imageVisibilitySelector = new JCheckBox("", true);
 			this.groundTruthSelector = new JComboBox<>(array("-", "New...", "Save"));
 			this.groundTruthVisibilitySelector = new JCheckBox();
@@ -173,26 +175,7 @@ public final class VisualAnalysis {
 			this.add(this.mainSplitPane, BorderLayout.CENTER);
 			
 			{
-				this.imageSelector.setRenderer(new DefaultListCellRenderer() {
-					
-					@Override
-					public final Component getListCellRendererComponent(final JList<?> list,
-							final Object value, final int index, final boolean isSelected,
-							final boolean cellHasFocus) {
-						final Component result = super.getListCellRendererComponent(list, value, index, isSelected,
-								cellHasFocus);
-						
-						if (index < 0 || isSelected) {
-							this.setText(new File(this.getText()).getName());
-						}
-						
-						return result;
-					}
-					
-					private static final long serialVersionUID = -3014056515590258107L;
-					
-				});
-				this.imageSelector.addActionListener(new ActionListener() {
+				this.imageSelector.setPathListener(new ActionListener() {
 					
 					@Override
 					public final void actionPerformed(final ActionEvent event) {
@@ -321,23 +304,12 @@ public final class VisualAnalysis {
 			
 			this.setContents(this.getImageComponent());
 			
-			final JComboBox<String> imageSelector = this.getImageSelector();
-			final DefaultComboBoxModel<String> model = (DefaultComboBoxModel<String>) imageSelector.getModel();
-			
-			model.insertElementAt(imagePath, 0);
-			
-			for (int i = model.getSize() - MainPanel.IMAGE_SELECTOR_RESERVED_SLOTS - 1; 0 < i; --i) {
-				if (model.getElementAt(i).equals(imagePath)) {
-					model.removeElementAt(i);
-				}
-			}
-			
-			imageSelector.setSelectedIndex(0);
+			this.getImageSelector().setPath(imagePath);
 			
 			return this;
 		}
 
-		public final JComboBox<String> getImageSelector() {
+		public final PathSelector getImageSelector() {
 			return this.imageSelector;
 		}
 		
@@ -394,8 +366,6 @@ public final class VisualAnalysis {
 		
 		private MainPanel mainPanel;
 		
-		private File experimentFile = new File("experiment.xml");
-		
 		private File imageFile;
 		
 		private String groundTruthName = "gt";
@@ -417,13 +387,7 @@ public final class VisualAnalysis {
 		}
 		
 		public final File getExperimentFile() {
-			return this.experimentFile;
-		}
-		
-		public final Context setExperimentFile(final File experimentFile) {
-			this.experimentFile = experimentFile;
-			
-			return this;
+			return new File(this.getMainPanel().getExperimentSelector().getSelectedItem().toString());
 		}
 		
 		public final String getGroundTruthName() {
@@ -518,7 +482,7 @@ public final class VisualAnalysis {
 				
 				this.getMainPanel().setImage(this.getImage(), imageFile.getPath());
 				
-				preferences.put(IMAGE_FILE_PATH, imageFile.getPath());
+				preferences.put(IMAGE_PATH, imageFile.getPath());
 			}
 		}
 		
@@ -654,6 +618,141 @@ public final class VisualAnalysis {
 			}
 			
 			private static final long serialVersionUID = 847822079141878928L;
+			
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-18)
+	 */
+	public static final class PathSelector extends JComboBox<Object> {
+		
+		private final Map<Option, ActionListener> optionListeners;
+		
+		private ActionListener pathListener;
+		
+		public PathSelector() {
+			this.optionListeners = new LinkedHashMap<>();
+			
+			this.setRenderer(new DefaultListCellRenderer() {
+				
+				@Override
+				public final Component getListCellRendererComponent(final JList<?> list,
+						final Object value, final int index, final boolean isSelected,
+						final boolean cellHasFocus) {
+					final Component result = super.getListCellRendererComponent(
+							list, value, index, isSelected, cellHasFocus);
+					
+					if (value instanceof Option) {
+						this.setText(((Option) value).getTranslationKey());
+					} else if (index < 0 || isSelected) {
+						this.setText(new File(this.getText()).getName());
+					}
+					
+					return result;
+				}
+				
+				private static final long serialVersionUID = -3014056515590258107L;
+				
+			});
+			
+			this.addActionListener(new ActionListener() {
+				
+				@Override
+				public final void actionPerformed(final ActionEvent event) {
+					PathSelector.this.action(event);
+				}
+				
+			});
+		}
+		
+		public final PathSelector setPath(final String path) {
+			final DefaultComboBoxModel<Object> model = (DefaultComboBoxModel<Object>) this.getModel();
+			
+			model.insertElementAt(path, 0);
+			
+			for (int i = model.getSize() - this.optionListeners.size() - 1; 0 < i; --i) {
+				if (model.getElementAt(i).equals(path)) {
+					model.removeElementAt(i);
+				}
+			}
+			
+			this.setSelectedIndex(0);
+			
+			return this;
+		}
+		
+		public final PathSelector setPathListener(final ActionListener listener) {
+			this.pathListener = listener;
+			
+			return this;
+		}
+		
+		public final PathSelector setOptionListener(final Option option, final ActionListener listener) {
+			final DefaultComboBoxModel<Object> model = (DefaultComboBoxModel<Object>) this.getModel();
+			
+			if (this.optionListeners.isEmpty()) {
+				model.addElement("-");
+			} else {
+				this.optionListeners.remove(option);
+				model.removeElement(option);
+			}
+			
+			if (listener != null) {
+				this.optionListeners.put(option, listener);
+				model.addElement(option);
+			}
+			
+			return this;
+		}
+		
+		final void action(final ActionEvent event) {
+			final Object selectedItem = this.getSelectedItem();
+			
+			if (selectedItem instanceof Option) {
+				this.optionListeners.get(selectedItem).actionPerformed(event);
+			} else if (selectedItem != null && this.pathListener != null) {
+				this.pathListener.actionPerformed(event);
+			}
+			
+			if (!this.optionListeners.isEmpty()
+					&& this.getItemCount() - this.optionListeners.size() - 1 <= this.getSelectedIndex()) {
+				this.setSelectedIndex(0);
+			}
+		}
+		
+		private static final long serialVersionUID = 2024380772192514052L;
+		
+		/**
+		 * @author codistmonk (creation 2015-02-18)
+		 */
+		public static enum Option {
+			
+			NEW {
+				
+				@Override
+				public final String getTranslationKey() {
+					return "New...";
+				}
+				
+			}, OPEN {
+				
+				@Override
+				public final String getTranslationKey() {
+					return "Open...";
+				}
+				
+			}, SAVE {
+				
+				@Override
+				public final String getTranslationKey() {
+					return "Save";
+				}
+				
+			};
+			
+			public abstract String getTranslationKey();
 			
 		}
 		
