@@ -7,10 +7,13 @@ import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
+import static net.sourceforge.aprog.tools.Tools.append;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.join;
+
 import imj2.tools.Canvas;
+
 import imj3.draft.segmentation.ImageComponent;
 import imj3.tools.CommonSwingTools.NestedList;
 import imj3.tools.CommonSwingTools.PropertyGetter;
@@ -35,20 +38,23 @@ import java.util.List;
 import java.util.Locale;
 import java.util.prefs.Preferences;
 
+import javax.swing.Box;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListCellRenderer;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
-import javax.swing.JToolBar;
+import javax.swing.JTextField;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-02-13)
@@ -84,8 +90,22 @@ public final class VisualAnalysis {
 		});
 	}
 	
-	public static final Component label(final String text, final Component component) {
-		return limitHeight(horizontalBox(new JLabel(text), component));
+	public static final Component label(final String text, final Component... components) {
+		return limitHeight(horizontalBox(append(array(new JLabel(text), Box.createGlue()), components)));
+	}
+	
+	public static final <C extends JComponent> C centerX(final C component) {
+		component.setAlignmentX(Component.CENTER_ALIGNMENT);
+		
+		return component;
+	}
+	
+	public static final JTextField textView(final String text) {
+		final JTextField result = new JTextField(text);
+		
+		result.setEditable(false);
+		
+		return result;
 	}
 	
 	/**
@@ -95,9 +115,21 @@ public final class VisualAnalysis {
 		
 		private final JComboBox<String> imageSelector;
 		
+		private final JCheckBox imageVisibilitySelector;
+		
 		private final JComboBox<String> groundTruthSelector;
 		
+		private final JCheckBox groundTruthVisibilitySelector;
+		
 		private final JComboBox<String> experimentSelector;
+		
+		private final JTextField trainingTimeView;
+		
+		private final JTextField classificationTimeView;
+		
+		private final JCheckBox classificationVisibilitySelector;
+		
+		private final JTextField scoreView;
 		
 		private final JTree tree;
 		
@@ -107,22 +139,30 @@ public final class VisualAnalysis {
 			super(new BorderLayout());
 			
 			this.imageSelector = new JComboBox<>(array("-", "Open..."));
+			this.imageVisibilitySelector = new JCheckBox("", true);
 			this.groundTruthSelector = new JComboBox<>(array("-", "New...", "Save"));
+			this.groundTruthVisibilitySelector = new JCheckBox();
 			this.experimentSelector = new JComboBox<>(array("-", "New...", "Open...", "Save"));
+			this.trainingTimeView = textView("-");
+			this.classificationTimeView = textView("-");
+			this.classificationVisibilitySelector = new JCheckBox();
+			this.scoreView = textView("-");
 			this.tree = new JTree();
+			
+			final int padding = this.imageVisibilitySelector.getPreferredSize().width;
+			
 			this.mainSplitPane = horizontalSplit(verticalBox(
-					label(" Image: ", this.imageSelector),
-					label(" Ground truth: ", this.groundTruthSelector),
-					label(" Experiment: ", this.experimentSelector),
+					label(" Image: ", this.imageSelector, this.imageVisibilitySelector),
+					label(" Ground truth: ", this.groundTruthSelector, this.groundTruthVisibilitySelector),
+					label(" Experiment: ", this.experimentSelector, Box.createHorizontalStrut(padding)),
+					label(" Training (s): ", this.trainingTimeView, Box.createHorizontalStrut(padding)),
+					label(" Classification (s): ", this.classificationTimeView, this.classificationVisibilitySelector),
+					label(" F1: ", this.scoreView, Box.createHorizontalStrut(padding)),
+					centerX(new JButton("Confusion matrix...")),
 					scrollable(this.tree)), scrollable(new JLabel("Drop file here")));
 			
 			setModel(this.tree, context.setExperiment(new Experiment()).getExperiment(), "Session");
 			
-			final JToolBar toolBar = new JToolBar();
-			
-			toolBar.add(new JLabel("TODO"));
-			
-			this.add(toolBar, BorderLayout.NORTH);
 			this.add(this.mainSplitPane, BorderLayout.CENTER);
 			
 			{
