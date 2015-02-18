@@ -4,9 +4,10 @@ import static imj3.tools.CommonTools.newInstanceOf;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-import imj2.pixel3d.MouseHandler;
-import imj3.tools.CommonTools.Property;
 
+import imj2.pixel3d.MouseHandler;
+
+import imj3.tools.CommonTools.Property;
 
 import java.awt.Component;
 import java.awt.Composite;
@@ -14,7 +15,6 @@ import java.awt.CompositeContext;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.GridLayout;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Window;
@@ -32,19 +32,15 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
-
 import javax.swing.AbstractAction;
 import javax.swing.Box;
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
@@ -60,7 +56,6 @@ import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
@@ -75,7 +70,7 @@ public final class CommonSwingTools {
 	}
 	
 	public static final void setModel(final JTree tree, final Object object, final String rootEdtiTitle) {
-		final DefaultMutableTreeNode root = new DefaultMutableTreeNode();
+		final DefaultMutableTreeNode root = new DefaultMutableTreeNode(new UIScaffold(object));
 		final DefaultTreeModel model = new DefaultTreeModel(root);
 		
 		tree.setModel(model);
@@ -83,11 +78,8 @@ public final class CommonSwingTools {
 		{
 			final UIScaffold scaffold = new UIScaffold(object);
 			
-			if (scaffold.getStringGetter() != null) {
-				final TreePath path = new TreePath(model.getPathToRoot(root));
-				
-				model.valueForPathChanged(path, new UserObject(scaffold, rootEdtiTitle, tree, root, false));
-			}
+			model.valueForPathChanged(new TreePath(model.getPathToRoot(root)),
+					new UserObject(scaffold, rootEdtiTitle, tree, root, false));
 			
 			for (final Map.Entry<String, Method> entry : scaffold.getNestedLists().entrySet()) {
 				model.insertNodeInto(new DefaultMutableTreeNode(entry.getKey()), root, model.getChildCount(root));
@@ -482,8 +474,9 @@ public final class CommonSwingTools {
 			try {
 				final UIScaffold scaffold = this.getUIScaffold();
 				final Method stringGetter = scaffold.getStringGetter();
+				final Object object = scaffold.getObject();
 				
-				return stringGetter != null ? (String) stringGetter.invoke(scaffold.getObject()) : scaffold.getObject().toString();
+				return stringGetter != null ? (String) stringGetter.invoke(object) : object.toString();
 			} catch (final Exception exception) {
 				throw Tools.unchecked(exception);
 			}
