@@ -174,23 +174,14 @@ public final class VisualAnalysis {
 			
 			this.add(this.mainSplitPane, BorderLayout.CENTER);
 			
-			{
-				this.imageSelector.setPathListener(new ActionListener() {
-					
-					@Override
-					public final void actionPerformed(final ActionEvent event) {
-						final int n = MainPanel.this.getImageSelector().getItemCount();
-						final int selectedIndex = MainPanel.this.getImageSelector().getSelectedIndex();
-						
-						if (selectedIndex < n - IMAGE_SELECTOR_RESERVED_SLOTS) {
-							context.setImageFile(new File(MainPanel.this.getImageSelector().getSelectedItem().toString()));
-						} else if (selectedIndex == n - 1) {
-							
-						}
-					}
-					
-				});
-			}
+			this.imageSelector.setPathListener(new ActionListener() {
+				
+				@Override
+				public final void actionPerformed(final ActionEvent event) {
+					context.setImageFile(new File(MainPanel.this.getImageSelector().getSelectedItem().toString()));
+				}
+				
+			});
 			
 			this.imageVisibilitySelector.addActionListener(new ActionListener() {
 				
