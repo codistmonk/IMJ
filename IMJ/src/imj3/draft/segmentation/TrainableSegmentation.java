@@ -448,12 +448,7 @@ public final class TrainableSegmentation {
 		setSharedProperty(mainFrame, "groundtruthUpdateNeeded", groundtruthUpdateNeeded);
 		setSharedProperty(mainFrame, "segmentsUpdateNeeded", segmentsUpdateNeeded);
 		
-		newView.addLayer().getPainters().add(new Painter() {
-			
-			@Override
-			public final AtomicBoolean getUpdateNeeded() {
-				return groundtruthUpdateNeeded;
-			}
+		newView.addLayer().getPainters().add(new Painter.Abstract(new AtomicBoolean(true), groundtruthUpdateNeeded) {
 			
 			@Override
 			public final void paint(final Canvas canvas) {
@@ -471,12 +466,7 @@ public final class TrainableSegmentation {
 			
 		});
 		
-		newView.addLayer().getPainters().add(new Painter() {
-			
-			@Override
-			public final AtomicBoolean getUpdateNeeded() {
-				return segmentsUpdateNeeded;
-			}
+		newView.addLayer().getPainters().add(new Painter.Abstract(new AtomicBoolean(true), segmentsUpdateNeeded) {
 			
 			@Override
 			public final void paint(final Canvas canvas) {
@@ -491,12 +481,7 @@ public final class TrainableSegmentation {
 			
 		});
 		
-		newView.addLayer().getPainters().add(new Painter() {
-			
-			@Override
-			public final AtomicBoolean getUpdateNeeded() {
-				return overlayUpdateNeeded;
-			}
+		newView.addLayer().getPainters().add(new Painter.Abstract(new AtomicBoolean(true), overlayUpdateNeeded) {
 			
 			@Override
 			public final void paint(final Canvas canvas) {

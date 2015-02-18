@@ -30,18 +30,11 @@ public final class ImageComponent extends JComponent {
 		final int imageWidth = image.getWidth();
 		final int imageHeight = image.getHeight();
 		
-		this.addLayer().getPainters().add(new Painter() {
-			
-			private final AtomicBoolean updateNeeded = new AtomicBoolean(true);
+		this.addLayer().getPainters().add(new Painter.Abstract() {
 			
 			@Override
 			public final void paint(final Canvas canvas) {
 				canvas.getGraphics().drawImage(ImageComponent.this.getImage(), 0, 0, null);
-			}
-			
-			@Override
-			public final AtomicBoolean getUpdateNeeded() {
-				return this.updateNeeded;
 			}
 			
 			private static final long serialVersionUID = 7401374809131989838L;
@@ -97,7 +90,41 @@ public final class ImageComponent extends JComponent {
 		
 		public abstract void paint(Canvas canvas);
 		
+		public abstract AtomicBoolean getActive();
+		
 		public abstract AtomicBoolean getUpdateNeeded();
+		
+		/**
+		 * @author codistmonk (creation 2015-02-18)
+		 */
+		public static abstract class Abstract implements Painter {
+			
+			private final AtomicBoolean active;
+			
+			private final AtomicBoolean updateNeeded;
+			
+			protected Abstract() {
+				this(new AtomicBoolean(true), new AtomicBoolean(true));
+			}
+			
+			protected Abstract(final AtomicBoolean active, final AtomicBoolean updateNeeded) {
+				this.active = active;
+				this.updateNeeded = updateNeeded;
+			}
+			
+			@Override
+			public final AtomicBoolean getActive() {
+				return this.active;
+			}
+			
+			@Override
+			public final AtomicBoolean getUpdateNeeded() {
+				return this.updateNeeded;
+			}
+			
+			private static final long serialVersionUID = -6462246646444465973L;
+			
+		}
 		
 	}
 	
@@ -142,7 +169,11 @@ public final class ImageComponent extends JComponent {
 					this.getCanvas().getGraphics().drawImage(this.getPrevious().getCanvas().getImage(), 0, 0, null);
 				}
 				
-				this.getPainters().forEach(painter -> painter.paint(this.getCanvas()));
+				this.getPainters().forEach(painter -> {
+					if (painter.getActive().get()) {
+						painter.paint(this.getCanvas());
+					}
+				});
 			}
 			
 			return result;

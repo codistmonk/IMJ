@@ -15,6 +15,8 @@ import static net.sourceforge.aprog.tools.Tools.join;
 import imj2.tools.Canvas;
 
 import imj3.draft.segmentation.ImageComponent;
+import imj3.draft.segmentation.ImageComponent.Layer;
+import imj3.draft.segmentation.ImageComponent.Painter;
 import imj3.tools.CommonSwingTools.NestedList;
 import imj3.tools.CommonSwingTools.PropertyGetter;
 import imj3.tools.CommonSwingTools.PropertySetter;
@@ -113,6 +115,8 @@ public final class VisualAnalysis {
 	 */
 	public static final class MainPanel extends JPanel {
 		
+		private final Context context;
+		
 		private final JComboBox<String> imageSelector;
 		
 		private final JCheckBox imageVisibilitySelector;
@@ -135,9 +139,12 @@ public final class VisualAnalysis {
 		
 		private final JSplitPane mainSplitPane;
 		
+		private ImageComponent imageComponent;
+		
 		public MainPanel(final Context context) {
 			super(new BorderLayout());
 			
+			this.context = context;
 			this.imageSelector = new JComboBox<>(array("-", "Open..."));
 			this.imageVisibilitySelector = new JCheckBox("", true);
 			this.groundTruthSelector = new JComboBox<>(array("-", "New...", "Save"));
@@ -202,6 +209,58 @@ public final class VisualAnalysis {
 				});
 			}
 			
+			this.imageVisibilitySelector.addActionListener(new ActionListener() {
+				
+				@Override
+				public final void actionPerformed(final ActionEvent event) {
+					final Layer imageLayer = MainPanel.this.getImageComponent().getLayers().get(0);
+					final Painter imagePainter = imageLayer.getPainters().get(0);
+					final boolean imageVisible = MainPanel.this.getImageVisibilitySelector().isSelected();
+					
+					if (!imageVisible) {
+						imageLayer.getCanvas().clear(Color.GRAY);
+					}
+					
+					imagePainter.getActive().set(imageVisible);
+					imagePainter.getUpdateNeeded().set(true);
+					
+					MainPanel.this.getImageComponent().repaint();
+				}
+				
+			});
+			
+			this.groundTruthVisibilitySelector.addActionListener(new ActionListener() {
+				
+				@Override
+				public final void actionPerformed(final ActionEvent event) {
+					final Layer groundTruthLayer = MainPanel.this.getImageComponent().getLayers().get(1);
+					final Painter groundTruthPainter = groundTruthLayer.getPainters().get(0);
+					final boolean groundTruthVisible = MainPanel.this.getGroundTruthVisibilitySelector().isSelected();
+					
+					groundTruthPainter.getActive().set(groundTruthVisible);
+					groundTruthPainter.getUpdateNeeded().set(true);
+					
+					MainPanel.this.getImageComponent().repaint();
+				}
+				
+			});
+			
+			this.classificationVisibilitySelector.addActionListener(new ActionListener() {
+				
+				@Override
+				public final void actionPerformed(final ActionEvent event) {
+					final Layer classificationLayer = MainPanel.this.getImageComponent().getLayers().get(2);
+					final Painter classificationPainter = classificationLayer.getPainters().get(0);
+					final boolean classificationVisible = MainPanel.this.getClassificationVisibilitySelector().isSelected();
+					
+					classificationPainter.getActive().set(classificationVisible);
+					classificationPainter.getUpdateNeeded().set(true);
+					
+					MainPanel.this.getImageComponent().repaint();
+				}
+				
+			});
+			
 			this.setDropTarget(new DropTarget() {
 				
 				@Override
@@ -227,12 +286,95 @@ public final class VisualAnalysis {
 			context.setMainPanel(this);
 		}
 		
+		public final Context getContext() {
+			return this.context;
+		}
+		
+		public final ImageComponent getImageComponent() {
+			return this.imageComponent;
+		}
+		
+		public final MainPanel setImage(final BufferedImage image, final String imagePath) {
+			this.imageComponent = new ImageComponent(image);
+			
+			this.getImageComponent().addLayer().getPainters().add(new Painter.Abstract() {
+				
+				@Override
+				public final void paint(final Canvas canvas) {
+					canvas.getGraphics().drawImage(MainPanel.this.getContext().getGroundTruth().getImage(), 0, 0, null);
+				}
+				
+				private static final long serialVersionUID = 4700895082820237288L;
+				
+			});
+			
+			this.getImageComponent().addLayer().getPainters().add(new Painter.Abstract() {
+				
+				@Override
+				public final void paint(final Canvas canvas) {
+					canvas.getGraphics().drawImage(MainPanel.this.getContext().getClassification().getImage(), 0, 0, null);
+				}
+				
+				private static final long serialVersionUID = 7941391067177261093L;
+				
+			});
+			
+			this.setContents(this.getImageComponent());
+			
+			final JComboBox<String> imageSelector = this.getImageSelector();
+			final DefaultComboBoxModel<String> model = (DefaultComboBoxModel<String>) imageSelector.getModel();
+			
+			model.insertElementAt(imagePath, 0);
+			
+			for (int i = model.getSize() - MainPanel.IMAGE_SELECTOR_RESERVED_SLOTS - 1; 0 < i; --i) {
+				if (model.getElementAt(i).equals(imagePath)) {
+					model.removeElementAt(i);
+				}
+			}
+			
+			imageSelector.setSelectedIndex(0);
+			
+			return this;
+		}
+
 		public final JComboBox<String> getImageSelector() {
 			return this.imageSelector;
 		}
 		
 		public final JTree getTree() {
 			return this.tree;
+		}
+		
+		public final JCheckBox getImageVisibilitySelector() {
+			return this.imageVisibilitySelector;
+		}
+		
+		public final JComboBox<String> getGroundTruthSelector() {
+			return this.groundTruthSelector;
+		}
+		
+		public final JCheckBox getGroundTruthVisibilitySelector() {
+			return this.groundTruthVisibilitySelector;
+		}
+		
+		public final JComboBox<String> getExperimentSelector() {
+			return this.experimentSelector;
+		}
+		
+		public final JTextField getTrainingTimeView() {
+			return this.trainingTimeView;
+		}
+		
+		public final JTextField getClassificationTimeView() {
+			return this.classificationTimeView;
+		}
+		
+		public final JCheckBox getClassificationVisibilitySelector() {
+			return this.classificationVisibilitySelector;
+		}
+		
+		public final JTextField getScoreView() {
+			return this.scoreView;
 		}
 		
 		public final void setContents(final Component component) {
@@ -373,20 +515,8 @@ public final class VisualAnalysis {
 				this.imageFile = imageFile;
 				
 				this.refreshGroundTruthAndClassification(Refresh.FROM_FILE);
-				this.getMainPanel().setContents(new ImageComponent(this.getImage()));
 				
-				final JComboBox<String> imageSelector = this.getMainPanel().getImageSelector();
-				final DefaultComboBoxModel<String> model = (DefaultComboBoxModel<String>) imageSelector.getModel();
-				
-				model.insertElementAt(imageFile.getPath(), 0);
-				
-				for (int i = model.getSize() - MainPanel.IMAGE_SELECTOR_RESERVED_SLOTS - 1; 0 < i; --i) {
-					if (model.getElementAt(i).equals(imageFile.getPath())) {
-						model.removeElementAt(i);
-					}
-				}
-				
-				imageSelector.setSelectedIndex(0);
+				this.getMainPanel().setImage(this.getImage(), imageFile.getPath());
 				
 				preferences.put(IMAGE_FILE_PATH, imageFile.getPath());
 			}
