@@ -3,14 +3,15 @@ package imj3.draft.processing;
 import static imj3.tools.AwtImage2D.awtRead;
 import static imj3.tools.CommonSwingTools.limitHeight;
 import static imj3.tools.CommonSwingTools.setModel;
+import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
+import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.join;
 import imj2.tools.Canvas;
 import imj3.draft.segmentation.ImageComponent;
-import imj3.tools.AwtImage2D;
 import imj3.tools.CommonSwingTools.NestedList;
 import imj3.tools.CommonSwingTools.PropertyGetter;
 import imj3.tools.CommonSwingTools.PropertySetter;
@@ -83,12 +84,20 @@ public final class VisualAnalysis {
 		});
 	}
 	
+	public static final Component label(final String text, final Component component) {
+		return limitHeight(horizontalBox(new JLabel(text), component));
+	}
+	
 	/**
 	 * @author codistmonk (creation 2015-02-13)
 	 */
 	public static final class MainPanel extends JPanel {
 		
 		private final JComboBox<String> imageSelector;
+		
+		private final JComboBox<String> groundTruthSelector;
+		
+		private final JComboBox<String> experimentSelector;
 		
 		private final JTree tree;
 		
@@ -97,11 +106,17 @@ public final class VisualAnalysis {
 		public MainPanel(final Context context) {
 			super(new BorderLayout());
 			
-			this.imageSelector = new JComboBox<>(/*array("-", "Open...")*/);
+			this.imageSelector = new JComboBox<>(array("-", "Open..."));
+			this.groundTruthSelector = new JComboBox<>(array("-", "New...", "Save"));
+			this.experimentSelector = new JComboBox<>(array("-", "New...", "Open...", "Save"));
 			this.tree = new JTree();
-			this.mainSplitPane = horizontalSplit(verticalBox(limitHeight(this.imageSelector), scrollable(this.tree)), scrollable(new JLabel("Drop file here")));
+			this.mainSplitPane = horizontalSplit(verticalBox(
+					label(" Image: ", this.imageSelector),
+					label(" Ground truth: ", this.groundTruthSelector),
+					label(" Experiment: ", this.experimentSelector),
+					scrollable(this.tree)), scrollable(new JLabel("Drop file here")));
 			
-			setModel(this.tree, context.setSession(new Session()).getSession(), "Session");
+			setModel(this.tree, context.setExperiment(new Experiment()).getExperiment(), "Session");
 			
 			final JToolBar toolBar = new JToolBar();
 			
@@ -186,7 +201,7 @@ public final class VisualAnalysis {
 		
 		private static final long serialVersionUID = 2173077945563031333L;
 		
-		public static final int IMAGE_SELECTOR_RESERVED_SLOTS = 0/*2*/;
+		public static final int IMAGE_SELECTOR_RESERVED_SLOTS = 2;
 		
 	}
 	
@@ -197,11 +212,13 @@ public final class VisualAnalysis {
 		
 		private MainPanel mainPanel;
 		
-		private File sessionDirectory = new File("");
+		private File experimentFile = new File("experiment.xml");
 		
 		private File imageFile;
 		
-		private Session session;
+		private String groundTruthName = "gt";
+		
+		private Experiment experiment;
 		
 		private BufferedImage image;
 		
@@ -217,22 +234,32 @@ public final class VisualAnalysis {
 			this.mainPanel = mainPanel;
 		}
 		
-		public final File getSessionDirectory() {
-			return this.sessionDirectory;
+		public final File getExperimentFile() {
+			return this.experimentFile;
 		}
 		
-		public final Context setSessionDirectory(final File sessionDirectory) {
-			this.sessionDirectory = sessionDirectory;
+		public final Context setExperimentFile(final File experimentFile) {
+			this.experimentFile = experimentFile;
 			
 			return this;
 		}
 		
-		public final Session getSession() {
-			return this.session;
+		public final String getGroundTruthName() {
+			return this.groundTruthName;
+		}
+
+		public final Context setGroundTruthName(final String groundTruthName) {
+			this.groundTruthName = groundTruthName;
+			
+			return this;
+		}
+
+		public final Experiment getExperiment() {
+			return this.experiment;
 		}
 		
-		public final Context setSession(final Session session) {
-			this.session = session;
+		public final Context setExperiment(final Experiment experiment) {
+			this.experiment = experiment;
 			
 			return this;
 		}
@@ -249,12 +276,16 @@ public final class VisualAnalysis {
 			return this.classification;
 		}
 		
+		public final String getExperimentName() {
+			return baseName(this.getExperimentFile().getName());
+		}
+		
 		public final String getGroundTruthPath() {
-			return baseName(this.imageFile.getPath()) + "_" + this.getSession().getName() + "_groundtruth.png";
+			return baseName(this.imageFile.getPath()) + "_groundtruth_" + this.getGroundTruthName() + "_" + this.getExperimentName() + ".png";
 		}
 		
 		public final String getClassificationPath() {
-			return baseName(this.imageFile.getPath()) + "_" + this.getSession().getName() + "_classification.png";
+			return baseName(this.imageFile.getPath()) + "_classification_" + this.getGroundTruthName() + "_" + this.getExperimentName() + ".png";
 		}
 		
 		public final void refreshGroundTruthAndClassification(final Refresh refresh) {
@@ -339,25 +370,15 @@ public final class VisualAnalysis {
 	/**
 	 * @author codistmonk (creation 2015-02-16)
 	 */
-	public static final class Session implements Serializable {
-		
-		private String name = "session";
+	public static final class Experiment implements Serializable {
 		
 		private final List<ClassDescription> classDescriptions = new ArrayList<>();
 		
 		private final List<TrainingField> trainingFields = new ArrayList<>();
 		
-		@StringGetter
-		@PropertyGetter("name")
-		public final String getName() {
-			return this.name;
-		}
-		
-		@PropertySetter("name")
-		public final Session setName(final String name) {
-			this.name = name;
-			
-			return this;
+		@Override
+		public final String toString() {
+			return "Experiment";
 		}
 		
 		@NestedList(name="classes", element="class", elementClass=ClassDescription.class)
