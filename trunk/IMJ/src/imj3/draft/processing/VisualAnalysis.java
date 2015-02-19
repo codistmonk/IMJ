@@ -123,11 +123,11 @@ public final class VisualAnalysis {
 		
 		private final JCheckBox imageVisibilitySelector;
 		
-		private final JComboBox<String> groundTruthSelector;
+		private final PathSelector groundTruthSelector;
 		
 		private final JCheckBox groundTruthVisibilitySelector;
 		
-		private final JComboBox<String> experimentSelector;
+		private final PathSelector experimentSelector;
 		
 		private final JTextField trainingTimeView;
 		
@@ -147,11 +147,11 @@ public final class VisualAnalysis {
 			super(new BorderLayout());
 			
 			this.context = context;
-			this.imageSelector = new PathSelector().setOptionListener(PathSelector.Option.OPEN, e -> Tools.debugPrint("TODO"));
+			this.imageSelector = new PathSelector();
 			this.imageVisibilitySelector = new JCheckBox("", true);
-			this.groundTruthSelector = new JComboBox<>(array("-", "New...", "Save"));
+			this.groundTruthSelector = new PathSelector();
 			this.groundTruthVisibilitySelector = new JCheckBox();
-			this.experimentSelector = new JComboBox<>(array("-", "New...", "Open...", "Save"));
+			this.experimentSelector = new PathSelector();
 			this.trainingTimeView = textView("-");
 			this.classificationTimeView = textView("-");
 			this.classificationVisibilitySelector = new JCheckBox();
@@ -174,6 +174,7 @@ public final class VisualAnalysis {
 			
 			this.add(this.mainSplitPane, BorderLayout.CENTER);
 			
+			this.imageSelector.setOptionListener(PathSelector.Option.OPEN, e -> Tools.debugPrint("TODO"));
 			this.imageSelector.setPathListener(new ActionListener() {
 				
 				@Override
@@ -182,6 +183,13 @@ public final class VisualAnalysis {
 				}
 				
 			});
+			
+			this.groundTruthSelector.setOptionListener(PathSelector.Option.NEW, e -> Tools.debugPrint("TODO"));
+			this.groundTruthSelector.setOptionListener(PathSelector.Option.SAVE, e -> Tools.debugPrint("TODO"));
+			
+			this.experimentSelector.setOptionListener(PathSelector.Option.NEW, e -> Tools.debugPrint("TODO"));
+			this.experimentSelector.setOptionListener(PathSelector.Option.OPEN, e -> Tools.debugPrint("TODO"));
+			this.experimentSelector.setOptionListener(PathSelector.Option.SAVE, e -> Tools.debugPrint("TODO"));
 			
 			this.imageVisibilitySelector.addActionListener(new ActionListener() {
 				
@@ -312,7 +320,7 @@ public final class VisualAnalysis {
 			return this.imageVisibilitySelector;
 		}
 		
-		public final JComboBox<String> getGroundTruthSelector() {
+		public final PathSelector getGroundTruthSelector() {
 			return this.groundTruthSelector;
 		}
 		
@@ -320,7 +328,7 @@ public final class VisualAnalysis {
 			return this.groundTruthVisibilitySelector;
 		}
 		
-		public final JComboBox<String> getExperimentSelector() {
+		public final PathSelector getExperimentSelector() {
 			return this.experimentSelector;
 		}
 		
