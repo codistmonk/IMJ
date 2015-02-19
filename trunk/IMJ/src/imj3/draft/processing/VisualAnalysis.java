@@ -11,6 +11,10 @@ import static net.sourceforge.aprog.tools.Tools.append;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.join;
+
+import com.thoughtworks.xstream.XStream;
+import com.thoughtworks.xstream.io.xml.StaxDriver;
+
 import imj2.tools.Canvas;
 import imj3.draft.processing.VisualAnalysis.Context.Refresh;
 import imj3.draft.segmentation.ImageComponent;
@@ -32,7 +36,11 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.io.Serializable;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -48,6 +56,7 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
@@ -56,9 +65,12 @@ import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
 
 import net.sourceforge.aprog.swing.SwingTools;
-import net.sourceforge.aprog.tools.IllegalInstantiationException;import net.sourceforge.aprog.tools.Tools;
+import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-02-13)
@@ -71,9 +83,13 @@ public final class VisualAnalysis {
 	
 	static final Preferences preferences = Preferences.userNodeForPackage(VisualAnalysis.class);
 	
+	static final XStream xstream = new XStream(new StaxDriver());
+	
 	public static final String IMAGE_PATH = "image.path";
 	
 	public static final String GROUND_TRUTH = "groundtruth";
+	
+	public static final String EXPERIMENT = "experiment";
 	
 	/**
 	 * @param commandLineArguments
@@ -92,6 +108,7 @@ public final class VisualAnalysis {
 				
 				context.setImageFile(new File(preferences.get(IMAGE_PATH, "")));
 				context.setGroundTruth(preferences.get(GROUND_TRUTH, "gt"));
+				context.setExperiment(new File(preferences.get(EXPERIMENT, "experiment.xml")));
 			}
 			
 		});
@@ -146,6 +163,8 @@ public final class VisualAnalysis {
 		
 		private ImageComponent imageComponent;
 		
+		private Experiment experiment;
+		
 		public MainPanel(final Context context) {
 			super(new BorderLayout());
 			
@@ -159,7 +178,7 @@ public final class VisualAnalysis {
 			this.classificationTimeView = textView("-");
 			this.classificationVisibilitySelector = new JCheckBox();
 			this.scoreView = textView("-");
-			this.tree = new JTree();
+			this.tree = new JTree(new DefaultTreeModel(new DefaultMutableTreeNode("No experiment")));
 			
 			final int padding = this.imageVisibilitySelector.getPreferredSize().width;
 			
@@ -172,8 +191,6 @@ public final class VisualAnalysis {
 					label(" F1: ", this.scoreView, Box.createHorizontalStrut(padding)),
 					centerX(new JButton("Confusion matrix...")),
 					scrollable(this.tree)), scrollable(new JLabel("Drop file here")));
-			
-			setModel(this.tree, context.setExperiment(new Experiment()).getExperiment(), "Session");
 			
 			this.add(this.mainSplitPane, BorderLayout.CENTER);
 			
@@ -204,7 +221,34 @@ public final class VisualAnalysis {
 			});
 			this.groundTruthSelector.setOptionListener(PathSelector.Option.SAVE, e -> Tools.debugPrint("TODO"));
 			
-			this.experimentSelector.setOptionListener(PathSelector.Option.NEW, e -> Tools.debugPrint("TODO"));
+			this.experimentSelector.setPathListener(new ActionListener() {
+				
+				@Override
+				public final void actionPerformed(final ActionEvent event) {
+					try {
+						MainPanel.this.setExperiment((Experiment) xstream.fromXML(
+								new File(MainPanel.this.getExperimentSelector().getSelectedItem().toString())));
+					} catch (final Exception exception) {
+						Tools.debugError(exception);
+					}
+				}
+				
+			});
+			this.experimentSelector.setOptionListener(PathSelector.Option.NEW, e -> {
+				final JFileChooser fileChooser = new JFileChooser(new File(preferences.get(EXPERIMENT, "")).getParentFile());
+				
+				if (JFileChooser.APPROVE_OPTION == fileChooser.showSaveDialog(this)) {
+					final File selectedFile = fileChooser.getSelectedFile();
+					
+					try (final OutputStream output = new FileOutputStream(selectedFile)) {
+						xstream.toXML(new Experiment(), output);
+					} catch (final IOException exception) {
+						throw new UncheckedIOException(exception);
+					}
+					
+					context.setExperiment(selectedFile);
+				}
+			});
 			this.experimentSelector.setOptionListener(PathSelector.Option.OPEN, e -> Tools.debugPrint("TODO"));
 			this.experimentSelector.setOptionListener(PathSelector.Option.SAVE, e -> Tools.debugPrint("TODO"));
 			
@@ -287,6 +331,18 @@ public final class VisualAnalysis {
 		
 		public final Context getContext() {
 			return this.context;
+		}
+		
+		public final Experiment getExperiment() {
+			return this.experiment;
+		}
+		
+		public final void setExperiment(final Experiment experiment) {
+			this.experiment = experiment;
+			
+			Tools.debugPrint();
+			
+			setModel(this.tree, experiment, "Experiment");
 		}
 		
 		public final ImageComponent getImageComponent() {
@@ -440,7 +496,11 @@ public final class VisualAnalysis {
 		}
 		
 		public final String getGroundTruthPath() {
-			return baseName(this.getImageFile().getPath()) + "_groundtruth_" + this.getGroundTruthName() + ".png";
+			return this.getGroundTruthPath(this.getGroundTruthName());
+		}
+		
+		public final String getGroundTruthPath(final String name) {
+			return baseName(this.getImageFile().getPath()) + "_groundtruth_" + name + ".png";
 		}
 		
 		public final String getClassificationPath() {
@@ -512,7 +572,23 @@ public final class VisualAnalysis {
 		}
 		
 		public final Context setGroundTruth(final String name) {
-			this.getMainPanel().getGroundTruthSelector().setPath(name);
+			if (new File(this.getGroundTruthPath(name)).isFile()) {
+				this.getMainPanel().getGroundTruthSelector().setPath(name);
+				
+				preferences.put(GROUND_TRUTH, name);
+			}
+			
+			return this;
+		}
+		
+		public final Context setExperiment(final File experimentFile) {
+			if (experimentFile.isFile()) {
+				Tools.debugPrint(experimentFile);
+				
+				this.getMainPanel().getExperimentSelector().setPath(experimentFile.getPath());
+				
+				preferences.put(EXPERIMENT, experimentFile.getPath());
+			}
 			
 			return this;
 		}
@@ -709,7 +785,7 @@ public final class VisualAnalysis {
 				}
 			}
 			
-			this.setSelectedIndex(0);
+			SwingUtilities.invokeLater(() -> this.setSelectedIndex(0));
 			
 			return this;
 		}
