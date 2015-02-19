@@ -3,6 +3,7 @@ package imj3.draft.processing;
 import static imj3.tools.AwtImage2D.awtRead;
 import static imj3.tools.CommonSwingTools.limitHeight;
 import static imj3.tools.CommonSwingTools.setModel;
+import static java.lang.Math.max;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
@@ -47,11 +48,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.prefs.Preferences;
 
+import javax.swing.AbstractAction;
 import javax.swing.Box;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListCellRenderer;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -59,11 +63,14 @@ import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 import javax.swing.JTree;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
@@ -115,7 +122,7 @@ public final class VisualAnalysis {
 	}
 	
 	public static final Component label(final String text, final Component... components) {
-		return limitHeight(horizontalBox(append(array(new JLabel(text), Box.createGlue()), components)));
+		return limitHeight(horizontalBox(append(array((Component) new JLabel(text)), components)));
 	}
 	
 	public static final <C extends JComponent> C centerX(final C component) {
@@ -130,6 +137,69 @@ public final class VisualAnalysis {
 		result.setEditable(false);
 		
 		return result;
+	}
+	
+	public static final JButton button(final String type) {
+		final JButton result = new JButton(new ImageIcon(Tools.getResourceURL("lib/tango/" + type + ".png")));
+		final int size = max(result.getIcon().getIconWidth(), result.getIcon().getIconHeight());
+		
+		result.setPreferredSize(new Dimension(size + 2, size + 2));
+		
+		return result;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-19)
+	 */
+	public static final class FileSelector extends JButton {
+		
+		private final List<File> files = new ArrayList<>();
+		
+		{
+			this.addActionListener(new ActionListener() {
+				
+				@Override
+				public final void actionPerformed(final ActionEvent event) {
+					FileSelector.this.showPopup();
+				}
+				
+			});
+			
+			this.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+			
+			this.setHorizontalAlignment(SwingConstants.LEFT);
+		}
+		
+		public final FileSelector setFile(final File file) {
+			this.files.remove(file);
+			this.files.add(0, file);
+			
+			this.setText(file.getName());
+			
+			return this;
+		}
+		
+		final void showPopup() {
+			final JPopupMenu popup = new JPopupMenu();
+			
+			for (final File file : this.files) {
+				popup.add(new JMenuItem(new AbstractAction(file.getPath()) {
+					
+					@Override
+					public final void actionPerformed(final ActionEvent event) {
+						FileSelector.this.setFile(file);
+					}
+					
+					private static final long serialVersionUID = 8311454620470586686L;
+					
+				}));
+			}
+			
+			popup.show(this, 0, 0);
+		}
+		
+		private static final long serialVersionUID = 7227165282556980768L;
+		
 	}
 	
 	/**
@@ -183,15 +253,17 @@ public final class VisualAnalysis {
 			final int padding = this.imageVisibilitySelector.getPreferredSize().width;
 			
 			this.mainSplitPane = horizontalSplit(verticalBox(
-					label(" Image: ", this.imageSelector, this.imageVisibilitySelector),
-					label(" Ground truth: ", this.groundTruthSelector, this.groundTruthVisibilitySelector),
-					label(" Experiment: ", this.experimentSelector, Box.createHorizontalStrut(padding)),
-					label(" Training (s): ", this.trainingTimeView, Box.createHorizontalStrut(padding)),
-					label(" Classification (s): ", this.classificationTimeView, this.classificationVisibilitySelector),
+					label(" Image: ", this.imageSelector, button("open"), button("refresh"), this.imageVisibilitySelector),
+					label(" Ground truth: ", this.groundTruthSelector, button("new"), button("save"), button("refresh"), this.groundTruthVisibilitySelector),
+					label(" Ground truth: ", new FileSelector().setFile(new File("b/test2")).setFile(new File("a/test1")), button("new"), button("save"), button("refresh"), Box.createHorizontalStrut(padding)),
+					label(" Experiment: ", this.experimentSelector, button("new"), button("open"), button("save"), button("refresh"), Box.createHorizontalStrut(padding)),
+					label(" Training (s): ", this.trainingTimeView, button("refresh"), Box.createHorizontalStrut(padding)),
+					label(" Classification (s): ", this.classificationTimeView, button("refresh"), this.classificationVisibilitySelector),
 					label(" F1: ", this.scoreView, Box.createHorizontalStrut(padding)),
 					centerX(new JButton("Confusion matrix...")),
 					scrollable(this.tree)), scrollable(new JLabel("Drop file here")));
 			
+			this.mainSplitPane.getLeftComponent().setMaximumSize(new Dimension(128, Integer.MAX_VALUE));
 			this.add(this.mainSplitPane, BorderLayout.CENTER);
 			
 			this.imageSelector.setOptionListener(PathSelector.Option.OPEN, e -> Tools.debugPrint("TODO"));
@@ -339,8 +411,6 @@ public final class VisualAnalysis {
 		
 		public final void setExperiment(final Experiment experiment) {
 			this.experiment = experiment;
-			
-			Tools.debugPrint();
 			
 			setModel(this.tree, experiment, "Experiment");
 		}
@@ -583,8 +653,6 @@ public final class VisualAnalysis {
 		
 		public final Context setExperiment(final File experimentFile) {
 			if (experimentFile.isFile()) {
-				Tools.debugPrint(experimentFile);
-				
 				this.getMainPanel().getExperimentSelector().setPath(experimentFile.getPath());
 				
 				preferences.put(EXPERIMENT, experimentFile.getPath());
