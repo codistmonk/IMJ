@@ -11,9 +11,8 @@ import static net.sourceforge.aprog.tools.Tools.append;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.join;
-
 import imj2.tools.Canvas;
-
+import imj3.draft.processing.VisualAnalysis.Context.Refresh;
 import imj3.draft.segmentation.ImageComponent;
 import imj3.draft.segmentation.ImageComponent.Layer;
 import imj3.draft.segmentation.ImageComponent.Painter;
@@ -51,6 +50,7 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
@@ -73,6 +73,8 @@ public final class VisualAnalysis {
 	
 	public static final String IMAGE_PATH = "image.path";
 	
+	public static final String GROUND_TRUTH = "groundtruth";
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Unused
@@ -89,6 +91,7 @@ public final class VisualAnalysis {
 				SwingTools.show(new MainPanel(context), VisualAnalysis.class.getSimpleName(), false);
 				
 				context.setImageFile(new File(preferences.get(IMAGE_PATH, "")));
+				context.setGroundTruth(preferences.get(GROUND_TRUTH, "gt"));
 			}
 			
 		});
@@ -179,12 +182,26 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void actionPerformed(final ActionEvent event) {
-					context.setImageFile(new File(MainPanel.this.getImageSelector().getSelectedItem().toString()));
+					MainPanel.this.setImage(MainPanel.this.getImageSelector().getSelectedItem().toString());
 				}
 				
 			});
 			
-			this.groundTruthSelector.setOptionListener(PathSelector.Option.NEW, e -> Tools.debugPrint("TODO"));
+			this.groundTruthSelector.setPathListener(new ActionListener() {
+				
+				@Override
+				public final void actionPerformed(final ActionEvent event) {
+					context.refreshGroundTruthAndClassification(Refresh.FROM_FILE);
+				}
+				
+			});
+			this.groundTruthSelector.setOptionListener(PathSelector.Option.NEW, e -> {
+				final String name = JOptionPane.showInputDialog("Ground truth name:");
+				
+				if (name != null) {
+					context.setGroundTruth(name);
+				}
+			});
 			this.groundTruthSelector.setOptionListener(PathSelector.Option.SAVE, e -> Tools.debugPrint("TODO"));
 			
 			this.experimentSelector.setOptionListener(PathSelector.Option.NEW, e -> Tools.debugPrint("TODO"));
@@ -276,8 +293,8 @@ public final class VisualAnalysis {
 			return this.imageComponent;
 		}
 		
-		public final MainPanel setImage(final BufferedImage image, final String imagePath) {
-			this.imageComponent = new ImageComponent(image);
+		final void setImage(final String path) {
+			this.imageComponent = new ImageComponent(awtRead(path));
 			
 			this.getImageComponent().addLayer().getPainters().add(new Painter.Abstract() {
 				
@@ -302,12 +319,8 @@ public final class VisualAnalysis {
 			});
 			
 			this.setContents(this.getImageComponent());
-			
-			this.getImageSelector().setPath(imagePath);
-			
-			return this;
 		}
-
+		
 		public final PathSelector getImageSelector() {
 			return this.imageSelector;
 		}
@@ -365,13 +378,7 @@ public final class VisualAnalysis {
 		
 		private MainPanel mainPanel;
 		
-		private File imageFile;
-		
-		private String groundTruthName = "gt";
-		
 		private Experiment experiment;
-		
-		private BufferedImage image;
 		
 		private final Canvas groundTruth = new Canvas();
 		
@@ -390,15 +397,15 @@ public final class VisualAnalysis {
 		}
 		
 		public final String getGroundTruthName() {
-			return this.groundTruthName;
+			return this.getMainPanel().getGroundTruthSelector().getSelectedItem().toString();
 		}
-
+		
 		public final Context setGroundTruthName(final String groundTruthName) {
-			this.groundTruthName = groundTruthName;
+			this.getMainPanel().getGroundTruthSelector().setPath(groundTruthName);
 			
 			return this;
 		}
-
+		
 		public final Experiment getExperiment() {
 			return this.experiment;
 		}
@@ -410,7 +417,10 @@ public final class VisualAnalysis {
 		}
 		
 		public final BufferedImage getImage() {
-			return this.image;
+			final MainPanel mainPanel = this.getMainPanel();
+			final ImageComponent imageComponent = mainPanel == null ? null : mainPanel.getImageComponent();
+			
+			return imageComponent == null ? null : imageComponent.getImage();
 		}
 
 		public final Canvas getGroundTruth() {
@@ -425,17 +435,30 @@ public final class VisualAnalysis {
 			return baseName(this.getExperimentFile().getName());
 		}
 		
+		public final File getImageFile() {
+			return new File(this.getMainPanel().getImageSelector().getSelectedItem().toString());
+		}
+		
 		public final String getGroundTruthPath() {
-			return baseName(this.imageFile.getPath()) + "_groundtruth_" + this.getGroundTruthName() + "_" + this.getExperimentName() + ".png";
+			return baseName(this.getImageFile().getPath()) + "_groundtruth_" + this.getGroundTruthName() + ".png";
 		}
 		
 		public final String getClassificationPath() {
-			return baseName(this.imageFile.getPath()) + "_classification_" + this.getGroundTruthName() + "_" + this.getExperimentName() + ".png";
+			return baseName(this.getImageFile().getPath()) + "_classification_" + this.getGroundTruthName() + "_" + this.getExperimentName() + ".png";
 		}
 		
 		public final void refreshGroundTruthAndClassification(final Refresh refresh) {
-			final int imageWidth = this.getImage().getWidth();
-			final int imageHeight = this.getImage().getHeight();
+			final BufferedImage image = this.getImage();
+			
+			if (image == null) {
+				return;
+			}
+			
+			System.out.println(Tools.debug(Tools.DEBUG_STACK_OFFSET + 1));
+			Tools.debugPrint(this.getGroundTruthName());
+			
+			final int imageWidth = image.getWidth();
+			final int imageHeight = image.getHeight();
 			
 			this.getGroundTruth().setFormat(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
 			this.getClassification().setFormat(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
@@ -472,17 +495,26 @@ public final class VisualAnalysis {
 			}
 		}
 		
-		public final void setImageFile(final File imageFile) {
-			if (imageFile.isFile()) {
-				this.image = awtRead(imageFile.getPath());
-				this.imageFile = imageFile;
+		public final Context setImageFile(final File imageFile) {
+			System.out.println(Tools.debug(Tools.DEBUG_STACK_OFFSET + 1, imageFile));
+			
+			final File oldImageFile = this.getImageFile();
+			
+			if (imageFile.isFile() && !imageFile.equals(oldImageFile)) {
+				this.getMainPanel().getImageSelector().setPath(imageFile.getPath());
 				
 				this.refreshGroundTruthAndClassification(Refresh.FROM_FILE);
 				
-				this.getMainPanel().setImage(this.getImage(), imageFile.getPath());
-				
 				preferences.put(IMAGE_PATH, imageFile.getPath());
 			}
+			
+			return this;
+		}
+		
+		public final Context setGroundTruth(final String name) {
+			this.getMainPanel().getGroundTruthSelector().setPath(name);
+			
+			return this;
 		}
 		
 		private static final long serialVersionUID = -2487965125442868238L;
@@ -747,6 +779,13 @@ public final class VisualAnalysis {
 				@Override
 				public final String getTranslationKey() {
 					return "Save";
+				}
+				
+			}, DELETE {
+				
+				@Override
+				public final String getTranslationKey() {
+					return "Delete";
 				}
 				
 			};
