@@ -51,6 +51,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.prefs.Preferences;
 
+import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
 import javax.swing.Box;
 import javax.swing.DefaultComboBoxModel;
@@ -155,6 +156,8 @@ public final class VisualAnalysis {
 		
 		private final List<File> files = new ArrayList<>();
 		
+		private ActionListener fileListener;
+		
 		{
 			this.addActionListener(new ActionListener() {
 				
@@ -170,11 +173,27 @@ public final class VisualAnalysis {
 			this.setHorizontalAlignment(SwingConstants.LEFT);
 		}
 		
+		public ActionListener getFileListener() {
+			return fileListener;
+		}
+		
+		public void setFileListener(final ActionListener fileListener) {
+			this.fileListener = fileListener;
+		}
+		
 		public final FileSelector setFile(final File file) {
 			this.files.remove(file);
 			this.files.add(0, file);
 			
+			Tools.debugPrint(file);
+			
+			final boolean changed = file.equals(new File(this.getText()));
+			
 			this.setText(file.getName());
+			
+			if (changed && this.fileListener != null) {
+				this.fileListener.actionPerformed(new ActionEvent(this, -1, null));
+			}
 			
 			return this;
 		}
@@ -213,7 +232,7 @@ public final class VisualAnalysis {
 		
 		private final JCheckBox imageVisibilitySelector;
 		
-		private final PathSelector groundTruthSelector;
+		private final FileSelector groundTruthSelector;
 		
 		private final JCheckBox groundTruthVisibilitySelector;
 		
@@ -241,7 +260,7 @@ public final class VisualAnalysis {
 			this.context = context;
 			this.imageSelector = new PathSelector();
 			this.imageVisibilitySelector = new JCheckBox("", true);
-			this.groundTruthSelector = new PathSelector();
+			this.groundTruthSelector = new FileSelector();
 			this.groundTruthVisibilitySelector = new JCheckBox();
 			this.experimentSelector = new PathSelector();
 			this.trainingTimeView = textView("-");
@@ -251,14 +270,17 @@ public final class VisualAnalysis {
 			this.tree = new JTree(new DefaultTreeModel(new DefaultMutableTreeNode("No experiment")));
 			
 			final int padding = this.imageVisibilitySelector.getPreferredSize().width;
+			final JButton newGroundTruthButton = button("new");
+			final JButton saveGroundTruthButton = button("save");
+			final JButton refreshGroundTruthButton = button("refresh");
 			
 			this.mainSplitPane = horizontalSplit(verticalBox(
 					label(" Image: ", this.imageSelector, button("open"), button("refresh"), this.imageVisibilitySelector),
-					label(" Ground truth: ", this.groundTruthSelector, button("new"), button("save"), button("refresh"), this.groundTruthVisibilitySelector),
-					label(" Ground truth: ", new FileSelector().setFile(new File("b/test2")).setFile(new File("a/test1")), button("new"), button("save"), button("refresh"), Box.createHorizontalStrut(padding)),
+					label(" Ground truth: ", this.groundTruthSelector, newGroundTruthButton, saveGroundTruthButton, refreshGroundTruthButton, this.groundTruthVisibilitySelector),
+//					label(" Ground truth: ", new FileSelector().setFile(new File("b/test2")).setFile(new File("a/test1")), button("new"), button("save"), button("refresh"), Box.createHorizontalStrut(padding)),
 					label(" Experiment: ", this.experimentSelector, button("new"), button("open"), button("save"), button("refresh"), Box.createHorizontalStrut(padding)),
-					label(" Training (s): ", this.trainingTimeView, button("refresh"), Box.createHorizontalStrut(padding)),
-					label(" Classification (s): ", this.classificationTimeView, button("refresh"), this.classificationVisibilitySelector),
+					label(" Training (s): ", this.trainingTimeView, button("process"), Box.createHorizontalStrut(padding)),
+					label(" Classification (s): ", this.classificationTimeView, button("process"), button("save"), button("refresh"), this.classificationVisibilitySelector),
 					label(" F1: ", this.scoreView, Box.createHorizontalStrut(padding)),
 					centerX(new JButton("Confusion matrix...")),
 					scrollable(this.tree)), scrollable(new JLabel("Drop file here")));
@@ -266,7 +288,18 @@ public final class VisualAnalysis {
 			this.mainSplitPane.getLeftComponent().setMaximumSize(new Dimension(128, Integer.MAX_VALUE));
 			this.add(this.mainSplitPane, BorderLayout.CENTER);
 			
-			this.imageSelector.setOptionListener(PathSelector.Option.OPEN, e -> Tools.debugPrint("TODO"));
+			this.imageSelector.setOptionListener(PathSelector.Option.OPEN, new ActionListener() {
+				
+				@Override
+				public final void actionPerformed(final ActionEvent event) {
+					final JFileChooser fileChooser = new JFileChooser(new File(preferences.get(IMAGE_PATH, "")).getParent());
+					
+					if (JFileChooser.APPROVE_OPTION == fileChooser.showOpenDialog(MainPanel.this)) {
+						context.setImageFile(fileChooser.getSelectedFile());
+					}
+				}
+				
+			});
 			this.imageSelector.setPathListener(new ActionListener() {
 				
 				@Override
@@ -276,7 +309,7 @@ public final class VisualAnalysis {
 				
 			});
 			
-			this.groundTruthSelector.setPathListener(new ActionListener() {
+			this.groundTruthSelector.setFileListener(new ActionListener() {
 				
 				@Override
 				public final void actionPerformed(final ActionEvent event) {
@@ -284,14 +317,20 @@ public final class VisualAnalysis {
 				}
 				
 			});
-			this.groundTruthSelector.setOptionListener(PathSelector.Option.NEW, e -> {
+			newGroundTruthButton.addActionListener(e -> {
 				final String name = JOptionPane.showInputDialog("Ground truth name:");
 				
-				if (name != null) {
+				if (name != null && context.getImage() != null) {
+					try {
+						ImageIO.write(context.formatGroundTruth().getGroundTruth().getImage(), "png", new File(context.getGroundTruthPath(name)));
+					} catch (final IOException exception) {
+						throw new UncheckedIOException(exception);
+					}
+					
 					context.setGroundTruth(name);
 				}
 			});
-			this.groundTruthSelector.setOptionListener(PathSelector.Option.SAVE, e -> Tools.debugPrint("TODO"));
+			saveGroundTruthButton.addActionListener(e -> Tools.debugPrint("TODO"));
 			
 			this.experimentSelector.setPathListener(new ActionListener() {
 				
@@ -459,7 +498,7 @@ public final class VisualAnalysis {
 			return this.imageVisibilitySelector;
 		}
 		
-		public final PathSelector getGroundTruthSelector() {
+		public final FileSelector getGroundTruthSelector() {
 			return this.groundTruthSelector;
 		}
 		
@@ -523,11 +562,11 @@ public final class VisualAnalysis {
 		}
 		
 		public final String getGroundTruthName() {
-			return this.getMainPanel().getGroundTruthSelector().getSelectedItem().toString();
+			return this.getMainPanel().getGroundTruthSelector().getText();
 		}
 		
 		public final Context setGroundTruthName(final String groundTruthName) {
-			this.getMainPanel().getGroundTruthSelector().setPath(groundTruthName);
+			this.getMainPanel().getGroundTruthSelector().setFile(new File(groundTruthName));
 			
 			return this;
 		}
@@ -551,6 +590,10 @@ public final class VisualAnalysis {
 
 		public final Canvas getGroundTruth() {
 			return this.groundTruth;
+		}
+		
+		public final Context formatGroundTruth() {
+			return format(this.getGroundTruth());
 		}
 		
 		public final Canvas getClassification() {
@@ -643,7 +686,7 @@ public final class VisualAnalysis {
 		
 		public final Context setGroundTruth(final String name) {
 			if (new File(this.getGroundTruthPath(name)).isFile()) {
-				this.getMainPanel().getGroundTruthSelector().setPath(name);
+				this.getMainPanel().getGroundTruthSelector().setFile(new File(name));
 				
 				preferences.put(GROUND_TRUTH, name);
 			}
@@ -657,6 +700,20 @@ public final class VisualAnalysis {
 				
 				preferences.put(EXPERIMENT, experimentFile.getPath());
 			}
+			
+			return this;
+		}
+		
+		private final Context format(final Canvas canvas) {
+			final BufferedImage image = this.getImage();
+			
+			if (image != null) {
+				canvas.setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+			} else {
+				canvas.setFormat(1, 1, BufferedImage.TYPE_INT_ARGB);
+			}
+			
+			canvas.clear(CLEAR);
 			
 			return this;
 		}
