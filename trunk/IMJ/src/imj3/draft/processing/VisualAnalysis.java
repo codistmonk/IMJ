@@ -31,6 +31,7 @@ import imj3.tools.CommonSwingTools.PropertySetter;
 import imj3.tools.CommonSwingTools.StringGetter;
 import imj3.tools.CommonSwingTools.UserObject;
 
+import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -597,8 +598,9 @@ public final class VisualAnalysis {
 						final DefaultMutableTreeNode node = selectionPath == null ? null : cast(DefaultMutableTreeNode.class, selectionPath.getLastPathComponent());
 						final UserObject userObject = node == null ? null : cast(UserObject.class, node.getUserObject());
 						final ClassDescription classDescription = userObject == null ? null : cast(ClassDescription.class, userObject.getUIScaffold().getObject());
+						final boolean nodeIsClasses = node != null && "classes".equals(node.getUserObject());
 						
-						if (classDescription != null) {
+						if (classDescription != null || nodeIsClasses) {
 							this.dragging = true;
 							
 							final Graphics2D g = MainPanel.this.getContext().getGroundTruth().getGraphics();
@@ -606,8 +608,9 @@ public final class VisualAnalysis {
 							final int x = event.getX();
 							final int y = event.getY();
 							
-							g.setColor(new Color(classDescription.getLabel(), true));
+							g.setColor(new Color(nodeIsClasses ? 0 : classDescription.getLabel(), true));
 							g.setStroke(new BasicStroke(MainPanel.this.getBrushSize(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+							g.setComposite(AlphaComposite.Src);
 							g.drawLine(m.x, m.y, x, y);
 							
 							MainPanel.this.getImageComponent().getLayers().get(1).getPainters().get(0).getUpdateNeeded().set(true);
