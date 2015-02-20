@@ -4,6 +4,7 @@ import static imj3.tools.AwtImage2D.awtRead;
 import static imj3.tools.CommonSwingTools.limitHeight;
 import static imj3.tools.CommonSwingTools.setModel;
 import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
@@ -16,6 +17,7 @@ import static net.sourceforge.aprog.tools.Tools.join;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 
+import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
 import imj3.draft.processing.VisualAnalysis.Context.Refresh;
 import imj3.draft.segmentation.ImageComponent;
@@ -30,11 +32,14 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -221,6 +226,26 @@ public final class VisualAnalysis {
 		
 	}
 	
+	public static final File save(final String preferenceKey, final String title, final Component parent) {
+		final JFileChooser fileChooser = new JFileChooser(new File(preferences.get(preferenceKey, "")).getParentFile());
+		
+		if (JFileChooser.APPROVE_OPTION == fileChooser.showSaveDialog(parent)) {
+			return fileChooser.getSelectedFile();
+		}
+		
+		return null;
+	}
+	
+	public static final File open(final String preferenceKey, final String title, final Component parent) {
+		final JFileChooser fileChooser = new JFileChooser(new File(preferences.get(preferenceKey, "")).getParentFile());
+		
+		if (JFileChooser.APPROVE_OPTION == fileChooser.showOpenDialog(parent)) {
+			return fileChooser.getSelectedFile();
+		}
+		
+		return null;
+	}
+	
 	/**
 	 * @author codistmonk (creation 2015-02-13)
 	 */
@@ -254,6 +279,10 @@ public final class VisualAnalysis {
 		
 		private Experiment experiment;
 		
+		private final Point mouse;
+		
+		private int brushSize;
+		
 		public MainPanel(final Context context) {
 			super(new BorderLayout());
 			
@@ -268,6 +297,8 @@ public final class VisualAnalysis {
 			this.classificationVisibilitySelector = new JCheckBox();
 			this.scoreView = textView("-");
 			this.tree = new JTree(new DefaultTreeModel(new DefaultMutableTreeNode("No experiment")));
+			this.mouse = new Point();
+			this.brushSize = 1;
 			
 			final int padding = this.imageVisibilitySelector.getPreferredSize().width;
 			final JButton openImageButton = button("open");
@@ -297,10 +328,10 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void actionPerformed(final ActionEvent event) {
-					final JFileChooser fileChooser = new JFileChooser(new File(preferences.get(IMAGE_PATH, "")).getParent());
+					final File file = open(IMAGE_PATH, "Open image", MainPanel.this);
 					
-					if (JFileChooser.APPROVE_OPTION == fileChooser.showOpenDialog(MainPanel.this)) {
-						context.setImage(fileChooser.getSelectedFile());
+					if (file != null) {
+						context.setImage(file);
 					}
 				}
 				
@@ -346,18 +377,16 @@ public final class VisualAnalysis {
 				
 			});
 			newExperimentButton.addActionListener(e -> {
-				final JFileChooser fileChooser = new JFileChooser(new File(preferences.get(EXPERIMENT, "")).getParentFile());
+				final File file = save(EXPERIMENT, "New experiment", MainPanel.this);
 				
-				if (JFileChooser.APPROVE_OPTION == fileChooser.showSaveDialog(this)) {
-					final File selectedFile = fileChooser.getSelectedFile();
-					
-					try (final OutputStream output = new FileOutputStream(selectedFile)) {
+				if (file != null) {
+					try (final OutputStream output = new FileOutputStream(file)) {
 						xstream.toXML(new Experiment(), output);
 					} catch (final IOException exception) {
 						throw new UncheckedIOException(exception);
 					}
 					
-					context.setExperiment(selectedFile);
+					context.setExperiment(file);
 				}
 			});
 			openExperimentButton.addActionListener(e -> Tools.debugPrint("TODO"));
@@ -422,7 +451,7 @@ public final class VisualAnalysis {
 					final File file = SwingTools.getFiles(event).get(0);
 					
 					if (file.getName().toLowerCase(Locale.ENGLISH).endsWith(".xml")) {
-						
+						context.setExperiment(file);
 					} else {
 						context.setImage(file);
 					}
@@ -438,6 +467,18 @@ public final class VisualAnalysis {
 			this.setPreferredSize(new Dimension(800, 600));
 			
 			context.setMainPanel(this);
+		}
+		
+		public final int getBrushSize() {
+			return this.brushSize;
+		}
+		
+		public final void setBrushSize(final int brushSize) {
+			this.brushSize = max(1, min(brushSize, 128));
+		}
+		
+		public final Point getMouse() {
+			return this.mouse;
 		}
 		
 		public final Context getContext() {
@@ -482,6 +523,70 @@ public final class VisualAnalysis {
 				private static final long serialVersionUID = 7941391067177261093L;
 				
 			});
+			
+			this.getImageComponent().addLayer().getPainters().add(new Painter.Abstract() {
+				
+				@Override
+				public final void paint(final Canvas canvas) {
+					final Point m = MainPanel.this.getMouse();
+					
+					if (0 < m.x) {
+						final int s = MainPanel.this.getBrushSize();
+						
+						canvas.getGraphics().setColor(Color.WHITE);
+						canvas.getGraphics().drawOval(m.x - s / 2, m.y - s / 2, s, s);
+					}
+				}
+				
+				private static final long serialVersionUID = -476876650788388190L;
+				
+			});
+			
+			new MouseHandler(null) {
+				
+				@Override
+				public final void mousePressed(final MouseEvent event) {
+					this.mouseMoved(event);
+				}
+				
+				@Override
+				public final void mouseMoved(final MouseEvent event) {
+					MainPanel.this.getMouse().setLocation(event.getX(), event.getY());
+					MainPanel.this.getImageComponent().getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
+					MainPanel.this.getImageComponent().repaint();
+				}
+				
+				@Override
+				public final void mouseExited(final MouseEvent event) {
+					MainPanel.this.getMouse().x = -1;
+					MainPanel.this.getImageComponent().getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
+					MainPanel.this.getImageComponent().repaint();
+				}
+				
+				@Override
+				public final void mouseWheelMoved(final MouseWheelEvent event) {
+					if (event.getWheelRotation() < 0) {
+						MainPanel.this.setBrushSize(MainPanel.this.getBrushSize() + 1);
+					} else {
+						MainPanel.this.setBrushSize(MainPanel.this.getBrushSize() - 1);
+					}
+					
+					MainPanel.this.getImageComponent().getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
+					MainPanel.this.getImageComponent().repaint();
+				}
+				
+				@Override
+				public final void mouseDragged(final MouseEvent event) {
+					Tools.debugPrint("TODO"); // TODO
+					
+					super.mouseDragged(event);
+					MainPanel.this.getImageComponent().getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
+					MainPanel.this.getImageComponent().repaint();
+				}
+				
+				private static final long serialVersionUID = 1137846082170903999L;
+				
+			}.addTo(this.getImageComponent());
 			
 			this.setContents(this.getImageComponent());
 		}
