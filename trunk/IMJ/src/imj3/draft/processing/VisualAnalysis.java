@@ -345,21 +345,9 @@ public final class VisualAnalysis {
 			saveGroundTruthButton.addActionListener(e -> context.saveGroundTruth());
 			
 			this.experimentSelector.setFileListener(e -> context.setExperiment(MainPanel.this.getExperimentSelector().getSelectedFile()));
-			newExperimentButton.addActionListener(e -> {
-				final File file = save(EXPERIMENT, "New experiment", MainPanel.this);
-				
-				if (file != null) {
-					try (final OutputStream output = new FileOutputStream(file)) {
-						xstream.toXML(new Experiment(), output);
-					} catch (final IOException exception) {
-						throw new UncheckedIOException(exception);
-					}
-					
-					context.setExperiment(file);
-				}
-			});
-			openExperimentButton.addActionListener(e -> Tools.debugPrint("TODO"));
-			saveExperimentButton.addActionListener(e -> Tools.debugPrint("TODO"));
+			newExperimentButton.addActionListener(e -> context.saveExperiment(save(EXPERIMENT, "New experiment", MainPanel.this)));
+			openExperimentButton.addActionListener(e -> context.setExperiment(open(EXPERIMENT, "Open experiment", MainPanel.this)));
+			saveExperimentButton.addActionListener(e -> context.saveExperiment());
 			
 			this.imageVisibilitySelector.addActionListener(new ActionListener() {
 				
@@ -706,7 +694,7 @@ public final class VisualAnalysis {
 		}
 		
 		public final Context saveGroundTruth() {
-			if (this.getImage() != null) {
+			if (this.getImage() != null && !this.getGroundTruthName().isEmpty()) {
 				try {
 					ImageIO.write(this.getGroundTruth().getImage(), "png", new File(this.getGroundTruthPath()));
 				} catch (final IOException exception) {
@@ -763,9 +751,6 @@ public final class VisualAnalysis {
 			if (image == null) {
 				return;
 			}
-			
-			System.out.println(Tools.debug(Tools.DEBUG_STACK_OFFSET + 1));
-			Tools.debugPrint(this.getGroundTruthName());
 			
 			final int imageWidth = image.getWidth();
 			final int imageHeight = image.getHeight();
@@ -838,6 +823,43 @@ public final class VisualAnalysis {
 				this.getMainPanel().getExperimentSelector().setFile(experimentFile);
 				
 				preferences.put(EXPERIMENT, experimentFile.getPath());
+			}
+			
+			return this;
+		}
+		
+		public final Context saveExperiment(final File experimentFile) {
+			if (experimentFile != null) {
+				Experiment experiment = this.getMainPanel().getExperiment();
+				
+				if (experiment == null) {
+					experiment = new Experiment();
+				}
+				
+				try (final OutputStream output = new FileOutputStream(experimentFile)) {
+					xstream.toXML(experiment, output);
+				} catch (final IOException exception) {
+					throw new UncheckedIOException(exception);
+				}
+				
+				this.setExperiment(experimentFile);
+			}
+			
+			return this;
+		}
+		
+		public final Context saveExperiment() {
+			final File experimentFile = this.getExperimentFile();
+			
+			Tools.debugPrint(experimentFile, this.getMainPanel().getExperiment());
+			
+			if (experimentFile != null && this.getMainPanel().getExperiment() != null) {
+				Tools.debugPrint(this.getMainPanel().getExperiment().getClassDescriptions());
+				try (final OutputStream output = new FileOutputStream(experimentFile)) {
+					xstream.toXML(this.getMainPanel().getExperiment(), output);
+				} catch (final IOException exception) {
+					throw new UncheckedIOException(exception);
+				}
 			}
 			
 			return this;
