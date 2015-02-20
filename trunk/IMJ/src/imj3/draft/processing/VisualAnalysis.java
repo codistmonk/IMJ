@@ -44,26 +44,19 @@ import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
 import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
 import javax.swing.Box;
-import javax.swing.DefaultComboBoxModel;
-import javax.swing.DefaultListCellRenderer;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -114,7 +107,7 @@ public final class VisualAnalysis {
 			public final void run() {
 				SwingTools.show(new MainPanel(context), VisualAnalysis.class.getSimpleName(), false);
 				
-				context.setImageFile(new File(preferences.get(IMAGE_PATH, "")));
+				context.setImage(new File(preferences.get(IMAGE_PATH, "")));
 				context.setGroundTruth(preferences.get(GROUND_TRUTH, "gt"));
 				context.setExperiment(new File(preferences.get(EXPERIMENT, "experiment.xml")));
 			}
@@ -156,6 +149,8 @@ public final class VisualAnalysis {
 		
 		private final List<File> files = new ArrayList<>();
 		
+		private File selectedFile;
+		
 		private ActionListener fileListener;
 		
 		{
@@ -173,26 +168,31 @@ public final class VisualAnalysis {
 			this.setHorizontalAlignment(SwingConstants.LEFT);
 		}
 		
-		public ActionListener getFileListener() {
-			return fileListener;
+		public final ActionListener getFileListener() {
+			return this.fileListener;
 		}
 		
-		public void setFileListener(final ActionListener fileListener) {
+		public final void setFileListener(final ActionListener fileListener) {
 			this.fileListener = fileListener;
+		}
+		
+		public final File getSelectedFile() {
+			return this.selectedFile;
 		}
 		
 		public final FileSelector setFile(final File file) {
 			this.files.remove(file);
 			this.files.add(0, file);
 			
-			Tools.debugPrint(file);
+			final boolean changed = !file.equals(this.getSelectedFile());
 			
-			final boolean changed = file.equals(new File(this.getText()));
-			
-			this.setText(file.getName());
-			
-			if (changed && this.fileListener != null) {
-				this.fileListener.actionPerformed(new ActionEvent(this, -1, null));
+			if (changed) {
+				this.selectedFile = file;
+				this.setText(file.getName());
+				
+				if (this.fileListener != null) {
+					this.fileListener.actionPerformed(new ActionEvent(this, -1, null));
+				}
 			}
 			
 			return this;
@@ -236,7 +236,7 @@ public final class VisualAnalysis {
 		
 		private final JCheckBox groundTruthVisibilitySelector;
 		
-		private final PathSelector experimentSelector;
+		private final FileSelector experimentSelector;
 		
 		private final JTextField trainingTimeView;
 		
@@ -262,7 +262,7 @@ public final class VisualAnalysis {
 			this.imageVisibilitySelector = new JCheckBox("", true);
 			this.groundTruthSelector = new FileSelector();
 			this.groundTruthVisibilitySelector = new JCheckBox();
-			this.experimentSelector = new PathSelector();
+			this.experimentSelector = new FileSelector();
 			this.trainingTimeView = textView("-");
 			this.classificationTimeView = textView("-");
 			this.classificationVisibilitySelector = new JCheckBox();
@@ -274,11 +274,16 @@ public final class VisualAnalysis {
 			final JButton newGroundTruthButton = button("new");
 			final JButton saveGroundTruthButton = button("save");
 			final JButton refreshGroundTruthButton = button("refresh");
+			final JButton newExperimentButton = button("new");
+			final JButton openExperimentButton = button("open");
+			final JButton runExperimentButton = button("process");
+			final JButton saveExperimentButton = button("save");
+			final JButton refreshExperimentButton = button("refresh");
 			
 			this.mainSplitPane = horizontalSplit(verticalBox(
 					label(" Image: ", this.imageSelector, openImageButton, this.imageVisibilitySelector),
 					label(" Ground truth: ", this.groundTruthSelector, newGroundTruthButton, saveGroundTruthButton, refreshGroundTruthButton, this.groundTruthVisibilitySelector),
-					label(" Experiment: ", this.experimentSelector, button("new"), button("open"), button("save"), button("refresh"), Box.createHorizontalStrut(padding)),
+					label(" Experiment: ", this.experimentSelector, newExperimentButton, openExperimentButton, runExperimentButton, saveExperimentButton, refreshExperimentButton, Box.createHorizontalStrut(padding)),
 					label(" Training (s): ", this.trainingTimeView, button("process"), Box.createHorizontalStrut(padding)),
 					label(" Classification (s): ", this.classificationTimeView, button("process"), button("save"), button("refresh"), this.classificationVisibilitySelector),
 					label(" F1: ", this.scoreView, Box.createHorizontalStrut(padding)),
@@ -295,7 +300,7 @@ public final class VisualAnalysis {
 					final JFileChooser fileChooser = new JFileChooser(new File(preferences.get(IMAGE_PATH, "")).getParent());
 					
 					if (JFileChooser.APPROVE_OPTION == fileChooser.showOpenDialog(MainPanel.this)) {
-						context.setImageFile(fileChooser.getSelectedFile());
+						context.setImage(fileChooser.getSelectedFile());
 					}
 				}
 				
@@ -304,7 +309,7 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void actionPerformed(final ActionEvent event) {
-					context.setImageFile(new File(MainPanel.this.getImageSelector().getText()));
+					context.setImage(MainPanel.this.getImageSelector().getSelectedFile());
 				}
 				
 			});
@@ -332,20 +337,15 @@ public final class VisualAnalysis {
 			});
 			saveGroundTruthButton.addActionListener(e -> Tools.debugPrint("TODO"));
 			
-			this.experimentSelector.setPathListener(new ActionListener() {
+			this.experimentSelector.setFileListener(new ActionListener() {
 				
 				@Override
 				public final void actionPerformed(final ActionEvent event) {
-					try {
-						MainPanel.this.setExperiment((Experiment) xstream.fromXML(
-								new File(MainPanel.this.getExperimentSelector().getSelectedItem().toString())));
-					} catch (final Exception exception) {
-						Tools.debugError(exception);
-					}
+					context.setExperiment(MainPanel.this.getExperimentSelector().getSelectedFile());
 				}
 				
 			});
-			this.experimentSelector.setOptionListener(PathSelector.Option.NEW, e -> {
+			newExperimentButton.addActionListener(e -> {
 				final JFileChooser fileChooser = new JFileChooser(new File(preferences.get(EXPERIMENT, "")).getParentFile());
 				
 				if (JFileChooser.APPROVE_OPTION == fileChooser.showSaveDialog(this)) {
@@ -360,8 +360,8 @@ public final class VisualAnalysis {
 					context.setExperiment(selectedFile);
 				}
 			});
-			this.experimentSelector.setOptionListener(PathSelector.Option.OPEN, e -> Tools.debugPrint("TODO"));
-			this.experimentSelector.setOptionListener(PathSelector.Option.SAVE, e -> Tools.debugPrint("TODO"));
+			openExperimentButton.addActionListener(e -> Tools.debugPrint("TODO"));
+			saveExperimentButton.addActionListener(e -> Tools.debugPrint("TODO"));
 			
 			this.imageVisibilitySelector.addActionListener(new ActionListener() {
 				
@@ -424,7 +424,7 @@ public final class VisualAnalysis {
 					if (file.getName().toLowerCase(Locale.ENGLISH).endsWith(".xml")) {
 						
 					} else {
-						context.setImageFile(file);
+						context.setImage(file);
 					}
 				}
 				
@@ -506,7 +506,7 @@ public final class VisualAnalysis {
 			return this.groundTruthVisibilitySelector;
 		}
 		
-		public final PathSelector getExperimentSelector() {
+		public final FileSelector getExperimentSelector() {
 			return this.experimentSelector;
 		}
 		
@@ -543,8 +543,6 @@ public final class VisualAnalysis {
 		
 		private MainPanel mainPanel;
 		
-		private Experiment experiment;
-		
 		private final Canvas groundTruth = new Canvas();
 		
 		private final Canvas classification = new Canvas();
@@ -558,7 +556,7 @@ public final class VisualAnalysis {
 		}
 		
 		public final File getExperimentFile() {
-			return new File(this.getMainPanel().getExperimentSelector().getSelectedItem().toString());
+			return this.getMainPanel().getExperimentSelector().getSelectedFile();
 		}
 		
 		public final String getGroundTruthName() {
@@ -567,16 +565,6 @@ public final class VisualAnalysis {
 		
 		public final Context setGroundTruthName(final String groundTruthName) {
 			this.getMainPanel().getGroundTruthSelector().setFile(new File(groundTruthName));
-			
-			return this;
-		}
-		
-		public final Experiment getExperiment() {
-			return this.experiment;
-		}
-		
-		public final Context setExperiment(final Experiment experiment) {
-			this.experiment = experiment;
 			
 			return this;
 		}
@@ -601,7 +589,9 @@ public final class VisualAnalysis {
 		}
 		
 		public final String getExperimentName() {
-			return baseName(this.getExperimentFile().getName());
+			final File experimentFile = this.getExperimentFile();
+			
+			return experimentFile == null ? null : baseName(experimentFile.getName());
 		}
 		
 		public final File getImageFile() {
@@ -668,7 +658,7 @@ public final class VisualAnalysis {
 			}
 		}
 		
-		public final Context setImageFile(final File imageFile) {
+		public final Context setImage(final File imageFile) {
 			System.out.println(Tools.debug(Tools.DEBUG_STACK_OFFSET + 1, imageFile));
 			
 			final File oldImageFile = this.getImageFile();
@@ -697,7 +687,8 @@ public final class VisualAnalysis {
 		
 		public final Context setExperiment(final File experimentFile) {
 			if (experimentFile.isFile()) {
-				this.getMainPanel().getExperimentSelector().setPath(experimentFile.getPath());
+				this.getMainPanel().setExperiment((Experiment) xstream.fromXML(experimentFile));
+				this.getMainPanel().getExperimentSelector().setFile(experimentFile);
 				
 				preferences.put(EXPERIMENT, experimentFile.getPath());
 			}
@@ -851,148 +842,6 @@ public final class VisualAnalysis {
 			}
 			
 			private static final long serialVersionUID = 847822079141878928L;
-			
-		}
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-02-18)
-	 */
-	public static final class PathSelector extends JComboBox<Object> {
-		
-		private final Map<Option, ActionListener> optionListeners;
-		
-		private ActionListener pathListener;
-		
-		public PathSelector() {
-			this.optionListeners = new LinkedHashMap<>();
-			
-			this.setRenderer(new DefaultListCellRenderer() {
-				
-				@Override
-				public final Component getListCellRendererComponent(final JList<?> list,
-						final Object value, final int index, final boolean isSelected,
-						final boolean cellHasFocus) {
-					final Component result = super.getListCellRendererComponent(
-							list, value, index, isSelected, cellHasFocus);
-					
-					if (value instanceof Option) {
-						this.setText(((Option) value).getTranslationKey());
-					} else if (index < 0 || isSelected) {
-						this.setText(new File(this.getText()).getName());
-					}
-					
-					return result;
-				}
-				
-				private static final long serialVersionUID = -3014056515590258107L;
-				
-			});
-			
-			this.addActionListener(new ActionListener() {
-				
-				@Override
-				public final void actionPerformed(final ActionEvent event) {
-					PathSelector.this.action(event);
-				}
-				
-			});
-		}
-		
-		public final PathSelector setPath(final String path) {
-			final DefaultComboBoxModel<Object> model = (DefaultComboBoxModel<Object>) this.getModel();
-			
-			model.insertElementAt(path, 0);
-			
-			for (int i = model.getSize() - this.optionListeners.size() - 1; 0 < i; --i) {
-				if (model.getElementAt(i).equals(path)) {
-					model.removeElementAt(i);
-				}
-			}
-			
-			SwingUtilities.invokeLater(() -> this.setSelectedIndex(0));
-			
-			return this;
-		}
-		
-		public final PathSelector setPathListener(final ActionListener listener) {
-			this.pathListener = listener;
-			
-			return this;
-		}
-		
-		public final PathSelector setOptionListener(final Option option, final ActionListener listener) {
-			final DefaultComboBoxModel<Object> model = (DefaultComboBoxModel<Object>) this.getModel();
-			
-			if (this.optionListeners.isEmpty()) {
-				model.addElement("-");
-			} else {
-				this.optionListeners.remove(option);
-				model.removeElement(option);
-			}
-			
-			if (listener != null) {
-				this.optionListeners.put(option, listener);
-				model.addElement(option);
-			}
-			
-			return this;
-		}
-		
-		final void action(final ActionEvent event) {
-			final Object selectedItem = this.getSelectedItem();
-			
-			if (selectedItem instanceof Option) {
-				this.optionListeners.get(selectedItem).actionPerformed(event);
-			} else if (selectedItem != null && this.pathListener != null) {
-				this.pathListener.actionPerformed(event);
-			}
-			
-			if (!this.optionListeners.isEmpty()
-					&& this.getItemCount() - this.optionListeners.size() - 1 <= this.getSelectedIndex()) {
-				this.setSelectedIndex(0);
-			}
-		}
-		
-		private static final long serialVersionUID = 2024380772192514052L;
-		
-		/**
-		 * @author codistmonk (creation 2015-02-18)
-		 */
-		public static enum Option {
-			
-			NEW {
-				
-				@Override
-				public final String getTranslationKey() {
-					return "New...";
-				}
-				
-			}, OPEN {
-				
-				@Override
-				public final String getTranslationKey() {
-					return "Open...";
-				}
-				
-			}, SAVE {
-				
-				@Override
-				public final String getTranslationKey() {
-					return "Save";
-				}
-				
-			}, DELETE {
-				
-				@Override
-				public final String getTranslationKey() {
-					return "Delete";
-				}
-				
-			};
-			
-			public abstract String getTranslationKey();
 			
 		}
 		
