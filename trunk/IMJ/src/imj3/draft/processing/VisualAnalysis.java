@@ -22,14 +22,17 @@ import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
 import imj3.draft.processing.VisualAnalysis.Context.Refresh;
 import imj3.draft.processing.VisualAnalysis.Experiment.ClassDescription;
+import imj3.draft.processing.VisualAnalysis.Experiment.TrainingField;
 import imj3.draft.segmentation.ImageComponent;
 import imj3.draft.segmentation.ImageComponent.Layer;
 import imj3.draft.segmentation.ImageComponent.Painter;
+import imj3.tools.CommonSwingTools.Instantiator;
 import imj3.tools.CommonSwingTools.NestedList;
 import imj3.tools.CommonSwingTools.PropertyGetter;
 import imj3.tools.CommonSwingTools.PropertySetter;
 import imj3.tools.CommonSwingTools.StringGetter;
 import imj3.tools.CommonSwingTools.UserObject;
+import imj3.tools.CommonTools;
 
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
@@ -449,7 +452,31 @@ public final class VisualAnalysis {
 		public final void setExperiment(final Experiment experiment) {
 			this.experiment = experiment;
 			
-			setModel(this.tree, experiment, "Experiment");
+			setModel(this.tree, experiment, "Experiment", new Instantiator() {
+				
+				@SuppressWarnings("unchecked")
+				@Override
+				public final <T> T newInstanceOf(final Class<T> cls) {
+					if (TrainingField.class.equals(cls)) {
+						final TrainingField result = (TrainingField) CommonTools.newInstanceOf(cls);
+						final BufferedImage image = MainPanel.this.getContext().getImage();
+						
+						if (image != null) {
+							result.setImagePath(MainPanel.this.getContext().getImageFile().getPath());
+							result.setBounds("0,0," + image.getWidth() + "," + image.getHeight());
+						}
+						
+						result.setGroundTruthName(MainPanel.this.getContext().getGroundTruthName());
+						
+						return (T) result;
+					}
+					
+					return CommonTools.newInstanceOf(cls);
+				}
+				
+				private static final long serialVersionUID = -3863907586014633958L;
+				
+			});
 		}
 		
 		public final ImageComponent getImageComponent() {
@@ -580,7 +607,8 @@ public final class VisualAnalysis {
 		}
 		
 		public final Color getBrushColor() {
-			if (MainPanel.this.getGroundTruthVisibilitySelector().isSelected() && !context.getGroundTruthName().isEmpty()) {
+			if (MainPanel.this.getGroundTruthVisibilitySelector().isSelected()
+					&& !MainPanel.this.getContext().getGroundTruthName().isEmpty()) {
 				final TreePath selectionPath = MainPanel.this.getTree().getSelectionPath();
 				final DefaultMutableTreeNode node = selectionPath == null ? null : cast(DefaultMutableTreeNode.class, selectionPath.getLastPathComponent());
 				final UserObject userObject = node == null ? null : cast(UserObject.class, node.getUserObject());
@@ -973,6 +1001,8 @@ public final class VisualAnalysis {
 			
 			private String imagePath = "";
 			
+			private String groundTruthName = "";
+			
 			private final Rectangle bounds = new Rectangle();
 			
 			@PropertyGetter("image")
@@ -983,6 +1013,18 @@ public final class VisualAnalysis {
 			@PropertySetter("image")
 			public final TrainingField setImagePath(final String imagePath) {
 				this.imagePath = imagePath;
+				
+				return this;
+			}
+			
+			@PropertyGetter("ground truth")
+			public final String getGroundTruthName() {
+				return this.groundTruthName;
+			}
+			
+			@PropertySetter("ground truth")
+			public final TrainingField setGroundTruthName(final String groundTruthName) {
+				this.groundTruthName = groundTruthName;
 				
 				return this;
 			}
@@ -1007,7 +1049,7 @@ public final class VisualAnalysis {
 			
 			@Override
 			public final String toString() {
-				return new File(this.getImagePath()).getName() + "[" + this.getBoundsAsString() + "]";
+				return this.getGroundTruthName() +  ":" + new File(this.getImagePath()).getName() + "[" + this.getBoundsAsString() + "]";
 			}
 			
 			private static final long serialVersionUID = 847822079141878928L;

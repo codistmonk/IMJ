@@ -1,10 +1,11 @@
 package imj3.tools;
 
-import static imj3.tools.CommonTools.newInstanceOf;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj2.pixel3d.MouseHandler;
+
 import imj3.tools.CommonTools.Property;
 
 import java.awt.Component;
@@ -28,7 +29,6 @@ import java.io.Serializable;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -68,7 +68,7 @@ public final class CommonSwingTools {
 		throw new IllegalInstantiationException();
 	}
 	
-	public static final void setModel(final JTree tree, final Object object, final String rootEdtiTitle) {
+	public static final void setModel(final JTree tree, final Object object, final String rootEdtiTitle, final Instantiator instantiator) {
 		final DefaultMutableTreeNode root = new DefaultMutableTreeNode(new UIScaffold(object));
 		final DefaultTreeModel model = new DefaultTreeModel(root);
 		
@@ -82,6 +82,7 @@ public final class CommonSwingTools {
 			
 			for (final Method method : scaffold.getInlineLists()) {
 				try {
+					@SuppressWarnings("unchecked")
 					final List<Object> list = (List<Object>) method.invoke(object);
 					
 					for (final Object o : list) {
@@ -98,6 +99,7 @@ public final class CommonSwingTools {
 				
 				try {
 					final Method method = entry.getValue();
+					@SuppressWarnings("unchecked")
 					final List<Object> list = (List<Object>) method.invoke(object);
 					
 					for (final Object o : list) {
@@ -145,6 +147,7 @@ public final class CommonSwingTools {
 							final InlineList annotation = inlineList.getAnnotation(InlineList.class);
 							
 							try {
+								@SuppressWarnings("unchecked")
 								final List<Object> list = (List<Object>) inlineList.invoke(object);
 								final String element = annotation.element();
 								
@@ -162,6 +165,7 @@ public final class CommonSwingTools {
 								final NestedList annotation = entry.getValue().getAnnotation(NestedList.class);
 								
 								try {
+									@SuppressWarnings("unchecked")
 									final List<Object> list = (List<Object>) entry.getValue().invoke(object);
 									final String element = annotation.element();
 									
@@ -179,7 +183,7 @@ public final class CommonSwingTools {
 			
 			private final void addListItem(final JPopupMenu popup, final MutableTreeNode nestingNode, final String element, final Class<?> elementClass, final List<Object> list) {
 				popup.add(item("Add " + element + "...", e -> {
-					final UIScaffold newElementScaffold = new UIScaffold(newInstanceOf(elementClass));
+					final UIScaffold newElementScaffold = new UIScaffold(instantiator.newInstanceOf(elementClass));
 					
 					newElementScaffold.edit("New " + element, new Runnable() {
 						
@@ -591,6 +595,29 @@ public final class CommonSwingTools {
 		public abstract String element();
 		
 		public abstract Class<?> elementClass();
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-21)
+	 */
+	public static abstract interface Instantiator extends Serializable {
+		
+		public abstract <T> T newInstanceOf(Class<T> cls);
+		
+		/**
+		 * @author codistmonk (creation 2015-02-21)
+		 */
+		public static final class Default implements Instantiator {
+			
+			@Override
+			public final <T> T newInstanceOf(final Class<T> cls) {
+				return CommonTools.newInstanceOf(cls);
+			}
+			
+			private static final long serialVersionUID = -2742127011021429060L;
+			
+		}
 		
 	}
 	
