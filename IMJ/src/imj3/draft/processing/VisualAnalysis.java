@@ -12,6 +12,7 @@ import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
 import static net.sourceforge.aprog.tools.Tools.append;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
+import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 
 import com.thoughtworks.xstream.XStream;
@@ -20,6 +21,7 @@ import com.thoughtworks.xstream.io.xml.StaxDriver;
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
 import imj3.draft.processing.VisualAnalysis.Context.Refresh;
+import imj3.draft.processing.VisualAnalysis.Experiment.ClassDescription;
 import imj3.draft.segmentation.ImageComponent;
 import imj3.draft.segmentation.ImageComponent.Layer;
 import imj3.draft.segmentation.ImageComponent.Painter;
@@ -27,6 +29,7 @@ import imj3.tools.CommonSwingTools.NestedList;
 import imj3.tools.CommonSwingTools.PropertyGetter;
 import imj3.tools.CommonSwingTools.PropertySetter;
 import imj3.tools.CommonSwingTools.StringGetter;
+import imj3.tools.CommonSwingTools.UserObject;
 
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
@@ -75,6 +78,7 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreePath;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -589,18 +593,25 @@ public final class VisualAnalysis {
 				@Override
 				public final void mouseDragged(final MouseEvent event) {
 					if (MainPanel.this.getGroundTruthVisibilitySelector().isSelected()) {
-						this.dragging = true;
+						final TreePath selectionPath = MainPanel.this.getTree().getSelectionPath();
+						final DefaultMutableTreeNode node = selectionPath == null ? null : cast(DefaultMutableTreeNode.class, selectionPath.getLastPathComponent());
+						final UserObject userObject = node == null ? null : cast(UserObject.class, node.getUserObject());
+						final ClassDescription classDescription = userObject == null ? null : cast(ClassDescription.class, userObject.getUIScaffold().getObject());
 						
-						final Graphics2D g = MainPanel.this.getContext().getGroundTruth().getGraphics();
-						final Point m = MainPanel.this.getMouse();
-						final int x = event.getX();
-						final int y = event.getY();
-						
-						g.setColor(Color.RED);
-						g.setStroke(new BasicStroke(MainPanel.this.getBrushSize(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-						g.drawLine(m.x, m.y, x, y);
-						
-						MainPanel.this.getImageComponent().getLayers().get(1).getPainters().get(0).getUpdateNeeded().set(true);
+						if (classDescription != null) {
+							this.dragging = true;
+							
+							final Graphics2D g = MainPanel.this.getContext().getGroundTruth().getGraphics();
+							final Point m = MainPanel.this.getMouse();
+							final int x = event.getX();
+							final int y = event.getY();
+							
+							g.setColor(new Color(classDescription.getLabel(), true));
+							g.setStroke(new BasicStroke(MainPanel.this.getBrushSize(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+							g.drawLine(m.x, m.y, x, y);
+							
+							MainPanel.this.getImageComponent().getLayers().get(1).getPainters().get(0).getUpdateNeeded().set(true);
+						}
 					}
 					
 					this.mouseMoved(event);
