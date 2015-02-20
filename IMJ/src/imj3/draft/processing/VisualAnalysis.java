@@ -28,10 +28,12 @@ import imj3.tools.CommonSwingTools.PropertyGetter;
 import imj3.tools.CommonSwingTools.PropertySetter;
 import imj3.tools.CommonSwingTools.StringGetter;
 
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.dnd.DropTarget;
@@ -544,9 +546,16 @@ public final class VisualAnalysis {
 			
 			new MouseHandler(null) {
 				
+				private boolean dragging;
+				
 				@Override
 				public final void mousePressed(final MouseEvent event) {
 					this.mouseMoved(event);
+				}
+				
+				@Override
+				public final void mouseReleased(final MouseEvent event) {
+					this.dragging = false;
 				}
 				
 				@Override
@@ -558,9 +567,11 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void mouseExited(final MouseEvent event) {
-					MainPanel.this.getMouse().x = -1;
-					MainPanel.this.getImageComponent().getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
-					MainPanel.this.getImageComponent().repaint();
+					if (!this.dragging) {
+						MainPanel.this.getMouse().x = -1;
+						MainPanel.this.getImageComponent().getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
+						MainPanel.this.getImageComponent().repaint();
+					}
 				}
 				
 				@Override
@@ -577,11 +588,22 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void mouseDragged(final MouseEvent event) {
-					Tools.debugPrint("TODO"); // TODO
+					if (MainPanel.this.getGroundTruthVisibilitySelector().isSelected()) {
+						this.dragging = true;
+						
+						final Graphics2D g = MainPanel.this.getContext().getGroundTruth().getGraphics();
+						final Point m = MainPanel.this.getMouse();
+						final int x = event.getX();
+						final int y = event.getY();
+						
+						g.setColor(Color.RED);
+						g.setStroke(new BasicStroke(MainPanel.this.getBrushSize(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+						g.drawLine(m.x, m.y, x, y);
+						
+						MainPanel.this.getImageComponent().getLayers().get(1).getPainters().get(0).getUpdateNeeded().set(true);
+					}
 					
-					super.mouseDragged(event);
-					MainPanel.this.getImageComponent().getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
-					MainPanel.this.getImageComponent().repaint();
+					this.mouseMoved(event);
 				}
 				
 				private static final long serialVersionUID = 1137846082170903999L;
