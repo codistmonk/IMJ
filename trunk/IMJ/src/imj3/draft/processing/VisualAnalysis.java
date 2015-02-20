@@ -331,58 +331,20 @@ public final class VisualAnalysis {
 			this.mainSplitPane.getLeftComponent().setMaximumSize(new Dimension(128, Integer.MAX_VALUE));
 			this.add(this.mainSplitPane, BorderLayout.CENTER);
 			
-			openImageButton.addActionListener(new ActionListener() {
+			openImageButton.addActionListener(e -> {
+				final File file = open(IMAGE_PATH, "Open image", MainPanel.this);
 				
-				@Override
-				public final void actionPerformed(final ActionEvent event) {
-					final File file = open(IMAGE_PATH, "Open image", MainPanel.this);
-					
-					if (file != null) {
-						context.setImage(file);
-					}
+				if (file != null) {
+					context.setImage(file);
 				}
-				
 			});
-			this.imageSelector.setFileListener(new ActionListener() {
-				
-				@Override
-				public final void actionPerformed(final ActionEvent event) {
-					context.setImage(MainPanel.this.getImageSelector().getSelectedFile());
-				}
-				
-			});
+			this.imageSelector.setFileListener(e -> context.setImage(MainPanel.this.getImageSelector().getSelectedFile()));
 			
-			this.groundTruthSelector.setFileListener(new ActionListener() {
-				
-				@Override
-				public final void actionPerformed(final ActionEvent event) {
-					context.refreshGroundTruthAndClassification(Refresh.FROM_FILE);
-				}
-				
-			});
-			newGroundTruthButton.addActionListener(e -> {
-				final String name = JOptionPane.showInputDialog("Ground truth name:");
-				
-				if (name != null && context.getImage() != null) {
-					try {
-						ImageIO.write(context.formatGroundTruth().getGroundTruth().getImage(), "png", new File(context.getGroundTruthPath(name)));
-					} catch (final IOException exception) {
-						throw new UncheckedIOException(exception);
-					}
-					
-					context.setGroundTruth(name);
-				}
-			});
-			saveGroundTruthButton.addActionListener(e -> Tools.debugPrint("TODO"));
+			this.groundTruthSelector.setFileListener(e -> context.refreshGroundTruthAndClassification(Refresh.FROM_FILE));
+			newGroundTruthButton.addActionListener(e -> context.saveGroundTruth(JOptionPane.showInputDialog("Ground truth name:")));
+			saveGroundTruthButton.addActionListener(e -> context.saveGroundTruth());
 			
-			this.experimentSelector.setFileListener(new ActionListener() {
-				
-				@Override
-				public final void actionPerformed(final ActionEvent event) {
-					context.setExperiment(MainPanel.this.getExperimentSelector().getSelectedFile());
-				}
-				
-			});
+			this.experimentSelector.setFileListener(e -> context.setExperiment(MainPanel.this.getExperimentSelector().getSelectedFile()));
 			newExperimentButton.addActionListener(e -> {
 				final File file = save(EXPERIMENT, "New experiment", MainPanel.this);
 				
@@ -511,6 +473,10 @@ public final class VisualAnalysis {
 			
 			this.getImageComponent().addLayer().getPainters().add(new Painter.Abstract() {
 				
+				{
+					this.getActive().set(MainPanel.this.getGroundTruthVisibilitySelector().isSelected());
+				}
+				
 				@Override
 				public final void paint(final Canvas canvas) {
 					canvas.getGraphics().drawImage(MainPanel.this.getContext().getGroundTruth().getImage(), 0, 0, null);
@@ -521,6 +487,10 @@ public final class VisualAnalysis {
 			});
 			
 			this.getImageComponent().addLayer().getPainters().add(new Painter.Abstract() {
+				
+				{
+					this.getActive().set(MainPanel.this.getClassificationVisibilitySelector().isSelected());
+				}
 				
 				@Override
 				public final void paint(final Canvas canvas) {
@@ -537,7 +507,7 @@ public final class VisualAnalysis {
 				public final void paint(final Canvas canvas) {
 					final Point m = MainPanel.this.getMouse();
 					
-					if (0 < m.x) {
+					if (0 < m.x && MainPanel.this.getBrushColor() != null) {
 						final int s = MainPanel.this.getBrushSize();
 						
 						canvas.getGraphics().setColor(Color.WHITE);
@@ -593,28 +563,22 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void mouseDragged(final MouseEvent event) {
-					if (MainPanel.this.getGroundTruthVisibilitySelector().isSelected()) {
-						final TreePath selectionPath = MainPanel.this.getTree().getSelectionPath();
-						final DefaultMutableTreeNode node = selectionPath == null ? null : cast(DefaultMutableTreeNode.class, selectionPath.getLastPathComponent());
-						final UserObject userObject = node == null ? null : cast(UserObject.class, node.getUserObject());
-						final ClassDescription classDescription = userObject == null ? null : cast(ClassDescription.class, userObject.getUIScaffold().getObject());
-						final boolean nodeIsClasses = node != null && "classes".equals(node.getUserObject());
+					final Color brushColor = MainPanel.this.getBrushColor();
+					
+					if (brushColor != null) {
+						this.dragging = true;
 						
-						if (classDescription != null || nodeIsClasses) {
-							this.dragging = true;
-							
-							final Graphics2D g = MainPanel.this.getContext().getGroundTruth().getGraphics();
-							final Point m = MainPanel.this.getMouse();
-							final int x = event.getX();
-							final int y = event.getY();
-							
-							g.setColor(new Color(nodeIsClasses ? 0 : classDescription.getLabel(), true));
-							g.setStroke(new BasicStroke(MainPanel.this.getBrushSize(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-							g.setComposite(AlphaComposite.Src);
-							g.drawLine(m.x, m.y, x, y);
-							
-							MainPanel.this.getImageComponent().getLayers().get(1).getPainters().get(0).getUpdateNeeded().set(true);
-						}
+						final Graphics2D g = MainPanel.this.getContext().getGroundTruth().getGraphics();
+						final Point m = MainPanel.this.getMouse();
+						final int x = event.getX();
+						final int y = event.getY();
+						
+						g.setColor(brushColor);
+						g.setStroke(new BasicStroke(MainPanel.this.getBrushSize(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+						g.setComposite(AlphaComposite.Src);
+						g.drawLine(m.x, m.y, x, y);
+						
+						MainPanel.this.getImageComponent().getLayers().get(1).getPainters().get(0).getUpdateNeeded().set(true);
 					}
 					
 					this.mouseMoved(event);
@@ -625,6 +589,22 @@ public final class VisualAnalysis {
 			}.addTo(this.getImageComponent());
 			
 			this.setContents(this.getImageComponent());
+		}
+		
+		public final Color getBrushColor() {
+			if (MainPanel.this.getGroundTruthVisibilitySelector().isSelected() && !context.getGroundTruthName().isEmpty()) {
+				final TreePath selectionPath = MainPanel.this.getTree().getSelectionPath();
+				final DefaultMutableTreeNode node = selectionPath == null ? null : cast(DefaultMutableTreeNode.class, selectionPath.getLastPathComponent());
+				final UserObject userObject = node == null ? null : cast(UserObject.class, node.getUserObject());
+				final ClassDescription classDescription = userObject == null ? null : cast(ClassDescription.class, userObject.getUIScaffold().getObject());
+				final boolean nodeIsClasses = node != null && "classes".equals(node.getUserObject());
+				
+				if (classDescription != null || nodeIsClasses) {
+					return new Color(nodeIsClasses ? 0 : classDescription.getLabel(), true);
+				}
+			}
+			
+			return null;
 		}
 		
 		public final FileSelector getImageSelector() {
@@ -723,6 +703,32 @@ public final class VisualAnalysis {
 		
 		public final Context formatGroundTruth() {
 			return format(this.getGroundTruth());
+		}
+		
+		public final Context saveGroundTruth() {
+			if (this.getImage() != null) {
+				try {
+					ImageIO.write(this.getGroundTruth().getImage(), "png", new File(this.getGroundTruthPath()));
+				} catch (final IOException exception) {
+					throw new UncheckedIOException(exception);
+				}
+			}
+			
+			return this;
+		}
+		
+		public final Context saveGroundTruth(final String name) {
+			if (name != null && this.getImage() != null) {
+				try {
+					ImageIO.write(this.formatGroundTruth().getGroundTruth().getImage(), "png", new File(this.getGroundTruthPath(name)));
+				} catch (final IOException exception) {
+					throw new UncheckedIOException(exception);
+				}
+				
+				this.setGroundTruth(name);
+			}
+			
+			return this;
 		}
 		
 		public final Canvas getClassification() {
