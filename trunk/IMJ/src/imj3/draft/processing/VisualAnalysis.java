@@ -818,7 +818,7 @@ public final class VisualAnalysis {
 		}
 		
 		public final Context setExperiment(final File experimentFile) {
-			if (experimentFile.isFile()) {
+			if (experimentFile != null && experimentFile.isFile()) {
 				this.getMainPanel().setExperiment((Experiment) xstream.fromXML(experimentFile));
 				this.getMainPanel().getExperimentSelector().setFile(experimentFile);
 				
