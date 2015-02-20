@@ -228,7 +228,7 @@ public final class VisualAnalysis {
 		
 		private final Context context;
 		
-		private final PathSelector imageSelector;
+		private final FileSelector imageSelector;
 		
 		private final JCheckBox imageVisibilitySelector;
 		
@@ -258,7 +258,7 @@ public final class VisualAnalysis {
 			super(new BorderLayout());
 			
 			this.context = context;
-			this.imageSelector = new PathSelector();
+			this.imageSelector = new FileSelector();
 			this.imageVisibilitySelector = new JCheckBox("", true);
 			this.groundTruthSelector = new FileSelector();
 			this.groundTruthVisibilitySelector = new JCheckBox();
@@ -270,14 +270,14 @@ public final class VisualAnalysis {
 			this.tree = new JTree(new DefaultTreeModel(new DefaultMutableTreeNode("No experiment")));
 			
 			final int padding = this.imageVisibilitySelector.getPreferredSize().width;
+			final JButton openImageButton = button("open");
 			final JButton newGroundTruthButton = button("new");
 			final JButton saveGroundTruthButton = button("save");
 			final JButton refreshGroundTruthButton = button("refresh");
 			
 			this.mainSplitPane = horizontalSplit(verticalBox(
-					label(" Image: ", this.imageSelector, button("open"), button("refresh"), this.imageVisibilitySelector),
+					label(" Image: ", this.imageSelector, openImageButton, this.imageVisibilitySelector),
 					label(" Ground truth: ", this.groundTruthSelector, newGroundTruthButton, saveGroundTruthButton, refreshGroundTruthButton, this.groundTruthVisibilitySelector),
-//					label(" Ground truth: ", new FileSelector().setFile(new File("b/test2")).setFile(new File("a/test1")), button("new"), button("save"), button("refresh"), Box.createHorizontalStrut(padding)),
 					label(" Experiment: ", this.experimentSelector, button("new"), button("open"), button("save"), button("refresh"), Box.createHorizontalStrut(padding)),
 					label(" Training (s): ", this.trainingTimeView, button("process"), Box.createHorizontalStrut(padding)),
 					label(" Classification (s): ", this.classificationTimeView, button("process"), button("save"), button("refresh"), this.classificationVisibilitySelector),
@@ -288,7 +288,7 @@ public final class VisualAnalysis {
 			this.mainSplitPane.getLeftComponent().setMaximumSize(new Dimension(128, Integer.MAX_VALUE));
 			this.add(this.mainSplitPane, BorderLayout.CENTER);
 			
-			this.imageSelector.setOptionListener(PathSelector.Option.OPEN, new ActionListener() {
+			openImageButton.addActionListener(new ActionListener() {
 				
 				@Override
 				public final void actionPerformed(final ActionEvent event) {
@@ -300,11 +300,11 @@ public final class VisualAnalysis {
 				}
 				
 			});
-			this.imageSelector.setPathListener(new ActionListener() {
+			this.imageSelector.setFileListener(new ActionListener() {
 				
 				@Override
 				public final void actionPerformed(final ActionEvent event) {
-					MainPanel.this.setImage(MainPanel.this.getImageSelector().getSelectedItem().toString());
+					context.setImageFile(new File(MainPanel.this.getImageSelector().getText()));
 				}
 				
 			});
@@ -486,7 +486,7 @@ public final class VisualAnalysis {
 			this.setContents(this.getImageComponent());
 		}
 		
-		public final PathSelector getImageSelector() {
+		public final FileSelector getImageSelector() {
 			return this.imageSelector;
 		}
 		
@@ -605,7 +605,7 @@ public final class VisualAnalysis {
 		}
 		
 		public final File getImageFile() {
-			return new File(this.getMainPanel().getImageSelector().getSelectedItem().toString());
+			return new File(this.getMainPanel().getImageSelector().getText());
 		}
 		
 		public final String getGroundTruthPath() {
@@ -674,7 +674,8 @@ public final class VisualAnalysis {
 			final File oldImageFile = this.getImageFile();
 			
 			if (imageFile.isFile() && !imageFile.equals(oldImageFile)) {
-				this.getMainPanel().getImageSelector().setPath(imageFile.getPath());
+				this.getMainPanel().setImage(imageFile.getPath());
+				this.getMainPanel().getImageSelector().setFile(imageFile);
 				
 				this.refreshGroundTruthAndClassification(Refresh.FROM_FILE);
 				
