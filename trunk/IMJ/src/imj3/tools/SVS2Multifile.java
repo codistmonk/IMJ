@@ -285,54 +285,66 @@ public final class SVS2Multifile {
 		public final void next(final String tileFormat, final ZipOutputStream output, final Collection<Exception> problems) {
 			if (this.bufferDone) {
 				final int h = min(this.tileSize, this.levelHeight - this.tileY);
-				final Canvas tile = new Canvas();
+				final int tileY0 = this.tileY;
+				final TaskManager tasks = new TaskManager(1.0);
 				
-				// TODO parallelize
 				for (int tileX = 0; tileX < this.levelWidth; tileX += this.tileSize) {
-					final int w = min(this.tileSize, this.levelWidth - tileX);
+					final int tileX0 = tileX;
 					
-					tile.setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR);
-					
-					for (int y = 0; y < h; ++y) {
-						for (int x = 0; x < w; ++x) {
-							tile.getImage().setRGB(x, y, this.buffer[y * this.levelWidth + tileX + x]);
-						}
-					}
-					
-					final String tileName = "tile_lod" + this.n + "_y" + this.tileY + "_x" + tileX + "." + tileFormat;
-					final ByteArrayOutputStream tmp = new ByteArrayOutputStream();
-					
-					try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(tileFormat).setCompressionQuality(0.9F).setOutput(tmp)) {
-						imageWriter.write(tile.getImage());
+					tasks.submit(new Runnable() {
 						
-						synchronized (output) {
-							output.putNextEntry(new ZipEntry(tileName));
-							output.write(tmp.toByteArray());
-							output.closeEntry();
-						}
-					} catch (final Exception exception) {
-						exception.printStackTrace();
-						
-						problems.add(exception);
-					}
-					
-					if (this.nextLevel != null) {
-						for (int y = 0; y < (h & ~1); y += 2) {
-							for (int x = 0; x < (w & ~1); x += 2) {
-								final int rgb00 = this.buffer[y * this.levelWidth + tileX + x];
-								final int rgb01 = this.buffer[y * this.levelWidth + tileX + x + 1];
-								final int rgb10 = this.buffer[(y + 1) * this.levelWidth + tileX + x];
-								final int rgb11 = this.buffer[(y + 1) * this.levelWidth + tileX + x + 1];
-								final int r = (((rgb00 & R) + (rgb01 & R) + (rgb10 & R) + (rgb11 & R)) / 4) & R; 
-								final int g = (((rgb00 & G) + (rgb01 & G) + (rgb10 & G) + (rgb11 & G)) / 4) & G; 
-								final int b = (((rgb00 & B) + (rgb01 & B) + (rgb10 & B) + (rgb11 & B)) / 4) & B;
-								final int nextRGB = 0xFF000000 | r | g | b;
+						@Override
+						public final void run() {
+							final Canvas tile = new Canvas();
+							final int w = min(LevelN.this.tileSize, LevelN.this.levelWidth - tileX0);
+							
+							tile.setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR);
+							
+							for (int y = 0; y < h; ++y) {
+								for (int x = 0; x < w; ++x) {
+									tile.getImage().setRGB(x, y, LevelN.this.buffer[y * LevelN.this.levelWidth + tileX0 + x]);
+								}
+							}
+							
+							final String tileName = "tile_lod" + LevelN.this.n + "_y" + tileY0 + "_x" + tileX0 + "." + tileFormat;
+							final ByteArrayOutputStream tmp = new ByteArrayOutputStream();
+							
+							try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(tileFormat).setCompressionQuality(0.9F).setOutput(tmp)) {
+								imageWriter.write(tile.getImage());
 								
-								this.nextLevel.setRGB((tileX + x) / 2, (this.tileY + y) / 2, nextRGB);
+								synchronized (output) {
+									output.putNextEntry(new ZipEntry(tileName));
+									output.write(tmp.toByteArray());
+									output.closeEntry();
+								}
+							} catch (final Exception exception) {
+								exception.printStackTrace();
+								
+								problems.add(exception);
+							}
+							
+							if (LevelN.this.nextLevel != null) {
+								for (int y = 0; y < (h & ~1); y += 2) {
+									for (int x = 0; x < (w & ~1); x += 2) {
+										final int rgb00 = LevelN.this.buffer[y * LevelN.this.levelWidth + tileX0 + x];
+										final int rgb01 = LevelN.this.buffer[y * LevelN.this.levelWidth + tileX0 + x + 1];
+										final int rgb10 = LevelN.this.buffer[(y + 1) * LevelN.this.levelWidth + tileX0 + x];
+										final int rgb11 = LevelN.this.buffer[(y + 1) * LevelN.this.levelWidth + tileX0 + x + 1];
+										final int r = (((rgb00 & R) + (rgb01 & R) + (rgb10 & R) + (rgb11 & R)) / 4) & R; 
+										final int g = (((rgb00 & G) + (rgb01 & G) + (rgb10 & G) + (rgb11 & G)) / 4) & G; 
+										final int b = (((rgb00 & B) + (rgb01 & B) + (rgb10 & B) + (rgb11 & B)) / 4) & B;
+										final int nextRGB = 0xFF000000 | r | g | b;
+										
+										LevelN.this.nextLevel.setRGB((tileX0 + x) / 2, (tileY0 + y) / 2, nextRGB);
+									}
+								}
 							}
 						}
-					}
+						
+					});
 				}
+				
+				tasks.join();
 				
 				this.bufferDone = false;
 				this.tileY += this.tileSize;
