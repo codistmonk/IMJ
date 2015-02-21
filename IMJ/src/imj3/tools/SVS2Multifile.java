@@ -9,8 +9,11 @@ import imj3.tools.CommonTools.FileProcessor;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 import javax.imageio.ImageIO;
 
@@ -20,6 +23,7 @@ import loci.formats.ImageReader;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.RegexFilter;
+import net.sourceforge.aprog.tools.TaskManager;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -65,34 +69,56 @@ public final class SVS2Multifile {
 							
 							final int bufferRowSize = imageWidth * getBytesPerPixel(reader);
 							final byte[] buffer = new byte[tileSize * bufferRowSize];
-							final Canvas tile = new Canvas();
+							final Map<Thread, Canvas> tiles = new HashMap<>();
 							final TicToc timer = new TicToc();
 							
 							Tools.debugPrint(new Date(timer.tic()));
 							
 							for (int tileY = 0; tileY < imageHeight; tileY += tileSize) {
+								final int tileY0 = tileY;
 								Tools.debugPrint(tileY, timer.toc(), (long) tileY * imageWidth / timer.toc());
 								
 								final int h = min(tileSize, imageHeight - tileY);
 								
 								reader.openBytes(0, buffer, 0, tileY, imageWidth, h);
 								
+								final TaskManager tasks = new TaskManager(1.0);
+								
+								Tools.debugPrint("Threads:", tasks.getWorkerCount());
+								
 								for (int tileX = 0; tileX < imageWidth; tileX += tileSize) {
-									final int w = min(tileSize, imageWidth - tileX);
+									final int tileX0 = tileX;
 									
-									tile.setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR);
-									
-									for (int y = 0; y < h; ++y) {
-										for (int x = 0; x < w; ++x) {
-											tile.getImage().setRGB(x, y, getPixelValueFromBuffer(reader, buffer, imageWidth, h, channelCount, tileX + x, y));
+									tasks.submit(new Runnable() {
+										
+										@Override
+										public void run() {
+											final Canvas tile = tiles.computeIfAbsent(Thread.currentThread(), t -> new Canvas());
+											final int w = min(tileSize, imageWidth - tileX0);
+											
+											tile.setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR);
+											
+											for (int y = 0; y < h; ++y) {
+												for (int x = 0; x < w; ++x) {
+													tile.getImage().setRGB(x, y, getPixelValueFromBuffer(reader, buffer, imageWidth, h, channelCount, tileX0 + x, y));
+												}
+											}
+											
+											final String tileFormat = "jpg";
+											
+											try {
+												ImageIO.write(tile.getImage(), tileFormat, new File(outRoot, "tile_lod0_y" + tileY0 + "_x" + tileX0 + "." + tileFormat));
+											} catch (final IOException exception) {
+												exception.printStackTrace();
+												
+												System.exit(-1);
+											}
 										}
-									}
-									
-									final String tileFormat = "jpg";
-									
-//									ImageIO.write(tile.getImage(), tileFormat, new File(outRoot, baseName(file.getName()) + "/"));
-									ImageIO.write(tile.getImage(), tileFormat, new File(outRoot, "tile_lod0_y" + tileY + "_x" + tileX + "." + tileFormat));
+										
+									});
 								}
+								
+								tasks.join();
 							}
 							
 							// TODO
