@@ -2,6 +2,7 @@ package imj3.tools;
 
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj3.core.Channels;
+import imj3.tools.CommonTools.FileProcessor;
 
 import java.io.File;
 import java.util.Locale;
@@ -29,18 +30,36 @@ public final class SVS2Multifile {
 	 */
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
-		final File root = new File(arguments.get("in", ""));
+		final File inRoot = new File(arguments.get("in", ""));
 		final RegexFilter filter = new RegexFilter(arguments.get("filter", ".*\\.svs"));
+		final File outRoot = new File(arguments.get("out", ""));
 		
 		IMJTools.toneDownBioFormatsLogger();
 		
-		for (final File file : root.listFiles(filter)) {
-			Tools.debugPrint(file);
+		FileProcessor.deepForEachFileIn(inRoot, new FileProcessor() {
+
+			@Override
+			public final void process(final File file) {
+				if (filter.accept(file.getParentFile(), file.getName())) {
+					if (file.getPath().contains("/old/")) {
+						Tools.debugError("Ignoring", file);
+					} else {
+						Tools.debugPrint(file);
+						
+						try {
+							final IFormatReader reader = newImageReader(file.getPath());
+							
+							Tools.debugPrint(reader.getSizeX(), reader.getSizeY(), predefinedChannelsFor(reader));
+						} catch (final Exception exception) {
+							Tools.debugError(exception);
+						}
+					}
+				}
+			}
 			
-			final IFormatReader reader = newImageReader(file.getPath());
+			private static final long serialVersionUID = 7631423500885984364L;
 			
-			Tools.debugPrint(predefinedChannelsFor(reader));
-		}
+		});
 	}
 	
 	public static final IFormatReader newImageReader(final String id) {

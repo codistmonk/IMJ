@@ -2,6 +2,7 @@ package imj3.tools;
 
 import static imj3.tools.CommonTools.classForName;
 import static imj3.tools.CommonTools.fieldValue;
+import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.invoke;
 
 import java.io.Serializable;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-11-29)
@@ -79,14 +81,25 @@ public final class IMJTools {
 	
 	public static final void toneDownBioFormatsLogger() {
 		try {
-			final Class<?> TIFF_PARSER_CLASS = classForName("loci.formats.tiff.TiffParser");
-			final Class<?> TIFF_COMPRESSION_CLASS = classForName("loci.formats.tiff.TiffCompression");
-			
 			final Class<?> loggerFactory = classForName("org.slf4j.LoggerFactory");
-			final Object logLevel = fieldValue(classForName("ch.qos.logback.classic.Level"), "INFO");
+			final Object logLevel = fieldValue(classForName("ch.qos.logback.classic.Level"), "WARN");
 			
-			invoke(invoke(loggerFactory, "getLogger", TIFF_PARSER_CLASS), "setLevel", logLevel);
-			invoke(invoke(loggerFactory, "getLogger", TIFF_COMPRESSION_CLASS), "setLevel", logLevel);
+			for (final String className : array(
+					"loci.formats.tiff.TiffParser"
+					, "loci.formats.tiff.TiffCompression"
+					, "loci.formats.in.MinimalTiffReader"
+					, "loci.formats.in.BaseTiffReader"
+					, "loci.formats.FormatTools"
+					, "loci.formats.FormatHandler"
+					, "loci.formats.FormatReader"
+					, "loci.formats.ImageReader"
+					)) {
+				try {
+					invoke(invoke(loggerFactory, "getLogger", classForName(className)), "setLevel", logLevel);
+				} catch (final Exception exception) {
+					Tools.debugError(exception);
+				}
+			}
 		} catch (final Exception exception) {
 			exception.printStackTrace();
 		}
