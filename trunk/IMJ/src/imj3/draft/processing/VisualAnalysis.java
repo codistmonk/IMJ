@@ -1002,7 +1002,7 @@ public final class VisualAnalysis {
 		}
 		
 		public final File getImageFile() {
-			return new File(this.getMainPanel().getImageSelector().getText());
+			return this.getMainPanel().getImageSelector().getSelectedFile();
 		}
 		
 		public final String getGroundTruthPath() {
