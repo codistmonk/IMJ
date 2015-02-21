@@ -6,10 +6,8 @@ import static java.lang.Math.min;
 import static java.util.Collections.synchronizedList;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.draft.AutoCloseableImageWriter;
 import imj2.tools.Canvas;
-
 import imj3.core.Channels;
 import imj3.tools.CommonTools.FileProcessor;
 
@@ -31,7 +29,6 @@ import java.util.zip.ZipOutputStream;
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
-
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.RegexFilter;
@@ -48,6 +45,12 @@ public final class SVS2Multifile {
 	private SVS2Multifile() {
 		throw new IllegalInstantiationException();
 	}
+	
+	public static final int R = 0x00FF0000;
+	
+	public static final int G = 0x0000FF00;
+	
+	public static final int B = 0x000000FF;
 	
 	/**
 	 * @param commandLineArguments
@@ -143,7 +146,7 @@ public final class SVS2Multifile {
 			this.buffers = new byte[2][this.tileSize * this.bufferRowSize];
 			
 			if (2 <= this.imageWidth && 2 <= this.imageHeight) {
-				this.nextLevel = new LevelN(tileSize, this.imageWidth / 2, this.imageHeight / 2);
+				this.nextLevel = new LevelN(1, tileSize, this.imageWidth / 2, this.imageHeight / 2);
 			}
 		}
 		
@@ -192,9 +195,9 @@ public final class SVS2Multifile {
 										final int rgb01 = tile.getImage().getRGB(x, y + 1);
 										final int rgb10 = tile.getImage().getRGB(x + 1, y);
 										final int rgb11 = tile.getImage().getRGB(x + 1, y + 1);
-										final int r = ((rgb00 & 0x00FF0000) + (rgb01 & 0x00FF0000) + (rgb10 & 0x00FF0000) + (rgb11 & 0x00FF0000)) / 4; 
-										final int g = ((rgb00 & 0x0000FF00) + (rgb01 & 0x0000FF00) + (rgb10 & 0x0000FF00) + (rgb11 & 0x0000FF00)) / 4; 
-										final int b = ((rgb00 & 0x000000FF) + (rgb01 & 0x000000FF) + (rgb10 & 0x000000FF) + (rgb11 & 0x000000FF)) / 4;
+										final int r = (((rgb00 & R) + (rgb01 & R) + (rgb10 & R) + (rgb11 & R)) / 4) & R; 
+										final int g = (((rgb00 & G) + (rgb01 & G) + (rgb10 & G) + (rgb11 & G)) / 4) & G; 
+										final int b = (((rgb00 & B) + (rgb01 & B) + (rgb10 & B) + (rgb11 & B)) / 4) & B;
 										final int rgb = 0xFF000000 | r | g | b;
 										
 										Level0.this.nextLevel.setRGB((tileX0 + x) / 2, (tileY0 + y) / 2, rgb);
@@ -224,6 +227,10 @@ public final class SVS2Multifile {
 				}
 				
 				tasks.join();
+				
+				if (this.nextLevel != null) {
+					this.nextLevel.next(tileFormat, output, problems);
+				}
 			}
 			
 			this.tileY += this.tileSize;
@@ -245,6 +252,8 @@ public final class SVS2Multifile {
 	 */
 	public static final class LevelN implements Serializable {
 		
+		private final int n;
+		
 		private int tileY;
 		
 		private final int[] buffer;
@@ -253,62 +262,84 @@ public final class SVS2Multifile {
 		
 		private final LevelN nextLevel;
 		
-		public LevelN(final int tileSize, final int levelWidth, final int levelHeight) {
+		private boolean bufferDone;
+		
+		public LevelN(final int n, final int tileSize, final int levelWidth, final int levelHeight) {
+			this.n = n;
 			this.buffer = new int[tileSize * levelWidth];
 			this.levelWidth = levelWidth;
 			this.levelHeight = levelHeight;
 			this.tileSize = tileSize;
-			this.nextLevel = 2 <= levelWidth && 2 <= levelHeight ? new LevelN(tileSize, levelWidth / 2, levelHeight / 2) : null;
+			this.nextLevel = 2 <= levelWidth && 2 <= levelHeight ? new LevelN(n + 1, tileSize, levelWidth / 2, levelHeight / 2) : null;
 		}
 		
 		public final void setRGB(final int xInLevel, final int yInLevel, final int rgb) {
 			this.buffer[(yInLevel - this.tileY) * this.levelWidth + xInLevel] = rgb;
 			
-			if (yInLevel % this.tileSize == 0 || yInLevel == this.levelHeight - 1) {
-				final boolean lastXReached = xInLevel == this.levelWidth - 1;
+			if ((yInLevel % this.tileSize == this.tileSize - 1 || yInLevel == this.levelHeight - 1)
+					&& xInLevel == this.levelWidth - 1) {
+				this.bufferDone = true;
+			}
+		}
+		
+		public final void next(final String tileFormat, final ZipOutputStream output, final Collection<Exception> problems) {
+			if (this.bufferDone) {
+				final int h = min(this.tileSize, this.levelHeight - this.tileY);
+				final Canvas tile = new Canvas();
 				
-				if (xInLevel % this.tileSize == 0 || lastXReached) {
-					final int h = min(this.tileSize, this.levelHeight - this.tileY);
+				// TODO parallelize
+				for (int tileX = 0; tileX < this.levelWidth; tileX += this.tileSize) {
+					final int w = min(this.tileSize, this.levelWidth - tileX);
 					
-					{
-						final Canvas tile = new Canvas();
-						
-						for (int tileX = 0; tileX < this.levelWidth; tileX += this.tileSize) {
-							final int w = min(this.tileSize, this.levelWidth - tileX);
-							
-							tile.setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR);
-							
-							for (int y = 0; y < h; ++y) {
-								for (int x = 0; x < w; ++x) {
-									tile.getImage().setRGB(x, y, this.buffer[y * this.levelWidth + tileX + x]);
-								}
-							}
-							
-							// TODO save tile
-							
-							if (this.nextLevel != null) {
-								for (int y = 0; y < (h & ~1); y += 2) {
-									for (int x = 0; x < (w & ~1); x += 2) {
-										final int rgb00 = tile.getImage().getRGB(x, y);
-										final int rgb01 = tile.getImage().getRGB(x, y + 1);
-										final int rgb10 = tile.getImage().getRGB(x + 1, y);
-										final int rgb11 = tile.getImage().getRGB(x + 1, y + 1);
-										final int r = ((rgb00 & 0x00FF0000) + (rgb01 & 0x00FF0000) + (rgb10 & 0x00FF0000) + (rgb11 & 0x00FF0000)) / 4; 
-										final int g = ((rgb00 & 0x0000FF00) + (rgb01 & 0x0000FF00) + (rgb10 & 0x0000FF00) + (rgb11 & 0x0000FF00)) / 4; 
-										final int b = ((rgb00 & 0x000000FF) + (rgb01 & 0x000000FF) + (rgb10 & 0x000000FF) + (rgb11 & 0x000000FF)) / 4;
-										final int nextRGB = 0xFF000000 | r | g | b;
-										
-										this.nextLevel.setRGB((tileX + x) / 2, (this.tileY + y) / 2, nextRGB);
-									}
-								}
-							}
+					tile.setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR);
+					
+					for (int y = 0; y < h; ++y) {
+						for (int x = 0; x < w; ++x) {
+							tile.getImage().setRGB(x, y, this.buffer[y * this.levelWidth + tileX + x]);
 						}
 					}
 					
-					if (lastXReached) {
-						this.tileY += this.tileSize;
+					final String tileName = "tile_lod" + this.n + "_y" + this.tileY + "_x" + tileX + "." + tileFormat;
+					final ByteArrayOutputStream tmp = new ByteArrayOutputStream();
+					
+					try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(tileFormat).setCompressionQuality(0.9F).setOutput(tmp)) {
+						imageWriter.write(tile.getImage());
+						
+						synchronized (output) {
+							output.putNextEntry(new ZipEntry(tileName));
+							output.write(tmp.toByteArray());
+							output.closeEntry();
+						}
+					} catch (final Exception exception) {
+						exception.printStackTrace();
+						
+						problems.add(exception);
+					}
+					
+					if (this.nextLevel != null) {
+						for (int y = 0; y < (h & ~1); y += 2) {
+							for (int x = 0; x < (w & ~1); x += 2) {
+								final int rgb00 = this.buffer[y * this.levelWidth + tileX + x];
+								final int rgb01 = this.buffer[y * this.levelWidth + tileX + x + 1];
+								final int rgb10 = this.buffer[(y + 1) * this.levelWidth + tileX + x];
+								final int rgb11 = this.buffer[(y + 1) * this.levelWidth + tileX + x + 1];
+								final int r = (((rgb00 & R) + (rgb01 & R) + (rgb10 & R) + (rgb11 & R)) / 4) & R; 
+								final int g = (((rgb00 & G) + (rgb01 & G) + (rgb10 & G) + (rgb11 & G)) / 4) & G; 
+								final int b = (((rgb00 & B) + (rgb01 & B) + (rgb10 & B) + (rgb11 & B)) / 4) & B;
+								final int nextRGB = 0xFF000000 | r | g | b;
+								
+								this.nextLevel.setRGB((tileX + x) / 2, (this.tileY + y) / 2, nextRGB);
+							}
+						}
 					}
 				}
+				
+				this.bufferDone = false;
+				this.tileY += this.tileSize;
+			}
+			
+			if (this.nextLevel != null) {
+				this.nextLevel.next(tileFormat, output, problems);
 			}
 		}
 		
