@@ -136,11 +136,17 @@ public final class VisualAnalysis {
 	}
 	
 	public static final Component label(final String text, final Component... components) {
-		return limitHeight(horizontalBox(append(array((Component) new JLabel(text)), components)));
+		return horizontalBox(append(array((Component) new JLabel(text)), components));
 	}
 	
 	public static final <C extends JComponent> C centerX(final C component) {
 		component.setAlignmentX(Component.CENTER_ALIGNMENT);
+		
+		return component;
+	}
+	
+	public static final <C extends JComponent> C left(final C component) {
+		component.setAlignmentX(Component.LEFT_ALIGNMENT);
 		
 		return component;
 	}
@@ -341,13 +347,13 @@ public final class VisualAnalysis {
 			final JButton refreshExperimentButton = button("refresh");
 			
 			this.mainSplitPane = horizontalSplit(scrollable(verticalBox(
-					label(" Image: ", this.imageSelector, openImageButton, this.imageVisibilitySelector),
-					label(" Ground truth: ", this.groundTruthSelector, newGroundTruthButton, saveGroundTruthButton, refreshGroundTruthButton, this.groundTruthVisibilitySelector),
-					label(" Experiment: ", this.experimentSelector, newExperimentButton, openExperimentButton, runExperimentButton, saveExperimentButton, refreshExperimentButton, Box.createHorizontalStrut(padding)),
-					label(" Training (s): ", this.trainingTimeView, button("process"), Box.createHorizontalStrut(padding)),
-					label(" Classification (s): ", this.classificationTimeView, button("process"), button("save"), button("refresh"), this.classificationVisibilitySelector),
-					label(" F1: ", this.scoreView, Box.createHorizontalStrut(padding)),
-					centerX(new JButton("Confusion matrix...")),
+					limitHeight(horizontalBox(this.imageVisibilitySelector, openImageButton, label(" Image: ", this.imageSelector))),
+					limitHeight(horizontalBox(this.groundTruthVisibilitySelector, newGroundTruthButton, saveGroundTruthButton, refreshGroundTruthButton, label(" Ground truth: ", this.groundTruthSelector))),
+					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), newExperimentButton, openExperimentButton, runExperimentButton, saveExperimentButton, refreshExperimentButton, label(" Experiment: ", this.experimentSelector))),
+					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), button("process"), label(" Training (s): ", this.trainingTimeView))),
+					limitHeight(horizontalBox(this.classificationVisibilitySelector, button("process"), button("save"), button("refresh"), label(" Classification (s): ", this.classificationTimeView))),
+					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), label(" F1: ", this.scoreView))),
+					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), new JButton("Confusion matrix..."), Box.createHorizontalGlue())),
 					scrollable(this.tree))), scrollable(new JLabel("Drop file here")));
 			
 			this.mainSplitPane.setResizeWeight(0.25);
