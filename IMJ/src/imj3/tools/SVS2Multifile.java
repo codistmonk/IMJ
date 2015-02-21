@@ -1,6 +1,8 @@
 package imj3.tools;
 
+import static imj2.tools.IMJTools.getFieldValue;
 import static java.lang.Math.min;
+import static java.util.Collections.synchronizedList;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj2.tools.Canvas;
@@ -8,12 +10,21 @@ import imj3.core.Channels;
 import imj3.tools.CommonTools.FileProcessor;
 
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import javax.imageio.ImageIO;
 
@@ -26,6 +37,7 @@ import net.sourceforge.aprog.tools.RegexFilter;
 import net.sourceforge.aprog.tools.TaskManager;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
+import net.sourceforge.aprog.xml.XMLTools;
 
 /**
  * @author codistmonk (creation 2014-11-30)
@@ -58,12 +70,23 @@ public final class SVS2Multifile {
 					} else {
 						Tools.debugPrint(file);
 						
-						try {
+						try (final ZipOutputStream output = new ZipOutputStream(new FileOutputStream(new File(outRoot, baseName(file.getName()) + ".zip")))) {
 							final IFormatReader reader = newImageReader(file.getPath());
 							final int channelCount = predefinedChannelsFor(reader).getChannelCount();
 							final int imageWidth = reader.getSizeX();
 							final int imageHeight = reader.getSizeY();
 							final int tileSize = 512;
+							final String tileFormat = "jpg";
+							
+							{
+								final String mpp = Array.get(getFieldValue(((ImageReader) reader).getReader(), "pixelSize"), 0).toString();
+								
+								output.putNextEntry(new ZipEntry("metadata.xml"));
+								XMLTools.write(XMLTools.parse("<collection><image type=\"lod0\" format=\"" + tileFormat + "\" width=\"" + imageWidth
+										+ "\" height=\"" + imageHeight + "\" tileWidth=\"" + tileSize + "\" tileHeight=\"" + tileSize
+										+ "\" micronsPerPixel=\"" + mpp + "\"/></collection>"), output, 0);
+								output.closeEntry();
+							}
 							
 							Tools.debugPrint(imageWidth, imageHeight, predefinedChannelsFor(reader));
 							
@@ -83,6 +106,7 @@ public final class SVS2Multifile {
 								reader.openBytes(0, buffer, 0, tileY, imageWidth, h);
 								
 								final TaskManager tasks = new TaskManager(1.0);
+								final Collection<Exception> problems = synchronizedList(new ArrayList<>()); 
 								
 								Tools.debugPrint("Threads:", tasks.getWorkerCount());
 								
@@ -93,6 +117,10 @@ public final class SVS2Multifile {
 										
 										@Override
 										public void run() {
+											if (!problems.isEmpty()) {
+												return;
+											}
+											
 											final Canvas tile = tiles.computeIfAbsent(Thread.currentThread(), t -> new Canvas());
 											final int w = min(tileSize, imageWidth - tileX0);
 											
@@ -104,14 +132,22 @@ public final class SVS2Multifile {
 												}
 											}
 											
-											final String tileFormat = "jpg";
+											final String tileName = "tile_lod0_y" + tileY0 + "_x" + tileX0 + "." + tileFormat;
 											
 											try {
-												ImageIO.write(tile.getImage(), tileFormat, new File(outRoot, "tile_lod0_y" + tileY0 + "_x" + tileX0 + "." + tileFormat));
+												final ByteArrayOutputStream tmp = new ByteArrayOutputStream();
+												
+												ImageIO.write(tile.getImage(), tileFormat, tmp);
+												
+												synchronized (output) {
+													output.putNextEntry(new ZipEntry(tileName));
+													output.write(tmp.toByteArray());
+													output.closeEntry();
+												}
 											} catch (final IOException exception) {
 												exception.printStackTrace();
 												
-												System.exit(-1);
+												problems.add(exception);
 											}
 										}
 										
@@ -119,12 +155,16 @@ public final class SVS2Multifile {
 								}
 								
 								tasks.join();
+								
+								if (!problems.isEmpty()) {
+									break;
+								}
 							}
-							
-							// TODO
 						} catch (final Exception exception) {
-							Tools.debugError(exception);
+							exception.printStackTrace();
 						}
+						
+						System.exit(-1);
 					}
 				}
 			}
