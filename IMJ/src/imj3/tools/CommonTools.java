@@ -4,6 +4,7 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.io.Serializable;
 import java.lang.reflect.Array;
+import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -109,6 +110,64 @@ public final class CommonTools {
 		}
 		
 		return (A) result;
+	}
+	
+	public static final Class<?> classForName(final String className) {
+		try {
+			return Class.forName(className);
+		} catch (final ClassNotFoundException exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	public static final Object fieldValue(final Object objectOrClass, final String fieldName) {
+		final Class<?> cls = objectOrClass instanceof Class<?> ? (Class<?>) objectOrClass : objectOrClass.getClass();
+		
+		try {
+			return cls.getField(fieldName).get(objectOrClass);
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	public static final Field accessible(final Field field) {
+		field.setAccessible(true);
+		
+		return field;
+	}
+	
+	public static final Field field(final Object object, final String fieldName) {
+		return field(object.getClass(), fieldName);
+	}
+	
+	public static final Field field(final Class<?> cls, final String fieldName) {
+		try {
+			try {
+				return accessible(cls.getDeclaredField(fieldName));
+			} catch (final NoSuchFieldException exception) {
+				return accessible(cls.getField(fieldName));
+			}
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final <T> T getFieldValue(final Object object, final String fieldName) {
+		try {
+			return (T) field(object, fieldName).get(object);
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final <T> T getFieldValue(final Class<?> cls, final String fieldName) {
+		try {
+			return (T) field(cls, fieldName).get(null);
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
 	}
 	
 	public static final Property property(final String name, final Supplier<?> getter,

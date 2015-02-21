@@ -1,11 +1,11 @@
 package imj3.tools;
 
+import static imj3.tools.CommonTools.classForName;
+import static imj3.tools.CommonTools.fieldValue;
 import static net.sourceforge.aprog.tools.Tools.invoke;
-import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -89,64 +89,6 @@ public final class IMJTools {
 			invoke(invoke(loggerFactory, "getLogger", TIFF_COMPRESSION_CLASS), "setLevel", logLevel);
 		} catch (final Exception exception) {
 			exception.printStackTrace();
-		}
-	}
-	
-	public static final Class<?> classForName(final String className) {
-		try {
-			return Class.forName(className);
-		} catch (final ClassNotFoundException exception) {
-			throw unchecked(exception);
-		}
-	}
-	
-	public static final Object fieldValue(final Object objectOrClass, final String fieldName) {
-		final Class<?> cls = objectOrClass instanceof Class<?> ? (Class<?>) objectOrClass : objectOrClass.getClass();
-		
-		try {
-			return cls.getField(fieldName).get(objectOrClass);
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
-	}
-	
-	public static final Field accessible(final Field field) {
-		field.setAccessible(true);
-		
-		return field;
-	}
-	
-	public static final Field field(final Object object, final String fieldName) {
-		return field(object.getClass(), fieldName);
-	}
-	
-	public static final Field field(final Class<?> cls, final String fieldName) {
-		try {
-			try {
-				return accessible(cls.getDeclaredField(fieldName));
-			} catch (final NoSuchFieldException exception) {
-				return accessible(cls.getField(fieldName));
-			}
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
-	}
-	
-	@SuppressWarnings("unchecked")
-	public static final <T> T getFieldValue(final Object object, final String fieldName) {
-		try {
-			return (T) field(object, fieldName).get(object);
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
-	}
-	
-	@SuppressWarnings("unchecked")
-	public static final <T> T getFieldValue(final Class<?> cls, final String fieldName) {
-		try {
-			return (T) field(cls, fieldName).get(null);
-		} catch (final Exception exception) {
-			throw unchecked(exception);
 		}
 	}
 	
