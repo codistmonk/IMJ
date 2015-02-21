@@ -9,6 +9,7 @@ import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
+import static net.sourceforge.aprog.tools.MathTools.square;
 import static net.sourceforge.aprog.tools.Tools.append;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
@@ -20,6 +21,7 @@ import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.Canvas;
+
 import imj3.draft.processing.VisualAnalysis.Context.Refresh;
 import imj3.draft.processing.VisualAnalysis.Experiment.ClassDescription;
 import imj3.draft.processing.VisualAnalysis.Experiment.TrainingField;
@@ -40,6 +42,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -535,19 +538,37 @@ public final class VisualAnalysis {
 				@Override
 				public final void paint(final Canvas canvas) {
 					final Point m = MainPanel.this.getMouse();
+					final Graphics2D g = canvas.getGraphics();
 					
 					if (0 < m.x && MainPanel.this.getBrushColor() != null) {
 						final int s = MainPanel.this.getBrushSize();
 						
-						canvas.getGraphics().setColor(Color.WHITE);
-						canvas.getGraphics().drawOval(m.x - s / 2, m.y - s / 2, s, s);
+						g.setColor(Color.WHITE);
+						g.drawOval(m.x - s / 2, m.y - s / 2, s, s);
 					}
 					
 					final Rectangle trainingBounds = MainPanel.this.getTrainingBounds();
 					
 					if (trainingBounds != null) {
-						canvas.getGraphics().setColor(Color.WHITE);
-						canvas.getGraphics().draw(trainingBounds);
+						g.setColor(Color.WHITE);
+						g.draw(trainingBounds);
+						
+						final int size = 12;
+						final int x = trainingBounds.x;
+						final int y = trainingBounds.y;
+						final int w = trainingBounds.width;
+						final int halfW = w / 2;
+						final int h = trainingBounds.height;
+						final int halfH = h / 2;
+						
+						fillDisk(g, x, y, size);
+						fillDisk(g, x + halfW, y, size);
+						fillDisk(g, x + w, y, size);
+						fillDisk(g, x, y + halfH, size);
+						fillDisk(g, x + w, y + halfH, size);
+						fillDisk(g, x, y + h, size);
+						fillDisk(g, x + halfW, y + h, size);
+						fillDisk(g, x + w, y + h, size);
 					}
 				}
 				
@@ -559,8 +580,12 @@ public final class VisualAnalysis {
 				
 				private boolean dragging;
 				
+				private Transform transform;
+				
 				@Override
 				public final void mousePressed(final MouseEvent event) {
+					this.transform = Transform.get(MainPanel.this.getTrainingBounds(), event.getX(), event.getY());
+					
 					this.mouseMoved(event);
 				}
 				
@@ -599,22 +624,31 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void mouseDragged(final MouseEvent event) {
-					final Color brushColor = MainPanel.this.getBrushColor();
+					final BufferedImage image = MainPanel.this.getImageComponent().getImage();
 					
-					if (brushColor != null) {
-						this.dragging = true;
+					if (image != null) {
+						final Color brushColor = MainPanel.this.getBrushColor();
 						
-						final Graphics2D g = MainPanel.this.getContext().getGroundTruth().getGraphics();
-						final Point m = MainPanel.this.getMouse();
-						final int x = event.getX();
-						final int y = event.getY();
-						
-						g.setColor(brushColor);
-						g.setStroke(new BasicStroke(MainPanel.this.getBrushSize(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-						g.setComposite(AlphaComposite.Src);
-						g.drawLine(m.x, m.y, x, y);
-						
-						MainPanel.this.getImageComponent().getLayers().get(1).getPainters().get(0).getUpdateNeeded().set(true);
+						if (brushColor != null) {
+							this.dragging = true;
+							
+							final Graphics2D g = MainPanel.this.getContext().getGroundTruth().getGraphics();
+							final Point m = MainPanel.this.getMouse();
+							final int x = event.getX();
+							final int y = event.getY();
+							
+							g.setColor(brushColor);
+							g.setStroke(new BasicStroke(MainPanel.this.getBrushSize(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+							g.setComposite(AlphaComposite.Src);
+							g.drawLine(m.x, m.y, x, y);
+							
+							MainPanel.this.getImageComponent().getLayers().get(1).getPainters().get(0).getUpdateNeeded().set(true);
+						} else if (this.transform != null) {
+							this.transform.updateBounds(MainPanel.this.getTrainingBounds(),
+									event.getX(), event.getY(), image.getWidth(), image.getHeight());
+							
+							MainPanel.this.getImageComponent().getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
+						}
 					}
 					
 					this.mouseMoved(event);
@@ -706,6 +740,173 @@ public final class VisualAnalysis {
 		private static final long serialVersionUID = 2173077945563031333L;
 		
 		public static final int IMAGE_SELECTOR_RESERVED_SLOTS = 2;
+		
+		public static final void fillDisk(final Graphics g, final int x, final int y, final int size) {
+			g.fillOval(x - size / 2, y - size / 2, size, size);
+		}
+		
+		/**
+		 * @author codistmonk (creation 2015-02-21)
+		 */
+		public static interface Transform extends Serializable {
+			
+			public abstract void updateBounds(Rectangle bounds, int x, int y, int endX, int endY);
+			
+			public static Transform get(final Rectangle bounds, final int x, final int y) {
+				if (bounds == null) {
+					return null;
+				}
+				
+				final int x0 = bounds.x;
+				final int y0 = bounds.y;
+				final int w = bounds.width;
+				final int halfW = w / 2;
+				final int h = bounds.height;
+				final int halfH = h / 2;
+				
+				if (Resize.closeEnough(x0, y0, x, y)) {
+					return Resize.NORTH_WEST;
+				}
+				
+				if (Resize.closeEnough(x0 + halfW, y0, x, y)) {
+					return Resize.NORTH;
+				}
+				
+				if (Resize.closeEnough(x0 + w, y0, x, y)) {
+					return Resize.NORTH_EAST;
+				}
+				
+				if (Resize.closeEnough(x0, y0 + halfH, x, y)) {
+					return Resize.WEST;
+				}
+				
+				if (Resize.closeEnough(x0 + w, y0 + halfH, x, y)) {
+					return Resize.EAST;
+				}
+				
+				if (Resize.closeEnough(x0, y0 + h, x, y)) {
+					return Resize.SOUTH_WEST;
+				}
+				
+				if (Resize.closeEnough(x0 + halfW, y0 + h, x, y)) {
+					return Resize.SOUTH;
+				}
+				
+				if (Resize.closeEnough(x0 + w, y0 + h, x, y)) {
+					return Resize.SOUTH_EAST;
+				}
+				
+				if (bounds.contains(x, y)) {
+					return new Translate(x - bounds.x, y - bounds.y);
+				}
+				
+				return null;
+			}
+			
+			/**
+			 * @author codistmonk (creation 2015-02-21)
+			 */
+			public static final class Translate implements Transform {
+				
+				private final int offsetX;
+				
+				private final int offsetY;
+				
+				public Translate(final int offsetX, final int offsetY) {
+					this.offsetX = offsetX;
+					this.offsetY = offsetY;
+				}
+				
+				@Override
+				public final void updateBounds(final Rectangle bounds, final int x, final int y, final int endX, final int endY) {
+					bounds.x = max(0, min(x - this.offsetX, endX - bounds.width));
+					bounds.y = max(0, min(y - this.offsetY, endY - bounds.height));
+				}
+				
+				private static final long serialVersionUID = 6750762176816903863L;
+				
+			}
+			
+		}
+		
+		/**
+		 * @author codistmonk (creation 2015-02-21)
+		 */
+		public static enum Resize implements Transform {
+			
+			NORTH {
+				
+				@Override
+				public final void updateBounds(final Rectangle bounds, final int x, final int y, final int endX, final int endY) {
+					final int bottom = bounds.y + bounds.height - 1;
+					
+					bounds.y = max(0, min(y, bottom));
+					bounds.height = bottom - bounds.y + 1;
+				}
+				
+			}, EAST {
+				
+				@Override
+				public final void updateBounds(final Rectangle bounds, final int x, final int y, final int endX, final int endY) {
+					bounds.width = max(1, min(x, endX - 1) - bounds.x + 1);
+				}
+				
+			}, SOUTH {
+				
+				@Override
+				public final void updateBounds(final Rectangle bounds, final int x, final int y, final int endX, final int endY) {
+					bounds.height = max(1, min(y, endY - 1) - bounds.y + 1);
+				}
+				
+			}, WEST {
+				
+				@Override
+				public final void updateBounds(final Rectangle bounds, final int x, final int y, final int endX, final int endY) {
+					final int right = bounds.x + bounds.width - 1;
+					
+					bounds.x = max(0, min(x, right));
+					bounds.width = right - bounds.x + 1;
+				}
+				
+			}, NORTH_WEST {
+				
+				@Override
+				public final void updateBounds(final Rectangle bounds, final int x, final int y, final int endX, final int endY) {
+					NORTH.updateBounds(bounds, x, y, endX, endY);
+					WEST.updateBounds(bounds, x, y, endX, endY);
+				}
+				
+			}, NORTH_EAST {
+				
+				@Override
+				public final void updateBounds(final Rectangle bounds, final int x, final int y, final int endX, final int endY) {
+					NORTH.updateBounds(bounds, x, y, endX, endY);
+					EAST.updateBounds(bounds, x, y, endX, endY);
+				}
+				
+			}, SOUTH_EAST {
+				
+				@Override
+				public final void updateBounds(final Rectangle bounds, final int x, final int y, final int endX, final int endY) {
+					SOUTH.updateBounds(bounds, x, y, endX, endY);
+					EAST.updateBounds(bounds, x, y, endX, endY);
+				}
+				
+			}, SOUTH_WEST {
+				
+				@Override
+				public final void updateBounds(final Rectangle bounds, final int x, final int y, final int endX, final int endY) {
+					SOUTH.updateBounds(bounds, x, y, endX, endY);
+					WEST.updateBounds(bounds, x, y, endX, endY);
+				}
+				
+			};
+			
+			public static final boolean closeEnough(final int x0, final int y0, final int x1, final int y1) {
+				return square(x1 - x0) + square(y1 - y0) <= square(12.0);
+			}
+			
+		}
 		
 	}
 	
