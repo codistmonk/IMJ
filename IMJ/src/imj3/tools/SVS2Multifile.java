@@ -1,6 +1,7 @@
 package imj3.tools;
 
 import static java.lang.Math.min;
+import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import imj2.tools.Canvas;
 import imj3.core.Channels;
@@ -10,6 +11,8 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.Date;
 import java.util.Locale;
+
+import javax.imageio.ImageIO;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
@@ -84,6 +87,11 @@ public final class SVS2Multifile {
 											tile.getImage().setRGB(x, y, getPixelValueFromBuffer(reader, buffer, imageWidth, h, channelCount, tileX + x, y));
 										}
 									}
+									
+									final String tileFormat = "jpg";
+									
+//									ImageIO.write(tile.getImage(), tileFormat, new File(outRoot, baseName(file.getName()) + "/"));
+									ImageIO.write(tile.getImage(), tileFormat, new File(outRoot, "tile_lod0_y" + tileY + "_x" + tileX + "." + tileFormat));
 								}
 							}
 							
