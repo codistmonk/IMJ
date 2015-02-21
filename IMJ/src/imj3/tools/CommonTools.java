@@ -2,6 +2,7 @@ package imj3.tools;
 
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
+import java.io.File;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -206,6 +207,25 @@ public final class CommonTools {
 		}
 		
 		private static final long serialVersionUID = -6068768247605642711L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-21)
+	 */
+	public static abstract interface FileProcessor extends Serializable {
+		
+		public abstract void process(File file);
+		
+		public static void deepForEachFileIn(final File root, final FileProcessor processor) {
+			for (final File file : root.listFiles()) {
+				if (file.isDirectory()) {
+					deepForEachFileIn(file, processor);
+				} else {
+					processor.process(file);
+				}
+			}
+		}
 		
 	}
 	
