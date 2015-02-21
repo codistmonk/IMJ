@@ -177,10 +177,11 @@ public final class SVS2Multifile {
 			
 			final int tileY0 = this.getTileY();
 			final Map<Thread, Canvas> tiles = new HashMap<>();
-			final TaskManager tasks = new TaskManager(1.0);
 			
 			{
-				for (int tileX = 0; tileX < this.imageWidth; tileX += this.tileSize) {
+				final TaskManager tasks = new TaskManager(1.0);
+				
+				for (int tileX = 0; tileX < this.imageWidth && problems.isEmpty(); tileX += this.tileSize) {
 					final int tileX0 = tileX;
 					
 					tasks.submit(new Runnable() {
@@ -199,6 +200,22 @@ public final class SVS2Multifile {
 							for (int y = 0; y < Level.this.h; ++y) {
 								for (int x = 0; x < w; ++x) {
 									tile.getImage().setRGB(x, y, getPixelValueFromBuffer(Level.this.reader, buffer, Level.this.imageWidth, Level.this.h, Level.this.channelCount, tileX0 + x, y));
+								}
+							}
+							
+							if (Level.this.nextLevel != null) {
+								for (int y = 0; y < (Level.this.h & ~1); y += 2) {
+									for (int x = 0; x < (w & ~1); x += 2) {
+										final int rgb00 = tile.getImage().getRGB(x, y);
+										final int rgb01 = tile.getImage().getRGB(x, y + 1);
+										final int rgb10 = tile.getImage().getRGB(x + 1, y);
+										final int rgb11 = tile.getImage().getRGB(x + 1, y + 1);
+										final int r = ((rgb00 & 0x00FF0000) + (rgb01 & 0x00FF0000) + (rgb10 & 0x00FF0000) + (rgb11 & 0x00FF0000)) / 4; 
+										final int g = ((rgb00 & 0x0000FF00) + (rgb01 & 0x0000FF00) + (rgb10 & 0x0000FF00) + (rgb11 & 0x0000FF00)) / 4; 
+										final int b = ((rgb00 & 0x000000FF) + (rgb01 & 0x000000FF) + (rgb10 & 0x000000FF) + (rgb11 & 0x000000FF)) / 4;
+										final int rgb = 0xFF000000 | r | g | b;
+										
+									}
 								}
 							}
 							
@@ -226,60 +243,10 @@ public final class SVS2Multifile {
 				tasks.join();
 			}
 			
-			if (this.bufferIndex == 1 && this.nextLevel != null) {
-//				this.nextLevel.next1();
-			}
-			
 			this.tileY += this.tileSize;
 			this.bufferIndex = (this.bufferIndex + 1) & 1;
 			
 			return this.tileY < this.imageHeight && problems.isEmpty();
-		}
-		
-		public final void next1() {
-			final Collection<Exception> problems = synchronizedList(new ArrayList<>());
-			
-			this.h = min(this.tileSize, this.imageHeight - this.tileY);
-			
-//			for (int y = 0; y < this.h; ++y) {
-//				final int previousLevel00Y = y * 2;
-//				final int previousLevel00BufferIndex = previousLevel00Y / this.previousLevel.tileSize;
-//				final int previousLevel00YInBuffer = previousLevel00Y % this.previousLevel.tileSize;
-//				final int previousLevel01BufferIndex = previousLevel00BufferIndex;
-//				final int previousLevel01YInBuffer = previousLevel00YInBuffer;
-//				final int previousLevel10Y = previousLevel00Y + 1;
-//				final int previousLevel10BufferIndex = previousLevel10Y / this.previousLevel.tileSize;
-//				final int previousLevel10YInBuffer = previousLevel10Y % this.previousLevel.tileSize;
-//				final int previousLevel11BufferIndex = previousLevel10BufferIndex;
-//				final int previousLevel11YInBuffer = previousLevel10YInBuffer;
-//				
-//				for (int x = 0; x < this.imageWidth; ++x) {
-//					final int previousLevel00X = x * 2;
-//					final int previousLevel01X = previousLevel00X + 1;
-//					final int previousLevel10X = previousLevel00X;
-//					final int previousLevel11X = previousLevel01X;
-//					
-//					this.buffers[this.bufferIndex][y * this.bufferRowSize + x] = (byte) ((
-//							this.previousLevel.buffers[previousLevel00BufferIndex][previousLevel00YInBuffer * this.previousLevel.bufferRowSize + previousLevel00X]
-//							+ this.previousLevel.buffers[previousLevel01BufferIndex][previousLevel01YInBuffer * this.previousLevel.bufferRowSize + previousLevel01X]
-//							+ this.previousLevel.buffers[previousLevel10BufferIndex][previousLevel10YInBuffer * this.previousLevel.bufferRowSize + previousLevel10X]
-//							+ this.previousLevel.buffers[previousLevel11BufferIndex][previousLevel11YInBuffer * this.previousLevel.bufferRowSize + previousLevel11X]
-//					) / 4);
-//					
-//				}
-//			}
-			// TODO update currentBuffer using previous buffer(s)
-			
-			final TaskManager tasks = new TaskManager(1.0);
-			
-			// TODO process current buffer
-			
-			if (this.bufferIndex == 1 && this.nextLevel != null) {
-				this.nextLevel.next1();
-			}
-			
-			this.tileY += this.tileSize;
-			this.bufferIndex = (this.bufferIndex + 1) & 1;
 		}
 		
 		final int getTileY() {
@@ -287,6 +254,82 @@ public final class SVS2Multifile {
 		}
 		
 		private static final long serialVersionUID = -5885557044465685071L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-21)
+	 */
+	public static final class LevelN implements Serializable {
+		
+		private int tileY;
+		
+		private final int[] buffer;
+		
+		private final int levelWidth, levelHeight, tileSize;
+		
+		private final LevelN nextLevel;
+		
+		public LevelN(final int tileSize, final int levelWidth, final int levelHeight) {
+			this.buffer = new int[tileSize * levelWidth];
+			this.levelWidth = levelWidth;
+			this.levelHeight = levelHeight;
+			this.tileSize = tileSize;
+			this.nextLevel = 2 <= levelWidth && 2 <= levelHeight ? new LevelN(tileSize, levelWidth / 2, levelHeight / 2) : null;
+		}
+		
+		public final void setRGB(final int xInLevel, final int yInLevel, final int rgb) {
+			this.buffer[(yInLevel - this.tileY) * this.levelWidth + xInLevel] = rgb;
+			
+			if (yInLevel % this.tileSize == 0 || yInLevel == this.levelHeight - 1) {
+				final boolean lastXReached = xInLevel == this.levelWidth - 1;
+				
+				if (xInLevel % this.tileSize == 0 || lastXReached) {
+					final int h = min(this.tileSize, this.levelHeight - this.tileY);
+					
+					{
+						final Canvas tile = new Canvas();
+						
+						for (int tileX = 0; tileX < this.levelWidth; tileX += this.tileSize) {
+							final int w = min(this.tileSize, this.levelWidth - tileX);
+							
+							tile.setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR);
+							
+							for (int y = 0; y < h; ++y) {
+								for (int x = 0; x < w; ++x) {
+									tile.getImage().setRGB(x, y, this.buffer[y * this.levelWidth + tileX + x]);
+								}
+							}
+							
+							// TODO save tile
+							
+							if (this.nextLevel != null) {
+								for (int y = 0; y < h; y += 2) {
+									for (int x = 0; x < w; x += 2) {
+										final int rgb00 = tile.getImage().getRGB(x, y);
+										final int rgb01 = tile.getImage().getRGB(x, y + 1);
+										final int rgb10 = tile.getImage().getRGB(x + 1, y);
+										final int rgb11 = tile.getImage().getRGB(x + 1, y + 1);
+										final int r = ((rgb00 & 0x00FF0000) + (rgb01 & 0x00FF0000) + (rgb10 & 0x00FF0000) + (rgb11 & 0x00FF0000)) / 4; 
+										final int g = ((rgb00 & 0x0000FF00) + (rgb01 & 0x0000FF00) + (rgb10 & 0x0000FF00) + (rgb11 & 0x0000FF00)) / 4; 
+										final int b = ((rgb00 & 0x000000FF) + (rgb01 & 0x000000FF) + (rgb10 & 0x000000FF) + (rgb11 & 0x000000FF)) / 4;
+										final int nextRGB = 0xFF000000 | r | g | b;
+										
+										this.nextLevel.setRGB((tileX + x) / 2, (this.tileY + y) / 2, nextRGB);
+									}
+								}
+							}
+						}
+					}
+					
+					if (lastXReached) {
+						this.tileY += this.tileSize;
+					}
+				}
+			}
+		}
+		
+		private static final long serialVersionUID = -1013722312568926426L;
 		
 	}
 	
