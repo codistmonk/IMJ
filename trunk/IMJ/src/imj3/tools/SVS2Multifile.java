@@ -5,7 +5,9 @@ import static java.lang.Math.min;
 import static java.util.Collections.synchronizedList;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj2.tools.Canvas;
+
 import imj3.core.Channels;
 import imj3.tools.CommonTools.FileProcessor;
 
@@ -17,10 +19,8 @@ import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.zip.ZipEntry;
@@ -31,6 +31,7 @@ import javax.imageio.ImageIO;
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
+
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.RegexFilter;
@@ -163,8 +164,6 @@ public final class SVS2Multifile {
 						} catch (final Exception exception) {
 							exception.printStackTrace();
 						}
-						
-						System.exit(-1);
 					}
 				}
 			}
