@@ -96,9 +96,9 @@ public final class SVS2Multifile {
 							
 							Tools.debugPrint(new Date(timer.tic()));
 							
-							final Level level0 = new Level(reader, tileSize);
+							final Level0 level0 = new Level0(reader, tileSize);
 							
-							while (level0.next0(problems, output, tileFormat)) {
+							while (level0.next(problems, output, tileFormat)) {
 								final int tileY = level0.getTileY();
 								Tools.debugPrint(tileY, timer.toc(), 1000L * tileY * imageWidth / max(1L, timer.toc()));
 							}
@@ -121,11 +121,9 @@ public final class SVS2Multifile {
 	/**
 	 * @author codistmonk (creation 2015-02-21)
 	 */
-	public static final class Level implements Serializable {
+	public static final class Level0 implements Serializable {
 		
 		private final IFormatReader reader;
-		
-		private final Level previousLevel;
 		
 		private final byte[][] buffers;
 		
@@ -133,26 +131,10 @@ public final class SVS2Multifile {
 		
 		private int bufferIndex, tileY, h;
 		
-		private Level nextLevel;
+		private LevelN nextLevel;
 		
-		public Level(final Level previousLevel) {
-			this.reader = previousLevel.reader;
-			this.previousLevel = previousLevel;
-			this.tileSize = previousLevel.tileSize;
-			this.channelCount = previousLevel.channelCount;
-			this.imageWidth = previousLevel.imageWidth / 2;
-			this.imageHeight = previousLevel.imageHeight / 2;
-			this.bufferRowSize = this.imageWidth * getBytesPerPixel(this.reader);
-			this.buffers = new byte[2][this.tileSize * this.bufferRowSize];
-			
-			if (2 <= this.imageWidth && 2 <= this.imageHeight) {
-				this.nextLevel = new Level(this);
-			}
-		}
-		
-		public Level(final IFormatReader reader, final int tileSize) {
+		public Level0(final IFormatReader reader, final int tileSize) {
 			this.reader = reader;
-			this.previousLevel = null;
 			this.tileSize = tileSize;
 			this.channelCount = predefinedChannelsFor(reader).getChannelCount();
 			this.imageWidth = reader.getSizeX();
@@ -161,11 +143,11 @@ public final class SVS2Multifile {
 			this.buffers = new byte[2][this.tileSize * this.bufferRowSize];
 			
 			if (2 <= this.imageWidth && 2 <= this.imageHeight) {
-				this.nextLevel = new Level(this);
+				this.nextLevel = new LevelN(tileSize, this.imageWidth / 2, this.imageHeight / 2);
 			}
 		}
 		
-		public final boolean next0(final Collection<Exception> problems, final ZipOutputStream output, final String tileFormat) {
+		public final boolean next(final Collection<Exception> problems, final ZipOutputStream output, final String tileFormat) {
 			this.h = min(this.tileSize, this.imageHeight - this.tileY);
 			final byte[] buffer = this.buffers[this.bufferIndex];
 			
@@ -193,18 +175,18 @@ public final class SVS2Multifile {
 							}
 							
 							final Canvas tile = tiles.computeIfAbsent(Thread.currentThread(), t -> new Canvas());
-							final int w = min(Level.this.tileSize, Level.this.imageWidth - tileX0);
+							final int w = min(Level0.this.tileSize, Level0.this.imageWidth - tileX0);
 							
-							tile.setFormat(w, Level.this.h, BufferedImage.TYPE_3BYTE_BGR);
+							tile.setFormat(w, Level0.this.h, BufferedImage.TYPE_3BYTE_BGR);
 							
-							for (int y = 0; y < Level.this.h; ++y) {
+							for (int y = 0; y < Level0.this.h; ++y) {
 								for (int x = 0; x < w; ++x) {
-									tile.getImage().setRGB(x, y, getPixelValueFromBuffer(Level.this.reader, buffer, Level.this.imageWidth, Level.this.h, Level.this.channelCount, tileX0 + x, y));
+									tile.getImage().setRGB(x, y, getPixelValueFromBuffer(Level0.this.reader, buffer, Level0.this.imageWidth, Level0.this.h, Level0.this.channelCount, tileX0 + x, y));
 								}
 							}
 							
-							if (Level.this.nextLevel != null) {
-								for (int y = 0; y < (Level.this.h & ~1); y += 2) {
+							if (Level0.this.nextLevel != null) {
+								for (int y = 0; y < (Level0.this.h & ~1); y += 2) {
 									for (int x = 0; x < (w & ~1); x += 2) {
 										final int rgb00 = tile.getImage().getRGB(x, y);
 										final int rgb01 = tile.getImage().getRGB(x, y + 1);
@@ -215,6 +197,7 @@ public final class SVS2Multifile {
 										final int b = ((rgb00 & 0x000000FF) + (rgb01 & 0x000000FF) + (rgb10 & 0x000000FF) + (rgb11 & 0x000000FF)) / 4;
 										final int rgb = 0xFF000000 | r | g | b;
 										
+										Level0.this.nextLevel.setRGB((tileX0 + x) / 2, (tileY0 + y) / 2, rgb);
 									}
 								}
 							}
@@ -304,8 +287,8 @@ public final class SVS2Multifile {
 							// TODO save tile
 							
 							if (this.nextLevel != null) {
-								for (int y = 0; y < h; y += 2) {
-									for (int x = 0; x < w; x += 2) {
+								for (int y = 0; y < (h & ~1); y += 2) {
+									for (int x = 0; x < (w & ~1); x += 2) {
 										final int rgb00 = tile.getImage().getRGB(x, y);
 										final int rgb01 = tile.getImage().getRGB(x, y + 1);
 										final int rgb10 = tile.getImage().getRGB(x + 1, y);
