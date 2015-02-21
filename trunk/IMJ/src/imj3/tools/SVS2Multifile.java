@@ -1,10 +1,14 @@
 package imj3.tools;
 
+import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+import imj2.tools.Canvas;
 import imj3.core.Channels;
 import imj3.tools.CommonTools.FileProcessor;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
+import java.util.Date;
 import java.util.Locale;
 
 import loci.formats.FormatTools;
@@ -13,6 +17,7 @@ import loci.formats.ImageReader;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.RegexFilter;
+import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
 /**
@@ -48,8 +53,41 @@ public final class SVS2Multifile {
 						
 						try {
 							final IFormatReader reader = newImageReader(file.getPath());
+							final int channelCount = predefinedChannelsFor(reader).getChannelCount();
+							final int imageWidth = reader.getSizeX();
+							final int imageHeight = reader.getSizeY();
+							final int tileSize = 512;
 							
-							Tools.debugPrint(reader.getSizeX(), reader.getSizeY(), predefinedChannelsFor(reader));
+							Tools.debugPrint(imageWidth, imageHeight, predefinedChannelsFor(reader));
+							
+							final int bufferRowSize = imageWidth * getBytesPerPixel(reader);
+							final byte[] buffer = new byte[tileSize * bufferRowSize];
+							final Canvas tile = new Canvas();
+							final TicToc timer = new TicToc();
+							
+							Tools.debugPrint(new Date(timer.tic()));
+							
+							for (int tileY = 0; tileY < imageHeight; tileY += tileSize) {
+								Tools.debugPrint(tileY, timer.toc(), (long) tileY * imageWidth / timer.toc());
+								
+								final int h = min(tileSize, imageHeight - tileY);
+								
+								reader.openBytes(0, buffer, 0, tileY, imageWidth, h);
+								
+								for (int tileX = 0; tileX < imageWidth; tileX += tileSize) {
+									final int w = min(tileSize, imageWidth - tileX);
+									
+									tile.setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR);
+									
+									for (int y = 0; y < h; ++y) {
+										for (int x = 0; x < w; ++x) {
+											tile.getImage().setRGB(x, y, getPixelValueFromBuffer(reader, buffer, imageWidth, h, channelCount, tileX + x, y));
+										}
+									}
+								}
+							}
+							
+							// TODO
 						} catch (final Exception exception) {
 							Tools.debugError(exception);
 						}
@@ -60,6 +98,50 @@ public final class SVS2Multifile {
 			private static final long serialVersionUID = 7631423500885984364L;
 			
 		});
+	}
+	
+	public static final int getPixelValueFromBuffer(final IFormatReader reader, final byte[] buffer, final int bufferWidth, final int bufferHeight, final int channelCount, final int xInBuffer, final int yInBuffer) {
+		final int bytesPerChannel = FormatTools.getBytesPerPixel(reader.getPixelType());
+		int result = 0;
+		
+		if (reader.isIndexed()) {
+			if (!reader.isInterleaved()) {
+				throw new IllegalArgumentException();
+			}
+			
+			final int pixelFirstByteIndex = (yInBuffer * bufferWidth + xInBuffer) * bytesPerChannel;
+			
+			try {
+				switch (bytesPerChannel) {
+				case 1:
+					return packPixelValue(reader.get8BitLookupTable(),
+							buffer[pixelFirstByteIndex] & 0x000000FF);
+				case 2:
+					return packPixelValue(reader.get16BitLookupTable(),
+							((buffer[pixelFirstByteIndex] & 0x000000FF) << 8) | (buffer[pixelFirstByteIndex + 1] & 0x000000FF));
+				default:
+					throw new IllegalArgumentException();
+				}
+			} catch (final Exception exception) {
+				throw unchecked(exception);
+			}
+		} else if (reader.isInterleaved()) {
+			final int pixelFirstByteIndex = (yInBuffer * bufferWidth + xInBuffer) * bytesPerChannel * channelCount;
+			
+			for (int i = 0; i < channelCount; ++i) {
+				result = (result << 8) | (buffer[pixelFirstByteIndex + i] & 0x000000FF);
+			}
+		} else {
+			final int tileChannelByteCount = bufferWidth * bufferHeight * bytesPerChannel;
+			final int pixelFirstByteIndex = (yInBuffer * bufferWidth + xInBuffer) * bytesPerChannel;
+			
+			for (int i = 0; i < channelCount; ++i) {
+				result = (result << 8) | (buffer[pixelFirstByteIndex + i * tileChannelByteCount] & 0x000000FF);
+			}
+		}
+		
+		// XXX Is it always ok to assume RGBA and convert to ARGB if channelCount == 4?
+		return channelCount == 4 ? (result >> 8) | (result << 24) : result;
 	}
 	
 	public static final IFormatReader newImageReader(final String id) {
@@ -108,7 +190,7 @@ public final class SVS2Multifile {
 		
 		switch (lociImage.getRGBChannelCount()) {
 		case 1:
-			switch (FormatTools.getBytesPerPixel(lociImage.getPixelType()) * lociImage.getRGBChannelCount()) {
+			switch (getBytesPerPixel(lociImage)) {
 			case 1:
 				return 1 == lociImage.getBitsPerPixel() ?
 						Channels.Predefined.C1_U1 : Channels.Predefined.C1_U8;
@@ -126,6 +208,10 @@ public final class SVS2Multifile {
 		default:
 			throw new IllegalArgumentException();
 		}
+	}
+	
+	public static final int getBytesPerPixel(final IFormatReader lociImage) {
+		return FormatTools.getBytesPerPixel(lociImage.getPixelType()) * lociImage.getRGBChannelCount();
 	}
 	
 }
