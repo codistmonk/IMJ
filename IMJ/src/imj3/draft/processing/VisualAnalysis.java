@@ -80,6 +80,8 @@ import javax.swing.JTextField;
 import javax.swing.JTree;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.event.TreeSelectionEvent;
+import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
@@ -310,6 +312,20 @@ public final class VisualAnalysis {
 			this.mouse = new Point();
 			this.brushSize = 1;
 			
+			this.tree.addTreeSelectionListener(new TreeSelectionListener() {
+				
+				@Override
+				public final void valueChanged(final TreeSelectionEvent event) {
+					final ImageComponent imageComponent = MainPanel.this.getImageComponent();
+					
+					if (imageComponent != null) {
+						imageComponent.getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
+						imageComponent.repaint();
+					}
+				}
+				
+			});
+			
 			final int padding = this.imageVisibilitySelector.getPreferredSize().width;
 			final JButton openImageButton = button("open");
 			final JButton newGroundTruthButton = button("new");
@@ -466,8 +482,6 @@ public final class VisualAnalysis {
 							result.setBounds("0,0," + image.getWidth() + "," + image.getHeight());
 						}
 						
-						result.setGroundTruthName(MainPanel.this.getContext().getGroundTruthName());
-						
 						return (T) result;
 					}
 					
@@ -527,6 +541,13 @@ public final class VisualAnalysis {
 						
 						canvas.getGraphics().setColor(Color.WHITE);
 						canvas.getGraphics().drawOval(m.x - s / 2, m.y - s / 2, s, s);
+					}
+					
+					final Rectangle trainingBounds = MainPanel.this.getTrainingBounds();
+					
+					if (trainingBounds != null) {
+						canvas.getGraphics().setColor(Color.WHITE);
+						canvas.getGraphics().draw(trainingBounds);
 					}
 				}
 				
@@ -617,6 +638,21 @@ public final class VisualAnalysis {
 				
 				if (classDescription != null || nodeIsClasses) {
 					return new Color(nodeIsClasses ? 0 : classDescription.getLabel(), true);
+				}
+			}
+			
+			return null;
+		}
+		
+		public final Rectangle getTrainingBounds() {
+			if (!MainPanel.this.getContext().getGroundTruthName().isEmpty()) {
+				final TreePath selectionPath = MainPanel.this.getTree().getSelectionPath();
+				final DefaultMutableTreeNode node = selectionPath == null ? null : cast(DefaultMutableTreeNode.class, selectionPath.getLastPathComponent());
+				final UserObject userObject = node == null ? null : cast(UserObject.class, node.getUserObject());
+				final TrainingField trainingField = userObject == null ? null : cast(TrainingField.class, userObject.getUIScaffold().getObject());
+				
+				if (trainingField != null) {
+					return trainingField.getBounds();
 				}
 			}
 			
@@ -879,10 +915,7 @@ public final class VisualAnalysis {
 		public final Context saveExperiment() {
 			final File experimentFile = this.getExperimentFile();
 			
-			Tools.debugPrint(experimentFile, this.getMainPanel().getExperiment());
-			
 			if (experimentFile != null && this.getMainPanel().getExperiment() != null) {
-				Tools.debugPrint(this.getMainPanel().getExperiment().getClassDescriptions());
 				try (final OutputStream output = new FileOutputStream(experimentFile)) {
 					xstream.toXML(this.getMainPanel().getExperiment(), output);
 				} catch (final IOException exception) {
@@ -1001,8 +1034,6 @@ public final class VisualAnalysis {
 			
 			private String imagePath = "";
 			
-			private String groundTruthName = "";
-			
 			private final Rectangle bounds = new Rectangle();
 			
 			@PropertyGetter("image")
@@ -1013,18 +1044,6 @@ public final class VisualAnalysis {
 			@PropertySetter("image")
 			public final TrainingField setImagePath(final String imagePath) {
 				this.imagePath = imagePath;
-				
-				return this;
-			}
-			
-			@PropertyGetter("ground truth")
-			public final String getGroundTruthName() {
-				return this.groundTruthName;
-			}
-			
-			@PropertySetter("ground truth")
-			public final TrainingField setGroundTruthName(final String groundTruthName) {
-				this.groundTruthName = groundTruthName;
 				
 				return this;
 			}
@@ -1049,7 +1068,7 @@ public final class VisualAnalysis {
 			
 			@Override
 			public final String toString() {
-				return this.getGroundTruthName() +  ":" + new File(this.getImagePath()).getName() + "[" + this.getBoundsAsString() + "]";
+				return new File(this.getImagePath()).getName() + "[" + this.getBoundsAsString() + "]";
 			}
 			
 			private static final long serialVersionUID = 847822079141878928L;
