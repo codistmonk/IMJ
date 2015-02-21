@@ -17,6 +17,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -170,6 +171,126 @@ public final class SVS2Multifile {
 			private static final long serialVersionUID = 7631423500885984364L;
 			
 		});
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-21)
+	 */
+	public static final class Level implements Serializable {
+		
+		private final IFormatReader reader;
+		
+		private final Level previousLevel;
+		
+		private final byte[][] buffers;
+		
+		private final int tileSize, channelCount, imageWidth, imageHeight, bufferRowSize;
+		
+		private int bufferIndex, tileY, h;
+		
+		private Level nextLevel;
+		
+		public Level(final Level previousLevel) {
+			this.reader = previousLevel.reader;
+			this.previousLevel = previousLevel;
+			this.tileSize = previousLevel.tileSize;
+			this.channelCount = previousLevel.channelCount;
+			this.imageWidth = previousLevel.imageWidth / 2;
+			this.imageHeight = previousLevel.imageHeight / 2;
+			this.bufferRowSize = this.imageWidth * getBytesPerPixel(reader);
+			this.buffers = new byte[2][this.tileSize * this.bufferRowSize];
+			
+			if (2 <= this.imageWidth && 2 <= this.imageHeight) {
+				this.nextLevel = new Level(this);
+			}
+		}
+		
+		public Level(final IFormatReader reader, final int tileSize) {
+			this.reader = reader;
+			this.previousLevel = null;
+			this.buffers = new byte[2][];
+			this.tileSize = tileSize;
+			this.channelCount = predefinedChannelsFor(reader).getChannelCount();
+			this.imageWidth = reader.getSizeX();
+			this.imageHeight = reader.getSizeY();
+			this.bufferRowSize = this.imageWidth * getBytesPerPixel(reader);
+			
+			if (2 <= this.imageWidth && 2 <= this.imageHeight) {
+				this.nextLevel = new Level(this);
+			}
+		}
+		
+		public final void next0() {
+			final Collection<Exception> problems = synchronizedList(new ArrayList<>());
+			
+			this.h = min(this.tileSize, this.imageHeight - this.tileY);
+			
+			try {
+				this.reader.openBytes(0, this.buffers[this.bufferIndex], 0, this.tileY, this.imageWidth, this.h);
+			} catch (final Exception exception) {
+				problems.add(exception);
+			}
+			
+			final TaskManager tasks = new TaskManager(1.0);
+			
+			// TODO process current buffer
+			
+			if (this.bufferIndex == 1 && this.nextLevel != null) {
+				this.nextLevel.next1();
+			}
+			
+			this.tileY += this.tileSize;
+			this.bufferIndex = (this.bufferIndex + 1) & 1;
+		}
+		
+		public final void next1() {
+			final Collection<Exception> problems = synchronizedList(new ArrayList<>());
+			
+			this.h = min(this.tileSize, this.imageHeight - this.tileY);
+			
+//			for (int y = 0; y < this.h; ++y) {
+//				final int previousLevel00Y = y * 2;
+//				final int previousLevel00BufferIndex = previousLevel00Y / this.previousLevel.tileSize;
+//				final int previousLevel00YInBuffer = previousLevel00Y % this.previousLevel.tileSize;
+//				final int previousLevel01BufferIndex = previousLevel00BufferIndex;
+//				final int previousLevel01YInBuffer = previousLevel00YInBuffer;
+//				final int previousLevel10Y = previousLevel00Y + 1;
+//				final int previousLevel10BufferIndex = previousLevel10Y / this.previousLevel.tileSize;
+//				final int previousLevel10YInBuffer = previousLevel10Y % this.previousLevel.tileSize;
+//				final int previousLevel11BufferIndex = previousLevel10BufferIndex;
+//				final int previousLevel11YInBuffer = previousLevel10YInBuffer;
+//				
+//				for (int x = 0; x < this.imageWidth; ++x) {
+//					final int previousLevel00X = x * 2;
+//					final int previousLevel01X = previousLevel00X + 1;
+//					final int previousLevel10X = previousLevel00X;
+//					final int previousLevel11X = previousLevel01X;
+//					
+//					this.buffers[this.bufferIndex][y * this.bufferRowSize + x] = (byte) ((
+//							this.previousLevel.buffers[previousLevel00BufferIndex][previousLevel00YInBuffer * this.previousLevel.bufferRowSize + previousLevel00X]
+//							+ this.previousLevel.buffers[previousLevel01BufferIndex][previousLevel01YInBuffer * this.previousLevel.bufferRowSize + previousLevel01X]
+//							+ this.previousLevel.buffers[previousLevel10BufferIndex][previousLevel10YInBuffer * this.previousLevel.bufferRowSize + previousLevel10X]
+//							+ this.previousLevel.buffers[previousLevel11BufferIndex][previousLevel11YInBuffer * this.previousLevel.bufferRowSize + previousLevel11X]
+//					) / 4);
+//					
+//				}
+//			}
+			// TODO update currentBuffer using previous buffer(s)
+			
+			final TaskManager tasks = new TaskManager(1.0);
+			
+			// TODO process current buffer
+			
+			if (this.bufferIndex == 1 && this.nextLevel != null) {
+				this.nextLevel.next1();
+			}
+			
+			this.tileY += this.tileSize;
+			this.bufferIndex = (this.bufferIndex + 1) & 1;
+		}
+		
+		private static final long serialVersionUID = -5885557044465685071L;
+		
 	}
 	
 	public static final int getPixelValueFromBuffer(final IFormatReader reader, final byte[] buffer, final int bufferWidth, final int bufferHeight, final int channelCount, final int xInBuffer, final int yInBuffer) {
