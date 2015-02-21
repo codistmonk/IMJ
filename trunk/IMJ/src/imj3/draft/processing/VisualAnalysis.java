@@ -340,7 +340,7 @@ public final class VisualAnalysis {
 			final JButton saveExperimentButton = button("save");
 			final JButton refreshExperimentButton = button("refresh");
 			
-			this.mainSplitPane = horizontalSplit(verticalBox(
+			this.mainSplitPane = horizontalSplit(scrollable(verticalBox(
 					label(" Image: ", this.imageSelector, openImageButton, this.imageVisibilitySelector),
 					label(" Ground truth: ", this.groundTruthSelector, newGroundTruthButton, saveGroundTruthButton, refreshGroundTruthButton, this.groundTruthVisibilitySelector),
 					label(" Experiment: ", this.experimentSelector, newExperimentButton, openExperimentButton, runExperimentButton, saveExperimentButton, refreshExperimentButton, Box.createHorizontalStrut(padding)),
@@ -348,9 +348,9 @@ public final class VisualAnalysis {
 					label(" Classification (s): ", this.classificationTimeView, button("process"), button("save"), button("refresh"), this.classificationVisibilitySelector),
 					label(" F1: ", this.scoreView, Box.createHorizontalStrut(padding)),
 					centerX(new JButton("Confusion matrix...")),
-					scrollable(this.tree)), scrollable(new JLabel("Drop file here")));
+					scrollable(this.tree))), scrollable(new JLabel("Drop file here")));
 			
-			this.mainSplitPane.getLeftComponent().setMaximumSize(new Dimension(128, Integer.MAX_VALUE));
+			this.mainSplitPane.setResizeWeight(0.25);
 			this.add(this.mainSplitPane, BorderLayout.CENTER);
 			
 			openImageButton.addActionListener(e -> {
@@ -648,6 +648,7 @@ public final class VisualAnalysis {
 									event.getX(), event.getY(), image.getWidth(), image.getHeight());
 							
 							MainPanel.this.getImageComponent().getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
+							MainPanel.this.getTree().repaint();
 						}
 					}
 					
