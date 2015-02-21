@@ -1,11 +1,13 @@
 package imj3.tools;
 
 import static imj2.tools.IMJTools.getFieldValue;
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.synchronizedList;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
+import imj2.draft.AutoCloseableImageWriter;
 import imj2.tools.Canvas;
 
 import imj3.core.Channels;
@@ -15,7 +17,6 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -25,8 +26,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-
-import javax.imageio.ImageIO;
 
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
@@ -71,13 +70,14 @@ public final class SVS2Multifile {
 					} else {
 						Tools.debugPrint(file);
 						
+						final String tileFormat = "jpg";
+						
 						try (final ZipOutputStream output = new ZipOutputStream(new FileOutputStream(new File(outRoot, baseName(file.getName()) + ".zip")))) {
 							final IFormatReader reader = newImageReader(file.getPath());
 							final int channelCount = predefinedChannelsFor(reader).getChannelCount();
 							final int imageWidth = reader.getSizeX();
 							final int imageHeight = reader.getSizeY();
 							final int tileSize = 512;
-							final String tileFormat = "jpg";
 							
 							{
 								final String mpp = Array.get(getFieldValue(((ImageReader) reader).getReader(), "pixelSize"), 0).toString();
@@ -100,7 +100,7 @@ public final class SVS2Multifile {
 							
 							for (int tileY = 0; tileY < imageHeight; tileY += tileSize) {
 								final int tileY0 = tileY;
-								Tools.debugPrint(tileY, timer.toc(), (long) tileY * imageWidth / timer.toc());
+								Tools.debugPrint(tileY, timer.toc(), 1000L * tileY * imageWidth / max(1L, timer.toc()));
 								
 								final int h = min(tileSize, imageHeight - tileY);
 								
@@ -134,18 +134,17 @@ public final class SVS2Multifile {
 											}
 											
 											final String tileName = "tile_lod0_y" + tileY0 + "_x" + tileX0 + "." + tileFormat;
+											final ByteArrayOutputStream tmp = new ByteArrayOutputStream();
 											
-											try {
-												final ByteArrayOutputStream tmp = new ByteArrayOutputStream();
-												
-												ImageIO.write(tile.getImage(), tileFormat, tmp);
+											try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(tileFormat).setCompressionQuality(0.9F).setOutput(tmp)) {
+												imageWriter.write(tile.getImage());
 												
 												synchronized (output) {
 													output.putNextEntry(new ZipEntry(tileName));
 													output.write(tmp.toByteArray());
 													output.closeEntry();
 												}
-											} catch (final IOException exception) {
+											} catch (final Exception exception) {
 												exception.printStackTrace();
 												
 												problems.add(exception);

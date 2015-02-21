@@ -6,18 +6,13 @@ import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.intRange;
 import static net.sourceforge.aprog.tools.Tools.iterable;
-import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
 import imj2.tools.IMJTools;
 
 import java.awt.image.BufferedImage;
-import java.awt.image.RenderedImage;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,10 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipOutputStream;
 
-import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
-import javax.imageio.ImageWriteParam;
-import javax.imageio.ImageWriter;
 
 import loci.formats.ImageReader;
 import loci.formats.tiff.TiffCompression;
@@ -297,59 +289,6 @@ public final class SVS2Zip {
 			
 			debugPrint("Testing done in", timer.toc(), "ms");
 		}
-	}
-	
-	/**
-	 * @author codistmonk (creation 2014-05-25)
-	 */
-	public static final class AutoCloseableImageWriter implements AutoCloseable, Serializable {
-		
-		private final ImageWriter writer;
-		
-		private final ImageWriteParam outputParameters;
-		
-		public AutoCloseableImageWriter(final String format) {
-			this.writer = ImageIO.getImageWritersByFormatName(format).next();
-			this.outputParameters = this.writer.getDefaultWriteParam();
-		}
-		
-		public final AutoCloseableImageWriter setCompressionQuality(final float quality) {
-			this.outputParameters.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-			this.outputParameters.setCompressionQuality(quality);
-			
-			return this;
-		}
-		
-		public AutoCloseableImageWriter setOutput(final OutputStream output) {
-			try {
-				this.writer.setOutput(ImageIO.createImageOutputStream(output));
-			} catch (final IOException exception) {
-				throw unchecked(exception);
-			}
-			
-			return this;
-		}
-		
-		public final AutoCloseableImageWriter write(final RenderedImage image) {
-			try {
-				this.writer.write(null, new IIOImage(image, null, null), this.outputParameters);
-			} catch (final IOException exception) {
-				throw unchecked(exception);
-			}
-			
-			return this;
-		}
-		
-		@Override
-		public final void close() throws Exception {
-			this.writer.dispose();
-		}
-		
-		/**
-		 * {@value}.
-		 */
-		private static final long serialVersionUID = -3450450668038280563L;
-		
 	}
 	
 }
