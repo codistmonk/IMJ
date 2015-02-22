@@ -10,6 +10,7 @@ import static java.util.Arrays.sort;
 import static java.util.Collections.nCopies;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.RegionShrinkingTest.AutoMouseAdapter;
 
@@ -27,6 +28,8 @@ import java.util.List;
 import java.util.Set;
 
 import jgencode.primitivelists.IntList;
+
+import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.TicToc;
 
 import org.junit.Test;
