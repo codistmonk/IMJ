@@ -39,6 +39,7 @@ import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
 
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
+import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.RegexFilter;
 import net.sourceforge.aprog.tools.TaskManager;
@@ -60,6 +61,8 @@ public final class SVS2Multifile {
 	public static final int G = 0x0000FF00;
 	
 	public static final int B = 0x000000FF;
+	
+	public static final float COMPRESSION_QUALITY = 0.9F;
 	
 	/**
 	 * @param commandLineArguments
@@ -127,7 +130,8 @@ public final class SVS2Multifile {
 							
 							Tools.debugPrint(imageWidth, imageHeight, predefinedChannelsFor(reader));
 							
-							final Collection<Exception> problems = synchronizedList(new ArrayList<>()); 
+							final Collection<Exception> problems = synchronizedList(new ArrayList<>());
+							final ConsoleMonitor monitor = new ConsoleMonitor(30_000L);
 							final TicToc timer = new TicToc();
 							
 							Tools.debugPrint(new Date(timer.tic()));
@@ -135,8 +139,12 @@ public final class SVS2Multifile {
 							final Level0 level0 = new Level0(reader, tileSize, tileFormat, output, problems);
 							
 							while (level0.next()) {
-								final int tileY = level0.getTileY();
-								Tools.debugPrint(tileY, timer.toc(), 1000L * tileY * imageWidth / max(1L, timer.toc()));
+								if (monitor.ping()) {
+									final int tileY = level0.getTileY();
+									
+									Tools.debugPrint("tileY:", tileY, "time(s):", timer.toc() / 1_000L,
+											"rate(px/s):", 1_000L * tileY * imageWidth / max(1L, timer.toc()));
+								}
 							}
 							
 							for (final Exception problem : problems) {
@@ -175,7 +183,8 @@ public final class SVS2Multifile {
 		
 		private int tileY;
 		
-		public Level0(final IFormatReader reader, final int tileSize, final String tileFormat, final ZipOutputStream output, final Collection<Exception> problems) {
+		public Level0(final IFormatReader reader, final int tileSize, final String tileFormat,
+				final ZipOutputStream output, final Collection<Exception> problems) {
 			this.reader = reader;
 			this.tileSize = tileSize;
 			this.channelCount = predefinedChannelsFor(reader).getChannelCount();
@@ -186,7 +195,8 @@ public final class SVS2Multifile {
 			this.tileFormat = tileFormat;
 			this.output = output;
 			this.problems = problems;
-			this.nextLevel = 2 <= this.imageWidth && 2 <= this.imageHeight ? new LevelN(1, tileSize, this.imageWidth / 2, this.imageHeight / 2, tileFormat, output, problems) : null;
+			this.nextLevel = 2 <= this.imageWidth && 2 <= this.imageHeight ? new LevelN(
+					1, tileSize, this.imageWidth / 2, this.imageHeight / 2, tileFormat, output, problems) : null;
 		}
 		
 		public final boolean next() {
@@ -230,7 +240,8 @@ public final class SVS2Multifile {
 							
 							for (int y = 0; y < h; ++y) {
 								for (int x = 0; x < w; ++x) {
-									tile.getImage().setRGB(x, y, getPixelValueFromBuffer(reader, buffer, imageWidth, h, channelCount, tileX0 + x, y));
+									tile.getImage().setRGB(x, y, getPixelValueFromBuffer(
+											reader, buffer, imageWidth, h, channelCount, tileX0 + x, y));
 								}
 							}
 							
@@ -254,7 +265,8 @@ public final class SVS2Multifile {
 							final String tileName = "tile_lod0_y" + tileY + "_x" + tileX0 + "." + tileFormat;
 							final ByteArrayOutputStream tmp = new ByteArrayOutputStream();
 							
-							try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(tileFormat).setCompressionQuality(0.9F).setOutput(tmp)) {
+							try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(tileFormat)
+									.setCompressionQuality(COMPRESSION_QUALITY).setOutput(tmp)) {
 								imageWriter.write(tile.getImage());
 								
 								synchronized (output) {
@@ -315,7 +327,8 @@ public final class SVS2Multifile {
 		
 		private boolean bufferDone;
 		
-		public LevelN(final int n, final int tileSize, final int levelWidth, final int levelHeight, final String tileFormat, final ZipOutputStream output, final Collection<Exception> problems) {
+		public LevelN(final int n, final int tileSize, final int levelWidth, final int levelHeight,
+				final String tileFormat, final ZipOutputStream output, final Collection<Exception> problems) {
 			this.n = n;
 			this.buffer = new int[tileSize * levelWidth];
 			this.tileSize = tileSize;
@@ -324,7 +337,8 @@ public final class SVS2Multifile {
 			this.tileFormat = tileFormat;
 			this.output = output;
 			this.problems = problems;
-			this.nextLevel = 2 <= levelWidth && 2 <= levelHeight ? new LevelN(n + 1, tileSize, levelWidth / 2, levelHeight / 2, tileFormat, output, problems) : null;
+			this.nextLevel = 2 <= levelWidth && 2 <= levelHeight ? new LevelN(
+					n + 1, tileSize, levelWidth / 2, levelHeight / 2, tileFormat, output, problems) : null;
 		}
 		
 		public final void setRGB(final int xInLevel, final int yInLevel, final int rgb) {
@@ -373,7 +387,8 @@ public final class SVS2Multifile {
 							final String tileName = "tile_lod" + n + "_y" + tileY + "_x" + tileX0 + "." + tileFormat;
 							final ByteArrayOutputStream tmp = new ByteArrayOutputStream();
 							
-							try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(tileFormat).setCompressionQuality(0.9F).setOutput(tmp)) {
+							try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(tileFormat)
+									.setCompressionQuality(COMPRESSION_QUALITY).setOutput(tmp)) {
 								imageWriter.write(tile.getImage());
 								
 								synchronized (output) {
