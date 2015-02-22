@@ -20,8 +20,6 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import imj2.pixel3d.MouseHandler;
-import imj2.tools.Canvas;
-
 import imj3.draft.processing.VisualAnalysis.Context.Refresh;
 import imj3.draft.processing.VisualAnalysis.Experiment.ClassDescription;
 import imj3.draft.processing.VisualAnalysis.Experiment.TrainingField;
@@ -90,6 +88,7 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 
 import net.sourceforge.aprog.swing.SwingTools;
+import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
 

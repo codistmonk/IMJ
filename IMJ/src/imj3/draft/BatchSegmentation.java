@@ -3,9 +3,10 @@ package imj3.draft;
 import static imj3.draft.VisualSegmentation.extractCells;
 import static imj3.draft.VisualSegmentation.newMaskFor;
 import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
+
 import imj2.draft.PaletteBasedHistograms;
 import imj2.draft.PaletteBasedHistograms.Patch2DProcessor;
-import imj2.tools.Canvas;
+
 import imj3.draft.VisualSegmentation.PaletteRoot;
 
 import java.awt.image.BufferedImage;
@@ -21,6 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import javax.imageio.ImageIO;
 
+import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;

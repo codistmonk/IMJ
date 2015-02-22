@@ -27,6 +27,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 
 import net.sourceforge.aprog.swing.SwingTools;
+import net.sourceforge.aprog.tools.Canvas;
 
 /**
  * @author codistmonk (creation 2014-01-22)

@@ -2,8 +2,6 @@ package imj3.draft.segmentation;
 
 import static net.sourceforge.aprog.tools.Tools.last;
 
-import imj2.tools.Canvas;
-
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -14,6 +12,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JComponent;
+
+import net.sourceforge.aprog.tools.Canvas;
 
 /**
  * @author codistmonk (creation 2015-01-16)

@@ -12,10 +12,11 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
 import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.join;
+
 import imj2.draft.PaletteBasedHistograms;
 import imj2.pixel3d.MouseHandler;
-import imj2.tools.Canvas;
 import imj2.tools.MultiThreadTools;
+
 import imj3.draft.KMeans;
 import imj3.draft.segmentation.ImageComponent.Painter;
 import imj3.draft.segmentation.ClassifierNode;
@@ -76,7 +77,9 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 
 import jgencode.primitivelists.IntList;
+
 import net.sourceforge.aprog.swing.SwingTools;
+import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;

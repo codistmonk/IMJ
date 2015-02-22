@@ -17,7 +17,6 @@ import imj2.draft.PaletteBasedHistograms;
 import imj2.draft.PaletteBasedHistograms.Patch2DProcessor;
 import imj2.pixel3d.MouseHandler;
 import imj2.tools.AwtBackedImage;
-import imj2.tools.Canvas;
 import imj2.tools.IMJTools;
 
 import imj3.core.Channels;
@@ -85,6 +84,7 @@ import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
 
 import net.sourceforge.aprog.swing.SwingTools;
+import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Pair;
 import net.sourceforge.aprog.tools.TicToc;
