@@ -6,8 +6,10 @@ import static java.lang.Math.min;
 import static java.util.Collections.synchronizedList;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj2.draft.AutoCloseableImageWriter;
 import imj2.tools.Canvas;
+
 import imj3.core.Channels;
 import imj3.tools.CommonTools.FileProcessor;
 
@@ -19,16 +21,23 @@ import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
+
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.RegexFilter;
@@ -84,11 +93,35 @@ public final class SVS2Multifile {
 							
 							{
 								final String mpp = Array.get(getFieldValue(((ImageReader) reader).getReader(), "pixelSize"), 0).toString();
+								final Document xml = document(() ->
+									element("group", () -> {
+										final int[] level = { 0 };
+										final int[] w = { imageWidth };
+										final int[] h = { imageHeight };
+										
+										while (0 < w[0] && 0 < h[0]) {
+											element("image", () -> {
+												attribute("type", "lod" + level[0]);
+												attribute("format", "tileFormat");
+												attribute("width", w[0]);
+												attribute("height", h[0]);
+												attribute("tileWidth", tileSize);
+												attribute("tileHeight", tileSize);
+												
+												if (0 == level[0]) {
+													attribute("micronsPerPixel", mpp);
+												}
+											});
+											
+											++level[0];
+											w[0] /= 2;
+											h[0] /= 2;
+										}
+									})
+								);
 								
 								output.putNextEntry(new ZipEntry("metadata.xml"));
-								XMLTools.write(XMLTools.parse("<collection><image type=\"lod0\" format=\"" + tileFormat + "\" width=\"" + imageWidth
-										+ "\" height=\"" + imageHeight + "\" tileWidth=\"" + tileSize + "\" tileHeight=\"" + tileSize
-										+ "\" micronsPerPixel=\"" + mpp + "\"/></collection>"), output, 0);
+								XMLTools.write(xml, output, 0);
 								output.closeEntry();
 							}
 							
@@ -502,6 +535,55 @@ public final class SVS2Multifile {
 	
 	public static final int getBytesPerPixel(final IFormatReader lociImage) {
 		return FormatTools.getBytesPerPixel(lociImage.getPixelType()) * lociImage.getRGBChannelCount();
+	}
+	
+	private static final Map<Thread, List<Node>> stacks = Collections.synchronizedMap(new HashMap<>());
+	
+	public static final Document document(final Runnable contents) {
+		final List<Node> stack = stacks.computeIfAbsent(Thread.currentThread(), t -> new ArrayList<>());
+		final Document result = XMLTools.newDocument();
+		
+		stack.add(0, result);
+		
+		try {
+			contents.run();
+		} finally {
+			stack.remove(0);
+		}
+		
+		return result;
+	}
+	
+	public static final Element element(final String tagName, final Runnable contents) {
+		final List<Node> stack = stacks.get(Thread.currentThread());
+		final Node parent = stack.get(0);
+		final Document document = parent instanceof Document ? (Document) parent : parent.getOwnerDocument();
+		final Element result = document.createElement(tagName);
+		
+		parent.appendChild(result);
+		stack.add(0, result);
+		
+		try {
+			contents.run();
+		} finally {
+			stack.remove(0);
+		}
+		
+		return result;
+	}
+	
+	public static final void attribute(final String name, final Object value) {
+		final List<Node> stack = stacks.get(Thread.currentThread());
+		final Element element = (Element) stack.get(0);
+		
+		element.setAttribute(name, "" + value);
+	}
+	
+	public static final void text(final String text) {
+		final List<Node> stack = stacks.get(Thread.currentThread());
+		final Element element = (Element) stack.get(0);
+		
+		element.appendChild(element.getOwnerDocument().createTextNode(text));
 	}
 	
 }
