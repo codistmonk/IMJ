@@ -14,6 +14,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FilenameFilter;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -39,6 +40,7 @@ import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.RegexFilter;
+import net.sourceforge.aprog.tools.SystemProperties;
 import net.sourceforge.aprog.tools.TaskManager;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
@@ -59,7 +61,9 @@ public final class SVS2Multifile {
 	
 	public static final int B = 0x000000FF;
 	
-	public static final float COMPRESSION_QUALITY = 0.9F;
+	static float compressionQuality = 0.9F;
+	
+	static double levelCPULoad = 0.0;
 	
 	/**
 	 * @param commandLineArguments
@@ -70,93 +74,101 @@ public final class SVS2Multifile {
 		final File inRoot = new File(arguments.get("in", ""));
 		final RegexFilter filter = new RegexFilter(arguments.get("filter", ".*\\.svs"));
 		final File outRoot = new File(arguments.get("out", ""));
+		final int threads = max(1, arguments.get("threads", SystemProperties.getAvailableProcessorCount() / 2)[0]);
+		
+		compressionQuality = Float.parseFloat(arguments.get("compressionQuality", "0.9"));
+		levelCPULoad = 1.0 / threads;
 		
 		IMJTools.toneDownBioFormatsLogger();
 		
-		FileProcessor.deepForEachFileIn(inRoot, new FileProcessor() {
-
-			@Override
-			public final void process(final File file) {
-				if (filter.accept(file.getParentFile(), file.getName())) {
-					if (file.getPath().contains("/old/")) {
-						Tools.debugError("Ignoring", file);
-					} else {
-						Tools.debugPrint(file);
-						
-						final String tileFormat = "jpg";
-						
-						try (final ZipOutputStream output = new ZipOutputStream(new FileOutputStream(new File(outRoot, baseName(file.getName()) + ".zip")))) {
-							final IFormatReader reader = newImageReader(file.getPath());
-							final int imageWidth = reader.getSizeX();
-							final int imageHeight = reader.getSizeY();
-							final int tileSize = 512;
-							
-							{
-								final String mpp = Array.get(getFieldValue(((ImageReader) reader).getReader(), "pixelSize"), 0).toString();
-								final Document xml = document(() ->
-									element("group", () -> {
-										final int[] level = { 0 };
-										final int[] w = { imageWidth };
-										final int[] h = { imageHeight };
-										
-										while (0 < w[0] && 0 < h[0]) {
-											element("image", () -> {
-												attribute("type", "lod" + level[0]);
-												attribute("format", "tileFormat");
-												attribute("width", w[0]);
-												attribute("height", h[0]);
-												attribute("tileWidth", tileSize);
-												attribute("tileHeight", tileSize);
-												
-												if (0 == level[0]) {
-													attribute("micronsPerPixel", mpp);
-												}
-											});
-											
-											++level[0];
-											w[0] /= 2;
-											h[0] /= 2;
-										}
-									})
-								);
+		final TaskManager tasks = new TaskManager((double) threads / SystemProperties.getAvailableProcessorCount());
+		
+		Tools.debugPrint(tasks.getWorkerCount());
+		
+		FileProcessor.deepForEachFileIn(inRoot, f -> tasks.submit(() -> process(f, filter, outRoot)));
+		
+		tasks.join();
+	}
+	
+	public static final void process(final File file, final FilenameFilter filter, final File outRoot) {
+		final String fileName = file.getName();
+		
+		if (filter.accept(file.getParentFile(), fileName)) {
+			final File outputFile = new File(outRoot, baseName(fileName) + ".zip");
+			
+			if (file.getPath().contains("/old/") || outputFile.isFile()) {
+				Tools.debugError("Ignoring", file);
+			} else {
+				final String tileFormat = "jpg";
+				final TicToc timer = new TicToc();
+				
+				Tools.debugPrint("Processing", file, new Date(timer.tic()));
+				
+				try (final ZipOutputStream output = new ZipOutputStream(new FileOutputStream(outputFile))) {
+					final IFormatReader reader = newImageReader(file.getPath());
+					final int imageWidth = reader.getSizeX();
+					final int imageHeight = reader.getSizeY();
+					final int tileSize = 512;
+					
+					{
+						final String mpp = Array.get(getFieldValue(((ImageReader) reader).getReader(), "pixelSize"), 0).toString();
+						final Document xml = document(() ->
+							element("group", () -> {
+								final int[] level = { 0 };
+								final int[] w = { imageWidth };
+								final int[] h = { imageHeight };
 								
-								output.putNextEntry(new ZipEntry("metadata.xml"));
-								XMLTools.write(xml, output, 0);
-								output.closeEntry();
-							}
-							
-							Tools.debugPrint(imageWidth, imageHeight, predefinedChannelsFor(reader));
-							
-							final Collection<Exception> problems = synchronizedList(new ArrayList<>());
-							final ConsoleMonitor monitor = new ConsoleMonitor(30_000L);
-							final TicToc timer = new TicToc();
-							
-							Tools.debugPrint(new Date(timer.tic()));
-							
-							final Level0 level0 = new Level0(reader, tileSize, tileFormat, output, problems);
-							
-							while (level0.next()) {
-								if (monitor.ping()) {
-									final int tileY = level0.getTileY();
+								while (0 < w[0] && 0 < h[0]) {
+									element("image", () -> {
+										attribute("type", "lod" + level[0]);
+										attribute("format", "tileFormat");
+										attribute("width", w[0]);
+										attribute("height", h[0]);
+										attribute("tileWidth", tileSize);
+										attribute("tileHeight", tileSize);
+										
+										if (0 == level[0]) {
+											attribute("micronsPerPixel", mpp);
+										}
+									});
 									
-									Tools.debugPrint("tileY:", tileY, "time(s):", timer.toc() / 1_000L,
-											"rate(px/s):", 1_000L * tileY * imageWidth / max(1L, timer.toc()));
+									++level[0];
+									w[0] /= 2;
+									h[0] /= 2;
 								}
-							}
+							})
+						);
+						
+						output.putNextEntry(new ZipEntry("metadata.xml"));
+						XMLTools.write(xml, output, 0);
+						output.closeEntry();
+					}
+					
+					Tools.debugPrint(fileName, imageWidth, imageHeight, predefinedChannelsFor(reader));
+					
+					final Collection<Exception> problems = synchronizedList(new ArrayList<>());
+					final ConsoleMonitor monitor = new ConsoleMonitor(30_000L);
+					final Level0 level0 = new Level0(reader, tileSize, tileFormat, output, problems);
+					
+					while (level0.next()) {
+						if (monitor.ping()) {
+							final int tileY = level0.getTileY();
 							
-							for (final Exception problem : problems) {
-								problem.printStackTrace();
-							}
-						} catch (final Exception exception) {
-							exception.printStackTrace();
+							Tools.debugPrint(fileName, "tileY:", tileY, "time(s):", timer.toc() / 1_000L,
+									"rate(px/s):", 1_000L * tileY * imageWidth / max(1L, timer.toc()));
 						}
 					}
+					
+					Tools.debugPrint(fileName, "done in", timer.getTotalTime(), "ms");
+					
+					for (final Exception problem : problems) {
+						problem.printStackTrace();
+					}
+				} catch (final Exception exception) {
+					exception.printStackTrace();
 				}
 			}
-			
-			private static final long serialVersionUID = 7631423500885984364L;
-			
-		});
+		}
 	}
 	
 	/**
@@ -217,7 +229,7 @@ public final class SVS2Multifile {
 			
 			{
 				final Map<Thread, Canvas> tiles = new HashMap<>();
-				final TaskManager tasks = new TaskManager(1.0);
+				final TaskManager tasks = new TaskManager(levelCPULoad);
 				
 				for (int tileX = 0; tileX < imageWidth && problems.isEmpty(); tileX += tileSize) {
 					final int tileX0 = tileX;
@@ -263,7 +275,7 @@ public final class SVS2Multifile {
 							final ByteArrayOutputStream tmp = new ByteArrayOutputStream();
 							
 							try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(tileFormat)
-									.setCompressionQuality(COMPRESSION_QUALITY).setOutput(tmp)) {
+									.setCompressionQuality(compressionQuality).setOutput(tmp)) {
 								imageWriter.write(tile.getImage());
 								
 								synchronized (output) {
@@ -361,7 +373,7 @@ public final class SVS2Multifile {
 				final LevelN nextLevel = this.nextLevel;
 				
 				final int h = min(tileSize, levelHeight - tileY);
-				final TaskManager tasks = new TaskManager(1.0);
+				final TaskManager tasks = new TaskManager(levelCPULoad);
 				
 				for (int tileX = 0; tileX < levelWidth; tileX += tileSize) {
 					final int tileX0 = tileX;
@@ -385,7 +397,7 @@ public final class SVS2Multifile {
 							final ByteArrayOutputStream tmp = new ByteArrayOutputStream();
 							
 							try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(tileFormat)
-									.setCompressionQuality(COMPRESSION_QUALITY).setOutput(tmp)) {
+									.setCompressionQuality(compressionQuality).setOutput(tmp)) {
 								imageWriter.write(tile.getImage());
 								
 								synchronized (output) {

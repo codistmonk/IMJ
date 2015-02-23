@@ -93,6 +93,7 @@ public final class IMJTools {
 					, "loci.formats.FormatHandler"
 					, "loci.formats.FormatReader"
 					, "loci.formats.ImageReader"
+					, "loci.common.services.ServiceFactory"
 					)) {
 				try {
 					invoke(invoke(loggerFactory, "getLogger", classForName(className)), "setLevel", logLevel);
