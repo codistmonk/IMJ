@@ -685,13 +685,14 @@ public final class VisualAnalysis {
 		}
 		
 		public final Rectangle getTrainingBounds() {
-			if (!MainPanel.this.getContext().getGroundTruthName().isEmpty()) {
+			if ( !MainPanel.this.getContext().getGroundTruthName().isEmpty()) {
 				final TreePath selectionPath = MainPanel.this.getTree().getSelectionPath();
 				final DefaultMutableTreeNode node = selectionPath == null ? null : cast(DefaultMutableTreeNode.class, selectionPath.getLastPathComponent());
 				final UserObject userObject = node == null ? null : cast(UserObject.class, node.getUserObject());
 				final TrainingField trainingField = userObject == null ? null : cast(TrainingField.class, userObject.getUIScaffold().getObject());
 				
-				if (trainingField != null) {
+				if (trainingField != null
+						&& MainPanel.this.getContext().getImageFile().equals(new File(trainingField.getImagePath()))) {
 					return trainingField.getBounds();
 				}
 			}
