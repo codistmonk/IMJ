@@ -4,6 +4,7 @@ import imj3.core.Image2D;
 import imj3.draft.machinelearning.Classification;
 import imj3.draft.machinelearning.ClassifierClass;
 
+import java.awt.Rectangle;
 import java.util.Arrays;
 import java.util.Iterator;
 
@@ -18,16 +19,22 @@ public abstract class Image2DSource<M extends Image2DSource.Metadata, C extends 
 	
 	@Override
 	public final Iterator<Classification<C>> iterator() {
-		final int imageWidth = this.getMetadata().getImageWidth();
-		final int imageHeight = this.getMetadata().getImageHeight();
 		final int stride = this.getMetadata().getStride();
 		final int offset = stride / 2;
+		final Rectangle bounds = this.getMetadata().getBounds();
+		// bounds.x <= offset + k stride
+		// <- (bounds.x - offset) / stride <= k
+		// <- k = ceil((bounds.x - offset) / stride)
+		final int startX = offset + (bounds.x - offset + stride - 1) / stride * stride;
+		final int startY = offset + (bounds.y - offset + stride - 1) / stride * stride;
+		final int endX = bounds.x + bounds.width;
+		final int endY = bounds.y + bounds.height;
 		
 		return new Iterator<Classification<C>>() {
 			
-			private int x = offset;
+			private int x = startX;
 			
-			private int y = this.x;
+			private int y = startY;
 			
 			private final int[] patchData = new int[Image2DSource.this.getMetadata().getPatchPixelCount()];
 			
@@ -35,7 +42,7 @@ public abstract class Image2DSource<M extends Image2DSource.Metadata, C extends 
 			
 			@Override
 			public final boolean hasNext() {
-				return this.y < imageHeight && this.x < imageWidth;
+				return this.y < endY && this.x < endX;
 			}
 			
 			@Override
@@ -44,8 +51,8 @@ public abstract class Image2DSource<M extends Image2DSource.Metadata, C extends 
 				
 				final Classification<C> result = Image2DSource.this.convert(this.x, this.y, this.patchData, this.context);
 				
-				if (imageWidth <= (this.x += stride)) {
-					this.x = offset;
+				if (endX <= (this.x += stride)) {
+					this.x = startX;
 					this.y += stride;
 				}
 				
@@ -95,24 +102,31 @@ public abstract class Image2DSource<M extends Image2DSource.Metadata, C extends 
 		
 		private final Image2D image;
 		
+		private final Rectangle bounds;
+		
 		public Metadata(final Image2D image, final int patchSize,
 				final int patchSparsity, final int stride) {
 			super(patchSize, patchSparsity, stride);
 			this.image = image;
+			this.bounds = new Rectangle(image.getWidth(), image.getHeight());
 		}
 		
 		public final Image2D getImage() {
 			return this.image;
 		}
 		
-		@Override
-		public final int getImageWidth() {
-			return this.getImage().getWidth();
+		public final Rectangle getBounds() {
+			return this.bounds;
 		}
 		
 		@Override
-		public final int getImageHeight() {
-			return this.getImage().getHeight();
+		public final int getBoundsWidth() {
+			return this.getBounds().width;
+		}
+		
+		@Override
+		public final int getBoundsHeight() {
+			return this.getBounds().height;
 		}
 		
 		private static final long serialVersionUID = 5722451664995251006L;

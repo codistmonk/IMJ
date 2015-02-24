@@ -49,11 +49,11 @@ public abstract class Patch2DSource<M extends Patch2DSource.Metadata, C extends 
 		}
 		
 		public final int sizeX() {
-			return this.getImageWidth() / this.getStride();
+			return this.getBoundsWidth() / this.getStride();
 		}
 		
 		public final int sizeY() {
-			return this.getImageHeight() / this.getStride();
+			return this.getBoundsHeight() / this.getStride();
 		}
 		
 		public final int getPatchPixelCount() {
@@ -62,9 +62,9 @@ public abstract class Patch2DSource<M extends Patch2DSource.Metadata, C extends 
 			return n * n;
 		}
 		
-		public abstract int getImageWidth();
+		public abstract int getBoundsWidth();
 		
-		public abstract int getImageHeight();
+		public abstract int getBoundsHeight();
 		
 		private static final long serialVersionUID = -6730325302037718679L;
 		
