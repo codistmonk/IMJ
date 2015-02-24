@@ -1,5 +1,6 @@
 package imj3.draft.processing;
 
+import static imj3.draft.processing.Image2DRawSource.raw;
 import static imj3.tools.AwtImage2D.awtRead;
 import static imj3.tools.CommonSwingTools.limitHeight;
 import static imj3.tools.CommonSwingTools.setModel;
@@ -20,7 +21,9 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import imj2.pixel3d.MouseHandler;
+import imj3.draft.machinelearning.Classification;
 import imj3.draft.machinelearning.Classifier;
+import imj3.draft.machinelearning.ClassifierClass;
 import imj3.draft.machinelearning.DataSource;
 import imj3.draft.machinelearning.MedianCutClustering;
 import imj3.draft.processing.VisualAnalysis.Context.Refresh;
@@ -29,6 +32,7 @@ import imj3.draft.processing.VisualAnalysis.Experiment.TrainingField;
 import imj3.draft.segmentation.ImageComponent;
 import imj3.draft.segmentation.ImageComponent.Layer;
 import imj3.draft.segmentation.ImageComponent.Painter;
+import imj3.tools.AwtImage2D;
 import imj3.tools.CommonSwingTools.Instantiator;
 import imj3.tools.CommonSwingTools.NestedList;
 import imj3.tools.CommonSwingTools.PropertyGetter;
@@ -62,6 +66,7 @@ import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.prefs.Preferences;
@@ -391,8 +396,12 @@ public final class VisualAnalysis {
 					
 					// TODO run in another thread
 					if (experiment != null) {
-						// TODO create training set
-						DataSource<?, ?> trainingSet = null;
+						final CompositeDataSource trainingSet = new CompositeDataSource();
+						
+						experiment.getTrainingFields().forEach(f -> {
+							// TODO create labeled data source
+							trainingSet.add(raw(new AwtImage2D(f.getImagePath())));
+						});
 						
 						for (final Algorithm algorithm : experiment.getAlgorithms()) {
 							algorithm.optimize(trainingSet);
@@ -477,6 +486,82 @@ public final class VisualAnalysis {
 			this.setPreferredSize(new Dimension(800, 600));
 			
 			context.setMainPanel(this);
+		}
+		
+		/**
+		 * @author codistmonk (creation 2015-02-24)
+		 */
+		public static final class CompositeDataSource extends DataSource.Abstract<DataSource.Metadata, ClassifierClass> {
+			
+			private final List<DataSource<?, ?>> sources;
+			
+			public CompositeDataSource() {
+				super(new Metadata.Default());
+				this.sources = new ArrayList<>();
+			}
+			
+			public final CompositeDataSource add(final DataSource<?, ?> source) {
+				this.sources.add(source);
+				
+				return this;
+			}
+			
+			@Override
+			public final Iterator<Classification<ClassifierClass>> iterator() {
+				final Iterator<DataSource<?, ?>> i = this.sources.iterator();
+				
+				return new Iterator<Classification<ClassifierClass>>() {
+					
+					private Iterator<Classification<ClassifierClass>> j;
+					
+					{
+						this.update();
+					}
+					
+					@Override
+					public final boolean hasNext() {
+						return this.j != null && this.j.hasNext();
+					}
+					
+					@Override
+					public final Classification<ClassifierClass> next() {
+						final Classification<ClassifierClass> result = this.j.next();
+						
+						this.update();
+						
+						return result;
+					}
+					
+					private final void update() {
+						while ((this.j == null || !this.j.hasNext()) && i.hasNext()) {
+							this.j = (Iterator) i.next().iterator();
+						}
+					}
+					
+					
+				};
+			}
+			
+			@Override
+			public final int getInputDimension() {
+				if (!this.sources.isEmpty()) {
+					return this.sources.get(0).getInputDimension();
+				}
+				
+				return 0;
+			}
+			
+			@Override
+			public final int getClassDimension() {
+				if (!this.sources.isEmpty()) {
+					return this.sources.get(0).getClassDimension();
+				}
+				
+				return 0;
+			}
+			
+			private static final long serialVersionUID = 6526966621533776530L;
+			
 		}
 		
 		public final int getBrushSize() {
