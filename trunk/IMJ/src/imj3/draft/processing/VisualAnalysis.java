@@ -20,6 +20,9 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import imj2.pixel3d.MouseHandler;
+import imj3.draft.machinelearning.Classifier;
+import imj3.draft.machinelearning.DataSource;
+import imj3.draft.machinelearning.MedianCutClustering;
 import imj3.draft.processing.VisualAnalysis.Context.Refresh;
 import imj3.draft.processing.VisualAnalysis.Experiment.ClassDescription;
 import imj3.draft.processing.VisualAnalysis.Experiment.TrainingField;
@@ -338,19 +341,23 @@ public final class VisualAnalysis {
 			final JButton openImageButton = button("open");
 			final JButton newGroundTruthButton = button("new");
 			final JButton saveGroundTruthButton = button("save");
-			final JButton refreshGroundTruthButton = button("refresh");
+			final JButton reloadGroundTruthButton = button("refresh");
 			final JButton newExperimentButton = button("new");
 			final JButton openExperimentButton = button("open");
 			final JButton runExperimentButton = button("process");
 			final JButton saveExperimentButton = button("save");
-			final JButton refreshExperimentButton = button("refresh");
+			final JButton reloadExperimentButton = button("refresh");
+			final JButton runTrainingButton = button("process");
+			final JButton runClassificationButton = button("process");
+			final JButton saveClassificationButton = button("process");
+			final JButton reloadClassificationButton = button("process");
 			
 			this.mainSplitPane = horizontalSplit(scrollable(verticalBox(
 					limitHeight(horizontalBox(this.imageVisibilitySelector, openImageButton, label(" Image: ", this.imageSelector))),
-					limitHeight(horizontalBox(this.groundTruthVisibilitySelector, newGroundTruthButton, saveGroundTruthButton, refreshGroundTruthButton, label(" Ground truth: ", this.groundTruthSelector))),
-					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), newExperimentButton, openExperimentButton, runExperimentButton, saveExperimentButton, refreshExperimentButton, label(" Experiment: ", this.experimentSelector))),
-					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), button("process"), label(" Training (s): ", this.trainingTimeView))),
-					limitHeight(horizontalBox(this.classificationVisibilitySelector, button("process"), button("save"), button("refresh"), label(" Classification (s): ", this.classificationTimeView))),
+					limitHeight(horizontalBox(this.groundTruthVisibilitySelector, newGroundTruthButton, saveGroundTruthButton, reloadGroundTruthButton, label(" Ground truth: ", this.groundTruthSelector))),
+					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), newExperimentButton, openExperimentButton, runExperimentButton, saveExperimentButton, reloadExperimentButton, label(" Experiment: ", this.experimentSelector))),
+					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), runTrainingButton, label(" Training (s): ", this.trainingTimeView))),
+					limitHeight(horizontalBox(this.classificationVisibilitySelector, runClassificationButton, saveClassificationButton, reloadClassificationButton, label(" Classification (s): ", this.classificationTimeView))),
 					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), label(" F1: ", this.scoreView))),
 					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), new JButton("Confusion matrix..."), Box.createHorizontalGlue())),
 					scrollable(this.tree))), scrollable(new JLabel("Drop file here")));
@@ -375,6 +382,25 @@ public final class VisualAnalysis {
 			newExperimentButton.addActionListener(e -> context.saveExperiment(save(EXPERIMENT, "New experiment", MainPanel.this)));
 			openExperimentButton.addActionListener(e -> context.setExperiment(open(EXPERIMENT, "Open experiment", MainPanel.this)));
 			saveExperimentButton.addActionListener(e -> context.saveExperiment());
+			
+			runTrainingButton.addActionListener(new ActionListener() {
+				
+				@Override
+				public final void actionPerformed(final ActionEvent event) {
+					final Experiment experiment = MainPanel.this.getExperiment();
+					
+					// TODO run in another thread
+					if (experiment != null) {
+						// TODO create training set
+						DataSource<?, ?> trainingSet = null;
+						
+						for (final Algorithm algorithm : experiment.getAlgorithms()) {
+							algorithm.optimize(trainingSet);
+						}
+					}
+				}
+				
+			});
 			
 			this.imageVisibilitySelector.addActionListener(new ActionListener() {
 				
@@ -1172,6 +1198,8 @@ public final class VisualAnalysis {
 		
 		private final List<TrainingField> trainingFields = new ArrayList<>();
 		
+		private final List<Algorithm> algorithms = new ArrayList<>();
+		
 		@Override
 		public final String toString() {
 			return "Experiment";
@@ -1185,6 +1213,11 @@ public final class VisualAnalysis {
 		@NestedList(name="training", element="training field", elementClass=TrainingField.class)
 		public final List<TrainingField> getTrainingFields() {
 			return this.trainingFields;
+		}
+		
+		@NestedList(name="algorithms", element="algorithm", elementClass=Algorithm.class)
+		public final List<Algorithm> getAlgorithms() {
+			return this.algorithms;
 		}
 		
 		private static final long serialVersionUID = -4539259556658072410L;
@@ -1282,6 +1315,40 @@ public final class VisualAnalysis {
 			private static final long serialVersionUID = 847822079141878928L;
 			
 		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-24)
+	 */
+	public static final class Algorithm implements Serializable {
+		
+		private String classifierName = MedianCutClustering.class.getName();
+		
+		private Classifier<?> classifier;
+		
+		@StringGetter
+		@PropertyGetter("classifier")
+		public final String getClassifierName() {
+			return this.classifierName;
+		}
+		
+		@PropertySetter("classifier")
+		public final Algorithm setClassifierName(final String classifierName) {
+			this.classifierName = classifierName;
+			
+			return this;
+		}
+		
+		public final Classifier<?> getClassifier() {
+			return this.classifier;
+		}
+		
+		public final void optimize(final DataSource<?, ?> trainingSet) {
+			Tools.debugPrint("TODO"); // TODO
+		}
+		
+		private static final long serialVersionUID = 6887222324834498847L;
 		
 	}
 	
