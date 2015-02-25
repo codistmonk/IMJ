@@ -21,7 +21,9 @@ public final class Image2DRawSource extends Image2DSource<Image2DSource.Metadata
 	
 	@Override
 	public final int getInputDimension() {
-		return 3 * this.getMetadata().getPatchPixelCount();
+		final Metadata metadata = this.getMetadata();
+		
+		return metadata.getImage().getChannels().getChannelCount() * metadata.getPatchPixelCount();
 	}
 	
 	@Override
