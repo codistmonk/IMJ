@@ -1,6 +1,5 @@
 package imj3.draft.processing;
 
-import static imj3.draft.processing.Image2DRawSource.raw;
 import static imj3.tools.AwtImage2D.awtRead;
 import static imj3.tools.CommonSwingTools.limitHeight;
 import static imj3.tools.CommonSwingTools.setModel;
@@ -16,11 +15,14 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import imj2.pixel3d.MouseHandler;
+
+import imj3.core.Image2D;
 import imj3.draft.machinelearning.Classification;
 import imj3.draft.machinelearning.Classifier;
 import imj3.draft.machinelearning.ClassifierClass;
@@ -275,6 +277,16 @@ public final class VisualAnalysis {
 		return null;
 	}
 	
+	public static final Image2D read(final String id) {
+		try {
+			return new AwtImage2D(id);
+		} catch (final Exception exception) {
+			// TODO try Bio-Formats
+			
+			throw unchecked(exception);
+		}
+	}
+	
 	/**
 	 * @author codistmonk (creation 2015-02-13)
 	 */
@@ -355,8 +367,8 @@ public final class VisualAnalysis {
 			final JButton reloadExperimentButton = button("refresh");
 			final JButton runTrainingButton = button("process");
 			final JButton runClassificationButton = button("process");
-			final JButton saveClassificationButton = button("process");
-			final JButton reloadClassificationButton = button("process");
+			final JButton saveClassificationButton = button("save");
+			final JButton reloadClassificationButton = button("refresh");
 			
 			this.mainSplitPane = horizontalSplit(scrollable(verticalBox(
 					limitHeight(horizontalBox(this.imageVisibilitySelector, openImageButton, label(" Image: ", this.imageSelector))),
@@ -400,8 +412,15 @@ public final class VisualAnalysis {
 						final CompositeDataSource trainingSet = new CompositeDataSource();
 						
 						experiment.getTrainingFields().forEach(f -> {
-							// TODO create labeled data source
-							trainingSet.add(raw(new AwtImage2D(f.getImagePath())));
+							Tools.debugPrint(f.getImagePath());
+							final Image2D image = read(f.getImagePath());
+							final Image2D labels = read(context.getGroundTruthPathFromImagePath(f.getImagePath()));
+							// TODO specify patch sparsity and stride
+							final Image2DLabeledRawSource source = Image2DLabeledRawSource.raw(image, labels);
+							
+							source.getMetadata().getBounds().setBounds(f.getBounds());
+							
+							trainingSet.add(source);
 						});
 						
 						for (final Algorithm algorithm : experiment.getAlgorithms()) {
@@ -1125,6 +1144,10 @@ public final class VisualAnalysis {
 			return baseName(this.getImageFile().getPath()) + "_groundtruth_" + name + ".png";
 		}
 		
+		public final String getGroundTruthPathFromImagePath(final String imagePath) {
+			return baseName(imagePath) + "_groundtruth_" + this.getGroundTruthName() + ".png";
+		}
+		
 		public final String getClassificationPath() {
 			return baseName(this.getImageFile().getPath()) + "_classification_" + this.getGroundTruthName() + "_" + this.getExperimentName() + ".png";
 		}
@@ -1449,6 +1472,7 @@ public final class VisualAnalysis {
 		
 		public final void optimize(final DataSource<?, ?> trainingSet) {
 			Tools.debugPrint("TODO"); // TODO
+			Tools.debugPrint(trainingSet.size());
 		}
 		
 		private static final long serialVersionUID = 6887222324834498847L;
