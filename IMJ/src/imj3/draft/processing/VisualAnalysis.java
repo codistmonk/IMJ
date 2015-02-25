@@ -64,6 +64,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -1202,7 +1203,7 @@ public final class VisualAnalysis {
 		
 		public final Context setExperiment(final File experimentFile) {
 			if (experimentFile != null && experimentFile.isFile()) {
-				this.getMainPanel().setExperiment((Experiment) xstream.fromXML(experimentFile));
+				this.getMainPanel().setExperiment(Experiment.deserialized(xstream.fromXML(experimentFile)));
 				this.getMainPanel().getExperimentSelector().setFile(experimentFile);
 				
 				preferences.put(EXPERIMENT, experimentFile.getPath());
@@ -1306,6 +1307,23 @@ public final class VisualAnalysis {
 		}
 		
 		private static final long serialVersionUID = -4539259556658072410L;
+		
+		public static final Experiment deserialized(final Object object) {
+			final Experiment result = (Experiment) object;
+			
+			for (final Field field : result.getClass().getDeclaredFields()) {
+				try {
+					if (field.get(object) == null && field.getType().isAssignableFrom(ArrayList.class)) {
+						field.setAccessible(true);
+						field.set(object, new ArrayList<>());
+					}
+				} catch (final Exception exception) {
+					exception.printStackTrace();
+				}
+			}
+			
+			return result;
+		}
 		
 		/**
 		 * @author codistmonk (creation 2015-02-16)
