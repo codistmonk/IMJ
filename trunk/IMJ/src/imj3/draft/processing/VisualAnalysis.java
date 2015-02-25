@@ -21,12 +21,13 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import imj2.pixel3d.MouseHandler;
-
 import imj3.core.Image2D;
+import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classification;
 import imj3.draft.machinelearning.Classifier;
 import imj3.draft.machinelearning.ClassifierClass;
 import imj3.draft.machinelearning.DataSource;
+import imj3.draft.machinelearning.Measure;
 import imj3.draft.machinelearning.MedianCutClustering;
 import imj3.draft.processing.VisualAnalysis.Context.Refresh;
 import imj3.draft.processing.VisualAnalysis.Experiment.ClassDescription;
@@ -72,6 +73,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Function;
 import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
@@ -409,7 +411,7 @@ public final class VisualAnalysis {
 					
 					// TODO run in another thread
 					if (experiment != null) {
-						final CompositeDataSource trainingSet = new CompositeDataSource();
+						final CompositeDataSource unbufferedTrainingSet = new CompositeDataSource(c -> c.getClassifierClass().toArray()[0] != 0.0);
 						
 						experiment.getTrainingFields().forEach(f -> {
 							Tools.debugPrint(f.getImagePath());
@@ -420,8 +422,10 @@ public final class VisualAnalysis {
 							
 							source.getMetadata().getBounds().setBounds(f.getBounds());
 							
-							trainingSet.add(source);
+							unbufferedTrainingSet.add(source);
 						});
+						
+						final DataSource<?, ?> trainingSet = BufferedDataSource.buffer(unbufferedTrainingSet);
 						
 						for (final Algorithm algorithm : experiment.getAlgorithms()) {
 							algorithm.optimize(trainingSet);
@@ -515,9 +519,12 @@ public final class VisualAnalysis {
 			
 			private final List<DataSource<?, ?>> sources;
 			
-			public CompositeDataSource() {
+			private final Function<Classification<ClassifierClass>, Boolean> filter;
+			
+			public CompositeDataSource(final Function<Classification<ClassifierClass>, Boolean> filter) {
 				super(new Metadata.Default());
 				this.sources = new ArrayList<>();
+				this.filter = filter;
 			}
 			
 			public final CompositeDataSource add(final DataSource<?, ?> source) {
@@ -526,11 +533,12 @@ public final class VisualAnalysis {
 				return this;
 			}
 			
+			@SuppressWarnings("unchecked")
 			@Override
 			public final Iterator<Classification<ClassifierClass>> iterator() {
 				final Iterator<DataSource<?, ?>> i = this.sources.iterator();
 				
-				return new Iterator<Classification<ClassifierClass>>() {
+				return new FilteredIterator(new Iterator<Classification<ClassifierClass>>() {
 					
 					private Iterator<Classification<ClassifierClass>> j;
 					
@@ -559,7 +567,7 @@ public final class VisualAnalysis {
 					}
 					
 					
-				};
+				}, this.filter);
 			}
 			
 			@Override
@@ -581,6 +589,47 @@ public final class VisualAnalysis {
 			}
 			
 			private static final long serialVersionUID = 6526966621533776530L;
+			
+			/**
+			 * @author codistmonk (creation 2015)
+			 *
+			 * @param <T>
+			 */
+			public static final class FilteredIterator<T> implements Iterator<T> {
+				
+				private final Iterator<T> source;
+				
+				private final Function<T, Boolean> filter;
+				
+				private T next;
+				
+				public FilteredIterator(final Iterator<T> source, final Function<T, Boolean> filter) {
+					this.source = source;
+					this.filter = filter;
+				}
+				
+				@Override
+				public boolean hasNext() {
+					while (this.source.hasNext() && this.next == null) {
+						this.next = this.source.next();
+						
+						if (!this.filter.apply(this.next)) {
+							this.next = null;
+						}
+					}
+					
+					return this.next != null;
+				}
+				
+				@Override
+				public final T next() {
+					final T result = this.next;
+					this.next = null;
+					
+					return result;
+				}
+				
+			}
 			
 		}
 		
@@ -1471,8 +1520,8 @@ public final class VisualAnalysis {
 		}
 		
 		public final void optimize(final DataSource<?, ?> trainingSet) {
-			Tools.debugPrint("TODO"); // TODO
-			Tools.debugPrint(trainingSet.size());
+			// TODO ask user (?) for clustering type and parameters 
+			this.classifier = new MedianCutClustering(Measure.Predefined.L2_ES, 256).cluster(trainingSet);
 		}
 		
 		private static final long serialVersionUID = 6887222324834498847L;
