@@ -83,8 +83,8 @@ public final class Analyze {
 	}
 	
 	public static final <M extends DataSource.Metadata, In extends ClassifierClass, Out extends ClassifierClass>
-	ClassifiedDataSource<M, In, Out> classify(final DataSource<M, In> quantized, final Classifier<Out> rgbRenderer) {
-		return new ClassifiedDataSource<>(quantized, rgbRenderer);
+	ClassifiedDataSource<M, In, Out> classify(final DataSource<M, In> source, final Classifier<Out> classifier) {
+		return new ClassifiedDataSource<>(source, classifier);
 	}
 	
 	public static final double[][] newRGBRenderingMatrix(final int inputPatchPixelCount) {
