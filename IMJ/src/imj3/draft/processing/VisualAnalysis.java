@@ -29,6 +29,8 @@ import imj3.draft.machinelearning.ClassifierClass;
 import imj3.draft.machinelearning.DataSource;
 import imj3.draft.machinelearning.Measure;
 import imj3.draft.machinelearning.MedianCutClustering;
+import imj3.draft.machinelearning.NearestNeighborClassifier;
+import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 import imj3.draft.processing.VisualAnalysis.Context.Refresh;
 import imj3.draft.processing.VisualAnalysis.Experiment.ClassDescription;
 import imj3.draft.processing.VisualAnalysis.Experiment.TrainingField;
@@ -434,6 +436,44 @@ public final class VisualAnalysis {
 				}
 				
 			});
+			
+			runClassificationButton.addActionListener(new ActionListener() {
+				
+				@Override
+				public final void actionPerformed(final ActionEvent event) {
+					final Experiment experiment = MainPanel.this.getExperiment();
+					final BufferedImage awtImage = context.getImage();
+					
+					// TODO run in another thread
+					if (experiment != null && awtImage != null) {
+						if (!experiment.getAlgorithms().isEmpty()) {
+							final Classifier<ClassifierClass> classifier = (Classifier<ClassifierClass>) experiment.getAlgorithms().get(0).getClassifier();
+							
+							if (classifier != null) {
+								final Image2D image = new AwtImage2D(context.getImageFile().getPath(), awtImage);
+								final Image2DRawSource source = Image2DRawSource.raw(image);
+								final DataSource<? extends Patch2DSource.Metadata, ClassifierClass> classified = Analyze.classify(source, classifier);
+								final Canvas classification = context.getClassification();
+								
+								Tools.debugPrint("Classifying...");
+								final int w = image.getWidth();
+								int pixel = 0;
+								for (final Classification<ClassifierClass> c : classified) {
+									final int x = pixel % w;
+									final int y = pixel / w;
+									final int label = c.getClassifierClass().getClassIndex();
+									
+									classification.getImage().setRGB(x, y, 0xFF000000 | label);
+									++pixel;
+								}
+								Tools.debugPrint("Classification done");
+							}
+						}
+					}
+				}
+				
+			});
+			saveClassificationButton.addActionListener(e -> context.saveClassification());
 			
 			this.imageVisibilitySelector.addActionListener(new ActionListener() {
 				
@@ -1147,8 +1187,26 @@ public final class VisualAnalysis {
 		
 		public final Context saveGroundTruth() {
 			if (this.getImage() != null && !this.getGroundTruthName().isEmpty()) {
+				final File outputFile = new File(this.getGroundTruthPath());
+				
 				try {
-					ImageIO.write(this.getGroundTruth().getImage(), "png", new File(this.getGroundTruthPath()));
+					Tools.debugPrint("Writing", outputFile);
+					ImageIO.write(this.getGroundTruth().getImage(), "png", outputFile);
+				} catch (final IOException exception) {
+					throw new UncheckedIOException(exception);
+				}
+			}
+			
+			return this;
+		}
+		
+		public final Context saveClassification() {
+			if (this.getImage() != null && !this.getGroundTruthName().isEmpty()) {
+				final File outputFile = new File(this.getClassificationPath());
+				
+				try {
+					Tools.debugPrint("Writing", outputFile);
+					ImageIO.write(this.getClassification().getImage(), "png", outputFile);
 				} catch (final IOException exception) {
 					throw new UncheckedIOException(exception);
 				}
@@ -1159,8 +1217,11 @@ public final class VisualAnalysis {
 		
 		public final Context saveGroundTruth(final String name) {
 			if (name != null && this.getImage() != null) {
+				final File outputFile = new File(this.getGroundTruthPath(name));
+				
 				try {
-					ImageIO.write(this.formatGroundTruth().getGroundTruth().getImage(), "png", new File(this.getGroundTruthPath(name)));
+					Tools.debugPrint("Writing", outputFile);
+					ImageIO.write(this.formatGroundTruth().getGroundTruth().getImage(), "png", outputFile);
 				} catch (final IOException exception) {
 					throw new UncheckedIOException(exception);
 				}
@@ -1521,7 +1582,7 @@ public final class VisualAnalysis {
 		
 		public final void optimize(final DataSource<?, ?> trainingSet) {
 			// TODO ask user (?) for clustering type and parameters 
-			this.classifier = new MedianCutClustering(Measure.Predefined.L2_ES, 256).cluster(trainingSet);
+			this.classifier = new MedianCutClustering(Measure.Predefined.L2_ES, 2).cluster(trainingSet).updatePrototypeIndices();
 		}
 		
 		private static final long serialVersionUID = 6887222324834498847L;
