@@ -21,6 +21,7 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import imj2.pixel3d.MouseHandler;
+
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classification;
@@ -29,11 +30,9 @@ import imj3.draft.machinelearning.ClassifierClass;
 import imj3.draft.machinelearning.DataSource;
 import imj3.draft.machinelearning.Measure;
 import imj3.draft.machinelearning.MedianCutClustering;
-import imj3.draft.machinelearning.NearestNeighborClassifier;
-import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 import imj3.draft.processing.VisualAnalysis.Context.Refresh;
-import imj3.draft.processing.VisualAnalysis.Experiment.ClassDescription;
-import imj3.draft.processing.VisualAnalysis.Experiment.TrainingField;
+import imj3.draft.processing.VisualAnalysis.Pipeline.ClassDescription;
+import imj3.draft.processing.VisualAnalysis.Pipeline.TrainingField;
 import imj3.draft.segmentation.ImageComponent;
 import imj3.draft.segmentation.ImageComponent.Layer;
 import imj3.draft.segmentation.ImageComponent.Painter;
@@ -124,7 +123,7 @@ public final class VisualAnalysis {
 	
 	public static final String GROUND_TRUTH = "groundtruth";
 	
-	public static final String EXPERIMENT = "experiment";
+	public static final String PIPELINE = "pipeline";
 	
 	/**
 	 * @param commandLineArguments
@@ -143,7 +142,7 @@ public final class VisualAnalysis {
 				
 				context.setImage(new File(preferences.get(IMAGE_PATH, "")));
 				context.setGroundTruth(preferences.get(GROUND_TRUTH, "gt"));
-				context.setExperiment(new File(preferences.get(EXPERIMENT, "experiment.xml")));
+				context.setPipeline(new File(preferences.get(PIPELINE, "pipeline.xml")));
 			}
 			
 		});
@@ -306,7 +305,7 @@ public final class VisualAnalysis {
 		
 		private final JCheckBox groundTruthVisibilitySelector;
 		
-		private final FileSelector experimentSelector;
+		private final FileSelector pipelineSelector;
 		
 		private final JTextField trainingTimeView;
 		
@@ -322,7 +321,7 @@ public final class VisualAnalysis {
 		
 		private ImageComponent imageComponent;
 		
-		private Experiment experiment;
+		private Pipeline pipeline;
 		
 		private final Point mouse;
 		
@@ -336,12 +335,12 @@ public final class VisualAnalysis {
 			this.imageVisibilitySelector = new JCheckBox("", true);
 			this.groundTruthSelector = new FileSelector();
 			this.groundTruthVisibilitySelector = new JCheckBox();
-			this.experimentSelector = new FileSelector();
+			this.pipelineSelector = new FileSelector();
 			this.trainingTimeView = textView("-");
 			this.classificationTimeView = textView("-");
 			this.classificationVisibilitySelector = new JCheckBox();
 			this.scoreView = textView("-");
-			this.tree = new JTree(new DefaultTreeModel(new DefaultMutableTreeNode("No experiment")));
+			this.tree = new JTree(new DefaultTreeModel(new DefaultMutableTreeNode("No pipeline")));
 			this.mouse = new Point();
 			this.brushSize = 1;
 			
@@ -364,11 +363,11 @@ public final class VisualAnalysis {
 			final JButton newGroundTruthButton = button("new");
 			final JButton saveGroundTruthButton = button("save");
 			final JButton reloadGroundTruthButton = button("refresh");
-			final JButton newExperimentButton = button("new");
-			final JButton openExperimentButton = button("open");
-			final JButton runExperimentButton = button("process");
-			final JButton saveExperimentButton = button("save");
-			final JButton reloadExperimentButton = button("refresh");
+			final JButton newPipelineButton = button("new");
+			final JButton openPipelineButton = button("open");
+			final JButton runPipelineButton = button("process");
+			final JButton savePipelineButton = button("save");
+			final JButton reloadPipelineButton = button("refresh");
 			final JButton runTrainingButton = button("process");
 			final JButton runClassificationButton = button("process");
 			final JButton saveClassificationButton = button("save");
@@ -377,7 +376,7 @@ public final class VisualAnalysis {
 			this.mainSplitPane = horizontalSplit(scrollable(verticalBox(
 					limitHeight(horizontalBox(this.imageVisibilitySelector, openImageButton, label(" Image: ", this.imageSelector))),
 					limitHeight(horizontalBox(this.groundTruthVisibilitySelector, newGroundTruthButton, saveGroundTruthButton, reloadGroundTruthButton, label(" Ground truth: ", this.groundTruthSelector))),
-					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), newExperimentButton, openExperimentButton, runExperimentButton, saveExperimentButton, reloadExperimentButton, label(" Experiment: ", this.experimentSelector))),
+					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), newPipelineButton, openPipelineButton, runPipelineButton, savePipelineButton, reloadPipelineButton, label(" Pipeline: ", this.pipelineSelector))),
 					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), runTrainingButton, label(" Training (s): ", this.trainingTimeView))),
 					limitHeight(horizontalBox(this.classificationVisibilitySelector, runClassificationButton, saveClassificationButton, reloadClassificationButton, label(" Classification (s): ", this.classificationTimeView))),
 					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), label(" F1: ", this.scoreView))),
@@ -400,22 +399,22 @@ public final class VisualAnalysis {
 			newGroundTruthButton.addActionListener(e -> context.saveGroundTruth(JOptionPane.showInputDialog("Ground truth name:")));
 			saveGroundTruthButton.addActionListener(e -> context.saveGroundTruth());
 			
-			this.experimentSelector.setFileListener(e -> context.setExperiment(MainPanel.this.getExperimentSelector().getSelectedFile()));
-			newExperimentButton.addActionListener(e -> context.saveExperiment(save(EXPERIMENT, "New experiment", MainPanel.this)));
-			openExperimentButton.addActionListener(e -> context.setExperiment(open(EXPERIMENT, "Open experiment", MainPanel.this)));
-			saveExperimentButton.addActionListener(e -> context.saveExperiment());
+			this.pipelineSelector.setFileListener(e -> context.setPipeline(MainPanel.this.getPipelineSelector().getSelectedFile()));
+			newPipelineButton.addActionListener(e -> context.savePipeline(save(PIPELINE, "New pipeline", MainPanel.this)));
+			openPipelineButton.addActionListener(e -> context.setPipeline(open(PIPELINE, "Open pipeline", MainPanel.this)));
+			savePipelineButton.addActionListener(e -> context.savePipeline());
 			
 			runTrainingButton.addActionListener(new ActionListener() {
 				
 				@Override
 				public final void actionPerformed(final ActionEvent event) {
-					final Experiment experiment = MainPanel.this.getExperiment();
+					final Pipeline pipeline = MainPanel.this.getPipeline();
 					
 					// TODO run in another thread
-					if (experiment != null) {
+					if (pipeline != null) {
 						final CompositeDataSource unbufferedTrainingSet = new CompositeDataSource(c -> c.getClassifierClass().toArray()[0] != 0.0);
 						
-						experiment.getTrainingFields().forEach(f -> {
+						pipeline.getTrainingFields().forEach(f -> {
 							Tools.debugPrint(f.getImagePath());
 							final Image2D image = read(f.getImagePath());
 							final Image2D labels = read(context.getGroundTruthPathFromImagePath(f.getImagePath()));
@@ -429,8 +428,8 @@ public final class VisualAnalysis {
 						
 						final DataSource<?, ?> trainingSet = BufferedDataSource.buffer(unbufferedTrainingSet);
 						
-						for (final Algorithm algorithm : experiment.getAlgorithms()) {
-							algorithm.optimize(trainingSet);
+						for (final Algorithm algorithm : pipeline.getAlgorithms()) {
+							algorithm.train(trainingSet);
 						}
 					}
 				}
@@ -441,13 +440,13 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void actionPerformed(final ActionEvent event) {
-					final Experiment experiment = MainPanel.this.getExperiment();
+					final Pipeline pipeline = MainPanel.this.getPipeline();
 					final BufferedImage awtImage = context.getImage();
 					
 					// TODO run in another thread
-					if (experiment != null && awtImage != null) {
-						if (!experiment.getAlgorithms().isEmpty()) {
-							final Classifier<ClassifierClass> classifier = (Classifier<ClassifierClass>) experiment.getAlgorithms().get(0).getClassifier();
+					if (pipeline != null && awtImage != null) {
+						if (!pipeline.getAlgorithms().isEmpty()) {
+							final Classifier<ClassifierClass> classifier = (Classifier<ClassifierClass>) pipeline.getAlgorithms().get(0).getClassifier();
 							
 							if (classifier != null) {
 								final Image2D image = new AwtImage2D(context.getImageFile().getPath(), awtImage);
@@ -534,7 +533,7 @@ public final class VisualAnalysis {
 					final File file = SwingTools.getFiles(event).get(0);
 					
 					if (file.getName().toLowerCase(Locale.ENGLISH).endsWith(".xml")) {
-						context.setExperiment(file);
+						context.setPipeline(file);
 					} else {
 						context.setImage(file);
 					}
@@ -689,14 +688,14 @@ public final class VisualAnalysis {
 			return this.context;
 		}
 		
-		public final Experiment getExperiment() {
-			return this.experiment;
+		public final Pipeline getPipeline() {
+			return this.pipeline;
 		}
 		
-		public final void setExperiment(final Experiment experiment) {
-			this.experiment = experiment;
+		public final void setPipeline(final Pipeline pipeline) {
+			this.pipeline = pipeline;
 			
-			setModel(this.tree, experiment, "Experiment", new Instantiator() {
+			setModel(this.tree, pipeline, "Pipeline", new Instantiator() {
 				
 				@SuppressWarnings("unchecked")
 				@Override
@@ -940,8 +939,8 @@ public final class VisualAnalysis {
 			return this.groundTruthVisibilitySelector;
 		}
 		
-		public final FileSelector getExperimentSelector() {
-			return this.experimentSelector;
+		public final FileSelector getPipelineSelector() {
+			return this.pipelineSelector;
 		}
 		
 		public final JTextField getTrainingTimeView() {
@@ -1156,8 +1155,8 @@ public final class VisualAnalysis {
 			this.mainPanel = mainPanel;
 		}
 		
-		public final File getExperimentFile() {
-			return this.getMainPanel().getExperimentSelector().getSelectedFile();
+		public final File getPipelineFile() {
+			return this.getMainPanel().getPipelineSelector().getSelectedFile();
 		}
 		
 		public final String getGroundTruthName() {
@@ -1236,10 +1235,10 @@ public final class VisualAnalysis {
 			return this.classification;
 		}
 		
-		public final String getExperimentName() {
-			final File experimentFile = this.getExperimentFile();
+		public final String getPipelineName() {
+			final File pipelineFile = this.getPipelineFile();
 			
-			return experimentFile == null ? null : baseName(experimentFile.getName());
+			return pipelineFile == null ? null : baseName(pipelineFile.getName());
 		}
 		
 		public final File getImageFile() {
@@ -1259,7 +1258,7 @@ public final class VisualAnalysis {
 		}
 		
 		public final String getClassificationPath() {
-			return baseName(this.getImageFile().getPath()) + "_classification_" + this.getGroundTruthName() + "_" + this.getExperimentName() + ".png";
+			return baseName(this.getImageFile().getPath()) + "_classification_" + this.getGroundTruthName() + "_" + this.getPipelineName() + ".png";
 		}
 		
 		public final void refreshGroundTruthAndClassification(final Refresh refresh) {
@@ -1334,43 +1333,43 @@ public final class VisualAnalysis {
 			return this;
 		}
 		
-		public final Context setExperiment(final File experimentFile) {
-			if (experimentFile != null && experimentFile.isFile()) {
-				this.getMainPanel().setExperiment(Experiment.deserialized(xstream.fromXML(experimentFile)));
-				this.getMainPanel().getExperimentSelector().setFile(experimentFile);
+		public final Context setPipeline(final File pipelineFile) {
+			if (pipelineFile != null && pipelineFile.isFile()) {
+				this.getMainPanel().setPipeline(Pipeline.deserialized(xstream.fromXML(pipelineFile)));
+				this.getMainPanel().getPipelineSelector().setFile(pipelineFile);
 				
-				preferences.put(EXPERIMENT, experimentFile.getPath());
+				preferences.put(PIPELINE, pipelineFile.getPath());
 			}
 			
 			return this;
 		}
 		
-		public final Context saveExperiment(final File experimentFile) {
-			if (experimentFile != null) {
-				Experiment experiment = this.getMainPanel().getExperiment();
+		public final Context savePipeline(final File pipelineFile) {
+			if (pipelineFile != null) {
+				Pipeline pipeline = this.getMainPanel().getPipeline();
 				
-				if (experiment == null) {
-					experiment = new Experiment();
+				if (pipeline == null) {
+					pipeline = new Pipeline();
 				}
 				
-				try (final OutputStream output = new FileOutputStream(experimentFile)) {
-					xstream.toXML(experiment, output);
+				try (final OutputStream output = new FileOutputStream(pipelineFile)) {
+					xstream.toXML(pipeline, output);
 				} catch (final IOException exception) {
 					throw new UncheckedIOException(exception);
 				}
 				
-				this.setExperiment(experimentFile);
+				this.setPipeline(pipelineFile);
 			}
 			
 			return this;
 		}
 		
-		public final Context saveExperiment() {
-			final File experimentFile = this.getExperimentFile();
+		public final Context savePipeline() {
+			final File pipelineFile = this.getPipelineFile();
 			
-			if (experimentFile != null && this.getMainPanel().getExperiment() != null) {
-				try (final OutputStream output = new FileOutputStream(experimentFile)) {
-					xstream.toXML(this.getMainPanel().getExperiment(), output);
+			if (pipelineFile != null && this.getMainPanel().getPipeline() != null) {
+				try (final OutputStream output = new FileOutputStream(pipelineFile)) {
+					xstream.toXML(this.getMainPanel().getPipeline(), output);
 				} catch (final IOException exception) {
 					throw new UncheckedIOException(exception);
 				}
@@ -1411,7 +1410,7 @@ public final class VisualAnalysis {
 	/**
 	 * @author codistmonk (creation 2015-02-16)
 	 */
-	public static final class Experiment implements Serializable {
+	public static final class Pipeline implements Serializable {
 		
 		private final List<ClassDescription> classDescriptions = new ArrayList<>();
 		
@@ -1421,7 +1420,7 @@ public final class VisualAnalysis {
 		
 		@Override
 		public final String toString() {
-			return "Experiment";
+			return "Pipeline";
 		}
 		
 		@NestedList(name="classes", element="class", elementClass=ClassDescription.class)
@@ -1441,8 +1440,8 @@ public final class VisualAnalysis {
 		
 		private static final long serialVersionUID = -4539259556658072410L;
 		
-		public static final Experiment deserialized(final Object object) {
-			final Experiment result = (Experiment) object;
+		public static final Pipeline deserialized(final Object object) {
+			final Pipeline result = (Pipeline) object;
 			
 			for (final Field field : result.getClass().getDeclaredFields()) {
 				try {
@@ -1580,7 +1579,7 @@ public final class VisualAnalysis {
 			return this.classifier;
 		}
 		
-		public final void optimize(final DataSource<?, ?> trainingSet) {
+		public final void train(final DataSource<?, ?> trainingSet) {
 			// TODO ask user (?) for clustering type and parameters 
 			this.classifier = new MedianCutClustering(Measure.Predefined.L2_ES, 2).cluster(trainingSet).updatePrototypeIndices();
 		}
