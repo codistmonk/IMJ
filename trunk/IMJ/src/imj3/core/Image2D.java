@@ -2,6 +2,7 @@ package imj3.core;
 
 import static imj3.tools.IMJTools.cache;
 import static imj3.tools.IMJTools.quantize;
+import static net.sourceforge.aprog.tools.Tools.ignore;
 
 import java.io.Serializable;
 
@@ -108,6 +109,9 @@ public abstract interface Image2D extends Image {
 	}
 	
 	public default Image2D getTile(final int tileX, final int tileY) {
+		ignore(tileX);
+		ignore(tileY);
+		
 		return this;
 	}
 	
@@ -130,6 +134,10 @@ public abstract interface Image2D extends Image {
 		}
 		
 		return this;
+	}
+	
+	public default Object toAwt() {
+		return null;
 	}
 	
 	/**
