@@ -6,9 +6,7 @@ import static java.lang.Math.min;
 import static java.util.Collections.synchronizedList;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.draft.AutoCloseableImageWriter;
-
 import imj3.core.Channels;
 import imj3.tools.CommonTools.FileProcessor;
 
@@ -20,6 +18,7 @@ import java.io.FilenameFilter;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -37,7 +36,6 @@ import org.w3c.dom.Node;
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
-
 import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.ConsoleMonitor;
@@ -75,6 +73,7 @@ public final class SVS2Multifile {
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final File inRoot = new File(arguments.get("in", ""));
+		final String[] paths = arguments.get("files", "").split(",");
 		final RegexFilter filter = new RegexFilter(arguments.get("filter", ".*\\.svs"));
 		final File outRoot = new File(arguments.get("out", ""));
 		final int threads = max(1, arguments.get("threads", SystemProperties.getAvailableProcessorCount() / 2)[0]);
@@ -88,6 +87,7 @@ public final class SVS2Multifile {
 		
 		Tools.debugPrint(tasks.getWorkerCount());
 		
+		Arrays.stream(paths).forEach(p -> process(new File(p), null, outRoot));
 		FileProcessor.deepForEachFileIn(inRoot, f -> tasks.submit(() -> process(f, filter, outRoot)));
 		
 		tasks.join();
@@ -96,7 +96,7 @@ public final class SVS2Multifile {
 	public static final void process(final File file, final FilenameFilter filter, final File outRoot) {
 		final String fileName = file.getName();
 		
-		if (filter.accept(file.getParentFile(), fileName)) {
+		if (!fileName.isEmpty() && (filter == null || filter.accept(file.getParentFile(), fileName))) {
 			final File outputFile = new File(outRoot, baseName(fileName) + ".zip");
 			
 			if (file.getPath().contains("/old/") || outputFile.isFile()) {
@@ -124,9 +124,9 @@ public final class SVS2Multifile {
 								while (0 < w[0] && 0 < h[0]) {
 									element("image", () -> {
 										attribute("type", "lod" + level[0]);
-										attribute("format", "tileFormat");
 										attribute("width", w[0]);
 										attribute("height", h[0]);
+										attribute("tileFormat", tileFormat);
 										attribute("tileWidth", tileSize);
 										attribute("tileHeight", tileSize);
 										
