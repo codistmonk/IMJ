@@ -3,7 +3,9 @@ package imj3.tools;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj2.pixel3d.MouseHandler;
+
 import imj3.tools.CommonTools.Property;
 
 import java.awt.Component;
@@ -29,10 +31,14 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.IdentityHashMap;
-import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.Supplier;
 
 import javax.swing.AbstractAction;
@@ -382,13 +388,27 @@ public final class CommonSwingTools {
 		
 		private final Map<String, Method> nestedLists;
 		
+		private final List<String> orderedProperties;
+		
 		public UIScaffold(final Object object) {
 			this.object = object;
 			this.stringGetter = new Method[1];
-			this.propertyGetters = new LinkedHashMap<>();
-			this.propertySetters = new LinkedHashMap<>();
+			final PropertyOrderComparator propertyOrderComparator = this.new PropertyOrderComparator();
+			this.propertyGetters = new TreeMap<>(propertyOrderComparator);
+			this.propertySetters = new TreeMap<>(propertyOrderComparator);
 			this.inlineLists = new ArrayList<>();
-			this.nestedLists = new LinkedHashMap<>();
+			this.nestedLists = new TreeMap<>(propertyOrderComparator);
+			this.orderedProperties = new ArrayList<>();
+			
+			{
+				final Collection<String> tmp = new LinkedHashSet<>();
+				
+				collectOrderedProperties(object.getClass(), tmp);
+				
+				this.orderedProperties.addAll(tmp);
+				
+				Tools.debugPrint(this.orderedProperties);
+			}
 			
 			for (final Method method : object.getClass().getMethods()) {
 				for (final Annotation annotation : method.getAnnotations()) {
@@ -471,7 +491,57 @@ public final class CommonSwingTools {
 			showEditDialog(title, actionIfOk, properties.toArray(new Property[properties.size()]));
 		}
 		
+		final List<String> getOrderedProperties() {
+			return this.orderedProperties;
+		}
+		
+		/**
+		 * @author codistmonk (creation 2015-02-27)
+		 */
+		final class PropertyOrderComparator implements Comparator<String> {
+			
+			@Override
+			public final int compare(final String property1, final String property2) {
+				final List<String> orderedProperties = UIScaffold.this.getOrderedProperties();
+				
+				return Integer.compare(orderedProperties.indexOf(property1), orderedProperties.indexOf(property2));
+			}
+			
+		}
+		
 		private static final long serialVersionUID = -5160722477511458349L;
+		
+		public static final void collectOrderedProperties(final Class<?> cls, final Collection<String> properties) {
+			if (cls.getSuperclass() != null) {
+				collectOrderedProperties(cls.getSuperclass(), properties);
+			}
+			
+			for (final Class<?> superInterface : cls.getInterfaces()) {
+				collectOrderedProperties(superInterface, properties);
+			}
+			
+			{
+				final PropertyOrdering ordering = cls.getDeclaredAnnotation(PropertyOrdering.class);
+				
+				if (ordering != null) {
+					properties.addAll(Arrays.asList(ordering.value()));
+				}
+			}
+			
+			for (final Method method : cls.getDeclaredMethods()) {
+				final PropertyGetter getter = method.getDeclaredAnnotation(PropertyGetter.class);
+				
+				if (getter != null) {
+					properties.add(getter.value());
+				}
+				
+				final NestedList list = method.getDeclaredAnnotation(NestedList.class);
+				
+				if (list != null) {
+					properties.add(list.name());
+				}
+			}
+		}
 		
 	}
 	
@@ -552,6 +622,16 @@ public final class CommonSwingTools {
 		public abstract void edit();
 		
 		public abstract boolean isRemovable();
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-27)
+	 */
+	@Retention(RetentionPolicy.RUNTIME)
+	public static abstract @interface PropertyOrdering {
+		
+		public abstract String[] value();
 		
 	}
 	
