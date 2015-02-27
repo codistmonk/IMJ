@@ -406,8 +406,6 @@ public final class CommonSwingTools {
 				collectOrderedProperties(object.getClass(), tmp);
 				
 				this.orderedProperties.addAll(tmp);
-				
-				Tools.debugPrint(this.orderedProperties);
 			}
 			
 			for (final Method method : object.getClass().getMethods()) {

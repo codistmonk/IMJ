@@ -73,9 +73,14 @@ import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.prefs.Preferences;
 
@@ -1558,16 +1563,19 @@ public final class VisualAnalysis {
 				return this.classifier;
 			}
 			
+			public final Algorithm setClassifier(final Classifier<?> classifier) {
+				this.classifier = classifier;
+				
+				return this;
+			}
+			
 			public final Pipeline getPipeline() {
 				return Pipeline.this;
 			}
 			
 			public abstract int getClassCount();
 			
-			public final void train(final DataSource<?, ?> trainingSet) {
-				// TODO ask user (?) for clustering type and parameters 
-				this.classifier = new MedianCutClustering(Measure.Predefined.L2_ES, 2).cluster(trainingSet).updatePrototypeIndices();
-			}
+			public abstract void train(DataSource<?, ?> trainingSet);
 			
 			@Override
 			public final String toString() {
@@ -1609,6 +1617,11 @@ public final class VisualAnalysis {
 				return this.setClassCount(Integer.parseInt(classCountAsString));
 			}
 			
+			@Override
+			public final void train(final DataSource<?, ?> trainingSet) {
+				this.setClassifier(new MedianCutClustering(Measure.Predefined.L2_ES, this.getClassCount()).cluster(trainingSet).updatePrototypeIndices());
+			}
+			
 			private static final long serialVersionUID = 130550869712582710L;
 			
 		}
@@ -1618,9 +1631,74 @@ public final class VisualAnalysis {
 		 */
 		public final class SupervisedAlgorithm extends Algorithm {
 			
+			private Map<String, Integer> prototypeCounts;
+			
+			public final Map<String, Integer> getPrototypeCounts() {
+				if (this.prototypeCounts == null) {
+					this.prototypeCounts = new LinkedHashMap<>();
+				}
+				
+				{
+					final Collection<String> classes = new LinkedHashSet<>();
+					
+					for (final ClassDescription classDescription : this.getPipeline().getClassDescriptions()) {
+						final String name = classDescription.getName();
+						
+						classes.add(name);
+						
+						if (!this.prototypeCounts.containsKey(name)) {
+							this.prototypeCounts.put(name, 1);
+						}
+					}
+					
+					this.prototypeCounts.keySet().retainAll(classes);
+				}
+				
+				return this.prototypeCounts;
+			}
+			
+			@PropertyGetter("prototypes")
+			public final String getPrototypeCountsAsString() {
+				final String string = this.getPrototypeCounts().toString();
+				
+				return string.substring(1, string.length() - 1);
+			}
+			
+			@PropertySetter("prototypes")
+			public final SupervisedAlgorithm setPrototypeCounts(final String prototypeCountsAsString) {
+				final Map<String, Integer> prototypeCounts = this.getPrototypeCounts();
+				final Map<String, Integer> tmp = new HashMap<>();
+				
+				for (final String keyValue : prototypeCountsAsString.split(",")) {
+					final String[] keyAndValue = keyValue.split("=");
+					final String key = keyAndValue[0].trim();
+					final int value = Integer.parseInt(keyAndValue[1].trim());
+					
+					if (!prototypeCounts.containsKey(key)) {
+						throw new IllegalArgumentException();
+					}
+					
+					tmp.put(key, value);
+				}
+				
+				if (!tmp.keySet().containsAll(prototypeCounts.keySet())) {
+					throw new IllegalArgumentException();
+				}
+				
+				this.prototypeCounts.putAll(tmp);
+				
+				return this;
+			}
+			
 			@Override
 			public final int getClassCount() {
 				return this.getPipeline().getClassDescriptions().size();
+			}
+			
+			@Override
+			public final void train(final DataSource<?, ?> trainingSet) {
+				// TODO Auto-generated method stub
+				
 			}
 			
 			private static final long serialVersionUID = 6887222324834498847L;
