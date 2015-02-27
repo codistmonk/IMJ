@@ -48,6 +48,10 @@ public final class MultifileSource implements Serializable, Closeable {
 		}
 	}
 	
+	public final String getId() {
+		return this.file.getPath();
+	}
+	
 	public final InputStream open(final String key) {
 		try {
 			if (this.zip != null) {
