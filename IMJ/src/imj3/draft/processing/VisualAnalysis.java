@@ -309,13 +309,11 @@ public final class VisualAnalysis {
 		
 		private final FileSelector pipelineSelector;
 		
-		private final JTextField trainingTimeView;
+		private final JTextField trainingSummaryView;
 		
-		private final JTextField classificationTimeView;
+		private final JTextField classificationSummaryView;
 		
 		private final JCheckBox classificationVisibilitySelector;
-		
-		private final JTextField scoreView;
 		
 		private final JTree tree;
 		
@@ -338,10 +336,9 @@ public final class VisualAnalysis {
 			this.groundTruthSelector = new FileSelector();
 			this.groundTruthVisibilitySelector = new JCheckBox();
 			this.pipelineSelector = new FileSelector();
-			this.trainingTimeView = textView("-");
-			this.classificationTimeView = textView("-");
+			this.trainingSummaryView = textView("-");
+			this.classificationSummaryView = textView("-");
 			this.classificationVisibilitySelector = new JCheckBox();
-			this.scoreView = textView("-");
 			this.tree = new JTree(new DefaultTreeModel(new DefaultMutableTreeNode("No pipeline")));
 			this.mouse = new Point();
 			this.brushSize = 1;
@@ -371,18 +368,21 @@ public final class VisualAnalysis {
 			final JButton savePipelineButton = button("save");
 			final JButton reloadPipelineButton = button("refresh");
 			final JButton runTrainingButton = button("process");
+			final JButton showTrainingResultsButton = button("results");
 			final JButton runClassificationButton = button("process");
-			final JButton saveClassificationButton = button("save");
-			final JButton reloadClassificationButton = button("refresh");
+			final JButton showClassificationResultsButton = button("results");
 			
 			this.mainSplitPane = horizontalSplit(scrollable(verticalBox(
-					limitHeight(horizontalBox(this.imageVisibilitySelector, openImageButton, label(" Image: ", this.imageSelector))),
-					limitHeight(horizontalBox(this.groundTruthVisibilitySelector, newGroundTruthButton, saveGroundTruthButton, reloadGroundTruthButton, label(" Ground truth: ", this.groundTruthSelector))),
-					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), newPipelineButton, openPipelineButton, runPipelineButton, savePipelineButton, reloadPipelineButton, label(" Pipeline: ", this.pipelineSelector))),
-					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), runTrainingButton, label(" Training (s): ", this.trainingTimeView))),
-					limitHeight(horizontalBox(this.classificationVisibilitySelector, runClassificationButton, saveClassificationButton, reloadClassificationButton, label(" Classification (s): ", this.classificationTimeView))),
-					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), label(" F1: ", this.scoreView))),
-					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), new JButton("Confusion matrix..."), Box.createHorizontalGlue())),
+					limitHeight(horizontalBox(this.imageVisibilitySelector, openImageButton,
+							label(" Image: ", this.imageSelector))),
+					limitHeight(horizontalBox(this.groundTruthVisibilitySelector, newGroundTruthButton, saveGroundTruthButton, reloadGroundTruthButton,
+							label(" Ground truth: ", this.groundTruthSelector))),
+					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), newPipelineButton, openPipelineButton, runPipelineButton, savePipelineButton, reloadPipelineButton,
+							label(" Pipeline: ", this.pipelineSelector))),
+					limitHeight(horizontalBox(Box.createHorizontalStrut(padding), runTrainingButton, showTrainingResultsButton,
+							label(" Training: ", this.trainingSummaryView))),
+					limitHeight(horizontalBox(this.classificationVisibilitySelector, runClassificationButton, showClassificationResultsButton,
+							label(" Classification: ", this.classificationSummaryView))),
 					scrollable(this.tree))), scrollable(new JLabel("Drop file here")));
 			
 			this.mainSplitPane.setResizeWeight(0.25);
@@ -474,7 +474,7 @@ public final class VisualAnalysis {
 				}
 				
 			});
-			saveClassificationButton.addActionListener(e -> context.saveClassification());
+//			saveClassificationButton.addActionListener(e -> context.saveClassification());
 			
 			this.imageVisibilitySelector.addActionListener(new ActionListener() {
 				
@@ -962,20 +962,16 @@ public final class VisualAnalysis {
 			return this.pipelineSelector;
 		}
 		
-		public final JTextField getTrainingTimeView() {
-			return this.trainingTimeView;
+		public final JTextField getTrainingSummaryView() {
+			return this.trainingSummaryView;
 		}
 		
-		public final JTextField getClassificationTimeView() {
-			return this.classificationTimeView;
+		public final JTextField getClassificationSummaryView() {
+			return this.classificationSummaryView;
 		}
 		
 		public final JCheckBox getClassificationVisibilitySelector() {
 			return this.classificationVisibilitySelector;
-		}
-		
-		public final JTextField getScoreView() {
-			return this.scoreView;
 		}
 		
 		public final void setContents(final Component component) {
