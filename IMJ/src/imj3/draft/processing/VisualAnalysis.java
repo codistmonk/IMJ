@@ -37,6 +37,7 @@ import imj3.draft.segmentation.ImageComponent;
 import imj3.draft.segmentation.ImageComponent.Layer;
 import imj3.draft.segmentation.ImageComponent.Painter;
 import imj3.tools.AwtImage2D;
+import imj3.tools.CommonSwingTools.InlineList;
 import imj3.tools.CommonSwingTools.Instantiator;
 import imj3.tools.CommonSwingTools.NestedList;
 import imj3.tools.CommonSwingTools.PropertyGetter;
@@ -68,7 +69,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -414,7 +414,7 @@ public final class VisualAnalysis {
 					if (pipeline != null) {
 						final CompositeDataSource unbufferedTrainingSet = new CompositeDataSource(c -> c.getClassifierClass().toArray()[0] != 0.0);
 						
-						pipeline.getTrainingFields().forEach(f -> {
+						pipeline.getAlgorithms().get(0).getTrainingFields().forEach(f -> {
 							Tools.debugPrint(f.getImagePath());
 							final Image2D image = read(f.getImagePath());
 							final Image2D labels = read(context.getGroundTruthPathFromImagePath(f.getImagePath()));
@@ -1335,7 +1335,7 @@ public final class VisualAnalysis {
 		
 		public final Context setPipeline(final File pipelineFile) {
 			if (pipelineFile != null && pipelineFile.isFile()) {
-				this.getMainPanel().setPipeline(Pipeline.deserialized(xstream.fromXML(pipelineFile)));
+				this.getMainPanel().setPipeline((Pipeline) xstream.fromXML(pipelineFile));
 				this.getMainPanel().getPipelineSelector().setFile(pipelineFile);
 				
 				preferences.put(PIPELINE, pipelineFile.getPath());
@@ -1412,51 +1412,24 @@ public final class VisualAnalysis {
 	 */
 	public static final class Pipeline implements Serializable {
 		
-		private final List<ClassDescription> classDescriptions = new ArrayList<>();
-		
-		private final List<TrainingField> trainingFields = new ArrayList<>();
-		
-		private final List<Algorithm> algorithms = new ArrayList<>();
+		private List<Algorithm> algorithms;
 		
 		@Override
 		public final String toString() {
 			return "Pipeline";
 		}
 		
-		@NestedList(name="classes", element="class", elementClass=ClassDescription.class)
-		public final List<ClassDescription> getClassDescriptions() {
-			return this.classDescriptions;
-		}
-		
-		@NestedList(name="training", element="training field", elementClass=TrainingField.class)
-		public final List<TrainingField> getTrainingFields() {
-			return this.trainingFields;
-		}
-		
-		@NestedList(name="algorithms", element="algorithm", elementClass=Algorithm.class)
+		@InlineList(element="algorithm", elementClass=Algorithm.class)
 		public final List<Algorithm> getAlgorithms() {
+			if (this.algorithms == null) {
+				this.algorithms = new ArrayList<>();
+			}
+			
 			return this.algorithms;
 		}
 		
 		private static final long serialVersionUID = -4539259556658072410L;
-		
-		public static final Pipeline deserialized(final Object object) {
-			final Pipeline result = (Pipeline) object;
-			
-			for (final Field field : result.getClass().getDeclaredFields()) {
-				try {
-					if (field.get(object) == null && field.getType().isAssignableFrom(ArrayList.class)) {
-						field.setAccessible(true);
-						field.set(object, new ArrayList<>());
-					}
-				} catch (final Exception exception) {
-					exception.printStackTrace();
-				}
-			}
-			
-			return result;
-		}
-		
+				
 		/**
 		 * @author codistmonk (creation 2015-02-16)
 		 */
@@ -1558,11 +1531,14 @@ public final class VisualAnalysis {
 	 */
 	public static final class Algorithm implements Serializable {
 		
+		private List<ClassDescription> classDescriptions;
+		
+		private List<TrainingField> trainingFields;
+		
 		private String classifierName = MedianCutClustering.class.getName();
 		
 		private Classifier<?> classifier;
 		
-		@StringGetter
 		@PropertyGetter("classifier")
 		public final String getClassifierName() {
 			return this.classifierName;
@@ -1579,9 +1555,34 @@ public final class VisualAnalysis {
 			return this.classifier;
 		}
 		
+		@NestedList(name="classes", element="class", elementClass=ClassDescription.class)
+		public final List<ClassDescription> getClassDescriptions() {
+			if (this.classDescriptions == null) {
+				this.classDescriptions = new ArrayList<>();
+			}
+			
+			return this.classDescriptions;
+		}
+		
+		@NestedList(name="training", element="training field", elementClass=TrainingField.class)
+		public final List<TrainingField> getTrainingFields() {
+			if (this.trainingFields == null) {
+				this.trainingFields = new ArrayList<>();
+			}
+			
+			return this.trainingFields;
+		}
+		
 		public final void train(final DataSource<?, ?> trainingSet) {
 			// TODO ask user (?) for clustering type and parameters 
 			this.classifier = new MedianCutClustering(Measure.Predefined.L2_ES, 2).cluster(trainingSet).updatePrototypeIndices();
+		}
+		
+		@Override
+		public final String toString() {
+			final String classifierName = this.getClassifierName();
+			
+			return classifierName.substring(classifierName.lastIndexOf('.') + 1);
 		}
 		
 		private static final long serialVersionUID = 6887222324834498847L;
