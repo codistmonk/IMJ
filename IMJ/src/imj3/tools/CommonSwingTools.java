@@ -3,9 +3,7 @@ package imj3.tools;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.pixel3d.MouseHandler;
-
 import imj3.tools.CommonTools.Property;
 
 import java.awt.Component;
@@ -147,17 +145,21 @@ public final class CommonSwingTools {
 			
 			private final void addListItem(final JPopupMenu popup, final MutableTreeNode nestingNode, final String element, final Class<?> elementClass, final List<Object> list) {
 				popup.add(item("Add " + element + "...", e -> {
-					final UIScaffold newElementScaffold = new UIScaffold(instantiator.newInstanceOf(elementClass));
+					final Object newElement = instantiator.newInstanceOf(elementClass);
 					
-					newElementScaffold.edit("New " + element, new Runnable() {
+					if (newElement != null) {
+						final UIScaffold newElementScaffold = new UIScaffold(newElement);
 						
-						@Override
-						public final void run() {
-							addNode(tree, newElementScaffold, nestingNode, element);
-							list.add(newElementScaffold.getObject());
-						}
-						
-					});
+						newElementScaffold.edit("New " + element, new Runnable() {
+							
+							@Override
+							public final void run() {
+								addNode(tree, newElementScaffold, nestingNode, element);
+								list.add(newElementScaffold.getObject());
+							}
+							
+						});
+					}
 				}));
 			}
 			

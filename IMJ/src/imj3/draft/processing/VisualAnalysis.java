@@ -21,7 +21,6 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import imj2.pixel3d.MouseHandler;
-
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classification;
@@ -710,6 +709,23 @@ public final class VisualAnalysis {
 						}
 						
 						return (T) result;
+					}
+					
+					if (Algorithm.class.equals(cls)) {
+						final Class<? extends Algorithm> choice = (Class<? extends Algorithm>) JOptionPane.showInputDialog(
+								tree,
+								"Learning type:",
+								"New algorithm",
+								JOptionPane.PLAIN_MESSAGE,
+								null,
+								array(UnsupervisedAlgorithm.class, SupervisedAlgorithm.class),
+								UnsupervisedAlgorithm.class);
+						
+						if (choice != null) {
+							return (T) CommonTools.newInstanceOf(choice);
+						}
+						
+						return null;
 					}
 					
 					return CommonTools.newInstanceOf(cls);
@@ -1527,11 +1543,9 @@ public final class VisualAnalysis {
 	}
 	
 	/**
-	 * @author codistmonk (creation 2015-02-24)
+	 * @author codistmonk (creation 2015-02-27)
 	 */
-	public static final class Algorithm implements Serializable {
-		
-		private List<ClassDescription> classDescriptions;
+	public static abstract class Algorithm implements Serializable {
 		
 		private List<TrainingField> trainingFields;
 		
@@ -1555,15 +1569,6 @@ public final class VisualAnalysis {
 			return this.classifier;
 		}
 		
-		@NestedList(name="classes", element="class", elementClass=ClassDescription.class)
-		public final List<ClassDescription> getClassDescriptions() {
-			if (this.classDescriptions == null) {
-				this.classDescriptions = new ArrayList<>();
-			}
-			
-			return this.classDescriptions;
-		}
-		
 		@NestedList(name="training", element="training field", elementClass=TrainingField.class)
 		public final List<TrainingField> getTrainingFields() {
 			if (this.trainingFields == null) {
@@ -1572,6 +1577,8 @@ public final class VisualAnalysis {
 			
 			return this.trainingFields;
 		}
+		
+		public abstract int getClassCount();
 		
 		public final void train(final DataSource<?, ?> trainingSet) {
 			// TODO ask user (?) for clustering type and parameters 
@@ -1583,6 +1590,63 @@ public final class VisualAnalysis {
 			final String classifierName = this.getClassifierName();
 			
 			return classifierName.substring(classifierName.lastIndexOf('.') + 1);
+		}
+		
+		private static final long serialVersionUID = 7689582280746561160L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-24)
+	 */
+	public static final class UnsupervisedAlgorithm extends Algorithm {
+		
+		private int classCount;
+		
+		@Override
+		public final int getClassCount() {
+			return this.classCount;
+		}
+		
+		public final UnsupervisedAlgorithm setClassCount(final int classCount) {
+			this.classCount = classCount;
+			
+			return this;
+		}
+		
+		@PropertyGetter("classCount")
+		public final String getClassCountAsString() {
+			return Integer.toString(this.getClassCount());
+		}
+		
+		@PropertySetter("classCount")
+		public final UnsupervisedAlgorithm setClassCount(final String classCountAsString) {
+			return this.setClassCount(Integer.parseInt(classCountAsString));
+		}
+		
+		private static final long serialVersionUID = 130550869712582710L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-02-24)
+	 */
+	public static final class SupervisedAlgorithm extends Algorithm {
+		
+		private List<ClassDescription> classDescriptions;
+		
+		@NestedList(name="classes", element="class", elementClass=ClassDescription.class)
+		public final List<ClassDescription> getClassDescriptions() {
+			if (this.classDescriptions == null) {
+				this.classDescriptions = new ArrayList<>();
+			}
+			
+			return this.classDescriptions;
+		}
+		
+		@Override
+		public final int getClassCount() {
+			return this.getClassDescriptions().size();
 		}
 		
 		private static final long serialVersionUID = 6887222324834498847L;
