@@ -72,8 +72,9 @@ public final class SVS2Multifile {
 	 */
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
+		final String pathsAsString = arguments.get("files", "");
+		final String[] paths = pathsAsString.split(",");
 		final File inRoot = new File(arguments.get("in", ""));
-		final String[] paths = arguments.get("files", "").split(",");
 		final RegexFilter filter = new RegexFilter(arguments.get("filter", ".*\\.svs"));
 		final File outRoot = new File(arguments.get("out", ""));
 		final int threads = max(1, arguments.get("threads", SystemProperties.getAvailableProcessorCount() / 2)[0]);
@@ -87,8 +88,11 @@ public final class SVS2Multifile {
 		
 		Tools.debugPrint(tasks.getWorkerCount());
 		
-		Arrays.stream(paths).forEach(p -> process(new File(p), null, outRoot));
-		FileProcessor.deepForEachFileIn(inRoot, f -> tasks.submit(() -> process(f, filter, outRoot)));
+		if (!pathsAsString.isEmpty()) {
+			Arrays.stream(paths).forEach(p -> process(new File(p), null, outRoot));
+		} else {
+			FileProcessor.deepForEachFileIn(inRoot, f -> tasks.submit(() -> process(f, filter, outRoot)));
+		}
 		
 		tasks.join();
 	}
