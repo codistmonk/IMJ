@@ -5,6 +5,7 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 import java.io.File;
 import java.io.Serializable;
 import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.HashMap;
@@ -14,15 +15,13 @@ import java.util.WeakHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import net.sourceforge.aprog.tools.IllegalInstantiationException;
-
 /**
  * @author codistmonk (creation 2015-01-20)
  */
 public final class CommonTools {
 	
 	private CommonTools() {
-		throw new IllegalInstantiationException();
+		throw unchecked(new InstantiationException());
 	}
 	
 	private static final Map<Object, Map<String, Object>> sharedProperties = new WeakHashMap<>();
@@ -48,6 +47,19 @@ public final class CommonTools {
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final <T> T newInstanceOf(final Class<T> cls, final Object... arguments) {
+		for (final Constructor<?> constructor : cls.getConstructors()) {
+			try {
+				return (T) constructor.newInstance(arguments);
+			} catch (final Exception exception) {
+				throw unchecked(exception);
+			}
+		}
+		
+		return null;
 	}
 	
 	public static final Iterable<int[]> cartesian(final int... minMaxes) {

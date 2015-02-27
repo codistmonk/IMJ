@@ -21,6 +21,7 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import imj2.pixel3d.MouseHandler;
+
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classification;
@@ -30,13 +31,15 @@ import imj3.draft.machinelearning.DataSource;
 import imj3.draft.machinelearning.Measure;
 import imj3.draft.machinelearning.MedianCutClustering;
 import imj3.draft.processing.VisualAnalysis.Context.Refresh;
+import imj3.draft.processing.VisualAnalysis.Pipeline.Algorithm;
 import imj3.draft.processing.VisualAnalysis.Pipeline.ClassDescription;
+import imj3.draft.processing.VisualAnalysis.Pipeline.SupervisedAlgorithm;
 import imj3.draft.processing.VisualAnalysis.Pipeline.TrainingField;
+import imj3.draft.processing.VisualAnalysis.Pipeline.UnsupervisedAlgorithm;
 import imj3.draft.segmentation.ImageComponent;
 import imj3.draft.segmentation.ImageComponent.Layer;
 import imj3.draft.segmentation.ImageComponent.Painter;
 import imj3.tools.AwtImage2D;
-import imj3.tools.CommonSwingTools.InlineList;
 import imj3.tools.CommonSwingTools.Instantiator;
 import imj3.tools.CommonSwingTools.NestedList;
 import imj3.tools.CommonSwingTools.PropertyGetter;
@@ -413,7 +416,7 @@ public final class VisualAnalysis {
 					if (pipeline != null) {
 						final CompositeDataSource unbufferedTrainingSet = new CompositeDataSource(c -> c.getClassifierClass().toArray()[0] != 0.0);
 						
-						pipeline.getAlgorithms().get(0).getTrainingFields().forEach(f -> {
+						pipeline.getTrainingFields().forEach(f -> {
 							Tools.debugPrint(f.getImagePath());
 							final Image2D image = read(f.getImagePath());
 							final Image2D labels = read(context.getGroundTruthPathFromImagePath(f.getImagePath()));
@@ -713,7 +716,7 @@ public final class VisualAnalysis {
 					
 					if (Algorithm.class.equals(cls)) {
 						final Class<? extends Algorithm> choice = (Class<? extends Algorithm>) JOptionPane.showInputDialog(
-								tree,
+								MainPanel.this.getTree(),
 								"Learning type:",
 								"New algorithm",
 								JOptionPane.PLAIN_MESSAGE,
@@ -722,7 +725,7 @@ public final class VisualAnalysis {
 								UnsupervisedAlgorithm.class);
 						
 						if (choice != null) {
-							return (T) CommonTools.newInstanceOf(choice);
+							return (T) CommonTools.newInstanceOf(choice, pipeline);
 						}
 						
 						return null;
@@ -1428,20 +1431,135 @@ public final class VisualAnalysis {
 	 */
 	public static final class Pipeline implements Serializable {
 		
+		private List<TrainingField> trainingFields;
+		
 		private List<Algorithm> algorithms;
 		
-		@Override
-		public final String toString() {
-			return "Pipeline";
+		private List<ClassDescription> classDescriptions;
+		
+		@NestedList(name="classes", element="class", elementClass=ClassDescription.class)
+		public final List<ClassDescription> getClassDescriptions() {
+			if (this.classDescriptions == null) {
+				this.classDescriptions = new ArrayList<>();
+			}
+			
+			return this.classDescriptions;
 		}
 		
-		@InlineList(element="algorithm", elementClass=Algorithm.class)
+		@NestedList(name="training", element="training field", elementClass=TrainingField.class)
+		public final List<TrainingField> getTrainingFields() {
+			if (this.trainingFields == null) {
+				this.trainingFields = new ArrayList<>();
+			}
+			
+			return this.trainingFields;
+		}
+		
+		@NestedList(name="algorithms", element="algorithm", elementClass=Algorithm.class)
 		public final List<Algorithm> getAlgorithms() {
 			if (this.algorithms == null) {
 				this.algorithms = new ArrayList<>();
 			}
 			
 			return this.algorithms;
+		}
+		
+		@Override
+		public final String toString() {
+			return "Pipeline";
+		}
+		
+		/**
+		 * @author codistmonk (creation 2015-02-27)
+		 */
+		public abstract class Algorithm implements Serializable {
+			
+			private String classifierName = MedianCutClustering.class.getName();
+			
+			private Classifier<?> classifier;
+			
+			@PropertyGetter("classifier")
+			public final String getClassifierName() {
+				return this.classifierName;
+			}
+			
+			@PropertySetter("classifier")
+			public final Algorithm setClassifierName(final String classifierName) {
+				this.classifierName = classifierName;
+				
+				return this;
+			}
+			
+			public final Classifier<?> getClassifier() {
+				return this.classifier;
+			}
+			
+			public final Pipeline getPipeline() {
+				return Pipeline.this;
+			}
+			
+			public abstract int getClassCount();
+			
+			public final void train(final DataSource<?, ?> trainingSet) {
+				// TODO ask user (?) for clustering type and parameters 
+				this.classifier = new MedianCutClustering(Measure.Predefined.L2_ES, 2).cluster(trainingSet).updatePrototypeIndices();
+			}
+			
+			@Override
+			public final String toString() {
+				final String classifierName = this.getClassifierName();
+				
+				return classifierName.substring(classifierName.lastIndexOf('.') + 1);
+			}
+			
+			private static final long serialVersionUID = 7689582280746561160L;
+			
+		}
+		
+		/**
+		 * @author codistmonk (creation 2015-02-24)
+		 */
+		public final class UnsupervisedAlgorithm extends Algorithm {
+			
+			private int classCount;
+			
+			@Override
+			public final int getClassCount() {
+				return this.classCount;
+			}
+			
+			public final UnsupervisedAlgorithm setClassCount(final int classCount) {
+				this.classCount = classCount;
+				
+				return this;
+			}
+			
+			@PropertyGetter("classCount")
+			public final String getClassCountAsString() {
+				return Integer.toString(this.getClassCount());
+			}
+			
+			@PropertySetter("classCount")
+			public final UnsupervisedAlgorithm setClassCount(final String classCountAsString) {
+				return this.setClassCount(Integer.parseInt(classCountAsString));
+			}
+			
+			private static final long serialVersionUID = 130550869712582710L;
+			
+		}
+		
+		/**
+		 * @author codistmonk (creation 2015-02-24)
+		 */
+		public final class SupervisedAlgorithm extends Algorithm {
+			
+			@Override
+			public final int getClassCount() {
+				return this.getPipeline().getClassDescriptions().size();
+			}
+			
+			private static final long serialVersionUID = 6887222324834498847L;
+			
 		}
 		
 		private static final long serialVersionUID = -4539259556658072410L;
@@ -1539,117 +1657,6 @@ public final class VisualAnalysis {
 			private static final long serialVersionUID = 847822079141878928L;
 			
 		}
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-02-27)
-	 */
-	public static abstract class Algorithm implements Serializable {
-		
-		private List<TrainingField> trainingFields;
-		
-		private String classifierName = MedianCutClustering.class.getName();
-		
-		private Classifier<?> classifier;
-		
-		@PropertyGetter("classifier")
-		public final String getClassifierName() {
-			return this.classifierName;
-		}
-		
-		@PropertySetter("classifier")
-		public final Algorithm setClassifierName(final String classifierName) {
-			this.classifierName = classifierName;
-			
-			return this;
-		}
-		
-		public final Classifier<?> getClassifier() {
-			return this.classifier;
-		}
-		
-		@NestedList(name="training", element="training field", elementClass=TrainingField.class)
-		public final List<TrainingField> getTrainingFields() {
-			if (this.trainingFields == null) {
-				this.trainingFields = new ArrayList<>();
-			}
-			
-			return this.trainingFields;
-		}
-		
-		public abstract int getClassCount();
-		
-		public final void train(final DataSource<?, ?> trainingSet) {
-			// TODO ask user (?) for clustering type and parameters 
-			this.classifier = new MedianCutClustering(Measure.Predefined.L2_ES, 2).cluster(trainingSet).updatePrototypeIndices();
-		}
-		
-		@Override
-		public final String toString() {
-			final String classifierName = this.getClassifierName();
-			
-			return classifierName.substring(classifierName.lastIndexOf('.') + 1);
-		}
-		
-		private static final long serialVersionUID = 7689582280746561160L;
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-02-24)
-	 */
-	public static final class UnsupervisedAlgorithm extends Algorithm {
-		
-		private int classCount;
-		
-		@Override
-		public final int getClassCount() {
-			return this.classCount;
-		}
-		
-		public final UnsupervisedAlgorithm setClassCount(final int classCount) {
-			this.classCount = classCount;
-			
-			return this;
-		}
-		
-		@PropertyGetter("classCount")
-		public final String getClassCountAsString() {
-			return Integer.toString(this.getClassCount());
-		}
-		
-		@PropertySetter("classCount")
-		public final UnsupervisedAlgorithm setClassCount(final String classCountAsString) {
-			return this.setClassCount(Integer.parseInt(classCountAsString));
-		}
-		
-		private static final long serialVersionUID = 130550869712582710L;
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-02-24)
-	 */
-	public static final class SupervisedAlgorithm extends Algorithm {
-		
-		private List<ClassDescription> classDescriptions;
-		
-		@NestedList(name="classes", element="class", elementClass=ClassDescription.class)
-		public final List<ClassDescription> getClassDescriptions() {
-			if (this.classDescriptions == null) {
-				this.classDescriptions = new ArrayList<>();
-			}
-			
-			return this.classDescriptions;
-		}
-		
-		@Override
-		public final int getClassCount() {
-			return this.getClassDescriptions().size();
-		}
-		
-		private static final long serialVersionUID = 6887222324834498847L;
 		
 	}
 	
