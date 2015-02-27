@@ -1474,6 +1474,12 @@ public final class VisualAnalysis {
 			
 			private Classifier<?> classifier;
 			
+			private int patchSize;
+			
+			private int patchSparsity;
+			
+			private int stride;
+			
 			@PropertyGetter("classifier")
 			public final String getClassifierName() {
 				return this.classifierName;
@@ -1484,6 +1490,66 @@ public final class VisualAnalysis {
 				this.classifierName = classifierName;
 				
 				return this;
+			}
+			
+			public final int getPatchSize() {
+				return this.patchSize;
+			}
+			
+			public final Algorithm setPatchSize(final int patchSize) {
+				this.patchSize = patchSize;
+				
+				return this;
+			}
+			
+			@PropertyGetter("patchSize")
+			public final String getPatchSizeAsString() {
+				return Integer.toString(this.getPatchSize());
+			}
+			
+			@PropertySetter("patchSize")
+			public final Algorithm setPatchSize(final String patchSizeAsString) {
+				return this.setPatchSize(Integer.parseInt(patchSizeAsString));
+			}
+			
+			public final int getPatchSparsity() {
+				return this.patchSparsity;
+			}
+			
+			public final Algorithm setPatchSparsity(final int patchSparsity) {
+				this.patchSparsity = patchSparsity;
+				
+				return this;
+			}
+			
+			@PropertyGetter("patchSparsity")
+			public final String getPatchSparsityAsString() {
+				return Integer.toString(this.getPatchSparsity());
+			}
+			
+			@PropertySetter("patchSparsity")
+			public final Algorithm setPatchSparsity(final String patchSparsityAsString) {
+				return this.setPatchSparsity(Integer.parseInt(patchSparsityAsString));
+			}
+			
+			public final int getStride() {
+				return this.stride;
+			}
+			
+			public final Algorithm setStride(final int stride) {
+				this.stride = stride;
+				
+				return this;
+			}
+			
+			@PropertyGetter("stride")
+			public final String getStrideAsString() {
+				return Integer.toString(this.getStride());
+			}
+			
+			@PropertySetter("stride")
+			public final Algorithm setStride(final String strideAsString) {
+				return this.setStride(Integer.parseInt(strideAsString));
 			}
 			
 			public final Classifier<?> getClassifier() {
