@@ -99,6 +99,11 @@ public final class AwtImage2D implements Image2D {
 		return this;
 	}
 	
+	@Override
+	public final BufferedImage toAwt() {
+		return this.source;
+	}
+	
 	/**
 	 * {@value}.
 	 */
