@@ -21,7 +21,6 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import imj2.pixel3d.MouseHandler;
-
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classification;
@@ -43,6 +42,7 @@ import imj3.tools.AwtImage2D;
 import imj3.tools.CommonSwingTools.Instantiator;
 import imj3.tools.CommonSwingTools.NestedList;
 import imj3.tools.CommonSwingTools.PropertyGetter;
+import imj3.tools.CommonSwingTools.PropertyOrdering;
 import imj3.tools.CommonSwingTools.PropertySetter;
 import imj3.tools.CommonSwingTools.StringGetter;
 import imj3.tools.CommonSwingTools.UserObject;
@@ -1425,6 +1425,7 @@ public final class VisualAnalysis {
 	/**
 	 * @author codistmonk (creation 2015-02-16)
 	 */
+	@PropertyOrdering({ "classes", "training", "algorithms" })
 	public static final class Pipeline implements Serializable {
 		
 		private List<TrainingField> trainingFields;
@@ -1468,6 +1469,7 @@ public final class VisualAnalysis {
 		/**
 		 * @author codistmonk (creation 2015-02-27)
 		 */
+		@PropertyOrdering({ "patchSize", "patchSparsity", "stride", "classifier" })
 		public abstract class Algorithm implements Serializable {
 			
 			private String classifierName = MedianCutClustering.class.getName();
@@ -1570,8 +1572,9 @@ public final class VisualAnalysis {
 			@Override
 			public final String toString() {
 				final String classifierName = this.getClassifierName();
+				final String suffix = this instanceof UnsupervisedAlgorithm ? " (unsupervised: " + this.getClassCount() + ")" : "";
 				
-				return classifierName.substring(classifierName.lastIndexOf('.') + 1);
+				return classifierName.substring(classifierName.lastIndexOf('.') + 1) + suffix;
 			}
 			
 			private static final long serialVersionUID = 7689582280746561160L;
@@ -1629,6 +1632,7 @@ public final class VisualAnalysis {
 		/**
 		 * @author codistmonk (creation 2015-02-16)
 		 */
+		@PropertyOrdering({ "name", "label" })
 		public static final class ClassDescription implements Serializable {
 			
 			private String name = "class";
@@ -1675,6 +1679,7 @@ public final class VisualAnalysis {
 		/**
 		 * @author codistmonk (creation 2015-02-17)
 		 */
+		@PropertyOrdering({ "image", "bounds" })
 		public static final class TrainingField implements Serializable {
 			
 			private String imagePath = "";
