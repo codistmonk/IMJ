@@ -14,6 +14,21 @@ public abstract interface Image2D extends Image {
 	
 	public abstract int getHeight();
 	
+	@Override
+	public default long getPixelCount() {
+		return (long) this.getWidth() * this.getHeight();
+	}
+	
+	@Override
+	public default long getPixelValue(final long pixel) {
+		return this.getPixelValue(this.getX(pixel), this.getY(pixel));
+	}
+	
+	@Override
+	public default Image2D setPixelValue(final long pixel, final long value) {
+		return this.setPixelValue(this.getX(pixel), this.getY(pixel), value);
+	}
+	
 	public default long getPixelValue(final int x, final int y) {
 		final Image2D tile = this.getTileContaining(x, y);
 		
