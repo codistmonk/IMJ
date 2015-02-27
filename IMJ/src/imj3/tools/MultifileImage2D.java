@@ -1,5 +1,7 @@
 package imj3.tools;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static net.sourceforge.aprog.xml.XMLTools.getNumber;
 import static net.sourceforge.aprog.xml.XMLTools.getString;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
@@ -11,6 +13,8 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.Point;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -215,12 +219,13 @@ public final class MultifileImage2D implements Image2D {
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String path = arguments.get("file", "");
-		final MultifileImage2D image = new MultifileImage2D(new MultifileSource(path), 0);
+		final View view = new View(new MultifileSource(path));
+		final MultifileImage2D image = view.getImage();
 		
 		Tools.debugPrint(image.getWidth(), image.getHeight());
 		Tools.debugPrint(image.getPixelValue(image.getWidth() / 2, image.getHeight() / 2));
 		
-		SwingTools.show(new View(image), path, false);
+		SwingTools.show(view, path, false);
 	}
 	
 	/**
@@ -228,12 +233,15 @@ public final class MultifileImage2D implements Image2D {
 	 */
 	public static final class View extends JComponent {
 		
-		private final Image2D image;
+		private final MultifileSource source;
+		
+		private MultifileImage2D image;
 		
 		private final Point offset;
 		
-		public View(final Image2D image) {
-			this.image = image;
+		public View(final MultifileSource source) {
+			this.source = source;
+			this.image = new MultifileImage2D(source, 0);
 			this.offset = new Point();
 			
 			new MouseHandler(null) {
@@ -249,8 +257,9 @@ public final class MultifileImage2D implements Image2D {
 				public final void mouseDragged(final MouseEvent event) {
 					final int x = event.getX();
 					final int y = event.getY();
+					final int lod = View.this.getImage().getLod();
 					
-					View.this.getOffset().translate(this.mouse.x - x, this.mouse.y - y);
+					View.this.getOffset().translate((this.mouse.x - x) << lod, (this.mouse.y - y) << lod);
 					
 					this.mouse.setLocation(x, y);
 					
@@ -261,10 +270,83 @@ public final class MultifileImage2D implements Image2D {
 				
 			}.addTo(this);
 			
-			this.setPreferredSize(new Dimension(512, 512));
+			this.setFocusable(true);
+			
+			this.addKeyListener(new KeyAdapter() {
+				
+				@Override
+				public final void keyTyped(final KeyEvent event) {
+					switch (event.getKeyChar()) {
+					case '-':
+						View.this.nextLOD();
+						break;
+					case '+':
+						View.this.previousLOD();
+						break;
+					}
+				}
+				
+			});
+			
+			final int preferredWidth = 512;
+			final int preferredHeight = preferredWidth;
+			
+			this.setPreferredSize(new Dimension(preferredWidth, preferredHeight));
+			
+			{
+				final int width0 = this.image.getWidth();
+				final int height0 = this.image.getHeight();
+				
+				this.getOffset().translate((width0 - preferredWidth) / 2, (height0 - preferredHeight) / 2);
+				
+				final int targetSize = min(preferredWidth, preferredHeight);
+				int size = max(width0, height0);
+				int lod = 0;
+				
+				while (targetSize < size) {
+					++lod;
+					size /= 2;
+				}
+				
+				this.setSize(this.getPreferredSize());
+				this.setLOD(lod);
+			}
 		}
 		
-		public final Image2D getImage() {
+		public final int getLOD() {
+			return this.getImage().getLod();
+		}
+		
+		public final void nextLOD() {
+			if (1 < this.getImage().getWidth() && 1 < this.getImage().getHeight()) {
+				this.setLOD(this.getLOD() + 1);
+			}
+		}
+		
+		public final void previousLOD() {
+			final int lod = this.getLOD();
+			
+			if (0 < lod) {
+				this.setLOD(lod - 1);
+			}
+		}
+		
+		public final void setLOD(final int newLOD) {
+			final int w = this.getWidth() / 2;
+			final int h = this.getHeight() / 2;
+			final int oldLOD = this.getLOD();
+			final int centerX = this.getOffset().x + (w << oldLOD);
+			final int centerY = this.getOffset().y + (h << oldLOD);
+			this.image = new MultifileImage2D(this.getSource(), newLOD);
+			this.getOffset().setLocation(centerX - (w << newLOD), centerY - (h << newLOD));
+			this.repaint();
+		}
+		
+		public final MultifileSource getSource() {
+			return this.source;
+		}
+		
+		public final MultifileImage2D getImage() {
 			return this.image;
 		}
 		
@@ -276,19 +358,20 @@ public final class MultifileImage2D implements Image2D {
 		protected final void paintComponent(final Graphics g) {
 			super.paintComponent(g);
 			
-			final Image2D image = this.getImage();
+			final MultifileImage2D image = this.getImage();
 			final int optimalTileWidth = image.getOptimalTileWidth();
 			final int optimalTileHeight = image.getOptimalTileHeight();
 			final int imageWidth = image.getWidth();
 			final int imageHeight = image.getHeight();
 			final int width = this.getWidth();
 			final int height = this.getHeight();
+			final int lod = image.getLod();
 			
-			for (int yInImage = this.getOffset().y, y = -(yInImage % optimalTileHeight); y < height; y += optimalTileHeight, yInImage += optimalTileHeight) {
+			for (int yInImage = this.getOffset().y >> lod, y = -(yInImage % optimalTileHeight); y < height; y += optimalTileHeight, yInImage += optimalTileHeight) {
 				final int tileY = yInImage / optimalTileHeight * optimalTileHeight;
 				
 				if (0 <= tileY && tileY < imageHeight) {
-					for (int xInImage = this.getOffset().x, x = -(xInImage % optimalTileWidth); x < width; x += optimalTileHeight, xInImage += optimalTileWidth) {
+					for (int xInImage = this.getOffset().x >> lod, x = -(xInImage % optimalTileWidth); x < width; x += optimalTileHeight, xInImage += optimalTileWidth) {
 						final int tileX = xInImage / optimalTileWidth * optimalTileWidth;
 						
 						if (0 <= tileX && tileX < imageWidth) {
