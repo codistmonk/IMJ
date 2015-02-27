@@ -68,48 +68,8 @@ public final class CommonSwingTools {
 		throw new IllegalInstantiationException();
 	}
 	
-	public static final void setModel(final JTree tree, final Object object, final String rootEdtiTitle, final Instantiator instantiator) {
-		final DefaultMutableTreeNode root = new DefaultMutableTreeNode(new UIScaffold(object));
-		final DefaultTreeModel model = new DefaultTreeModel(root);
-		
-		tree.setModel(model);
-		
-		{
-			final UIScaffold scaffold = new UIScaffold(object);
-			
-			model.valueForPathChanged(new TreePath(model.getPathToRoot(root)),
-					new UserObject(scaffold, rootEdtiTitle, tree, root, false));
-			
-			for (final Method method : scaffold.getInlineLists()) {
-				try {
-					@SuppressWarnings("unchecked")
-					final List<Object> list = (List<Object>) method.invoke(object);
-					
-					for (final Object o : list) {
-						addNode(tree, new UIScaffold(o), root, method.getAnnotation(InlineList.class).element());
-					}
-				} catch (final Exception exception) {
-					exception.printStackTrace();
-				}
-			}
-			
-			for (final Map.Entry<String, Method> entry : scaffold.getNestedLists().entrySet()) {
-				final DefaultMutableTreeNode nestingNode = new DefaultMutableTreeNode(entry.getKey());
-				model.insertNodeInto(nestingNode, root, model.getChildCount(root));
-				
-				try {
-					final Method method = entry.getValue();
-					@SuppressWarnings("unchecked")
-					final List<Object> list = (List<Object>) method.invoke(object);
-					
-					for (final Object o : list) {
-						addNode(tree, new UIScaffold(o), nestingNode, method.getAnnotation(NestedList.class).element());
-					}
-				} catch (final Exception exception) {
-					exception.printStackTrace();
-				}
-			}
-		}
+	public static final void setModel(final JTree tree, final Object object, final String rootEditTitle, final Instantiator instantiator) {
+		final DefaultTreeModel model = new DefaultTreeModel(buildNode(tree, new UIScaffold(object), rootEditTitle));
 		
 		new MouseHandler(null) {
 			
@@ -131,10 +91,12 @@ public final class CommonSwingTools {
 			private final void mouseUsed(final MouseEvent event) {
 				if (event.isPopupTrigger()) {
 					final TreePath path = tree.getPathForLocation(event.getX(), event.getY());
-					final UserObject userObject = path == null ? null : cast(UserObject.class, ((DefaultMutableTreeNode) path.getLastPathComponent()).getUserObject());
+					final DefaultMutableTreeNode node = path == null ? null : (DefaultMutableTreeNode) path.getLastPathComponent();
+					final UserObject userObject = node == null ? null : cast(UserObject.class, node.getUserObject());
 					
 					if (userObject != null) {
 						final UIScaffold scaffold = userObject.getUIScaffold();
+						final Object object = scaffold.getObject();
 						final JPopupMenu popup = new JPopupMenu();
 						
 						popup.add(item("Edit...", e -> userObject.edit()));
@@ -151,7 +113,7 @@ public final class CommonSwingTools {
 								final List<Object> list = (List<Object>) inlineList.invoke(object);
 								final String element = annotation.element();
 								
-								this.addListItem(popup, root, element, annotation.elementClass(), list);
+								this.addListItem(popup, node, element, annotation.elementClass(), list);
 							} catch (final Exception exception) {
 								exception.printStackTrace();
 							}
@@ -161,7 +123,7 @@ public final class CommonSwingTools {
 							int i = -1;
 							
 							for (final Map.Entry<String, Method> entry : scaffold.getNestedLists().entrySet()) {
-								final MutableTreeNode nestingNode = (MutableTreeNode) model.getChild(root, ++i);
+								final MutableTreeNode nestingNode = (MutableTreeNode) model.getChild(node, ++i);
 								final NestedList annotation = entry.getValue().getAnnotation(NestedList.class);
 								
 								try {
@@ -171,6 +133,8 @@ public final class CommonSwingTools {
 									
 									this.addListItem(popup, nestingNode, element, annotation.elementClass(), list);
 								} catch (final Exception exception) {
+									Tools.debugPrint(object);
+									Tools.debugPrint(entry.getValue());
 									exception.printStackTrace();
 								}
 							}
@@ -200,11 +164,56 @@ public final class CommonSwingTools {
 			private static final long serialVersionUID = -475200304537897055L;
 			
 		}.addTo(tree);
+		
+		tree.setModel(model);
+	}
+	
+	public static final DefaultMutableTreeNode buildNode(final JTree tree, final UIScaffold scaffold, final String editTitle) {
+		final Object object = scaffold.getObject();
+		final DefaultMutableTreeNode result = new DefaultMutableTreeNode(scaffold);
+		final DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+		
+		{
+			model.valueForPathChanged(new TreePath(model.getPathToRoot(result)),
+					new UserObject(scaffold, editTitle, tree, result, false));
+			
+			for (final Method method : scaffold.getInlineLists()) {
+				try {
+					@SuppressWarnings("unchecked")
+					final List<Object> list = (List<Object>) method.invoke(object);
+					
+					for (final Object o : list) {
+						addNode(tree, new UIScaffold(o), result, method.getAnnotation(InlineList.class).element());
+					}
+				} catch (final Exception exception) {
+					exception.printStackTrace();
+				}
+			}
+			
+			for (final Map.Entry<String, Method> entry : scaffold.getNestedLists().entrySet()) {
+				final DefaultMutableTreeNode nestingNode = new DefaultMutableTreeNode(entry.getKey());
+				model.insertNodeInto(nestingNode, result, model.getChildCount(result));
+				
+				try {
+					final Method method = entry.getValue();
+					@SuppressWarnings("unchecked")
+					final List<Object> list = (List<Object>) method.invoke(object);
+					
+					for (final Object o : list) {
+						addNode(tree, new UIScaffold(o), nestingNode, method.getAnnotation(NestedList.class).element());
+					}
+				} catch (final Exception exception) {
+					exception.printStackTrace();
+				}
+			}
+		}
+		
+		return result;
 	}
 	
 	static final void addNode(final JTree tree, final UIScaffold scaffold, final MutableTreeNode parent, final String element) {
 		final DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
-		final DefaultMutableTreeNode newElementNode = new DefaultMutableTreeNode();
+		final DefaultMutableTreeNode newElementNode = buildNode(tree, scaffold, "Edit " + element);
 		
 		newElementNode.setUserObject(new UserObject(scaffold, element, tree, newElementNode, true));
 		
