@@ -21,16 +21,18 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import imj2.pixel3d.MouseHandler;
-
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classification;
 import imj3.draft.machinelearning.Classifier;
 import imj3.draft.machinelearning.ClassifierClass;
-import imj3.draft.machinelearning.CompositeDataSource;
+import imj3.draft.machinelearning.FilteredCompositeDataSource;
 import imj3.draft.machinelearning.DataSource;
 import imj3.draft.machinelearning.Measure;
+import imj3.draft.machinelearning.Measure.Predefined;
 import imj3.draft.machinelearning.MedianCutClustering;
+import imj3.draft.machinelearning.NearestNeighborClassifier;
+import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 import imj3.draft.processing.VisualAnalysis.Context.Refresh;
 import imj3.draft.processing.VisualAnalysis.Pipeline.Algorithm;
 import imj3.draft.processing.VisualAnalysis.Pipeline.ClassDescription;
@@ -419,7 +421,7 @@ public final class VisualAnalysis {
 					
 					// TODO run in another thread
 					if (pipeline != null) {
-						final CompositeDataSource unbufferedTrainingSet = new CompositeDataSource(c -> c.getClassifierClass().toArray()[0] != 0.0);
+						final FilteredCompositeDataSource unbufferedTrainingSet = new FilteredCompositeDataSource(c -> c.getClassifierClass().toArray()[0] != 0.0);
 						
 						pipeline.getTrainingFields().forEach(f -> {
 							Tools.debugPrint(f.getImagePath());
@@ -1577,9 +1579,23 @@ public final class VisualAnalysis {
 			
 			@Override
 			public final SupervisedAlgorithm train(final DataSource<?, ?> trainingSet) {
-				// TODO Auto-generated method stub
+				final Predefined measure = Measure.Predefined.L2_ES;
+				final NearestNeighborClassifier classifier = new NearestNeighborClassifier(measure);
+				int classIndex = -1;
 				
-				return this;
+				for (final Map.Entry<String, Integer> entry : this.getPrototypeCounts().entrySet()) {
+					final int i = ++classIndex;
+					
+					final NearestNeighborClassifier subClassifier = new MedianCutClustering(
+							measure, entry.getValue()).cluster(new FilteredCompositeDataSource(
+									c -> c.getClassifierClass().getClassIndex() == i).add(trainingSet));
+					
+					for (final Prototype prototype : subClassifier.getPrototypes()) {
+						classifier.getPrototypes().add(prototype.setClassIndex(i));
+					}
+				}
+				
+				return (SupervisedAlgorithm) this.setClassifier(classifier);
 			}
 			
 			private static final long serialVersionUID = 6887222324834498847L;
@@ -1587,7 +1603,7 @@ public final class VisualAnalysis {
 		}
 		
 		private static final long serialVersionUID = -4539259556658072410L;
-				
+		
 		/**
 		 * @author codistmonk (creation 2015-02-16)
 		 */

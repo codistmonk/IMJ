@@ -8,19 +8,19 @@ import java.util.function.Function;
 /**
  * @author codistmonk (creation 2015-02-24)
  */
-public final class CompositeDataSource extends DataSource.Abstract<DataSource.Metadata, ClassifierClass> {
+public final class FilteredCompositeDataSource extends DataSource.Abstract<DataSource.Metadata, ClassifierClass> {
 	
 	private final List<DataSource<?, ?>> sources;
 	
 	private final Function<Classification<ClassifierClass>, Boolean> filter;
 	
-	public CompositeDataSource(final Function<Classification<ClassifierClass>, Boolean> filter) {
+	public FilteredCompositeDataSource(final Function<Classification<ClassifierClass>, Boolean> filter) {
 		super(new Metadata.Default());
 		this.sources = new ArrayList<>();
 		this.filter = filter;
 	}
 	
-	public final CompositeDataSource add(final DataSource<?, ?> source) {
+	public final FilteredCompositeDataSource add(final DataSource<?, ?> source) {
 		this.sources.add(source);
 		
 		return this;
