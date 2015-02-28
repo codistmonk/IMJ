@@ -21,11 +21,13 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import imj2.pixel3d.MouseHandler;
+
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classification;
 import imj3.draft.machinelearning.Classifier;
 import imj3.draft.machinelearning.ClassifierClass;
+import imj3.draft.machinelearning.CompositeDataSource;
 import imj3.draft.machinelearning.DataSource;
 import imj3.draft.machinelearning.Measure;
 import imj3.draft.machinelearning.MedianCutClustering;
@@ -75,13 +77,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
@@ -556,127 +556,6 @@ public final class VisualAnalysis {
 			this.setPreferredSize(new Dimension(800, 600));
 			
 			context.setMainPanel(this);
-		}
-		
-		/**
-		 * @author codistmonk (creation 2015-02-24)
-		 */
-		public static final class CompositeDataSource extends DataSource.Abstract<DataSource.Metadata, ClassifierClass> {
-			
-			private final List<DataSource<?, ?>> sources;
-			
-			private final Function<Classification<ClassifierClass>, Boolean> filter;
-			
-			public CompositeDataSource(final Function<Classification<ClassifierClass>, Boolean> filter) {
-				super(new Metadata.Default());
-				this.sources = new ArrayList<>();
-				this.filter = filter;
-			}
-			
-			public final CompositeDataSource add(final DataSource<?, ?> source) {
-				this.sources.add(source);
-				
-				return this;
-			}
-			
-			@SuppressWarnings("unchecked")
-			@Override
-			public final Iterator<Classification<ClassifierClass>> iterator() {
-				final Iterator<DataSource<?, ?>> i = this.sources.iterator();
-				
-				return new FilteredIterator(new Iterator<Classification<ClassifierClass>>() {
-					
-					private Iterator<Classification<ClassifierClass>> j;
-					
-					{
-						this.update();
-					}
-					
-					@Override
-					public final boolean hasNext() {
-						return this.j != null && this.j.hasNext();
-					}
-					
-					@Override
-					public final Classification<ClassifierClass> next() {
-						final Classification<ClassifierClass> result = this.j.next();
-						
-						this.update();
-						
-						return result;
-					}
-					
-					private final void update() {
-						while ((this.j == null || !this.j.hasNext()) && i.hasNext()) {
-							this.j = (Iterator) i.next().iterator();
-						}
-					}
-					
-					
-				}, this.filter);
-			}
-			
-			@Override
-			public final int getInputDimension() {
-				if (!this.sources.isEmpty()) {
-					return this.sources.get(0).getInputDimension();
-				}
-				
-				return 0;
-			}
-			
-			@Override
-			public final int getClassDimension() {
-				if (!this.sources.isEmpty()) {
-					return this.sources.get(0).getClassDimension();
-				}
-				
-				return 0;
-			}
-			
-			private static final long serialVersionUID = 6526966621533776530L;
-			
-			/**
-			 * @author codistmonk (creation 2015)
-			 *
-			 * @param <T>
-			 */
-			public static final class FilteredIterator<T> implements Iterator<T> {
-				
-				private final Iterator<T> source;
-				
-				private final Function<T, Boolean> filter;
-				
-				private T next;
-				
-				public FilteredIterator(final Iterator<T> source, final Function<T, Boolean> filter) {
-					this.source = source;
-					this.filter = filter;
-				}
-				
-				@Override
-				public boolean hasNext() {
-					while (this.source.hasNext() && this.next == null) {
-						this.next = this.source.next();
-						
-						if (!this.filter.apply(this.next)) {
-							this.next = null;
-						}
-					}
-					
-					return this.next != null;
-				}
-				
-				@Override
-				public final T next() {
-					final T result = this.next;
-					this.next = null;
-					
-					return result;
-				}
-				
-			}
-			
 		}
 		
 		public final int getBrushSize() {
@@ -1575,7 +1454,7 @@ public final class VisualAnalysis {
 			
 			public abstract int getClassCount();
 			
-			public abstract void train(DataSource<?, ?> trainingSet);
+			public abstract Algorithm train(DataSource<?, ?> trainingSet);
 			
 			@Override
 			public final String toString() {
@@ -1618,8 +1497,9 @@ public final class VisualAnalysis {
 			}
 			
 			@Override
-			public final void train(final DataSource<?, ?> trainingSet) {
-				this.setClassifier(new MedianCutClustering(Measure.Predefined.L2_ES, this.getClassCount()).cluster(trainingSet).updatePrototypeIndices());
+			public final UnsupervisedAlgorithm train(final DataSource<?, ?> trainingSet) {
+				return (UnsupervisedAlgorithm) this.setClassifier(new MedianCutClustering(
+						Measure.Predefined.L2_ES, this.getClassCount()).cluster(trainingSet).updatePrototypeIndices());
 			}
 			
 			private static final long serialVersionUID = 130550869712582710L;
@@ -1696,9 +1576,10 @@ public final class VisualAnalysis {
 			}
 			
 			@Override
-			public final void train(final DataSource<?, ?> trainingSet) {
+			public final SupervisedAlgorithm train(final DataSource<?, ?> trainingSet) {
 				// TODO Auto-generated method stub
 				
+				return this;
 			}
 			
 			private static final long serialVersionUID = 6887222324834498847L;
