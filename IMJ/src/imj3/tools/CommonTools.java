@@ -62,6 +62,12 @@ public final class CommonTools {
 		return null;
 	}
 	
+	public static final void swap(final Object[] array1, final int index1, final Object[] array2, final int index2) {
+		final Object tmp = array1[index1];
+		array1[index1] = array2[index2];
+		array2[index2] = tmp;
+	}
+	
 	public static final Iterable<int[]> cartesian(final int... minMaxes) {
 		return new Iterable<int[]>() {
 			

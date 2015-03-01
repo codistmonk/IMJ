@@ -115,6 +115,7 @@ import javax.swing.tree.TreePath;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Pair;
 import net.sourceforge.aprog.tools.Tools;
 
 /**
@@ -1349,16 +1350,77 @@ public final class VisualAnalysis {
 			return this.algorithms;
 		}
 		
-		public final Pipeline train(final DataSource<?, ?> trainingSet) {
-			// TODO
-			
-			incorrect: // each intermediate source must be a DoubleImage2D
-			{
-				DataSource<?, ?> source = trainingSet;
+		public final Pipeline train(final Context context) {
+			final class ConcreteTrainingField implements Serializable {
 				
-				for (final Algorithm algorithm : this.getAlgorithms()) {
-					source = Analyze.classify(source, algorithm.train(source).getClassifier());
+				private final Image2D image;
+				
+				private final Image2D labels;
+				
+				private final Rectangle bounds;
+				
+				public ConcreteTrainingField(final Image2D image,
+						final Image2D labels, final Rectangle bounds) {
+					this.image = image;
+					this.labels = labels;
+					this.bounds = bounds;
 				}
+				
+				public final Image2D getImage() {
+					return this.image;
+				}
+				
+				public final Image2D getLabels() {
+					return this.labels;
+				}
+				
+				public final Rectangle getBounds() {
+					return this.bounds;
+				}
+				
+				private static final long serialVersionUID = 1918328132237430637L;
+				
+			}
+			
+			@SuppressWarnings("unchecked")
+			final List<ConcreteTrainingField>[] in = array(new ArrayList<>());
+			@SuppressWarnings("unchecked")
+			final List<ConcreteTrainingField>[] out = array(new ArrayList<>());
+			
+			this.getTrainingFields().forEach(f -> {
+				Tools.debugPrint(f.getImagePath());
+				
+				final Image2D image = read(f.getImagePath());
+				final Image2D labels = read(context.getGroundTruthPathFromImagePath(f.getImagePath()));
+				
+				out[0].add(new ConcreteTrainingField(image, labels, f.getBounds()));
+			});
+			
+			{
+				CommonTools.swap(in, 0, out, 0);
+				
+				final Algorithm algorithm = this.getAlgorithms().get(0);
+				final int patchSize = algorithm.getPatchSize();
+				final int patchSparsity = algorithm.getPatchSparsity();
+				final int stride = algorithm.getStride();
+				final FilteredCompositeDataSource unbufferedTrainingSet = new FilteredCompositeDataSource(c -> c.getClassifierClass().toArray()[0] != 0.0);
+				
+				in[0].forEach(f -> {
+					final Image2D image = f.getImage();
+					final Image2D labels = f.getLabels();
+					final Image2DLabeledRawSource source = Image2DLabeledRawSource.raw(image, labels,
+							patchSize, patchSparsity, stride);
+					
+					source.getMetadata().getBounds().setBounds(f.getBounds());
+					
+					unbufferedTrainingSet.add(source);
+				});
+				
+				final DataSource<?, ?> trainingSet = BufferedDataSource.buffer(unbufferedTrainingSet);
+				
+				algorithm.train(trainingSet);
+				
+				// TODO create out
 			}
 			
 			return this;
