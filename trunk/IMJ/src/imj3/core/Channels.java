@@ -1,8 +1,5 @@
 package imj3.core;
 
-import static imj3.core.Channels.Predefined.blue8;
-import static imj3.core.Channels.Predefined.green8;
-import static imj3.core.Channels.Predefined.red8;
 import static java.lang.Math.max;
 
 import java.io.Serializable;

@@ -21,6 +21,7 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import imj2.pixel3d.MouseHandler;
+import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classification;
@@ -79,6 +80,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -1347,6 +1349,27 @@ public final class VisualAnalysis {
 			return this.algorithms;
 		}
 		
+		public final Pipeline train(final DataSource<?, ?> trainingSet) {
+			// TODO
+			
+			incorrect: // each intermediate source must be a DoubleImage2D
+			{
+				DataSource<?, ?> source = trainingSet;
+				
+				for (final Algorithm algorithm : this.getAlgorithms()) {
+					source = Analyze.classify(source, algorithm.train(source).getClassifier());
+				}
+			}
+			
+			return this;
+		}
+		
+		public final Pipeline classify(final Image2D image, final Image2D classification) {
+			// TODO
+			
+			return this;
+		}
+		
 		@Override
 		public final String toString() {
 			return "Pipeline";
@@ -1699,6 +1722,73 @@ public final class VisualAnalysis {
 			private static final long serialVersionUID = 847822079141878928L;
 			
 		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-03-01)
+	 */
+	public static final class DoubleImage2D implements Image2D {
+		
+		private final Map<String, Object> metadata;
+		
+		private final String id;
+		
+		private final int width;
+		
+		private final int height;
+		
+		private final Channels channels;
+		
+		private final double[] data;
+		
+		public DoubleImage2D(final String id, final int width, final int height, final int channelCount) {
+			this.metadata = new HashMap<>();
+			this.id = id;
+			this.width = width;
+			this.height = height;
+			this.channels = new Channels.Default(channelCount, Double.SIZE);
+			this.data = new double[width * height * channelCount];
+		}
+		
+		@Override
+		public final Map<String, Object> getMetadata() {
+			return this.metadata;
+		}
+		
+		@Override
+		public final String getId() {
+			return this.id;
+		}
+		
+		@Override
+		public final Channels getChannels() {
+			return this.channels;
+		}
+		
+		@Override
+		public final int getWidth() {
+			return this.width;
+		}
+		
+		@Override
+		public final int getHeight() {
+			return this.height;
+		}
+		
+		@Override
+		public final long getPixelChannelValue(final long pixel, final int channelIndex) {
+			return Double.doubleToRawLongBits(this.data[(int) (pixel * this.getChannels().getChannelCount() + channelIndex)]);
+		}
+		
+		@Override
+		public final DoubleImage2D setPixelChannelValue(final long pixel, final int channelIndex, final long channelValue) {
+			this.data[(int) (pixel * this.getChannels().getChannelCount() + channelIndex)] = Double.longBitsToDouble(channelValue);
+			
+			return this;
+		}
+		
+		private static final long serialVersionUID = 9009222978487985122L;
 		
 	}
 	

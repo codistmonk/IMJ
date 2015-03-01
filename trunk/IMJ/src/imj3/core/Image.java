@@ -20,6 +20,17 @@ public abstract interface Image extends Serializable {
 	
 	public abstract Image setPixelValue(long pixel, long value);
 	
+	public default double[] getPixelValue(final long pixel, final double[] result) {
+		final int channelCount = this.getChannels().getChannelCount();
+		final double[] actualResult = result != null && result.length == channelCount ? result : new double[channelCount];
+		
+		for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex) {
+			actualResult[channelIndex] = this.getPixelChannelValue(pixel, channelIndex);
+		}
+		
+		return actualResult;
+	}
+	
 	public default long getPixelChannelValue(final long pixel, final int channelIndex) {
 		return this.getChannels().getChannelValue(this.getPixelValue(pixel), channelIndex);
 	}
