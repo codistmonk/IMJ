@@ -363,13 +363,15 @@ public final class MultifileImage2D implements Image2D {
 			final int optimalTileHeight = image.getOptimalTileHeight();
 			final int imageWidth = image.getWidth();
 			final int imageHeight = image.getHeight();
+			final int width = this.getWidth();
+			final int height = this.getHeight();
 			final int lod = image.getLod();
 			
 			for (int yInImage = this.getOffset().y >> lod, y = -(yInImage % optimalTileHeight), tileY = yInImage / optimalTileHeight * optimalTileHeight;
-					tileY < imageHeight && tileY < imageHeight; y += optimalTileHeight, yInImage += optimalTileHeight, tileY += optimalTileHeight) {
+					y < height && tileY < imageHeight && tileY < imageHeight; y += optimalTileHeight, yInImage += optimalTileHeight, tileY += optimalTileHeight) {
 				if (0 <= tileY) {
 					for (int xInImage = this.getOffset().x >> lod, x = -(xInImage % optimalTileWidth), tileX = xInImage / optimalTileWidth * optimalTileWidth;
-							tileX < imageWidth; x += optimalTileHeight, xInImage += optimalTileWidth, tileX += optimalTileWidth) {
+							x < width && tileX < imageWidth; x += optimalTileHeight, xInImage += optimalTileWidth, tileX += optimalTileWidth) {
 						if (0 <= tileX) {
 							g.drawImage((Image) image.getTile(tileX, tileY).toAwt(), x, y, null);
 						}
