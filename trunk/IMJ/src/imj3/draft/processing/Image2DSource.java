@@ -10,10 +10,35 @@ import java.util.Iterator;
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public abstract class Image2DSource<M extends Image2DSource.Metadata> extends Patch2DSource<M> {
+public abstract class Image2DSource extends Patch2DSource {
 	
-	protected Image2DSource(final M metadata) {
-		super(metadata);
+	private final Image2D image;
+	
+	private final Rectangle bounds;
+	
+	protected Image2DSource(final Image2D image, final int patchSize,
+			final int patchSparsity, final int stride) {
+		super(patchSize, patchSparsity, stride);
+		this.image = image;
+		this.bounds = new Rectangle(image.getWidth(), image.getHeight());
+	}
+	
+	public final Image2D getImage() {
+		return this.image;
+	}
+	
+	public final Rectangle getBounds() {
+		return this.bounds;
+	}
+	
+	@Override
+	public final int getBoundsWidth() {
+		return this.getBounds().width;
+	}
+	
+	@Override
+	public final int getBoundsHeight() {
+		return this.getBounds().height;
 	}
 	
 	@Override
@@ -24,15 +49,15 @@ public abstract class Image2DSource<M extends Image2DSource.Metadata> extends Pa
 	public final void extractPatchValues(final int x, final int y, final int[] result) {
 		Arrays.fill(result, 0);
 		
-		final int s = this.getMetadata().getPatchSize();
+		final int s = this.getPatchSize();
 		final int half = s / 2;
 		final int x0 = x - half;
 		final int x1 = x0 + s;
 		final int y0 = y - half;
 		final int y1 = y0 + s;
-		final int step = this.getMetadata().getPatchSparsity();
+		final int step = this.getPatchSparsity();
 		final int bufferWidth = s / step;
-		final Image2D image = this.getMetadata().getImage();
+		final Image2D image = this.getImage();
 		final int imageWidth = image.getWidth();
 		final int imageHeight = image.getHeight();
 		
@@ -58,11 +83,11 @@ public abstract class Image2DSource<M extends Image2DSource.Metadata> extends Pa
 	 */
 	public final class PatchIterator implements Iterator<Datum> {
 		
-		private final int stride = Image2DSource.this.getMetadata().getStride();
+		private final int stride = Image2DSource.this.getStride();
 		
 		private final int offset = this.stride / 2;
 		
-		private final Rectangle bounds = Image2DSource.this.getMetadata().getBounds();
+		private final Rectangle bounds = Image2DSource.this.getBounds();
 		
 		// bounds.x <= offset + k stride
 		// <- (bounds.x - offset) / stride <= k
@@ -79,7 +104,7 @@ public abstract class Image2DSource<M extends Image2DSource.Metadata> extends Pa
 		
 		private int y = this.startY;
 		
-		private final int[] patchData = new int[Image2DSource.this.getMetadata().getPatchPixelCount()];
+		private final int[] patchData = new int[Image2DSource.this.getPatchPixelCount()];
 		
 		private final Object context = Image2DSource.this.newContext();
 		
@@ -104,57 +129,5 @@ public abstract class Image2DSource<M extends Image2DSource.Metadata> extends Pa
 	}
 	
 	private static final long serialVersionUID = -774979627942684978L;
-
-	/**
-	 * @author codistmonk (creation 2015-02-08)
-	 */
-	public static abstract class Metadata extends Patch2DSource.Metadata {
-		
-		private final Image2D image;
-		
-		private final Rectangle bounds;
-		
-		public Metadata(final Image2D image, final int patchSize,
-				final int patchSparsity, final int stride) {
-			super(patchSize, patchSparsity, stride);
-			this.image = image;
-			this.bounds = new Rectangle(image.getWidth(), image.getHeight());
-		}
-		
-		public final Image2D getImage() {
-			return this.image;
-		}
-		
-		public final Rectangle getBounds() {
-			return this.bounds;
-		}
-		
-		@Override
-		public final int getBoundsWidth() {
-			return this.getBounds().width;
-		}
-		
-		@Override
-		public final int getBoundsHeight() {
-			return this.getBounds().height;
-		}
-		
-		private static final long serialVersionUID = 5722451664995251006L;
-		
-		/**
-		 * @author codistmonk (creation 2015-02-08)
-		 */
-		public static final class Default extends Metadata {
-			
-			public Default(final Image2D image, final int patchSize,
-					final int patchSparsity, final int stride) {
-				super(image, patchSize, patchSparsity, stride);
-			}
-			
-			private static final long serialVersionUID = 69449219027263879L;
-			
-		}
-		
-	}
 	
 }

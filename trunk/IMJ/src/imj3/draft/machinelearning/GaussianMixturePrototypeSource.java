@@ -12,26 +12,46 @@ import java.util.Random;
 /**
  * @author codistmonk (creation 2015-02-04)
  */
-public final class GaussianMixturePrototypeSource extends DataSource.Abstract<GaussianMixturePrototypeSource.Metadata> {
+public final class GaussianMixturePrototypeSource extends DataSource.Abstract<DataSource> {
+	
+	private final List<GaussianMixturePrototypeSource.Gaussian> gaussians;
+	
+	private final long seed;
 	
 	private final int dimension;
 	
 	private final int size;
 	
 	public GaussianMixturePrototypeSource(final int n, final int dimension, final int size, final long seed) {
-		super(new Metadata(n, dimension, seed));
+		this.gaussians = new ArrayList<>(n);
+		
+		final Random random = new Random(seed);
+		
+		for (int i = 0; i < n; ++i) {
+			this.gaussians.add(new Gaussian(random.doubles(dimension).toArray(), random.nextDouble()));
+		}
+		
+		this.seed = random.nextLong();
 		this.dimension = dimension;
 		this.size = size;
+	}
+	
+	public final List<GaussianMixturePrototypeSource.Gaussian> getGaussians() {
+		return this.gaussians;
+	}
+	
+	public final long getSeed() {
+		return this.seed;
 	}
 	
 	@Override
 	public final Iterator<Datum> iterator() {
 		final int d = this.getInputDimension();
-		final List<GaussianMixturePrototypeSource.Gaussian> gaussians = GaussianMixturePrototypeSource.this.getMetadata().getGaussians();
+		final List<GaussianMixturePrototypeSource.Gaussian> gaussians = GaussianMixturePrototypeSource.this.getGaussians();
 		
 		return new Iterator<Datum>() {
 			
-			private final Random random = new Random(GaussianMixturePrototypeSource.this.getMetadata().getSeed());
+			private final Random random = new Random(GaussianMixturePrototypeSource.this.getSeed());
 			
 			private final double[] datum = new double[d];
 			
@@ -101,39 +121,6 @@ public final class GaussianMixturePrototypeSource extends DataSource.Abstract<Ga
 		}
 		
 		private static final long serialVersionUID = 7955299362209802947L;
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-02-08)
-	 */
-	public static final class Metadata implements DataSource.Metadata {
-		
-		private final List<GaussianMixturePrototypeSource.Gaussian> gaussians;
-		
-		private final long seed;
-		
-		public Metadata(final int n, final int dimension, final long seed) {
-			this.gaussians = new ArrayList<>(n);
-			
-			final Random random = new Random(seed);
-			
-			for (int i = 0; i < n; ++i) {
-				this.gaussians.add(new Gaussian(random.doubles(dimension).toArray(), random.nextDouble()));
-			}
-			
-			this.seed = random.nextLong();
-		}
-		
-		public final List<GaussianMixturePrototypeSource.Gaussian> getGaussians() {
-			return this.gaussians;
-		}
-		
-		public final long getSeed() {
-			return this.seed;
-		}
-		
-		private static final long serialVersionUID = -8871661234430522022L;
 		
 	}
 	

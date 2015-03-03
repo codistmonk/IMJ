@@ -7,14 +7,12 @@ import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-02-09)
- * 
- * @param <M>
  */
-public final class Mean<M extends DataSource.Metadata> extends TransformedDataSource<M> {
+public final class Mean extends TransformedDataSource {
 	
 	private final int stride;
 	
-	public Mean(final DataSource<? extends M> source, final int stride) {
+	public Mean(final DataSource source, final int stride) {
 		super(source);
 		this.stride = stride;
 	}
@@ -79,12 +77,12 @@ public final class Mean<M extends DataSource.Metadata> extends TransformedDataSo
 	
 	private static final long serialVersionUID = -5585195651747133856L;
 	
-	public static final <M extends DataSource.Metadata> Mean<M> mean(final DataSource<? extends M> source) {
+	public static final Mean mean(final DataSource source) {
 		return mean(source, 1);
 	}
 	
-	public static final <M extends DataSource.Metadata> Mean<M> mean(final DataSource<? extends M> source, final int stride) {
-		return new Mean<>(source, stride);
+	public static final Mean mean(final DataSource source, final int stride) {
+		return new Mean(source, stride);
 	}
 	
 }

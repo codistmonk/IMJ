@@ -29,7 +29,7 @@ public final class MedianCutClustering extends NearestNeighborClustering {
 	}
 	
 	@Override
-	protected final void cluster(final DataSource<?> inputs, final NearestNeighborClassifier classifier) {
+	protected final void cluster(final DataSource inputs, final NearestNeighborClassifier classifier) {
 		final Queue<MedianCutClustering.Chunk> chunks = new PriorityQueue<>(new Comparator<MedianCutClustering.Chunk>() {
 			
 			@Override
@@ -61,7 +61,7 @@ public final class MedianCutClustering extends NearestNeighborClustering {
 	 */
 	public static final class Chunk implements Serializable {
 		
-		private final DataSource<?> inputs;
+		private final DataSource inputs;
 		
 		private final BitSet subset;
 		
@@ -71,13 +71,13 @@ public final class MedianCutClustering extends NearestNeighborClustering {
 		
 		private double score;
 		
-		public Chunk(final DataSource<?> inputs, final boolean initial) {
+		public Chunk(final DataSource inputs, final boolean initial) {
 			this.inputs = inputs;
 			this.subset = initial ? null : new BitSet();
 			this.statistics = new VectorStatistics(inputs.getInputDimension());
 		}
 		
-		public final DataSource<?> getInputs() {
+		public final DataSource getInputs() {
 			return this.inputs;
 		}
 		

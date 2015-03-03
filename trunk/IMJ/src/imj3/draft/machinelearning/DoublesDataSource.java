@@ -7,14 +7,13 @@ import imj3.draft.machinelearning.DataSource.Abstract;
 /**
  * @author codistmonk (creation 2015-02-12)
  */
-public final class DoublesDataSource extends Abstract<DataSource.Metadata> {
+public final class DoublesDataSource extends Abstract<DataSource> {
 	
 	private final int dimension;
 	
 	private final double[] inputs;
 	
-	public DoublesDataSource(final Metadata metadata, final int dimension, final double[] inputs) {
-		super(metadata);
+	public DoublesDataSource(final int dimension, final double[] inputs) {
 		this.dimension = dimension;
 		this.inputs = inputs;
 	}
@@ -73,7 +72,7 @@ public final class DoublesDataSource extends Abstract<DataSource.Metadata> {
 	}
 	
 	public static final DoublesDataSource source(final int dimension, final double... inputs) {
-		return new DoublesDataSource(new Metadata.Default(), dimension, inputs);
+		return new DoublesDataSource(dimension, inputs);
 	}
 	
 }

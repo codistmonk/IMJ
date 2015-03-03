@@ -7,9 +7,20 @@ import java.io.Serializable;
 /**
  * @author codistmonk (creation 2015-02-04)
  */
-public abstract interface DataSource<M extends DataSource.Metadata> extends Serializable, Iterable<Datum> {
+public abstract interface DataSource extends Serializable, Iterable<Datum> {
 	
-	public abstract M getMetadata();
+	public abstract DataSource getSource();
+	
+	@SuppressWarnings("unchecked")
+	public default <D extends DataSource> D findSource(Class<D> cls) {
+		DataSource result = this;
+		
+		while (result != null && ! cls.isInstance(result)) {
+			result = result.getSource();
+		}
+		
+		return (D) result;
+	}
 	
 	public abstract int getInputDimension();
 	
@@ -30,40 +41,25 @@ public abstract interface DataSource<M extends DataSource.Metadata> extends Seri
 	
 	/**
 	 * @author codistmonk (creation 2015-02-08)
-	 *
-	 * @param <M>
-	 * @param <D>
 	 */
-	public static abstract class Abstract<M extends DataSource.Metadata> implements DataSource<M> {
+	public static abstract class Abstract<D extends DataSource> implements DataSource {
 		
-		private final M metadata;
+		private final D source;
 		
-		protected Abstract(final M metadata) {
-			this.metadata = metadata;
+		protected Abstract() {
+			this(null);
+		}
+		
+		protected Abstract(final D source) {
+			this.source = source;
 		}
 		
 		@Override
-		public final M getMetadata() {
-			return this.metadata;
+		public final D getSource() {
+			return this.source;
 		}
 		
 		private static final long serialVersionUID = 8357748600830831869L;
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-02-08)
-	 */
-	public static abstract interface Metadata extends Serializable {
-		
-		/**
-		 * @author codistmonk (creation 2015-02-12)
-		 */
-		public static final class Default implements Metadata {
-			
-			private static final long serialVersionUID = 8983882340890506466L;
-			
-		}
 		
 	}
 	

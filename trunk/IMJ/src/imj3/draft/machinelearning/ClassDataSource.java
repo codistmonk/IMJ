@@ -4,13 +4,10 @@ import java.util.Iterator;
 
 /**
  * @author codistmonk (creation 2015-02-08)
- * 
- * @param <M>
- * @param <C>
  */
-public final class ClassDataSource<M extends DataSource.Metadata> extends TransformedDataSource<M> {
+public final class ClassDataSource extends TransformedDataSource {
 	
-	public ClassDataSource(final DataSource<M> source) {
+	public ClassDataSource(final DataSource source) {
 		super(source);
 	}
 	
@@ -47,8 +44,8 @@ public final class ClassDataSource<M extends DataSource.Metadata> extends Transf
 	
 	private static final long serialVersionUID = -4926248507282321872L;
 	
-	public static final <M extends DataSource.Metadata> ClassDataSource<M> classes(final DataSource<M> inputs) {
-		return new ClassDataSource<>(inputs);
+	public static final ClassDataSource classes(final DataSource inputs) {
+		return new ClassDataSource(inputs);
 	}
 	
 }

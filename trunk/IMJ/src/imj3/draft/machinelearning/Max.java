@@ -5,14 +5,12 @@ import java.util.Iterator;
 
 /**
  * @author codistmonk (creation 2015-02-09)
- * 
- * @param <M>
  */
-public final class Max<M extends DataSource.Metadata> extends TransformedDataSource<M> {
+public final class Max extends TransformedDataSource {
 	
 	private final int stride;
 	
-	public Max(final DataSource<? extends M> source, final int stride) {
+	public Max(final DataSource source, final int stride) {
 		super(source);
 		this.stride = stride;
 	}
@@ -69,12 +67,12 @@ public final class Max<M extends DataSource.Metadata> extends TransformedDataSou
 	
 	private static final long serialVersionUID = -2472244801933971495L;
 	
-	public static final <M extends DataSource.Metadata> Max<M> max(final DataSource<? extends M> source) {
+	public static final Max max(final DataSource source) {
 		return max(source, 1);
 	}
 	
-	public static final <M extends DataSource.Metadata> Max<M> max(final DataSource<? extends M> source, final int stride) {
-		return new Max<>(source, stride);
+	public static final Max max(final DataSource source, final int stride) {
+		return new Max(source, stride);
 	}
 	
 }

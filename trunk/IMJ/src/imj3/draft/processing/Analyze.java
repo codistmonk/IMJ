@@ -51,7 +51,7 @@ public final class Analyze {
 		SwingTools.show(image.getSource(), file.getName(), false);
 		
 		if (false) {
-			final DataSource<Image2DSource.Metadata> raw = raw(image, 2, 1, 2);
+			final Image2DSource raw = raw(image, 2, 1, 2);
 			
 			SwingTools.show(image(classes(mean(raw, 3))).getSource(), "Mean", false);
 			SwingTools.show(image(classes(max(raw))).getSource(), "Max", false);
@@ -61,27 +61,27 @@ public final class Analyze {
 		}
 		
 		if (true) {
-			final DataSource<? extends Patch2DSource.Metadata> source = buffer(raw(image, 8, 1, 8));
+			final DataSource source = buffer(raw(image, 8, 1, 8));
 			
 			Tools.debugPrint(new Histogram().add(source).getCounts().size());
 			
-			final DataSource<? extends Patch2DSource.Metadata> trainingSet = source;
+			final DataSource trainingSet = source;
 			
 //			final NearestNeighborClustering clustering = new KMeansClustering(Measure.Predefined.L2_ES, 256, 8);
 			final NearestNeighborClustering clustering = new MedianCutClustering(Measure.Predefined.L2_ES, 256);
 //			final NearestNeighborClustering clustering = new StreamingClustering(Measure.Predefined.L1_ES, 3);
 			final NearestNeighborClassifier quantizer = clustering.cluster(trainingSet);
-			final DataSource<? extends Patch2DSource.Metadata> quantized = classify(source, quantizer);
-			final LinearTransform rgbRenderer = new LinearTransform(Measure.Predefined.L2_ES, newRGBRenderingMatrix(source.getMetadata().getPatchPixelCount()));
-			final DataSource<? extends Patch2DSource.Metadata> rendered = classify(classes(quantized), rgbRenderer);
+			final DataSource quantized = classify(source, quantizer);
+			final LinearTransform rgbRenderer = new LinearTransform(Measure.Predefined.L2_ES, newRGBRenderingMatrix(source.findSource(Patch2DSource.class).getPatchPixelCount()));
+			final DataSource rendered = classify(classes(quantized), rgbRenderer);
 			
 //			SwingTools.show(image(classes(mean(classes(quantized), 3))).getSource(), clustering.getClass().getSimpleName() + " -> rendered", false);
 			SwingTools.show(image(classes(rendered)).getSource(), clustering.getClass().getSimpleName() + " -> rendered", false);
 		}
 	}
 	
-	public static final <M extends DataSource.Metadata> ClassifiedDataSource<M> classify(final DataSource<M> source, final Classifier classifier) {
-		return new ClassifiedDataSource<>(source, classifier);
+	public static final ClassifiedDataSource classify(final DataSource source, final Classifier classifier) {
+		return new ClassifiedDataSource(source, classifier);
 	}
 	
 	public static final double[][] newRGBRenderingMatrix(final int inputPatchPixelCount) {
@@ -101,12 +101,14 @@ public final class Analyze {
 		return result;
 	}
 	
-	public static final AwtImage2D image(final DataSource<? extends Patch2DSource.Metadata> source) {
+	public static final AwtImage2D image(final DataSource source) {
+		final Patch2DSource patches = source.findSource(Patch2DSource.class);
+		
 		return image(source, new AwtImage2D(Long.toHexString(new Random().nextLong()),
-				source.getMetadata().sizeX(), source.getMetadata().sizeY()));
+				patches.sizeX(), patches.sizeY()));
 	}
 	
-	public static final AwtImage2D image(final DataSource<? extends Patch2DSource.Metadata> source,
+	public static final AwtImage2D image(final DataSource source,
 			final AwtImage2D result) {
 		final TicToc timer = new TicToc();
 		final int dimension = source.getInputDimension();
@@ -116,7 +118,7 @@ public final class Analyze {
 			throw new IllegalArgumentException();
 		}
 		
-		final int width = source.getMetadata().sizeX();
+		final int width = source.findSource(Patch2DSource.class).sizeX();
 		
 		int pixel = 0;
 		

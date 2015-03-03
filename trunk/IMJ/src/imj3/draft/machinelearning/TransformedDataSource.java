@@ -2,27 +2,11 @@ package imj3.draft.machinelearning;
 
 /**
  * @author codistmonk (creation 2015-02-09)
- *
- * @param <M>
- * @param <In>
- * @param <Out>
  */
-public abstract class TransformedDataSource<M extends DataSource.Metadata> implements DataSource<M> {
+public abstract class TransformedDataSource extends DataSource.Abstract<DataSource> {
 	
-	private final DataSource<? extends M> source;
-	
-	protected TransformedDataSource(final DataSource<? extends M> source) {
-		this.source = source;
-	}
-	
-	@SuppressWarnings("unchecked")
-	public final DataSource<M> getSource() {
-		return (DataSource<M>) this.source;
-	}
-	
-	@Override
-	public final M getMetadata() {
-		return this.getSource().getMetadata();
+	protected TransformedDataSource(final DataSource source) {
+		super(source);
 	}
 	
 	@Override

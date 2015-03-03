@@ -14,17 +14,15 @@ import imj3.draft.machinelearning.Datum;
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public final class Image2DRawSource extends Image2DSource<Image2DSource.Metadata> {
+public final class Image2DRawSource extends Image2DSource {
 	
 	public Image2DRawSource(final Image2D image, final int patchSize, final int patchSparsity, final int stride) {
-		super(new Image2DSource.Metadata.Default(image, patchSize, patchSparsity, stride));
+		super(image, patchSize, patchSparsity, stride);
 	}
 	
 	@Override
 	public final int getInputDimension() {
-		final Metadata metadata = this.getMetadata();
-		
-		return metadata.getImage().getChannels().getChannelCount() * metadata.getPatchPixelCount();
+		return this.getImage().getChannels().getChannelCount() * this.getPatchPixelCount();
 	}
 	
 	@Override
