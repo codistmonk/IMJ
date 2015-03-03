@@ -41,7 +41,7 @@ public abstract class Image2DSource extends Patch2DSource {
 	}
 	
 	@Override
-	public final Iterator iterator() {
+	public final PatchIterator iterator() {
 		return this.new PatchIterator();
 	}
 	
@@ -106,6 +106,14 @@ public abstract class Image2DSource extends Patch2DSource {
 		private final int[] patchData = new int[Image2DSource.this.getPatchPixelCount()];
 		
 		private final Object context = Image2DSource.this.newContext();
+		
+		public final int getX() {
+			return this.x;
+		}
+		
+		public final int getY() {
+			return this.y;
+		}
 		
 		@Override
 		public final boolean hasNext() {

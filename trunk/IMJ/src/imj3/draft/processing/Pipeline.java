@@ -13,6 +13,7 @@ import imj3.draft.machinelearning.Measure;
 import imj3.draft.machinelearning.MedianCutClustering;
 import imj3.draft.machinelearning.NearestNeighborClassifier;
 import imj3.draft.machinelearning.Measure.Predefined;
+import imj3.draft.processing.Image2DSource.PatchIterator;
 import imj3.draft.processing.VisualAnalysis.Context;
 import imj3.tools.CommonTools;
 import imj3.tools.CommonSwingTools.NestedList;
@@ -90,10 +91,9 @@ public final class Pipeline implements Serializable {
 			out[0].add(new ConcreteTrainingField(image, labels, f.getBounds()));
 		});
 		
-		{
+		for (final Algorithm algorithm : this.getAlgorithms()) {
 			CommonTools.swap(in, 0, out, 0);
 			
-			final Algorithm algorithm = this.getAlgorithms().get(0);
 			final int patchSize = algorithm.getPatchSize();
 			final int patchSparsity = algorithm.getPatchSparsity();
 			final int stride = algorithm.getStride();
@@ -126,18 +126,24 @@ public final class Pipeline implements Serializable {
 				
 				final Image2D newImage = new DoubleImage2D(image.getId() + "_out",
 						image.getWidth() / stride, image.getHeight() / stride, n);
-				final Image2D newLabels = new DoubleImage2D(labels.getId() + "_tmp",
-						newImage.getWidth(), newImage.getHeight(), 1); // XXX doesn't have to be DoubleImage2D
+				final Image2D newLabels = new UnsignedImage2D(labels.getId() + "_tmp",
+						newImage.getWidth(), newImage.getHeight());
 				
-				int pixel = -1;
+				int targetPixel = -1;
 				
-				for (final Datum c : source) {
-					newImage.setPixelValue(++pixel, c.getPrototype().getValue());
+				for (final PatchIterator i = source.iterator(); i.hasNext();) {
+					final int sourceX = i.getX();
+					final int sourceY = i.getY();
+					
+					newImage.setPixelValue(++targetPixel, i.next().getPrototype().getValue());
+					newLabels.setPixelValue(targetPixel, labels.getPixelValue(sourceX, sourceY));
 				}
 				
-				// TODO update newLabels
+				out[0].add(new ConcreteTrainingField(newImage, newLabels));
 			});
 		}
+		
+		// TODO evaluate training
 		
 		return this;
 	}
@@ -511,6 +517,10 @@ public final class Pipeline implements Serializable {
 		private final Image2D labels;
 		
 		private final Rectangle bounds;
+		
+		public ConcreteTrainingField(final Image2D image, final Image2D labels) {
+			this(image, labels, new Rectangle(image.getWidth(), image.getHeight()));
+		}
 		
 		public ConcreteTrainingField(final Image2D image,
 				final Image2D labels, final Rectangle bounds) {

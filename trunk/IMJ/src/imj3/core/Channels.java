@@ -13,6 +13,10 @@ public abstract interface Channels extends Serializable {
 	
 	public abstract int getChannelBitCount();
 	
+	public default int getValueBitCount() {
+		return this.getChannelCount() * this.getChannelBitCount();
+	}
+	
 	public default long getChannelValue(final long pixelValue, final int channelIndex) {
 		final int channelBitCount = this.getChannelBitCount();
 		final long mask1 = ~((~0L) << channelBitCount);
