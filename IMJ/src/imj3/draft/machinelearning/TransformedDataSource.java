@@ -7,17 +7,17 @@ package imj3.draft.machinelearning;
  * @param <In>
  * @param <Out>
  */
-public abstract class TransformedDataSource<M extends DataSource.Metadata, In extends ClassifierClass, Out extends ClassifierClass> implements DataSource<M, Out> {
+public abstract class TransformedDataSource<M extends DataSource.Metadata> implements DataSource<M> {
 	
-	private final DataSource<? extends M, ? extends In> source;
+	private final DataSource<? extends M> source;
 	
-	protected TransformedDataSource(final DataSource<? extends M, ? extends In> source) {
+	protected TransformedDataSource(final DataSource<? extends M> source) {
 		this.source = source;
 	}
 	
 	@SuppressWarnings("unchecked")
-	public final DataSource<M, In> getSource() {
-		return (DataSource<M, In>) this.source;
+	public final DataSource<M> getSource() {
+		return (DataSource<M>) this.source;
 	}
 	
 	@Override

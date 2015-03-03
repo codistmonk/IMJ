@@ -7,7 +7,7 @@ import imj3.draft.machinelearning.DataSource.Abstract;
 /**
  * @author codistmonk (creation 2015-02-12)
  */
-public final class DoublesDataSource extends Abstract<DataSource.Metadata, ClassifierClass> {
+public final class DoublesDataSource extends Abstract<DataSource.Metadata> {
 	
 	private final int dimension;
 	
@@ -39,16 +39,13 @@ public final class DoublesDataSource extends Abstract<DataSource.Metadata, Class
 	}
 	
 	@Override
-	public final Iterator<Classification<ClassifierClass>> iterator() {
+	public final Iterator<Datum> iterator() {
 		final int d = this.getInputDimension();
 		final int n = this.size();
 		
-		return new Iterator<Classification<ClassifierClass>>() {
+		return new Iterator<Datum>() {
 			
-			private final double[] datum = new double[d];
-			
-			private final Classification<ClassifierClass> result = new Classification<ClassifierClass>(
-					this.datum, new ClassifierClass.Default(this.datum), 0.0);
+			private final Datum result = new Datum.Default().setValue(new double[d]).setScore(0.0);
 			
 			private int i;
 			
@@ -58,8 +55,8 @@ public final class DoublesDataSource extends Abstract<DataSource.Metadata, Class
 			}
 			
 			@Override
-			public final Classification<ClassifierClass> next() {
-				System.arraycopy(DoublesDataSource.this.getInputs(), this.i, this.datum, 0, d);
+			public final Datum next() {
+				System.arraycopy(DoublesDataSource.this.getInputs(), this.i, this.result.getValue(), 0, d);
 				
 				this.i += d;
 				

@@ -10,17 +10,17 @@ import java.util.Random;
  * @param <M>
  * @param <C>
  */
-public final class ShuffledDataSource<M extends DataSource.Metadata, C extends ClassifierClass> implements DataSource<M, C> {
+public final class ShuffledDataSource<M extends DataSource.Metadata> implements DataSource<M> {
 	
-	private final BufferedDataSource<M, C> source;
+	private final BufferedDataSource<M> source;
 	
 	private final long seed;
 	
-	public ShuffledDataSource(final DataSource<M, C> source, final int bufferLimit, final long seed) {
+	public ShuffledDataSource(final DataSource<M> source, final int bufferLimit, final long seed) {
 		this(new BufferedDataSource<>(source, bufferLimit), seed);
 	}
 	
-	public ShuffledDataSource(final BufferedDataSource<M, C> source, final long seed) {
+	public ShuffledDataSource(final BufferedDataSource<M> source, final long seed) {
 		this.source = source;
 		this.seed = seed;
 		
@@ -29,7 +29,7 @@ public final class ShuffledDataSource<M extends DataSource.Metadata, C extends C
 		}
 	}
 	
-	public final BufferedDataSource<M, C> getSource() {
+	public final BufferedDataSource<M> getSource() {
 		return this.source;
 	}
 	
@@ -53,18 +53,18 @@ public final class ShuffledDataSource<M extends DataSource.Metadata, C extends C
 	}
 	
 	@Override
-	public final Iterator<Classification<C>> iterator() {
+	public final Iterator<Datum> iterator() {
 		if (this.getSource().getDataset() != null) {
 			return this.getSource().getDataset().iterator();
 		}
 		
 		final int n = this.getSource().getBufferLimit();
 		
-		return new Iterator<Classification<C>>() {
+		return new Iterator<Datum>() {
 			
 			private final Random random = new Random(ShuffledDataSource.this.getSeed());
 			
-			private final BufferedDataSource<M, C>.BufferedIterator i = (BufferedDataSource<M, C>.BufferedIterator) ShuffledDataSource.this.getSource().iterator();
+			private final BufferedDataSource<M>.BufferedIterator i = (BufferedDataSource<M>.BufferedIterator) ShuffledDataSource.this.getSource().iterator();
 			
 			private int j = n;
 			
@@ -74,7 +74,7 @@ public final class ShuffledDataSource<M extends DataSource.Metadata, C extends C
 			}
 			
 			@Override
-			public final Classification<C> next() {
+			public final Datum next() {
 				if (--this.j == 0) {
 					this.j = n;
 					Collections.shuffle(this.i.getBuffer(), this.random);

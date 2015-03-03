@@ -8,19 +8,19 @@ import java.util.function.Function;
 /**
  * @author codistmonk (creation 2015-02-24)
  */
-public final class FilteredCompositeDataSource extends DataSource.Abstract<DataSource.Metadata, ClassifierClass> {
+public final class FilteredCompositeDataSource extends DataSource.Abstract<DataSource.Metadata> {
 	
-	private final List<DataSource<?, ?>> sources;
+	private final List<DataSource<?>> sources;
 	
-	private final Function<Classification<ClassifierClass>, Boolean> filter;
+	private final Function<Datum, Boolean> filter;
 	
-	public FilteredCompositeDataSource(final Function<Classification<ClassifierClass>, Boolean> filter) {
+	public FilteredCompositeDataSource(final Function<Datum, Boolean> filter) {
 		super(new Metadata.Default());
 		this.sources = new ArrayList<>();
 		this.filter = filter;
 	}
 	
-	public final FilteredCompositeDataSource add(final DataSource<?, ?> source) {
+	public final FilteredCompositeDataSource add(final DataSource<?> source) {
 		this.sources.add(source);
 		
 		return this;
@@ -28,12 +28,12 @@ public final class FilteredCompositeDataSource extends DataSource.Abstract<DataS
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public final Iterator<Classification<ClassifierClass>> iterator() {
-		final Iterator<DataSource<?, ?>> i = this.sources.iterator();
+	public final Iterator<Datum> iterator() {
+		final Iterator<DataSource<?>> i = this.sources.iterator();
 		
-		return new FilteredIterator(new Iterator<Classification<ClassifierClass>>() {
+		return new FilteredIterator(new Iterator<Datum>() {
 			
-			private Iterator<Classification<ClassifierClass>> j;
+			private Iterator<Datum> j;
 			
 			{
 				this.update();
@@ -45,8 +45,8 @@ public final class FilteredCompositeDataSource extends DataSource.Abstract<DataS
 			}
 			
 			@Override
-			public final Classification<ClassifierClass> next() {
-				final Classification<ClassifierClass> result = this.j.next();
+			public final Datum next() {
+				final Datum result = this.j.next();
 				
 				this.update();
 				

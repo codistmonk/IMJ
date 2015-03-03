@@ -8,11 +8,11 @@ import java.util.Iterator;
  * @param <M>
  * @param <C>
  */
-public final class ClassifiedDataSource<M extends DataSource.Metadata, In extends ClassifierClass, Out extends ClassifierClass> extends TransformedDataSource<M, In, Out> {
+public final class ClassifiedDataSource<M extends DataSource.Metadata> extends TransformedDataSource<M> {
 	
-	private final Classifier<Out> classifier;
+	private final Classifier classifier;
 	
-	public ClassifiedDataSource(final DataSource<M, In> source, final Classifier<Out> classifier) {
+	public ClassifiedDataSource(final DataSource<M> source, final Classifier classifier) {
 		super(source);
 		this.classifier = classifier;
 	}
@@ -28,12 +28,12 @@ public final class ClassifiedDataSource<M extends DataSource.Metadata, In extend
 	}
 	
 	@Override
-	public final Iterator<Classification<Out>> iterator() {
-		return new Iterator<Classification<Out>>() {
+	public final Iterator<Datum> iterator() {
+		return new Iterator<Datum>() {
 			
-			private final Iterator<Classification<In>> inputs = ClassifiedDataSource.this.getSource().iterator();
+			private final Iterator<Datum> inputs = ClassifiedDataSource.this.getSource().iterator();
 			
-			private final Classification<Out> tmp = new Classification<>();
+			private final Datum tmp = new Datum.Default();
 			
 			@Override
 			public final boolean hasNext() {
@@ -41,17 +41,14 @@ public final class ClassifiedDataSource<M extends DataSource.Metadata, In extend
 			}
 			
 			@Override
-			public final Classification<Out> next() {
-				final Classification<Out> result = ClassifiedDataSource.this.getClassifier().classify(
-						this.tmp, this.inputs.next().getInput());
-				
-				return result;
+			public final Datum next() {
+				return ClassifiedDataSource.this.getClassifier().classify(this.inputs.next(), this.tmp);
 			}
 			
 		};
 	}
 	
-	final Classifier<Out> getClassifier() {
+	final Classifier getClassifier() {
 		return this.classifier;
 	}
 	

@@ -3,17 +3,17 @@ package imj3.draft.processing;
 import static imj3.core.Channels.Predefined.blue8;
 import static imj3.core.Channels.Predefined.green8;
 import static imj3.core.Channels.Predefined.red8;
+import static imj3.draft.machinelearning.Datum.Default.datum;
 
 import java.io.Serializable;
 
 import imj3.core.Image2D;
-import imj3.draft.machinelearning.Classification;
-import imj3.draft.machinelearning.ClassifierClass;
+import imj3.draft.machinelearning.Datum;
 
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public final class Image2DLabeledRawSource extends Image2DSource<Image2DLabeledRawSource.Metadata, ClassifierClass> {
+public final class Image2DLabeledRawSource extends Image2DSource<Image2DLabeledRawSource.Metadata> {
 	
 	public Image2DLabeledRawSource(final Image2D image, final Image2D labels, final int patchSize, final int patchSparsity, final int stride) {
 		super(new Metadata(image, labels, patchSize, patchSparsity, stride));
@@ -37,7 +37,7 @@ public final class Image2DLabeledRawSource extends Image2DSource<Image2DLabeledR
 	}
 	
 	@Override
-	protected final Classification<ClassifierClass> convert(final int x, final int y, final int[] patchValues, final Object context) {
+	protected final Datum convert(final int x, final int y, final int[] patchValues, final Object context) {
 		final Context c = (Context) context;
 		
 		this.convert(x, y, patchValues, c.getDatum());
@@ -80,12 +80,12 @@ public final class Image2DLabeledRawSource extends Image2DSource<Image2DLabeledR
 		
 		private final double[] label;
 		
-		private final Classification<ClassifierClass> classification;
+		private final Datum classification;
 		
 		public Context() {
 			this.datum = new double[Image2DLabeledRawSource.this.getInputDimension()];
 			this.label = new double[Image2DLabeledRawSource.this.getClassDimension()];
-			this.classification = new Classification<>(this.datum, new ClassifierClass.Default(this.label), 0.0);
+			this.classification = datum(this.datum).setPrototype(datum(this.label));
 		}
 		
 		public final double[] getDatum() {
@@ -96,7 +96,7 @@ public final class Image2DLabeledRawSource extends Image2DSource<Image2DLabeledR
 			return this.label;
 		}
 		
-		public final Classification<ClassifierClass> getClassification() {
+		public final Datum getClassification() {
 			return this.classification;
 		}
 		

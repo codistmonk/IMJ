@@ -1,8 +1,7 @@
 package imj3.draft.processing;
 
 import imj3.core.Image2D;
-import imj3.draft.machinelearning.Classification;
-import imj3.draft.machinelearning.ClassifierClass;
+import imj3.draft.machinelearning.Datum;
 
 import java.awt.Rectangle;
 import java.util.Arrays;
@@ -11,14 +10,14 @@ import java.util.Iterator;
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public abstract class Image2DSource<M extends Image2DSource.Metadata, C extends ClassifierClass> extends Patch2DSource<M, C> {
+public abstract class Image2DSource<M extends Image2DSource.Metadata> extends Patch2DSource<M> {
 	
 	protected Image2DSource(final M metadata) {
 		super(metadata);
 	}
 	
 	@Override
-	public final Iterator<Classification<C>> iterator() {
+	public final Iterator<Datum> iterator() {
 		final int stride = this.getMetadata().getStride();
 		final int offset = stride / 2;
 		final Rectangle bounds = this.getMetadata().getBounds();
@@ -30,7 +29,7 @@ public abstract class Image2DSource<M extends Image2DSource.Metadata, C extends 
 		final int endX = bounds.x + bounds.width;
 		final int endY = bounds.y + bounds.height;
 		
-		return new Iterator<Classification<C>>() {
+		return new Iterator<Datum>() {
 			
 			private int x = startX;
 			
@@ -46,10 +45,10 @@ public abstract class Image2DSource<M extends Image2DSource.Metadata, C extends 
 			}
 			
 			@Override
-			public final Classification<C> next() {
+			public final Datum next() {
 				Image2DSource.this.extractPatchValues(this.x, this.y, this.patchData);
 				
-				final Classification<C> result = Image2DSource.this.convert(this.x, this.y, this.patchData, this.context);
+				final Datum result = Image2DSource.this.convert(this.x, this.y, this.patchData, this.context);
 				
 				if (endX <= (this.x += stride)) {
 					this.x = startX;
@@ -91,7 +90,7 @@ public abstract class Image2DSource<M extends Image2DSource.Metadata, C extends 
 	
 	protected abstract Object newContext();
 	
-	protected abstract Classification<C> convert(int x, int y, int[] patchValues, Object context);
+	protected abstract Datum convert(int x, int y, int[] patchValues, Object context);
 	
 	private static final long serialVersionUID = -774979627942684978L;
 	

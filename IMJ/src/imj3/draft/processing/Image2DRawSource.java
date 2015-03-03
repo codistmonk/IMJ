@@ -3,17 +3,18 @@ package imj3.draft.processing;
 import static imj3.core.Channels.Predefined.blue8;
 import static imj3.core.Channels.Predefined.green8;
 import static imj3.core.Channels.Predefined.red8;
+import static imj3.draft.machinelearning.Datum.Default.datum;
+import static net.sourceforge.aprog.tools.Tools.ignore;
 
 import java.io.Serializable;
 
 import imj3.core.Image2D;
-import imj3.draft.machinelearning.Classification;
-import imj3.draft.machinelearning.ClassifierClass;
+import imj3.draft.machinelearning.Datum;
 
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public final class Image2DRawSource extends Image2DSource<Image2DSource.Metadata, ClassifierClass> {
+public final class Image2DRawSource extends Image2DSource<Image2DSource.Metadata> {
 	
 	public Image2DRawSource(final Image2D image, final int patchSize, final int patchSparsity, final int stride) {
 		super(new Image2DSource.Metadata.Default(image, patchSize, patchSparsity, stride));
@@ -37,7 +38,7 @@ public final class Image2DRawSource extends Image2DSource<Image2DSource.Metadata
 	}
 	
 	@Override
-	protected final Classification<ClassifierClass> convert(final int x, final int y, final int[] patchValues, final Object context) {
+	protected final Datum convert(final int x, final int y, final int[] patchValues, final Object context) {
 		final Context c = (Context) context;
 		
 		this.convert(x, y, patchValues, c.getDatum());
@@ -46,6 +47,9 @@ public final class Image2DRawSource extends Image2DSource<Image2DSource.Metadata
 	}
 	
 	private final void convert(final int x, final int y, final int[] patchValues, final double[] result) {
+		ignore(x);
+		ignore(y);
+		
 		int i = -1;
 		
 		for (final int value : patchValues) {
@@ -76,18 +80,18 @@ public final class Image2DRawSource extends Image2DSource<Image2DSource.Metadata
 		
 		private final double[] datum;
 		
-		private final Classification<ClassifierClass> classification;
+		private final Datum classification;
 		
 		public Context() {
 			this.datum = new double[Image2DRawSource.this.getInputDimension()];
-			this.classification = new Classification<>(this.datum, new ClassifierClass.Default(this.datum), 0.0);
+			this.classification = datum(this.datum);
 		}
 		
 		public final double[] getDatum() {
 			return this.datum;
 		}
 		
-		public final Classification<ClassifierClass> getClassification() {
+		public final Datum getClassification() {
 			return this.classification;
 		}
 		

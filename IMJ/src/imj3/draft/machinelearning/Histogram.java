@@ -1,6 +1,7 @@
 package imj3.draft.machinelearning;
 
 import static java.lang.Math.rint;
+
 import imj2.tools.BitwiseQuantizationTest.DoubleArrayComparator;
 
 import java.io.Serializable;
@@ -38,9 +39,9 @@ public final class Histogram implements Serializable {
 		return this;
 	}
 	
-	public final Histogram add(final DataSource<?, ?> inputs) {
-		for (final Classification<?> classification : inputs) {
-			this.add(classification.getInput().clone());
+	public final Histogram add(final DataSource<?> inputs) {
+		for (final Datum classification : inputs) {
+			this.add(classification.getValue().clone());
 		}
 		
 		return this;

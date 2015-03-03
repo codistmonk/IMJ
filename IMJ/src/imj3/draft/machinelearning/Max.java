@@ -8,11 +8,11 @@ import java.util.Iterator;
  * 
  * @param <M>
  */
-public final class Max<M extends DataSource.Metadata> extends TransformedDataSource<M, ClassifierClass, ClassifierClass> {
+public final class Max<M extends DataSource.Metadata> extends TransformedDataSource<M> {
 	
 	private final int stride;
 	
-	public Max(final DataSource<? extends M, ? extends ClassifierClass> source, final int stride) {
+	public Max(final DataSource<? extends M> source, final int stride) {
 		super(source);
 		this.stride = stride;
 	}
@@ -28,17 +28,17 @@ public final class Max<M extends DataSource.Metadata> extends TransformedDataSou
 	}
 	
 	@Override
-	public final Iterator<Classification<ClassifierClass>> iterator() {
+	public final Iterator<Datum> iterator() {
 		final int n = this.getInputDimension();
 		final int stride = this.getClassDimension();
 		
-		return new Iterator<Classification<ClassifierClass>>() {
+		return new Iterator<Datum>() {
 			
-			private final Iterator<Classification<ClassifierClass>> i = Max.this.getSource().iterator();
+			private final Iterator<Datum> i = Max.this.getSource().iterator();
 			
 			private final double[] datum = new double[Max.this.getClassDimension()];
 			
-			private final Classification<ClassifierClass> result = new Classification<ClassifierClass>(this.datum, new ClassifierClass.Default(this.datum), 0.0);
+			private final Datum result = new Datum.Default().setValue(this.datum);
 			
 			@Override
 			public final boolean hasNext() {
@@ -46,10 +46,10 @@ public final class Max<M extends DataSource.Metadata> extends TransformedDataSou
 			}
 			
 			@Override
-			public final Classification<ClassifierClass> next() {
+			public final Datum next() {
 				Arrays.fill(this.datum, Double.NEGATIVE_INFINITY);
 				
-				final double[] input = this.i.next().getInput();
+				final double[] input = this.i.next().getValue();
 				
 				for (int j = 0; j < n; j += stride) {
 					for (int k = 0; k < stride; ++k) {
@@ -69,11 +69,11 @@ public final class Max<M extends DataSource.Metadata> extends TransformedDataSou
 	
 	private static final long serialVersionUID = -2472244801933971495L;
 	
-	public static final <M extends DataSource.Metadata> Max<M> max(final DataSource<? extends M, ? extends ClassifierClass> source) {
+	public static final <M extends DataSource.Metadata> Max<M> max(final DataSource<? extends M> source) {
 		return max(source, 1);
 	}
 	
-	public static final <M extends DataSource.Metadata> Max<M> max(final DataSource<? extends M, ? extends ClassifierClass> source, final int stride) {
+	public static final <M extends DataSource.Metadata> Max<M> max(final DataSource<? extends M> source, final int stride) {
 		return new Max<>(source, stride);
 	}
 	

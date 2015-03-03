@@ -2,12 +2,11 @@ package imj3.draft.machinelearning;
 
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
-import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public abstract class NearestNeighborClustering implements Clustering<Prototype> {
+public abstract class NearestNeighborClustering implements Clustering {
 	
 	private final Measure measure;
 	
@@ -27,7 +26,7 @@ public abstract class NearestNeighborClustering implements Clustering<Prototype>
 	}
 	
 	@Override
-	public final NearestNeighborClassifier cluster(final DataSource<?, ?> inputs) {
+	public final NearestNeighborClassifier cluster(final DataSource<?> inputs) {
 		final TicToc timer = new TicToc();
 		final NearestNeighborClassifier result = new NearestNeighborClassifier(this.getMeasure());
 		
@@ -38,7 +37,7 @@ public abstract class NearestNeighborClustering implements Clustering<Prototype>
 		return result;
 	}
 	
-	protected abstract void cluster(DataSource<?, ?> inputs, NearestNeighborClassifier classifier);
+	protected abstract void cluster(DataSource<?> inputs, NearestNeighborClassifier classifier);
 	
 	private static final long serialVersionUID = 2918812158797378496L;
 	
