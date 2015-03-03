@@ -1,6 +1,6 @@
 package imj3.draft.machinelearning;
 
-import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
+import static imj3.draft.machinelearning.Datum.Default.datum;
 
 import java.util.List;
 
@@ -16,28 +16,28 @@ public final class StreamingClustering extends NearestNeighborClustering {
 	}
 	
 	@Override
-	public final void cluster(final DataSource<?, ?> inputs, final NearestNeighborClassifier classifier) {
+	public final void cluster(final DataSource<?> inputs, final NearestNeighborClassifier classifier) {
 		final int k = this.getClusterCount();
-		final List<Prototype> prototypes = classifier.getPrototypes();
-		final Classification<Prototype> tmp = new Classification<>();
+		final List<Datum> prototypes = classifier.getPrototypes();
+		final Datum tmp = new Datum.Default();
 		
-		for (final Classification<?> classification : inputs) {
+		for (final Datum classification : inputs) {
 			final int n = prototypes.size();
 			// XXX should the weights be considered instead of performing a normal classification?
-			final Classification<Prototype> c = classifier.classify(tmp, classification.getInput());
+			final Datum c = classifier.classify(classification, tmp);
 			
 			if (c == null) {
 				throw new NullPointerException();
 			}
 			
 			if (0.0 != c.getScore() && n < k) {
-				prototypes.add(new Prototype(c.getInput().clone()).setClassIndex(n));
+				prototypes.add(datum(c.getValue().clone()).setIndex(n));
 			} else if (0.0 == c.getScore()) {
-				c.getClassifierClass().updateWeight(1.0);
+				c.getPrototype().updateWeight(1.0);
 			} else {
-				final Prototype prototype = c.getClassifierClass();
+				final Datum prototype = c.getPrototype();
 				
-				mergeInto(prototype.toArray(), prototype.getWeight(), c.getInput(), 1.0);
+				mergeInto(prototype.getValue(), prototype.getWeight(), c.getValue(), 1.0);
 				
 				prototype.updateWeight(1.0);
 			}

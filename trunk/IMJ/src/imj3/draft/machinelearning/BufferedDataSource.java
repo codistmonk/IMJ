@@ -1,7 +1,6 @@
 package imj3.draft.machinelearning;
 
 import imj3.draft.machinelearning.DataSource.Metadata;
-import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,17 +11,17 @@ import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-02-04)
- * @param <C>
+ * @param <D>
  */
-public final class BufferedDataSource<M extends Metadata, C extends ClassifierClass> implements DataSource<M, C> {
+public final class BufferedDataSource<M extends Metadata> implements DataSource<M> {
 	
-	private final DataSource<M, C> source;
+	private final DataSource<M> source;
 	
-	private final List<Classification<C>> dataset;
+	private final List<Datum> dataset;
 	
 	private final int bufferLimit;
 	
-	public BufferedDataSource(final DataSource<M, C> source, final int bufferLimit) {
+	public BufferedDataSource(final DataSource<M> source, final int bufferLimit) {
 		this.source = source;
 		
 		if (bufferLimit <= 0) {
@@ -30,7 +29,7 @@ public final class BufferedDataSource<M extends Metadata, C extends ClassifierCl
 			
 			Tools.debugPrint("Buffering...");
 			
-			for (final Classification<C> classification : source) {
+			for (final Datum classification : source) {
 				copyTo(this.dataset, classification);
 			}
 			
@@ -43,7 +42,7 @@ public final class BufferedDataSource<M extends Metadata, C extends ClassifierCl
 		}
 	}
 	
-	public final DataSource<M, C> getSource() {
+	public final DataSource<M> getSource() {
 		return this.source;
 	}
 	
@@ -51,7 +50,7 @@ public final class BufferedDataSource<M extends Metadata, C extends ClassifierCl
 		return this.bufferLimit;
 	}
 	
-	public final List<Classification<C>> getDataset() {
+	public final List<Datum> getDataset() {
 		return this.dataset;
 	}
 	
@@ -61,7 +60,7 @@ public final class BufferedDataSource<M extends Metadata, C extends ClassifierCl
 	}
 	
 	@Override
-	public final Iterator<Classification<C>> iterator() {
+	public final Iterator<Datum> iterator() {
 		return this.getDataset() != null ? this.getDataset().iterator() : this.new BufferedIterator();
 	}
 	
@@ -78,17 +77,17 @@ public final class BufferedDataSource<M extends Metadata, C extends ClassifierCl
 	/**
 	 * @author codistmonk (creation 2015-02-08)
 	 */
-	public final class BufferedIterator implements Iterator<Classification<C>> {
+	public final class BufferedIterator implements Iterator<Datum> {
 		
 		private final int bufferLimit = BufferedDataSource.this.getBufferLimit();
 		
-		private final Iterator<Classification<C>> i = BufferedDataSource.this.getSource().iterator();
+		private final Iterator<Datum> i = BufferedDataSource.this.getSource().iterator();
 		
-		private final List<Classification<C>> buffer = new ArrayList<>(this.bufferLimit);
+		private final List<Datum> buffer = new ArrayList<>(this.bufferLimit);
 		
-		private Iterator<Classification<C>> j = this.buffer.iterator();
+		private Iterator<Datum> j = this.buffer.iterator();
 		
-		public final List<Classification<C>> getBuffer() {
+		public final List<Datum> getBuffer() {
 			return this.buffer;
 		}
 		
@@ -98,7 +97,7 @@ public final class BufferedDataSource<M extends Metadata, C extends ClassifierCl
 		}
 		
 		@Override
-		public final Classification<C> next() {
+		public final Datum next() {
 			if (!this.j.hasNext()) {
 				this.getBuffer().clear();
 				
@@ -116,26 +115,23 @@ public final class BufferedDataSource<M extends Metadata, C extends ClassifierCl
 	
 	private static final long serialVersionUID = -3379089397400242050L;
 	
-	@SuppressWarnings("unchecked")
-	public static final <C extends ClassifierClass> void copyTo(final Collection<Classification<C>> buffer, final Classification<C> classification) {
-		final Prototype prototype = Tools.cast(Prototype.class, classification.getClassifierClass());
+	public static final void copyTo(final Collection<Datum> buffer, final Datum classification) {
+		final Datum prototype = classification.getPrototype();
 		
-		if (prototype != null && classification.getInput() == prototype.toArray()) {
-			final double[] input = classification.getInput().clone();
+		if (prototype != null && classification.getValue() == prototype.getValue()) {
+			final double[] input = classification.getValue().clone();
 			
-			buffer.add(new Classification<>(input,
-					(C) new Prototype(input), classification.getScore()));
+			buffer.add(new Datum.Default().setValue(input).setScore(classification.getScore()));
 		} else {
-			buffer.add(new Classification<>(classification.getInput().clone(),
-					classification.getClassifierClass(), classification.getScore()));
+			buffer.add(new Datum.Default().setValue(classification.getValue().clone()).setPrototype(prototype).setScore(classification.getScore()));
 		}
 	}
 	
-	public static final <M extends Metadata, C extends ClassifierClass> BufferedDataSource<M, C> buffer(final DataSource<M, C> source) {
+	public static final <M extends Metadata> BufferedDataSource<M> buffer(final DataSource<M> source) {
 		return buffer(source, 0);
 	}
 	
-	public static final <M extends Metadata, C extends ClassifierClass> BufferedDataSource<M, C> buffer(final DataSource<M, C> source, final int bufferLimit) {
+	public static final <M extends Metadata> BufferedDataSource<M> buffer(final DataSource<M> source, final int bufferLimit) {
 		return new BufferedDataSource<>(source, bufferLimit);
 	}
 	

@@ -5,8 +5,6 @@ import static net.sourceforge.aprog.tools.Tools.sort;
 
 import imj2.tools.VectorStatistics;
 
-import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
-
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -31,7 +29,7 @@ public final class MedianCutClustering extends NearestNeighborClustering {
 	}
 	
 	@Override
-	protected final void cluster(final DataSource<?, ?> inputs, final NearestNeighborClassifier classifier) {
+	protected final void cluster(final DataSource<?> inputs, final NearestNeighborClassifier classifier) {
 		final Queue<MedianCutClustering.Chunk> chunks = new PriorityQueue<>(new Comparator<MedianCutClustering.Chunk>() {
 			
 			@Override
@@ -52,7 +50,7 @@ public final class MedianCutClustering extends NearestNeighborClustering {
 		}
 		
 		for (final MedianCutClustering.Chunk chunk : chunks) {
-			classifier.getPrototypes().add(new Prototype(chunk.getStatistics().getMeans()));
+			classifier.getPrototypes().add(new Datum.Default().setValue(chunk.getStatistics().getMeans()));
 		}
 	}
 	
@@ -63,7 +61,7 @@ public final class MedianCutClustering extends NearestNeighborClustering {
 	 */
 	public static final class Chunk implements Serializable {
 		
-		private final DataSource<?, ?> inputs;
+		private final DataSource<?> inputs;
 		
 		private final BitSet subset;
 		
@@ -73,13 +71,13 @@ public final class MedianCutClustering extends NearestNeighborClustering {
 		
 		private double score;
 		
-		public Chunk(final DataSource<?, ?> inputs, final boolean initial) {
+		public Chunk(final DataSource<?> inputs, final boolean initial) {
 			this.inputs = inputs;
 			this.subset = initial ? null : new BitSet();
 			this.statistics = new VectorStatistics(inputs.getInputDimension());
 		}
 		
-		public final DataSource<?, ?> getInputs() {
+		public final DataSource<?> getInputs() {
 			return this.inputs;
 		}
 		
@@ -104,9 +102,9 @@ public final class MedianCutClustering extends NearestNeighborClustering {
 			final int d = statistics.getStatistics().length;
 			int i = -1;
 			
-			for (final Classification<?> classification : this.getInputs()) {
+			for (final Datum classification : this.getInputs()) {
 				if (this.contains(++i)) {
-					statistics.addValues(classification.getInput());
+					statistics.addValues(classification.getValue());
 				}
 			}
 			
@@ -133,10 +131,10 @@ public final class MedianCutClustering extends NearestNeighborClustering {
 			int i = -1;
 			int k = -1;
 			
-			for (final Classification<?> classification : this.getInputs()) {
+			for (final Datum classification : this.getInputs()) {
 				if (this.contains(++i)) {
 					indices[++k] = i;
-					values[k] = classification.getInput()[j];
+					values[k] = classification.getValue()[j];
 				}
 			}
 			

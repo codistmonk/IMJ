@@ -10,11 +10,11 @@ import net.sourceforge.aprog.tools.Tools;
  * 
  * @param <M>
  */
-public final class Mean<M extends DataSource.Metadata> extends TransformedDataSource<M, ClassifierClass, ClassifierClass> {
+public final class Mean<M extends DataSource.Metadata> extends TransformedDataSource<M> {
 	
 	private final int stride;
 	
-	public Mean(final DataSource<? extends M, ? extends ClassifierClass> source, final int stride) {
+	public Mean(final DataSource<? extends M> source, final int stride) {
 		super(source);
 		this.stride = stride;
 	}
@@ -30,17 +30,17 @@ public final class Mean<M extends DataSource.Metadata> extends TransformedDataSo
 	}
 	
 	@Override
-	public final Iterator<Classification<ClassifierClass>> iterator() {
+	public final Iterator<Datum> iterator() {
 		final int n = this.getInputDimension();
 		final int stride = this.getClassDimension();
 		
-		return new Iterator<Classification<ClassifierClass>>() {
+		return new Iterator<Datum>() {
 			
-			private final Iterator<Classification<ClassifierClass>> i = Mean.this.getSource().iterator();
+			private final Iterator<Datum> i = Mean.this.getSource().iterator();
 			
 			private final double[] datum = new double[Mean.this.getClassDimension()];
 			
-			private final Classification<ClassifierClass> result = new Classification<ClassifierClass>(this.datum, new ClassifierClass.Default(this.datum), 0.0);
+			private final Datum result = new Datum.Default().setValue(this.datum);
 			
 			@Override
 			public final boolean hasNext() {
@@ -48,10 +48,10 @@ public final class Mean<M extends DataSource.Metadata> extends TransformedDataSo
 			}
 			
 			@Override
-			public final Classification<ClassifierClass> next() {
+			public final Datum next() {
 				Arrays.fill(this.datum, 0.0);
 				
-				final double[] input = this.i.next().getInput();
+				final double[] input = this.i.next().getValue();
 				
 				for (int j = 0; j < n; j += stride) {
 					for (int k = 0; k < stride; ++k) {
@@ -79,11 +79,11 @@ public final class Mean<M extends DataSource.Metadata> extends TransformedDataSo
 	
 	private static final long serialVersionUID = -5585195651747133856L;
 	
-	public static final <M extends DataSource.Metadata> Mean<M> mean(final DataSource<? extends M, ? extends ClassifierClass> source) {
+	public static final <M extends DataSource.Metadata> Mean<M> mean(final DataSource<? extends M> source) {
 		return mean(source, 1);
 	}
 	
-	public static final <M extends DataSource.Metadata> Mean<M> mean(final DataSource<? extends M, ? extends ClassifierClass> source, final int stride) {
+	public static final <M extends DataSource.Metadata> Mean<M> mean(final DataSource<? extends M> source, final int stride) {
 		return new Mean<>(source, stride);
 	}
 	

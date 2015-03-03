@@ -1,12 +1,11 @@
 package imj3.draft.processing;
 
-import imj3.draft.machinelearning.ClassifierClass;
 import imj3.draft.machinelearning.DataSource;
 
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public abstract class Patch2DSource<M extends Patch2DSource.Metadata, C extends ClassifierClass> extends DataSource.Abstract<M, C> {
+public abstract class Patch2DSource<M extends Patch2DSource.Metadata> extends DataSource.Abstract<M> {
 	
 	public Patch2DSource(final M metadata) {
 		super(metadata);

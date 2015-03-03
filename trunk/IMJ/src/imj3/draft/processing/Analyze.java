@@ -7,11 +7,10 @@ import static imj3.draft.machinelearning.Mean.mean;
 import static imj3.draft.processing.Image2DRawSource.raw;
 
 import imj3.core.Channels;
-import imj3.draft.machinelearning.Classification;
 import imj3.draft.machinelearning.ClassifiedDataSource;
 import imj3.draft.machinelearning.Classifier;
-import imj3.draft.machinelearning.ClassifierClass;
 import imj3.draft.machinelearning.DataSource;
+import imj3.draft.machinelearning.Datum;
 import imj3.draft.machinelearning.Histogram;
 import imj3.draft.machinelearning.KMeansClustering;
 import imj3.draft.machinelearning.LinearTransform;
@@ -20,7 +19,6 @@ import imj3.draft.machinelearning.MedianCutClustering;
 import imj3.draft.machinelearning.NearestNeighborClassifier;
 import imj3.draft.machinelearning.NearestNeighborClustering;
 import imj3.draft.machinelearning.StreamingClustering;
-import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 import imj3.tools.AwtImage2D;
 
 import java.io.File;
@@ -53,7 +51,7 @@ public final class Analyze {
 		SwingTools.show(image.getSource(), file.getName(), false);
 		
 		if (false) {
-			final DataSource<Image2DSource.Metadata, ?> raw = raw(image, 2, 1, 2);
+			final DataSource<Image2DSource.Metadata> raw = raw(image, 2, 1, 2);
 			
 			SwingTools.show(image(classes(mean(raw, 3))).getSource(), "Mean", false);
 			SwingTools.show(image(classes(max(raw))).getSource(), "Max", false);
@@ -63,27 +61,26 @@ public final class Analyze {
 		}
 		
 		if (true) {
-			final DataSource<? extends Patch2DSource.Metadata, ?> source = buffer(raw(image, 8, 1, 8));
+			final DataSource<? extends Patch2DSource.Metadata> source = buffer(raw(image, 8, 1, 8));
 			
 			Tools.debugPrint(new Histogram().add(source).getCounts().size());
 			
-			final DataSource<? extends Patch2DSource.Metadata, ?> trainingSet = source;
+			final DataSource<? extends Patch2DSource.Metadata> trainingSet = source;
 			
 //			final NearestNeighborClustering clustering = new KMeansClustering(Measure.Predefined.L2_ES, 256, 8);
 			final NearestNeighborClustering clustering = new MedianCutClustering(Measure.Predefined.L2_ES, 256);
 //			final NearestNeighborClustering clustering = new StreamingClustering(Measure.Predefined.L1_ES, 3);
 			final NearestNeighborClassifier quantizer = clustering.cluster(trainingSet);
-			final DataSource<? extends Patch2DSource.Metadata, Prototype> quantized = classify(source, quantizer);
+			final DataSource<? extends Patch2DSource.Metadata> quantized = classify(source, quantizer);
 			final LinearTransform rgbRenderer = new LinearTransform(Measure.Predefined.L2_ES, newRGBRenderingMatrix(source.getMetadata().getPatchPixelCount()));
-			final DataSource<? extends Patch2DSource.Metadata, ?> rendered = classify(classes(quantized), rgbRenderer);
+			final DataSource<? extends Patch2DSource.Metadata> rendered = classify(classes(quantized), rgbRenderer);
 			
 //			SwingTools.show(image(classes(mean(classes(quantized), 3))).getSource(), clustering.getClass().getSimpleName() + " -> rendered", false);
 			SwingTools.show(image(classes(rendered)).getSource(), clustering.getClass().getSimpleName() + " -> rendered", false);
 		}
 	}
 	
-	public static final <M extends DataSource.Metadata, In extends ClassifierClass, Out extends ClassifierClass>
-	ClassifiedDataSource<M, In, Out> classify(final DataSource<M, In> source, final Classifier<Out> classifier) {
+	public static final <M extends DataSource.Metadata> ClassifiedDataSource<M> classify(final DataSource<M> source, final Classifier classifier) {
 		return new ClassifiedDataSource<>(source, classifier);
 	}
 	
@@ -104,12 +101,12 @@ public final class Analyze {
 		return result;
 	}
 	
-	public static final AwtImage2D image(final DataSource<? extends Patch2DSource.Metadata, ?> source) {
+	public static final AwtImage2D image(final DataSource<? extends Patch2DSource.Metadata> source) {
 		return image(source, new AwtImage2D(Long.toHexString(new Random().nextLong()),
 				source.getMetadata().sizeX(), source.getMetadata().sizeY()));
 	}
 	
-	public static final AwtImage2D image(final DataSource<? extends Patch2DSource.Metadata, ?> source,
+	public static final AwtImage2D image(final DataSource<? extends Patch2DSource.Metadata> source,
 			final AwtImage2D result) {
 		final TicToc timer = new TicToc();
 		final int dimension = source.getInputDimension();
@@ -123,10 +120,10 @@ public final class Analyze {
 		
 		int pixel = 0;
 		
-		for (final Classification<?> c : source) {
+		for (final Datum c : source) {
 			final int x = pixel % width;
 			final int y = pixel / width;
-			final double[] input = c.getInput();
+			final double[] input = c.getValue();
 			final int rgb = dimension == 1 ? gray(input) : argb(input);
 			
 			result.setPixelValue(x, y, rgb);

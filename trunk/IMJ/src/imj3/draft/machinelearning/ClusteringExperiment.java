@@ -1,6 +1,6 @@
 package imj3.draft.machinelearning;
 
-import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
+import static imj3.draft.machinelearning.Datum.Default.datum;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
@@ -22,16 +22,16 @@ public final class ClusteringExperiment {
 	public static final void main(final String[] commandLineArguments) {
 		final int s = 16;
 		final int d = s * s * 3;
-		final int n = 100_000;
+		final int n = 1_000;
 		final int k = 128;
 		
 		Tools.debugPrint("dimension:", d);
 		
-//		final DataSource<?, Prototype> inputs = new RandomPrototypeSource(d, n, 0L);
-//		final DataSource<?, Prototype> inputs = new BufferedDataSource<>(new RandomPrototypeSource(d, n, 0L));
-//		final DataSource<?, Prototype> inputs = new GaussianMixturePrototypeSource(k, d, n, 0L);
-//		final DataSource<?, Prototype> inputs = new BufferedDataSource<>(new GaussianMixturePrototypeSource(k, d, n, 0L));
-		final DataSource<?, Prototype> inputs = new ShuffledDataSource<>(new GaussianMixturePrototypeSource(k, d, n, 0L), 0, 0L);
+//		final DataSource<?> inputs = new RandomPrototypeSource(d, n, 0L);
+//		final DataSource<?> inputs = new BufferedDataSource<>(new RandomPrototypeSource(d, n, 0L));
+//		final DataSource<?> inputs = new GaussianMixturePrototypeSource(k, d, n, 0L);
+//		final DataSource<?> inputs = new BufferedDataSource<>(new GaussianMixturePrototypeSource(k, d, n, 0L));
+		final DataSource<?> inputs = new ShuffledDataSource<>(new GaussianMixturePrototypeSource(k, d, n, 0L), 0, 0L);
 		
 //		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L1, n).cluster(inputs), inputs));
 		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L1, k).cluster(inputs), inputs));
@@ -41,14 +41,14 @@ public final class ClusteringExperiment {
 	}
 	
 	// XXX rename this method to evaluateReconstructionError?
-	public static final <C extends ClassifierClass> double evaluate(final Classifier<C> classifier, final DataSource<?, C> inputs) {
+	public static final double evaluate(final Classifier classifier, final DataSource<?> inputs) {
 		final TicToc timer = new TicToc();
 		double result = 0.0;
-		final Classification<C> tmp = new Classification<>();
+		final Datum tmp = datum();
 		
-		for (final Classification<C> classification : inputs) {
+		for (final Datum classification : inputs) {
 			result += classifier.getClassMeasure().compute(
-					classification.getClassifierClass(), classifier.classify(tmp, classification.getInput()).getClassifierClass());
+					classification.getPrototype(), classifier.classify(classification, tmp).getPrototype());
 		}
 		
 		Tools.debugPrint("Evaluation done in", timer.toc(), "ms");

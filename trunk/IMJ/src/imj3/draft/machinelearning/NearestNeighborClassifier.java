@@ -6,31 +6,31 @@ import java.util.List;
 /**
  * @author codistmonk (creation 2015-02-04)
  */
-public final class NearestNeighborClassifier implements Classifier<NearestNeighborClassifier.Prototype> {
+public final class NearestNeighborClassifier implements Classifier {
 	
-	private final List<NearestNeighborClassifier.Prototype> prototypes;
+	private final List<Datum> prototypes;
 	
 	private final Measure measure;
 	
-	private final ClassifierClass.Measure<Prototype> prototypeMeasure;
+	private final Datum.Measure<Datum> prototypeMeasure;
 	
 	public NearestNeighborClassifier(final Measure measure) {
 		this.prototypes = new ArrayList<>();
 		this.measure = measure;
-		this.prototypeMeasure = new ClassifierClass.Measure.Default<>(measure);
+		this.prototypeMeasure = new Datum.Measure.Default<>(measure);
 	}
 	
 	public final NearestNeighborClassifier updatePrototypeIndices() {
 		final int n = this.getPrototypes().size();
 		
 		for (int i = 0; i < n; ++i) {
-			this.getPrototypes().get(i).setClassIndex(i);
+			this.getPrototypes().get(i).setIndex(i);
 		}
 		
 		return this;
 	}
 	
-	public final List<NearestNeighborClassifier.Prototype> getPrototypes() {
+	public final List<Datum> getPrototypes() {
 		return this.prototypes;
 	}
 	
@@ -44,25 +44,25 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 	}
 	
 	@Override
-	public final ClassifierClass.Measure<Prototype> getClassMeasure() {
+	public final Datum.Measure<Datum> getClassMeasure() {
 		return this.prototypeMeasure;
 	}
 	
 	@Override
-	public final Classification<Prototype> classify(final Classification<Prototype> result, final double... input) {
-		NearestNeighborClassifier.Prototype bestPrototype = null;
+	public final Datum classify(final Datum in, final Datum out) {
+		Datum bestDatum = null;
 		double bestDistance = Double.POSITIVE_INFINITY;
 		
-		for (final NearestNeighborClassifier.Prototype prototype : this.getPrototypes()) {
-			final double d = this.getMeasure().compute(prototype.toArray(), input, bestDistance);
+		for (final Datum prototype : this.getPrototypes()) {
+			final double d = this.getMeasure().compute(prototype.getValue(), in.getValue(), bestDistance);
 			
 			if (d < bestDistance) {
-				bestPrototype = prototype;
+				bestDatum = prototype;
 				bestDistance = d;
 			}
 		}
 		
-		return result.setInput(input).setClassifierClass(bestPrototype).setScore(bestDistance);
+		return out.setValue(in.getValue()).setPrototype(bestDatum).setScore(bestDistance);
 	}
 	
 	@Override
@@ -71,61 +71,5 @@ public final class NearestNeighborClassifier implements Classifier<NearestNeighb
 	}
 	
 	private static final long serialVersionUID = 8724283262153100459L;
-	
-	/**
-	 * @author codistmonk (creation 2015-02-04)
-	 */
-	public static final class Prototype implements ClassifierClass {
-		
-		private int classIndex;
-		
-		private final double[] datum;
-		
-		private double weight;
-		
-		public Prototype(final double[] datum) {
-			this(datum, 1.0);
-		}
-		
-		public Prototype(final double[] datum, final double weight) {
-			this.datum = datum;
-			this.weight = weight;
-		}
-		
-		@Override
-		public final int getClassIndex() {
-			return this.classIndex;
-		}
-		
-		public final Prototype setClassIndex(final int index) {
-			this.classIndex = index;
-			
-			return this;
-		}
-		
-		@Override
-		public final double[] toArray() {
-			return this.datum;
-		}
-		
-		public final double getWeight() {
-			return this.weight;
-		}
-		
-		public final Prototype setWeight(final double weight) {
-			this.weight = weight;
-			
-			return this;
-		}
-		
-		public final Prototype updateWeight(final double delta) {
-			this.weight += delta;
-			
-			return this;
-		}
-		
-		private static final long serialVersionUID = 2041173451916012723L;
-		
-	}
 	
 }

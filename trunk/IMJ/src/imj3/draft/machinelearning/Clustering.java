@@ -5,8 +5,8 @@ import java.io.Serializable;
 /**
  * @author codistmonk (creation 2015-02-04)
  */
-public abstract interface Clustering<C extends ClassifierClass> extends Serializable {
+public abstract interface Clustering extends Serializable {
 	
-	public abstract Classifier<C> cluster(DataSource<?, ?> inputs);
+	public abstract Classifier cluster(DataSource<?> inputs);
 	
 }

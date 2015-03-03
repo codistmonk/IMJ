@@ -5,15 +5,15 @@ import net.sourceforge.aprog.tools.Tools;
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public final class LinearTransform implements Classifier<ClassifierClass> {
+public final class LinearTransform implements Classifier {
 	
 	private final double[][] matrix;
 	
-	private final ClassifierClass.Measure<ClassifierClass> transformedMeasure;
+	private final Datum.Measure<Datum> transformedMeasure;
 	
 	public LinearTransform(final Measure measure, double[][] matrix) {
 		this.matrix = matrix;
-		this.transformedMeasure = new ClassifierClass.Measure.Default<>(measure);
+		this.transformedMeasure = new Datum.Measure.Default<>(measure);
 	}
 	
 	public final double[][] getMatrix() {
@@ -34,20 +34,20 @@ public final class LinearTransform implements Classifier<ClassifierClass> {
 	}
 	
 	@Override
-	public final ClassifierClass.Measure<ClassifierClass> getClassMeasure() {
+	public final Datum.Measure<Datum> getClassMeasure() {
 		return this.transformedMeasure;
 	}
 	
 	@Override
-	public final Classification<ClassifierClass> classify(final Classification<ClassifierClass> result, final double... input) {
+	public final Datum classify(final Datum in, final Datum out) {
 		final int n = this.getMatrixRowCount();
 		final double[] datum = new double[n];
 		
 		for (int i = 0; i < n; ++i) {
-			datum[i] = dot(this.getMatrix()[i], input);
+			datum[i] = dot(this.getMatrix()[i], in.getValue());
 		}
 		
-		return result.setInput(input).setClassifierClass(new ClassifierClass.Default(datum)).setScore(0.0);
+		return out.setValue(in.getValue()).setPrototype(new Datum.Default().setValue(datum)).setScore(0.0);
 	}
 	
 	@Override

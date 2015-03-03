@@ -14,7 +14,6 @@ import static net.sourceforge.aprog.tools.Tools.append;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
-import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import com.thoughtworks.xstream.XStream;
@@ -23,32 +22,21 @@ import com.thoughtworks.xstream.io.xml.StaxDriver;
 import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
-import imj3.draft.machinelearning.Classification;
 import imj3.draft.machinelearning.Classifier;
-import imj3.draft.machinelearning.ClassifierClass;
+import imj3.draft.machinelearning.Datum;
 import imj3.draft.machinelearning.FilteredCompositeDataSource;
 import imj3.draft.machinelearning.DataSource;
-import imj3.draft.machinelearning.Measure;
-import imj3.draft.machinelearning.Measure.Predefined;
-import imj3.draft.machinelearning.MedianCutClustering;
-import imj3.draft.machinelearning.NearestNeighborClassifier;
-import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
+import imj3.draft.processing.Pipeline.Algorithm;
+import imj3.draft.processing.Pipeline.ClassDescription;
+import imj3.draft.processing.Pipeline.SupervisedAlgorithm;
+import imj3.draft.processing.Pipeline.TrainingField;
+import imj3.draft.processing.Pipeline.UnsupervisedAlgorithm;
 import imj3.draft.processing.VisualAnalysis.Context.Refresh;
-import imj3.draft.processing.VisualAnalysis.Pipeline.Algorithm;
-import imj3.draft.processing.VisualAnalysis.Pipeline.ClassDescription;
-import imj3.draft.processing.VisualAnalysis.Pipeline.SupervisedAlgorithm;
-import imj3.draft.processing.VisualAnalysis.Pipeline.TrainingField;
-import imj3.draft.processing.VisualAnalysis.Pipeline.UnsupervisedAlgorithm;
 import imj3.draft.segmentation.ImageComponent;
 import imj3.draft.segmentation.ImageComponent.Layer;
 import imj3.draft.segmentation.ImageComponent.Painter;
 import imj3.tools.AwtImage2D;
 import imj3.tools.CommonSwingTools.Instantiator;
-import imj3.tools.CommonSwingTools.NestedList;
-import imj3.tools.CommonSwingTools.PropertyGetter;
-import imj3.tools.CommonSwingTools.PropertyOrdering;
-import imj3.tools.CommonSwingTools.PropertySetter;
-import imj3.tools.CommonSwingTools.StringGetter;
 import imj3.tools.CommonSwingTools.UserObject;
 import imj3.tools.CommonTools;
 
@@ -76,11 +64,7 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -422,7 +406,7 @@ public final class VisualAnalysis {
 					
 					// TODO run in another thread
 					if (pipeline != null) {
-						final FilteredCompositeDataSource unbufferedTrainingSet = new FilteredCompositeDataSource(c -> c.getClassifierClass().toArray()[0] != 0.0);
+						final FilteredCompositeDataSource unbufferedTrainingSet = new FilteredCompositeDataSource(c -> c.getPrototype().getValue()[0] != 0.0);
 						
 						pipeline.getTrainingFields().forEach(f -> {
 							Tools.debugPrint(f.getImagePath());
@@ -436,7 +420,7 @@ public final class VisualAnalysis {
 							unbufferedTrainingSet.add(source);
 						});
 						
-						final DataSource<?, ?> trainingSet = BufferedDataSource.buffer(unbufferedTrainingSet);
+						final DataSource<?> trainingSet = BufferedDataSource.buffer(unbufferedTrainingSet);
 						
 						for (final Algorithm algorithm : pipeline.getAlgorithms()) {
 							algorithm.train(trainingSet);
@@ -456,21 +440,21 @@ public final class VisualAnalysis {
 					// TODO run in another thread
 					if (pipeline != null && awtImage != null) {
 						if (!pipeline.getAlgorithms().isEmpty()) {
-							final Classifier<ClassifierClass> classifier = (Classifier<ClassifierClass>) pipeline.getAlgorithms().get(0).getClassifier();
+							final Classifier classifier = pipeline.getAlgorithms().get(0).getClassifier();
 							
 							if (classifier != null) {
 								final Image2D image = new AwtImage2D(context.getImageFile().getPath(), awtImage);
 								final Image2DRawSource source = Image2DRawSource.raw(image);
-								final DataSource<? extends Patch2DSource.Metadata, ClassifierClass> classified = Analyze.classify(source, classifier);
+								final DataSource<? extends Patch2DSource.Metadata> classified = Analyze.classify(source, classifier);
 								final Canvas classification = context.getClassification();
 								
 								Tools.debugPrint("Classifying...");
 								final int w = image.getWidth();
 								int pixel = 0;
-								for (final Classification<ClassifierClass> c : classified) {
+								for (final Datum c : classified) {
 									final int x = pixel % w;
 									final int y = pixel / w;
-									final int label = c.getClassifierClass().getClassIndex();
+									final int label = c.getPrototype().getIndex();
 									
 									classification.getImage().setRGB(x, y, 0xFF000000 | label);
 									++pixel;
@@ -1251,7 +1235,9 @@ public final class VisualAnalysis {
 				Pipeline pipeline = this.getMainPanel().getPipeline();
 				
 				if (pipeline == null) {
+					Tools.debugPrint();
 					pipeline = new Pipeline();
+					Tools.debugPrint();
 				}
 				
 				try (final OutputStream output = new FileOutputStream(pipelineFile)) {
@@ -1304,509 +1290,6 @@ public final class VisualAnalysis {
 		public static enum Refresh {
 			
 			NOP, CLEAR, FROM_FILE;
-			
-		}
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-02-16)
-	 */
-	@PropertyOrdering({ "classes", "training", "algorithms" })
-	public static final class Pipeline implements Serializable {
-		
-		private List<TrainingField> trainingFields;
-		
-		private List<Algorithm> algorithms;
-		
-		private List<ClassDescription> classDescriptions;
-		
-		@NestedList(name="classes", element="class", elementClass=ClassDescription.class)
-		public final List<ClassDescription> getClassDescriptions() {
-			if (this.classDescriptions == null) {
-				this.classDescriptions = new ArrayList<>();
-			}
-			
-			return this.classDescriptions;
-		}
-		
-		@NestedList(name="training", element="training field", elementClass=TrainingField.class)
-		public final List<TrainingField> getTrainingFields() {
-			if (this.trainingFields == null) {
-				this.trainingFields = new ArrayList<>();
-			}
-			
-			return this.trainingFields;
-		}
-		
-		@NestedList(name="algorithms", element="algorithm", elementClass=Algorithm.class)
-		public final List<Algorithm> getAlgorithms() {
-			if (this.algorithms == null) {
-				this.algorithms = new ArrayList<>();
-			}
-			
-			return this.algorithms;
-		}
-		
-		public final Pipeline train(final Context context) {
-			final class ConcreteTrainingField implements Serializable {
-				
-				private final Image2D image;
-				
-				private final Image2D labels;
-				
-				private final Rectangle bounds;
-				
-				public ConcreteTrainingField(final Image2D image,
-						final Image2D labels, final Rectangle bounds) {
-					this.image = image;
-					this.labels = labels;
-					this.bounds = bounds;
-				}
-				
-				public final Image2D getImage() {
-					return this.image;
-				}
-				
-				public final Image2D getLabels() {
-					return this.labels;
-				}
-				
-				public final Rectangle getBounds() {
-					return this.bounds;
-				}
-				
-				private static final long serialVersionUID = 1918328132237430637L;
-				
-			}
-			
-			@SuppressWarnings("unchecked")
-			final List<ConcreteTrainingField>[] in = array(new ArrayList<>());
-			@SuppressWarnings("unchecked")
-			final List<ConcreteTrainingField>[] out = array(new ArrayList<>());
-			
-			this.getTrainingFields().forEach(f -> {
-				Tools.debugPrint(f.getImagePath());
-				
-				final Image2D image = read(f.getImagePath());
-				final Image2D labels = read(context.getGroundTruthPathFromImagePath(f.getImagePath()));
-				
-				out[0].add(new ConcreteTrainingField(image, labels, f.getBounds()));
-			});
-			
-			{
-				CommonTools.swap(in, 0, out, 0);
-				
-				final Algorithm algorithm = this.getAlgorithms().get(0);
-				final int patchSize = algorithm.getPatchSize();
-				final int patchSparsity = algorithm.getPatchSparsity();
-				final int stride = algorithm.getStride();
-				final FilteredCompositeDataSource unbufferedTrainingSet = new FilteredCompositeDataSource(c -> c.getClassifierClass().toArray()[0] != 0.0);
-				
-				in[0].forEach(f -> {
-					final Image2D image = f.getImage();
-					final Image2D labels = f.getLabels();
-					final Image2DLabeledRawSource source = Image2DLabeledRawSource.raw(image, labels,
-							patchSize, patchSparsity, stride);
-					
-					source.getMetadata().getBounds().setBounds(f.getBounds());
-					
-					unbufferedTrainingSet.add(source);
-				});
-				
-				final DataSource<?, ?> trainingSet = BufferedDataSource.buffer(unbufferedTrainingSet);
-				
-				algorithm.train(trainingSet);
-				
-				out[0].clear();
-				
-				final int n = trainingSet.getClassDimension();
-				
-				in[0].forEach(f -> {
-					final Image2D image = f.getImage();
-					final Image2D labels = f.getLabels();
-					final Image2DLabeledRawSource source = Image2DLabeledRawSource.raw(image, labels,
-							patchSize, patchSparsity, stride);
-					
-					final Image2D newImage = new DoubleImage2D(image.getId() + "_out",
-							image.getWidth() / stride, image.getHeight() / stride, n);
-					final Image2D newLabels = new DoubleImage2D(labels.getId() + "_tmp",
-							newImage.getWidth(), newImage.getHeight(), 1); // XXX doesn't have to be DoubleImage2D
-					
-					int pixel = -1;
-					
-					for (final Classification<ClassifierClass> c : source) {
-						final double[] prototype = c.getClassifierClass().toArray();
-						
-						++pixel;
-						
-						for (int i = 0; i < n; ++i) {
-							newImage.setPixelChannelValue(pixel, i, Double.doubleToRawLongBits(prototype[i]));
-						}
-					}
-					// TODO
-				});
-			}
-			
-			return this;
-		}
-		
-		public final Pipeline classify(final Image2D image, final Image2D classification) {
-			// TODO
-			
-			return this;
-		}
-		
-		@Override
-		public final String toString() {
-			return "Pipeline";
-		}
-		
-		/**
-		 * @author codistmonk (creation 2015-02-27)
-		 */
-		@PropertyOrdering({ "patchSize", "patchSparsity", "stride", "classifier" })
-		public abstract class Algorithm implements Serializable {
-			
-			private String classifierName = MedianCutClustering.class.getName();
-			
-			private Classifier<?> classifier;
-			
-			private int patchSize;
-			
-			private int patchSparsity;
-			
-			private int stride;
-			
-			@PropertyGetter("classifier")
-			public final String getClassifierName() {
-				return this.classifierName;
-			}
-			
-			@PropertySetter("classifier")
-			public final Algorithm setClassifierName(final String classifierName) {
-				this.classifierName = classifierName;
-				
-				return this;
-			}
-			
-			public final int getPatchSize() {
-				return this.patchSize;
-			}
-			
-			public final Algorithm setPatchSize(final int patchSize) {
-				this.patchSize = patchSize;
-				
-				return this;
-			}
-			
-			@PropertyGetter("patchSize")
-			public final String getPatchSizeAsString() {
-				return Integer.toString(this.getPatchSize());
-			}
-			
-			@PropertySetter("patchSize")
-			public final Algorithm setPatchSize(final String patchSizeAsString) {
-				return this.setPatchSize(Integer.parseInt(patchSizeAsString));
-			}
-			
-			public final int getPatchSparsity() {
-				return this.patchSparsity;
-			}
-			
-			public final Algorithm setPatchSparsity(final int patchSparsity) {
-				this.patchSparsity = patchSparsity;
-				
-				return this;
-			}
-			
-			@PropertyGetter("patchSparsity")
-			public final String getPatchSparsityAsString() {
-				return Integer.toString(this.getPatchSparsity());
-			}
-			
-			@PropertySetter("patchSparsity")
-			public final Algorithm setPatchSparsity(final String patchSparsityAsString) {
-				return this.setPatchSparsity(Integer.parseInt(patchSparsityAsString));
-			}
-			
-			public final int getStride() {
-				return this.stride;
-			}
-			
-			public final Algorithm setStride(final int stride) {
-				this.stride = stride;
-				
-				return this;
-			}
-			
-			@PropertyGetter("stride")
-			public final String getStrideAsString() {
-				return Integer.toString(this.getStride());
-			}
-			
-			@PropertySetter("stride")
-			public final Algorithm setStride(final String strideAsString) {
-				return this.setStride(Integer.parseInt(strideAsString));
-			}
-			
-			public final Classifier<?> getClassifier() {
-				return this.classifier;
-			}
-			
-			public final Algorithm setClassifier(final Classifier<?> classifier) {
-				this.classifier = classifier;
-				
-				return this;
-			}
-			
-			public final Pipeline getPipeline() {
-				return Pipeline.this;
-			}
-			
-			public abstract int getClassCount();
-			
-			public abstract Algorithm train(DataSource<?, ?> trainingSet);
-			
-			@Override
-			public final String toString() {
-				final String classifierName = this.getClassifierName();
-				final String suffix = this instanceof UnsupervisedAlgorithm ? " (unsupervised: " + this.getClassCount() + ")" : "";
-				
-				return classifierName.substring(classifierName.lastIndexOf('.') + 1) + suffix;
-			}
-			
-			private static final long serialVersionUID = 7689582280746561160L;
-			
-		}
-		
-		/**
-		 * @author codistmonk (creation 2015-02-24)
-		 */
-		public final class UnsupervisedAlgorithm extends Algorithm {
-			
-			private int classCount;
-			
-			@Override
-			public final int getClassCount() {
-				return this.classCount;
-			}
-			
-			public final UnsupervisedAlgorithm setClassCount(final int classCount) {
-				this.classCount = classCount;
-				
-				return this;
-			}
-			
-			@PropertyGetter("classCount")
-			public final String getClassCountAsString() {
-				return Integer.toString(this.getClassCount());
-			}
-			
-			@PropertySetter("classCount")
-			public final UnsupervisedAlgorithm setClassCount(final String classCountAsString) {
-				return this.setClassCount(Integer.parseInt(classCountAsString));
-			}
-			
-			@Override
-			public final UnsupervisedAlgorithm train(final DataSource<?, ?> trainingSet) {
-				return (UnsupervisedAlgorithm) this.setClassifier(new MedianCutClustering(
-						Measure.Predefined.L2_ES, this.getClassCount()).cluster(trainingSet).updatePrototypeIndices());
-			}
-			
-			private static final long serialVersionUID = 130550869712582710L;
-			
-		}
-		
-		/**
-		 * @author codistmonk (creation 2015-02-24)
-		 */
-		public final class SupervisedAlgorithm extends Algorithm {
-			
-			private Map<String, Integer> prototypeCounts;
-			
-			public final Map<String, Integer> getPrototypeCounts() {
-				if (this.prototypeCounts == null) {
-					this.prototypeCounts = new LinkedHashMap<>();
-				}
-				
-				{
-					final Collection<String> classes = new LinkedHashSet<>();
-					
-					for (final ClassDescription classDescription : this.getPipeline().getClassDescriptions()) {
-						final String name = classDescription.getName();
-						
-						classes.add(name);
-						
-						if (!this.prototypeCounts.containsKey(name)) {
-							this.prototypeCounts.put(name, 1);
-						}
-					}
-					
-					this.prototypeCounts.keySet().retainAll(classes);
-				}
-				
-				return this.prototypeCounts;
-			}
-			
-			@PropertyGetter("prototypes")
-			public final String getPrototypeCountsAsString() {
-				final String string = this.getPrototypeCounts().toString();
-				
-				return string.substring(1, string.length() - 1);
-			}
-			
-			@PropertySetter("prototypes")
-			public final SupervisedAlgorithm setPrototypeCounts(final String prototypeCountsAsString) {
-				final Map<String, Integer> prototypeCounts = this.getPrototypeCounts();
-				final Map<String, Integer> tmp = new HashMap<>();
-				
-				for (final String keyValue : prototypeCountsAsString.split(",")) {
-					final String[] keyAndValue = keyValue.split("=");
-					final String key = keyAndValue[0].trim();
-					final int value = Integer.parseInt(keyAndValue[1].trim());
-					
-					if (!prototypeCounts.containsKey(key)) {
-						throw new IllegalArgumentException();
-					}
-					
-					tmp.put(key, value);
-				}
-				
-				if (!tmp.keySet().containsAll(prototypeCounts.keySet())) {
-					throw new IllegalArgumentException();
-				}
-				
-				this.prototypeCounts.putAll(tmp);
-				
-				return this;
-			}
-			
-			@Override
-			public final int getClassCount() {
-				return this.getPipeline().getClassDescriptions().size();
-			}
-			
-			@Override
-			public final SupervisedAlgorithm train(final DataSource<?, ?> trainingSet) {
-				final Predefined measure = Measure.Predefined.L2_ES;
-				final NearestNeighborClassifier classifier = new NearestNeighborClassifier(measure);
-				int classIndex = -1;
-				
-				for (final Map.Entry<String, Integer> entry : this.getPrototypeCounts().entrySet()) {
-					final int i = ++classIndex;
-					
-					final NearestNeighborClassifier subClassifier = new MedianCutClustering(
-							measure, entry.getValue()).cluster(new FilteredCompositeDataSource(
-									c -> c.getClassifierClass().getClassIndex() == i).add(trainingSet));
-					
-					for (final Prototype prototype : subClassifier.getPrototypes()) {
-						classifier.getPrototypes().add(prototype.setClassIndex(i));
-					}
-				}
-				
-				return (SupervisedAlgorithm) this.setClassifier(classifier);
-			}
-			
-			private static final long serialVersionUID = 6887222324834498847L;
-			
-		}
-		
-		private static final long serialVersionUID = -4539259556658072410L;
-		
-		/**
-		 * @author codistmonk (creation 2015-02-16)
-		 */
-		@PropertyOrdering({ "name", "label" })
-		public static final class ClassDescription implements Serializable {
-			
-			private String name = "class";
-			
-			private int label = 0xFF000000;
-			
-			@StringGetter
-			@PropertyGetter("name")
-			public final String getName() {
-				return this.name;
-			}
-			
-			@PropertySetter("name")
-			public final ClassDescription setName(final String name) {
-				this.name = name;
-				
-				return this;
-			}
-			
-			public final int getLabel() {
-				return this.label;
-			}
-			
-			public final ClassDescription setLabel(final int label) {
-				this.label = label;
-				
-				return this;
-			}
-			
-			@PropertyGetter("label")
-			public final String getLabelAsString() {
-				return "#" + Integer.toHexString(this.getLabel()).toUpperCase(Locale.ENGLISH);
-			}
-			
-			@PropertySetter("label")
-			public final ClassDescription setLabel(final String labelAsString) {
-				return this.setLabel((int) Long.parseLong(labelAsString.substring(1), 16));
-			}
-			
-			private static final long serialVersionUID = 4974707407567297906L;
-			
-		}
-		
-		/**
-		 * @author codistmonk (creation 2015-02-17)
-		 */
-		@PropertyOrdering({ "image", "bounds" })
-		public static final class TrainingField implements Serializable {
-			
-			private String imagePath = "";
-			
-			private final Rectangle bounds = new Rectangle();
-			
-			@PropertyGetter("image")
-			public final String getImagePath() {
-				return this.imagePath;
-			}
-			
-			@PropertySetter("image")
-			public final TrainingField setImagePath(final String imagePath) {
-				this.imagePath = imagePath;
-				
-				return this;
-			}
-			
-			public final Rectangle getBounds() {
-				return this.bounds;
-			}
-			
-			@PropertyGetter("bounds")
-			public final String getBoundsAsString() {
-				return join(",", this.getBounds().x, this.getBounds().y, this.getBounds().width, this.getBounds().height);
-			}
-			
-			@PropertySetter("bounds")
-			public final TrainingField setBounds(final String boundsAsString) {
-				final int[] bounds = Arrays.stream(boundsAsString.split(",")).mapToInt(Integer::parseInt).toArray();
-				
-				this.getBounds().setBounds(bounds[0], bounds[1], bounds[2], bounds[3]);
-				
-				return this;
-			}
-			
-			@Override
-			public final String toString() {
-				return new File(this.getImagePath()).getName() + "[" + this.getBoundsAsString() + "]";
-			}
-			
-			private static final long serialVersionUID = 847822079141878928L;
 			
 		}
 		

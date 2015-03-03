@@ -1,6 +1,6 @@
 package imj3.draft.machinelearning;
 
-import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
+import static imj3.draft.machinelearning.Datum.Default.datum;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -17,44 +17,44 @@ public final class GreedyAssociativeStreamingClustering extends NearestNeighborC
 	}
 	
 	@Override
-	protected final void cluster(final DataSource<?, ?> inputs, final NearestNeighborClassifier classifier) {
+	protected final void cluster(final DataSource<?> inputs, final NearestNeighborClassifier classifier) {
 		final int k = this.getClusterCount();
-		final List<GreedyAssociativeStreamingClustering.EndPoint<Prototype>> sources = new ArrayList<>(k);
-		final List<GreedyAssociativeStreamingClustering.EndPoint<Prototype>> targets = new ArrayList<>(k);
-		final Iterator<Classification<ClassifierClass>> i = (Iterator) inputs.iterator();
+		final List<GreedyAssociativeStreamingClustering.EndPoint<Datum>> sources = new ArrayList<>(k);
+		final List<GreedyAssociativeStreamingClustering.EndPoint<Datum>> targets = new ArrayList<>(k);
+		final Iterator<Datum> i = (Iterator) inputs.iterator();
 		
 		for (int j = 0; j < k && i.hasNext(); ++j) {
-			sources.add(new GreedyAssociativeStreamingClustering.EndPoint<>(new Prototype(i.next().getInput().clone())));
+			sources.add(new GreedyAssociativeStreamingClustering.EndPoint<>(datum(i.next().getValue().clone())));
 		}
 		
-		final List<GreedyAssociativeStreamingClustering.Association<Prototype>> associations = new ArrayList<>(k * k);
+		final List<GreedyAssociativeStreamingClustering.Association<Datum>> associations = new ArrayList<>(k * k);
 		
 		while (i.hasNext()) {
 			for (int j = 0; j < k && i.hasNext(); ++j) {
-				targets.add(new GreedyAssociativeStreamingClustering.EndPoint<>(new Prototype(i.next().getInput().clone())));
+				targets.add(new GreedyAssociativeStreamingClustering.EndPoint<>(datum(i.next().getValue().clone())));
 			}
 			
-			for (final GreedyAssociativeStreamingClustering.EndPoint<Prototype> source : sources) {
-				for (final GreedyAssociativeStreamingClustering.EndPoint<Prototype> target: targets) {
-					final double cost = Measure.Predefined.L1.compute(source.getObject().toArray(), target.getObject().toArray());
+			for (final GreedyAssociativeStreamingClustering.EndPoint<Datum> source : sources) {
+				for (final GreedyAssociativeStreamingClustering.EndPoint<Datum> target: targets) {
+					final double cost = Measure.Predefined.L1.compute(source.getObject().getValue(), target.getObject().getValue());
 					
 					associations.add(new GreedyAssociativeStreamingClustering.Association<>(source, target, cost));
 				}
 			}
 			
-			for (final GreedyAssociativeStreamingClustering.Association<Prototype> association : associations) {
+			for (final GreedyAssociativeStreamingClustering.Association<Datum> association : associations) {
 				if (!association.isLocked()) {
-					final GreedyAssociativeStreamingClustering.EndPoint<Prototype> source = association.getSource();
-					final GreedyAssociativeStreamingClustering.EndPoint<Prototype> target = association.getTarget();
+					final GreedyAssociativeStreamingClustering.EndPoint<Datum> source = association.getSource();
+					final GreedyAssociativeStreamingClustering.EndPoint<Datum> target = association.getTarget();
 					
 					source.setLocked(true);
 					target.setLocked(true);
 					
-					final Prototype sourcePrototype = source.getObject();
-					final Prototype targetPrototype = target.getObject();
+					final Datum sourcePrototype = source.getObject();
+					final Datum targetPrototype = target.getObject();
 					
-					StreamingClustering.mergeInto(sourcePrototype.toArray(), sourcePrototype.getWeight(),
-							targetPrototype.toArray(), targetPrototype.getWeight());
+					StreamingClustering.mergeInto(sourcePrototype.getValue(), sourcePrototype.getWeight(),
+							targetPrototype.getValue(), targetPrototype.getWeight());
 				}
 			}
 			
@@ -62,7 +62,7 @@ public final class GreedyAssociativeStreamingClustering extends NearestNeighborC
 			associations.clear();
 		}
 		
-		for (final GreedyAssociativeStreamingClustering.EndPoint<Prototype> source : sources) {
+		for (final GreedyAssociativeStreamingClustering.EndPoint<Datum> source : sources) {
 			classifier.getPrototypes().add(source.getObject());
 		}
 	}

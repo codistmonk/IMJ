@@ -7,7 +7,7 @@ import java.io.Serializable;
 /**
  * @author codistmonk (creation 2015-02-04)
  */
-public abstract interface DataSource<M extends DataSource.Metadata, C extends ClassifierClass> extends Serializable, Iterable<Classification<C>> {
+public abstract interface DataSource<M extends DataSource.Metadata> extends Serializable, Iterable<Datum> {
 	
 	public abstract M getMetadata();
 	
@@ -15,6 +15,7 @@ public abstract interface DataSource<M extends DataSource.Metadata, C extends Cl
 	
 	public abstract int getClassDimension();
 	
+	// TODO use long instead of int
 	public default int size() {
 		int result = 0;
 		
@@ -31,9 +32,9 @@ public abstract interface DataSource<M extends DataSource.Metadata, C extends Cl
 	 * @author codistmonk (creation 2015-02-08)
 	 *
 	 * @param <M>
-	 * @param <C>
+	 * @param <D>
 	 */
-	public static abstract class Abstract<M extends DataSource.Metadata, C extends ClassifierClass>  implements DataSource<M, C> {
+	public static abstract class Abstract<M extends DataSource.Metadata> implements DataSource<M> {
 		
 		private final M metadata;
 		

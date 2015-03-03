@@ -1,8 +1,7 @@
 package imj3.draft.machinelearning;
 
+import static imj3.draft.machinelearning.Datum.Default.datum;
 import static net.sourceforge.aprog.tools.MathTools.square;
-
-import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -13,31 +12,30 @@ import java.util.Random;
 /**
  * @author codistmonk (creation 2015-02-04)
  */
-public final class GaussianMixturePrototypeSource extends DataSource.Abstract<GaussianMixturePrototypeSource.Metadata, Prototype> {
+public final class GaussianMixturePrototypeSource extends DataSource.Abstract<GaussianMixturePrototypeSource.Metadata> {
 	
 	private final int dimension;
 	
 	private final int size;
 	
 	public GaussianMixturePrototypeSource(final int n, final int dimension, final int size, final long seed) {
-		super(new Metadata(n, dimension, size, seed));
+		super(new Metadata(n, dimension, seed));
 		this.dimension = dimension;
 		this.size = size;
 	}
 	
 	@Override
-	public final Iterator<Classification<Prototype>> iterator() {
+	public final Iterator<Datum> iterator() {
 		final int d = this.getInputDimension();
 		final List<GaussianMixturePrototypeSource.Gaussian> gaussians = GaussianMixturePrototypeSource.this.getMetadata().getGaussians();
 		
-		return new Iterator<Classification<Prototype>>() {
+		return new Iterator<Datum>() {
 			
 			private final Random random = new Random(GaussianMixturePrototypeSource.this.getMetadata().getSeed());
 			
 			private final double[] datum = new double[d];
 			
-			private final Classification<Prototype> result = new Classification<>(
-					this.datum, new Prototype(this.datum), 0.0);
+			private final Datum result = datum(this.datum);
 			
 			private int i = 0;
 			
@@ -47,7 +45,7 @@ public final class GaussianMixturePrototypeSource extends DataSource.Abstract<Ga
 			}
 			
 			@Override
-			public final Classification<Prototype> next() {
+			public final Datum next() {
 				++this.i;
 				
 				final GaussianMixturePrototypeSource.Gaussian gaussian = gaussians.get(this.random.nextInt(gaussians.size()));
@@ -115,7 +113,7 @@ public final class GaussianMixturePrototypeSource extends DataSource.Abstract<Ga
 		
 		private final long seed;
 		
-		public Metadata(final int n, final int dimension, final int size, final long seed) {
+		public Metadata(final int n, final int dimension, final long seed) {
 			this.gaussians = new ArrayList<>(n);
 			
 			final Random random = new Random(seed);

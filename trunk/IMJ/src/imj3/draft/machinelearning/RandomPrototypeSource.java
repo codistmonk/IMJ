@@ -1,14 +1,12 @@
 package imj3.draft.machinelearning;
 
-import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
-
 import java.util.Iterator;
 import java.util.Random;
 
 /**
  * @author codistmonk (creation 2015-02-04)
  */
-public final class RandomPrototypeSource extends DataSource.Abstract<RandomPrototypeSource.Metadata, Prototype> {
+public final class RandomPrototypeSource extends DataSource.Abstract<RandomPrototypeSource.Metadata> {
 	
 	private final int dimension;
 	
@@ -21,17 +19,14 @@ public final class RandomPrototypeSource extends DataSource.Abstract<RandomProto
 	}
 	
 	@Override
-	public final Iterator<Classification<Prototype>> iterator() {
+	public final Iterator<Datum> iterator() {
 		final int d = this.getInputDimension();
 		
-		return new Iterator<Classification<Prototype>>() {
+		return new Iterator<Datum>() {
 			
 			private final Random random = new Random(RandomPrototypeSource.this.getMetadata().getSeed());
 			
-			private final double[] datum = new double[d];
-			
-			private final Classification<Prototype> result = new Classification<>(
-					this.datum, new Prototype(this.datum), 0.0);
+			private final Datum result = new Datum.Default().setValue(new double[d]);
 			
 			private int i = 0;
 			
@@ -41,11 +36,13 @@ public final class RandomPrototypeSource extends DataSource.Abstract<RandomProto
 			}
 			
 			@Override
-			public final Classification<Prototype> next() {
+			public final Datum next() {
+				final double[] datum = this.result.setIndex(this.i).getValue();
+				
 				++this.i;
 				
 				for (int i = 0; i < d; ++i) {
-					this.datum[i] = this.random.nextDouble();
+					datum[i] = this.random.nextDouble();
 				}
 				
 				if (SIMULATE_SLOW_ACCESS) {
