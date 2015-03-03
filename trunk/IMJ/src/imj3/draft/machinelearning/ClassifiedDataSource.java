@@ -1,7 +1,5 @@
 package imj3.draft.machinelearning;
 
-import java.util.Iterator;
-
 /**
  * @author codistmonk (creation 2015-02-08)
  */
@@ -25,10 +23,10 @@ public final class ClassifiedDataSource extends TransformedDataSource {
 	}
 	
 	@Override
-	public final Iterator<Datum> iterator() {
-		return new Iterator<Datum>() {
+	public final Iterator iterator() {
+		return new Iterator.Abstract<Iterator>() {
 			
-			private final Iterator<Datum> inputs = ClassifiedDataSource.this.getSource().iterator();
+			private final Iterator inputs = ClassifiedDataSource.this.getSource().iterator();
 			
 			private final Datum tmp = new Datum.Default();
 			
@@ -41,6 +39,8 @@ public final class ClassifiedDataSource extends TransformedDataSource {
 			public final Datum next() {
 				return ClassifiedDataSource.this.getClassifier().classify(this.inputs.next(), this.tmp);
 			}
+			
+			private static final long serialVersionUID = 6126895304133041154L;
 			
 		};
 	}

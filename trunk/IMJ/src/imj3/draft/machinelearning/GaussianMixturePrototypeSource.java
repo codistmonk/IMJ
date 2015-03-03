@@ -45,11 +45,11 @@ public final class GaussianMixturePrototypeSource extends DataSource.Abstract<Da
 	}
 	
 	@Override
-	public final Iterator<Datum> iterator() {
+	public final Iterator iterator() {
 		final int d = this.getInputDimension();
 		final List<GaussianMixturePrototypeSource.Gaussian> gaussians = GaussianMixturePrototypeSource.this.getGaussians();
 		
-		return new Iterator<Datum>() {
+		return new Iterator.Abstract<Iterator>() {
 			
 			private final Random random = new Random(GaussianMixturePrototypeSource.this.getSeed());
 			
@@ -77,6 +77,8 @@ public final class GaussianMixturePrototypeSource extends DataSource.Abstract<Da
 				
 				return this.result;
 			}
+			
+			private static final long serialVersionUID = 6126895304133041154L;
 			
 		};
 	}

@@ -5,7 +5,6 @@ import imj3.draft.machinelearning.Datum;
 
 import java.awt.Rectangle;
 import java.util.Arrays;
-import java.util.Iterator;
 
 /**
  * @author codistmonk (creation 2015-02-06)
@@ -42,7 +41,7 @@ public abstract class Image2DSource extends Patch2DSource {
 	}
 	
 	@Override
-	public final Iterator<Datum> iterator() {
+	public final Iterator iterator() {
 		return this.new PatchIterator();
 	}
 	
@@ -81,7 +80,7 @@ public abstract class Image2DSource extends Patch2DSource {
 	/**
 	 * @author codistmonk (creation 2015-03-03)
 	 */
-	public final class PatchIterator implements Iterator<Datum> {
+	public final class PatchIterator extends Iterator.Abstract<Iterator> {
 		
 		private final int stride = Image2DSource.this.getStride();
 		
@@ -126,6 +125,9 @@ public abstract class Image2DSource extends Patch2DSource {
 			
 			return result;
 		}
+		
+		private static final long serialVersionUID = 4860177156580289698L;
+		
 	}
 	
 	private static final long serialVersionUID = -774979627942684978L;

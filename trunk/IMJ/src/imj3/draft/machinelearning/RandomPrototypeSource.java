@@ -1,6 +1,5 @@
 package imj3.draft.machinelearning;
 
-import java.util.Iterator;
 import java.util.Random;
 
 /**
@@ -25,10 +24,10 @@ public final class RandomPrototypeSource extends DataSource.Abstract<DataSource>
 	}
 	
 	@Override
-	public final Iterator<Datum> iterator() {
+	public final Iterator iterator() {
 		final int d = this.getInputDimension();
 		
-		return new Iterator<Datum>() {
+		return new Iterator.Abstract<Iterator>() {
 			
 			private final Random random = new Random(RandomPrototypeSource.this.getSeed());
 			
@@ -61,6 +60,8 @@ public final class RandomPrototypeSource extends DataSource.Abstract<DataSource>
 				
 				return this.result;
 			}
+			
+			private static final long serialVersionUID = 6126895304133041154L;
 			
 		};
 	}

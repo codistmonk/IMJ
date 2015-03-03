@@ -2,8 +2,6 @@ package imj3.draft.machinelearning;
 
 import static imj3.draft.machinelearning.Datum.Default.datum;
 
-import java.util.Iterator;
-
 /**
  * @author codistmonk (creation 2015-02-08)
  */
@@ -24,10 +22,10 @@ public final class ClassIndexDataSource extends TransformedDataSource {
 	}
 	
 	@Override
-	public final Iterator<Datum> iterator() {
-		return new Iterator<Datum>() {
+	public final Iterator iterator() {
+		return new Iterator.Abstract<Iterator>() {
 			
-			private final Iterator<Datum> i = ClassIndexDataSource.this.getSource().iterator();
+			private final Iterator i = ClassIndexDataSource.this.getSource().iterator();
 			
 			private final Datum result = datum(null).setPrototype(datum(0.0));
 			
@@ -42,6 +40,8 @@ public final class ClassIndexDataSource extends TransformedDataSource {
 				
 				return this.result;
 			}
+			
+			private static final long serialVersionUID = 6126895304133041154L;
 			
 		};
 	}
