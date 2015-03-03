@@ -10,15 +10,12 @@ import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
-
 import imj2.core.Image2D;
 import imj2.draft.KMeans;
 import imj2.draft.PaletteBasedHistograms;
 import imj2.draft.PaletteBasedHistograms.Patch2DProcessor;
-import imj2.pixel3d.MouseHandler;
 import imj2.tools.AwtBackedImage;
 import imj2.tools.IMJTools;
-
 import imj3.core.Channels;
 import imj3.tools.AwtImage2D;
 
@@ -83,6 +80,7 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
 
+import net.sourceforge.aprog.swing.MouseHandler;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -566,7 +564,7 @@ public final class VisualSegmentation {
 		// XXX temporary fix for Java 8 defect on Mac OS X Lion with low graphic capabilities
 		newView.setMaximumSize(new Dimension(1024, 1024));
 		
-		new MouseHandler(null) {
+		new MouseHandler() {
 			
 			@Override
 			public final void mouseClicked(final MouseEvent event) {
