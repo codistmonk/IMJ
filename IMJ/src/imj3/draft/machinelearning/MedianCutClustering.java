@@ -1,9 +1,8 @@
 package imj3.draft.machinelearning;
 
 import static net.sourceforge.aprog.tools.Tools.intRange;
+import static net.sourceforge.aprog.tools.Tools.sort;
 
-import imj2.pixel3d.OrthographicRenderer;
-import imj2.pixel3d.OrthographicRenderer.IntComparator;
 import imj2.tools.VectorStatistics;
 
 import imj3.draft.machinelearning.NearestNeighborClassifier.Prototype;
@@ -14,6 +13,8 @@ import java.util.BitSet;
 import java.util.Comparator;
 import java.util.PriorityQueue;
 import java.util.Queue;
+
+import net.sourceforge.aprog.tools.IntComparator;
 
 /**
  * Differences with "original" median-cut:<ul>
@@ -139,7 +140,7 @@ public final class MedianCutClustering extends NearestNeighborClustering {
 				}
 			}
 			
-			OrthographicRenderer.dualPivotQuicksort(indexIndices, 0, n, new IntComparator() {
+			sort(indexIndices, 0, n, new IntComparator() {
 				
 				@Override
 				public final int compare(final int index1, final int index2) {

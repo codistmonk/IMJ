@@ -3,9 +3,6 @@ package imj3.tools;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
-import imj2.pixel3d.MouseHandler;
-
 import imj3.tools.CommonTools.Property;
 
 import java.awt.Component;
@@ -59,6 +56,7 @@ import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
+import net.sourceforge.aprog.swing.MouseHandler;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
@@ -75,7 +73,7 @@ public final class CommonSwingTools {
 	public static final void setModel(final JTree tree, final Object object, final String rootEditTitle, final Instantiator instantiator) {
 		final DefaultTreeModel model = new DefaultTreeModel(buildNode(tree, new UIScaffold(object), rootEditTitle));
 		
-		new MouseHandler(null) {
+		new MouseHandler() {
 			
 			@Override
 			public final void mouseClicked(final MouseEvent event) {

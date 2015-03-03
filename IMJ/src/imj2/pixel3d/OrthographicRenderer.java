@@ -2,12 +2,13 @@ package imj2.pixel3d;
 
 import static java.lang.Math.min;
 import static java.util.Arrays.copyOf;
+import static net.sourceforge.aprog.tools.Tools.sort;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
-import java.io.Serializable;
 
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
+import net.sourceforge.aprog.tools.IntComparator;
 
 /**
  * @author codistmonk (creation 2014-04-27)
@@ -128,7 +129,7 @@ public final class OrthographicRenderer implements Renderer {
 	public final void render() {
 		final int n = this.pixelCount;
 		
-		dualPivotQuicksort(this.indices, 0, n, this.comparator);
+		sort(this.indices, 0, n, this.comparator);
 		
 		final DataBuffer dataBuffer = this.canvas.getRaster().getDataBuffer();
 		
@@ -181,20 +182,6 @@ public final class OrthographicRenderer implements Renderer {
 	
 	public static final DefaultFactory<OrthographicRenderer> FACTORY = DefaultFactory.forClass(OrthographicRenderer.class);
 	
-	public static final void checkSorted(final int[] values, final IntComparator comparator) {
-		final int n = values.length - 1;
-		
-		for (int i = 0; i < n; ++i) {
-			if (0 < comparator.compare(values[i], values[i + 1])) {
-				throw new RuntimeException("element(" + i + ") > element(" + (i + 1) + ")");
-			}
-		}
-	}
-	
-	public static final void dualPivotQuicksort(final int[] values, final int start, final int end, final IntComparator comparator) {
-		DualPivotQuicksort.sort(values, start, end - 1, null, 0, 0, comparator);
-	}
-	
 	public static final int overlay(final int previousRGB, final int argb) {
 		final int alpha = argb >>> 24;
 		final int beta = 255 - alpha;
@@ -203,34 +190,6 @@ public final class OrthographicRenderer implements Renderer {
 		final int blue = (((argb & B) * alpha + (previousRGB & B) * beta) / 255) & B;
 		
 		return 0xFF000000 | red | green | blue;
-	}
-	
-	/**
-	 * @author codistmonk (creation 2014-04-29)
-	 */
-	public static abstract interface IntComparator extends Serializable {
-		
-		public abstract int compare(int value1, int value2);
-		
-		/**
-		 * @author codistmonk (creation 2014-05-23)
-		 */
-		public static final class Default implements IntComparator {
-			
-			@Override
-			public final int compare(final int value1, final int value2) {
-				return value1 < value2 ? -1 : value1 == value2 ? 0 : 1;
-			}
-			
-			/**
-			 * {@value}.
-			 */
-			private static final long serialVersionUID = 2338544738825140920L;
-			
-			public static final Default INSTANCE = new Default();
-			
-		}
-		
 	}
 	
 }

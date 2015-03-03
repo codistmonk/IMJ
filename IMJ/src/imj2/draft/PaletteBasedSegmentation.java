@@ -32,7 +32,6 @@ import static net.sourceforge.aprog.tools.Tools.writeObject;
 
 import imj2.draft.PaletteBasedSegmentation.HistogramView.PointsUpdatedEvent;
 import imj2.draft.PaletteBasedSegmentation.HistogramView.SegmentsUpdatedEvent;
-import imj2.pixel3d.MouseHandler;
 import imj2.pixel3d.OrbiterMouseHandler;
 import imj2.pixel3d.OrthographicRenderer;
 import imj2.pixel3d.Renderer;
@@ -82,6 +81,7 @@ import jgencode.primitivelists.IntList;
 
 import net.sourceforge.aprog.events.EventManager;
 import net.sourceforge.aprog.events.EventManager.Event.Listener;
+import net.sourceforge.aprog.swing.MouseHandler;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.Factory;
@@ -172,7 +172,7 @@ public final class PaletteBasedSegmentation {
 		
 		histogramView.getUserPoints().addAll(Double.NaN, 0.0, 0.0);
 		
-		new MouseHandler(null) {
+		new MouseHandler() {
 			
 			@Override
 			public final void mouseClicked(final MouseEvent event) {

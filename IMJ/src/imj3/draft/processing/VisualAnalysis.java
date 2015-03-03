@@ -20,7 +20,6 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 
-import imj2.pixel3d.MouseHandler;
 import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
@@ -80,7 +79,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -112,10 +110,10 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 
+import net.sourceforge.aprog.swing.MouseHandler;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Pair;
 import net.sourceforge.aprog.tools.Tools;
 
 /**
@@ -708,7 +706,7 @@ public final class VisualAnalysis {
 				
 			});
 			
-			new MouseHandler(null) {
+			new MouseHandler() {
 				
 				private boolean dragging;
 				

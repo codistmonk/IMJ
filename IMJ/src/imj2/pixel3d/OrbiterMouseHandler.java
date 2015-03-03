@@ -12,6 +12,8 @@ import java.awt.event.MouseWheelEvent;
 import java.io.Serializable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import net.sourceforge.aprog.swing.MouseHandler;
+
 /**
  * @author codistmonk (creation 2014-03-13)
  */

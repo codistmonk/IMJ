@@ -5,7 +5,6 @@ import static java.lang.Math.min;
 import static net.sourceforge.aprog.xml.XMLTools.getNumber;
 import static net.sourceforge.aprog.xml.XMLTools.getString;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
-import imj2.pixel3d.MouseHandler;
 import imj3.core.Channels;
 import imj3.core.Image2D;
 
@@ -27,6 +26,7 @@ import javax.swing.JComponent;
 
 import org.w3c.dom.Document;
 
+import net.sourceforge.aprog.swing.MouseHandler;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
@@ -244,7 +244,7 @@ public final class MultifileImage2D implements Image2D {
 			this.image = new MultifileImage2D(source, 0);
 			this.offset = new Point();
 			
-			new MouseHandler(null) {
+			new MouseHandler() {
 				
 				private final Point mouse = new Point();
 				
