@@ -105,12 +105,12 @@ public final class Pipeline implements Serializable {
 				final Image2DLabeledRawSource source = Image2DLabeledRawSource.raw(image, labels,
 						patchSize, patchSparsity, stride);
 				
-				source.getMetadata().getBounds().setBounds(f.getBounds());
+				source.getBounds().setBounds(f.getBounds());
 				
 				unbufferedTrainingSet.add(source);
 			});
 			
-			final DataSource<?> trainingSet = BufferedDataSource.buffer(unbufferedTrainingSet);
+			final DataSource trainingSet = BufferedDataSource.buffer(unbufferedTrainingSet);
 			
 			algorithm.train(trainingSet);
 			
@@ -257,7 +257,7 @@ public final class Pipeline implements Serializable {
 		
 		public abstract int getClassCount();
 		
-		public abstract Algorithm train(DataSource<?> trainingSet);
+		public abstract Algorithm train(DataSource trainingSet);
 		
 		@Override
 		public final String toString() {
@@ -300,7 +300,7 @@ public final class Pipeline implements Serializable {
 		}
 		
 		@Override
-		public final UnsupervisedAlgorithm train(final DataSource<?> trainingSet) {
+		public final UnsupervisedAlgorithm train(final DataSource trainingSet) {
 			return (UnsupervisedAlgorithm) this.setClassifier(new MedianCutClustering(
 					Measure.Predefined.L2_ES, this.getClassCount()).cluster(trainingSet).updatePrototypeIndices());
 		}
@@ -379,7 +379,7 @@ public final class Pipeline implements Serializable {
 		}
 		
 		@Override
-		public final SupervisedAlgorithm train(final DataSource<?> trainingSet) {
+		public final SupervisedAlgorithm train(final DataSource trainingSet) {
 			final Predefined measure = Measure.Predefined.L2_ES;
 			final NearestNeighborClassifier classifier = new NearestNeighborClassifier(measure);
 			int classIndex = -1;

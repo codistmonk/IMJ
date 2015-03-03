@@ -8,30 +8,28 @@ import java.util.function.Function;
 /**
  * @author codistmonk (creation 2015-02-24)
  */
-public final class FilteredCompositeDataSource extends DataSource.Abstract<DataSource.Metadata> {
+public final class FilteredCompositeDataSource extends DataSource.Abstract<DataSource> {
 	
-	private final List<DataSource<?>> sources;
+	private final List<DataSource> sources;
 	
 	private final Function<Datum, Boolean> filter;
 	
 	public FilteredCompositeDataSource(final Function<Datum, Boolean> filter) {
-		super(new Metadata.Default());
 		this.sources = new ArrayList<>();
 		this.filter = filter;
 	}
 	
-	public final FilteredCompositeDataSource add(final DataSource<?> source) {
+	public final FilteredCompositeDataSource add(final DataSource source) {
 		this.sources.add(source);
 		
 		return this;
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	public final Iterator<Datum> iterator() {
-		final Iterator<DataSource<?>> i = this.sources.iterator();
+		final Iterator<DataSource> i = this.sources.iterator();
 		
-		return new FilteredIterator(new Iterator<Datum>() {
+		return new FilteredIterator<Datum>(new Iterator<Datum>() {
 			
 			private Iterator<Datum> j;
 			
@@ -55,7 +53,7 @@ public final class FilteredCompositeDataSource extends DataSource.Abstract<DataS
 			
 			private final void update() {
 				while ((this.j == null || !this.j.hasNext()) && i.hasNext()) {
-					this.j = (Iterator) i.next().iterator();
+					this.j = i.next().iterator();
 				}
 			}
 			

@@ -6,16 +6,22 @@ import java.util.Random;
 /**
  * @author codistmonk (creation 2015-02-04)
  */
-public final class RandomPrototypeSource extends DataSource.Abstract<RandomPrototypeSource.Metadata> {
+public final class RandomPrototypeSource extends DataSource.Abstract<DataSource> {
+	
+	private final long seed;
 	
 	private final int dimension;
 	
 	private final int size;
 	
 	public RandomPrototypeSource(final int dimension, final int size, final long seed) {
-		super(new Metadata(seed));
+		this.seed = seed;
 		this.dimension = dimension;
 		this.size = size;
+	}
+	
+	public final long getSeed() {
+		return this.seed;
 	}
 	
 	@Override
@@ -24,7 +30,7 @@ public final class RandomPrototypeSource extends DataSource.Abstract<RandomProto
 		
 		return new Iterator<Datum>() {
 			
-			private final Random random = new Random(RandomPrototypeSource.this.getMetadata().getSeed());
+			private final Random random = new Random(RandomPrototypeSource.this.getSeed());
 			
 			private final Datum result = new Datum.Default().setValue(new double[d]);
 			
@@ -77,24 +83,5 @@ public final class RandomPrototypeSource extends DataSource.Abstract<RandomProto
 	private static final long serialVersionUID = -5303911125576388280L;
 	
 	static final boolean SIMULATE_SLOW_ACCESS = false;
-	
-	/**
-	 * @author codistmonk (creation 2015-02-08)
-	 */
-	public static final class Metadata implements DataSource.Metadata {
-		
-		private final long seed;
-		
-		public Metadata(final long seed) {
-			this.seed = seed;
-		}
-		
-		public final long getSeed() {
-			return this.seed;
-		}
-		
-		private static final long serialVersionUID = 6674451727155317787L;
-		
-	}
 	
 }

@@ -6,13 +6,10 @@ import java.util.Iterator;
 
 /**
  * @author codistmonk (creation 2015-02-08)
- * 
- * @param <M>
- * @param <C>
  */
-public final class ClassIndexDataSource<M extends DataSource.Metadata> extends TransformedDataSource<M> {
+public final class ClassIndexDataSource extends TransformedDataSource {
 	
-	public ClassIndexDataSource(final DataSource<M> source) {
+	public ClassIndexDataSource(final DataSource source) {
 		super(source);
 	}
 	
@@ -51,8 +48,8 @@ public final class ClassIndexDataSource<M extends DataSource.Metadata> extends T
 	
 	private static final long serialVersionUID = -4926248507282321872L;
 	
-	public static final <M extends DataSource.Metadata> ClassIndexDataSource<M> classIndices(final DataSource<M> inputs) {
-		return new ClassIndexDataSource<>(inputs);
+	public static final ClassIndexDataSource classIndices(final DataSource inputs) {
+		return new ClassIndexDataSource(inputs);
 	}
 	
 }

@@ -5,68 +5,55 @@ import imj3.draft.machinelearning.DataSource;
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public abstract class Patch2DSource<M extends Patch2DSource.Metadata> extends DataSource.Abstract<M> {
+public abstract class Patch2DSource extends DataSource.Abstract<DataSource> {
 	
-	public Patch2DSource(final M metadata) {
-		super(metadata);
+	private final int patchSize;
+	
+	private final int patchSparsity;
+	
+	private final int stride;
+	
+	protected Patch2DSource(final int patchSize, final int patchSparsity, final int stride) {
+		this.patchSize = patchSize;
+		this.patchSparsity = patchSparsity;
+		this.stride = stride;
 	}
+	
+	public final int getPatchSize() {
+		return this.patchSize;
+	}
+	
+	public final int getPatchSparsity() {
+		return this.patchSparsity;
+	}
+	
+	public final int getStride() {
+		return this.stride;
+	}
+	
+	public final int sizeX() {
+		return this.getBoundsWidth() / this.getStride();
+	}
+	
+	public final int sizeY() {
+		return this.getBoundsHeight() / this.getStride();
+	}
+	
+	public final int getPatchPixelCount() {
+		final int n = this.getPatchSize() / this.getPatchSparsity();
+		
+		return n * n;
+	}
+	
+	public abstract int getBoundsWidth();
+	
+	public abstract int getBoundsHeight();
 	
 	@Override
 	public final int size() {
-		return this.getMetadata().sizeX() * this.getMetadata().sizeY();
+		return this.sizeX() * this.sizeY();
 	}
 	
 	private static final long serialVersionUID = -5424770105639516510L;
-	
-	/**
-	 * @author codistmonk (creation 2015-02-08)
-	 */
-	public static abstract class Metadata implements DataSource.Metadata {
-		
-		private final int patchSize;
-		
-		private final int patchSparsity;
-		
-		private final int stride;
-		
-		protected Metadata(final int patchSize, final int patchSparsity, final int stride) {
-			this.patchSize = patchSize;
-			this.patchSparsity = patchSparsity;
-			this.stride = stride;
-		}
-		
-		public final int getPatchSize() {
-			return this.patchSize;
-		}
-		
-		public final int getPatchSparsity() {
-			return this.patchSparsity;
-		}
-		
-		public final int getStride() {
-			return this.stride;
-		}
-		
-		public final int sizeX() {
-			return this.getBoundsWidth() / this.getStride();
-		}
-		
-		public final int sizeY() {
-			return this.getBoundsHeight() / this.getStride();
-		}
-		
-		public final int getPatchPixelCount() {
-			final int n = this.getPatchSize() / this.getPatchSparsity();
-			
-			return n * n;
-		}
-		
-		public abstract int getBoundsWidth();
-		
-		public abstract int getBoundsHeight();
-		
-		private static final long serialVersionUID = -6730325302037718679L;
-		
-	}
 	
 }

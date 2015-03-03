@@ -412,12 +412,12 @@ public final class VisualAnalysis {
 							// TODO specify patch sparsity and stride
 							final Image2DLabeledRawSource source = Image2DLabeledRawSource.raw(image, labels);
 							
-							source.getMetadata().getBounds().setBounds(f.getBounds());
+							source.getBounds().setBounds(f.getBounds());
 							
 							unbufferedTrainingSet.add(source);
 						});
 						
-						final DataSource<?> trainingSet = BufferedDataSource.buffer(unbufferedTrainingSet);
+						final DataSource trainingSet = BufferedDataSource.buffer(unbufferedTrainingSet);
 						
 						for (final Algorithm algorithm : pipeline.getAlgorithms()) {
 							algorithm.train(trainingSet);
@@ -442,7 +442,7 @@ public final class VisualAnalysis {
 							if (classifier != null) {
 								final Image2D image = new AwtImage2D(context.getImageFile().getPath(), awtImage);
 								final Image2DRawSource source = Image2DRawSource.raw(image);
-								final DataSource<? extends Patch2DSource.Metadata> classified = Analyze.classify(source, classifier);
+								final DataSource classified = Analyze.classify(source, classifier);
 								final Canvas classification = context.getClassification();
 								
 								Tools.debugPrint("Classifying...");

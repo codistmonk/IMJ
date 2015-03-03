@@ -16,7 +16,7 @@ public final class StreamingClustering extends NearestNeighborClustering {
 	}
 	
 	@Override
-	public final void cluster(final DataSource<?> inputs, final NearestNeighborClassifier classifier) {
+	public final void cluster(final DataSource inputs, final NearestNeighborClassifier classifier) {
 		final int k = this.getClusterCount();
 		final List<Datum> prototypes = classifier.getPrototypes();
 		final Datum tmp = new Datum.Default();

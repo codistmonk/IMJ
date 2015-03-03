@@ -13,17 +13,22 @@ import imj3.draft.machinelearning.Datum;
 /**
  * @author codistmonk (creation 2015-02-06)
  */
-public final class Image2DLabeledRawSource extends Image2DSource<Image2DLabeledRawSource.Metadata> {
+public final class Image2DLabeledRawSource extends Image2DSource {
+	
+	private final Image2D labels;
 	
 	public Image2DLabeledRawSource(final Image2D image, final Image2D labels, final int patchSize, final int patchSparsity, final int stride) {
-		super(new Metadata(image, labels, patchSize, patchSparsity, stride));
+		super(image, patchSize, patchSparsity, stride);
+		this.labels = labels;
+	}
+	
+	public final Image2D getLabels() {
+		return this.labels;
 	}
 	
 	@Override
 	public final int getInputDimension() {
-		final Metadata metadata = this.getMetadata();
-		
-		return metadata.getImage().getChannels().getChannelCount() * metadata.getPatchPixelCount();
+		return this.getImage().getChannels().getChannelCount() * this.getPatchPixelCount();
 	}
 	
 	@Override
@@ -42,7 +47,7 @@ public final class Image2DLabeledRawSource extends Image2DSource<Image2DLabeledR
 		
 		this.convert(x, y, patchValues, c.getDatum());
 		
-		c.getLabel()[0] = this.getMetadata().getLabels().getPixelValue(x, y);
+		c.getLabel()[0] = this.getLabels().getPixelValue(x, y);
 		
 		return c.getClassification();
 	}
@@ -101,27 +106,6 @@ public final class Image2DLabeledRawSource extends Image2DSource<Image2DLabeledR
 		}
 		
 		private static final long serialVersionUID = -4151299401539931812L;
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-02-25)
-	 */
-	public static final class Metadata extends Image2DSource.Metadata {
-		
-		private final Image2D labels;
-		
-		public Metadata(final Image2D image, final Image2D labels,
-				final int patchSize, final int patchSparsity, final int stride) {
-			super(image, patchSize, patchSparsity, stride);
-			this.labels = labels;
-		}
-		
-		public final Image2D getLabels() {
-			return this.labels;
-		}
-		
-		private static final long serialVersionUID = -741448437114398419L;
 		
 	}
 	

@@ -4,15 +4,12 @@ import java.util.Iterator;
 
 /**
  * @author codistmonk (creation 2015-02-08)
- *
- * @param <M>
- * @param <C>
  */
-public final class ClassifiedDataSource<M extends DataSource.Metadata> extends TransformedDataSource<M> {
+public final class ClassifiedDataSource extends TransformedDataSource {
 	
 	private final Classifier classifier;
 	
-	public ClassifiedDataSource(final DataSource<M> source, final Classifier classifier) {
+	public ClassifiedDataSource(final DataSource source, final Classifier classifier) {
 		super(source);
 		this.classifier = classifier;
 	}

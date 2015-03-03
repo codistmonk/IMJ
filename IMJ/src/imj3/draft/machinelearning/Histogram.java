@@ -39,7 +39,7 @@ public final class Histogram implements Serializable {
 		return this;
 	}
 	
-	public final Histogram add(final DataSource<?> inputs) {
+	public final Histogram add(final DataSource inputs) {
 		for (final Datum classification : inputs) {
 			this.add(classification.getValue().clone());
 		}

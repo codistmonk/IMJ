@@ -1,7 +1,5 @@
 package imj3.draft.machinelearning;
 
-import imj3.draft.machinelearning.DataSource.Metadata;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -11,18 +9,15 @@ import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-02-04)
- * @param <D>
  */
-public final class BufferedDataSource<M extends Metadata> implements DataSource<M> {
-	
-	private final DataSource<M> source;
+public final class BufferedDataSource extends DataSource.Abstract<DataSource> {
 	
 	private final List<Datum> dataset;
 	
 	private final int bufferLimit;
 	
-	public BufferedDataSource(final DataSource<M> source, final int bufferLimit) {
-		this.source = source;
+	public BufferedDataSource(final DataSource source, final int bufferLimit) {
+		super(source);
 		
 		if (bufferLimit <= 0) {
 			this.dataset = new ArrayList<>();
@@ -42,21 +37,12 @@ public final class BufferedDataSource<M extends Metadata> implements DataSource<
 		}
 	}
 	
-	public final DataSource<M> getSource() {
-		return this.source;
-	}
-	
 	public final int getBufferLimit() {
 		return this.bufferLimit;
 	}
 	
 	public final List<Datum> getDataset() {
 		return this.dataset;
-	}
-	
-	@Override
-	public final M getMetadata() {
-		return this.getSource().getMetadata();
 	}
 	
 	@Override
@@ -127,12 +113,12 @@ public final class BufferedDataSource<M extends Metadata> implements DataSource<
 		}
 	}
 	
-	public static final <M extends Metadata> BufferedDataSource<M> buffer(final DataSource<M> source) {
+	public static final BufferedDataSource buffer(final DataSource source) {
 		return buffer(source, 0);
 	}
 	
-	public static final <M extends Metadata> BufferedDataSource<M> buffer(final DataSource<M> source, final int bufferLimit) {
-		return new BufferedDataSource<>(source, bufferLimit);
+	public static final BufferedDataSource buffer(final DataSource source, final int bufferLimit) {
+		return new BufferedDataSource(source, bufferLimit);
 	}
 	
 }

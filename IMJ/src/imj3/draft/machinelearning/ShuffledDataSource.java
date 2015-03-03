@@ -6,40 +6,26 @@ import java.util.Random;
 
 /**
  * @author codistmonk (creation 2015-02-08)
- *
- * @param <M>
- * @param <C>
  */
-public final class ShuffledDataSource<M extends DataSource.Metadata> implements DataSource<M> {
-	
-	private final BufferedDataSource<M> source;
+public final class ShuffledDataSource extends DataSource.Abstract<BufferedDataSource> {
 	
 	private final long seed;
 	
-	public ShuffledDataSource(final DataSource<M> source, final int bufferLimit, final long seed) {
-		this(new BufferedDataSource<>(source, bufferLimit), seed);
+	public ShuffledDataSource(final DataSource source, final int bufferLimit, final long seed) {
+		this(new BufferedDataSource(source, bufferLimit), seed);
 	}
 	
-	public ShuffledDataSource(final BufferedDataSource<M> source, final long seed) {
-		this.source = source;
+	public ShuffledDataSource(final BufferedDataSource source, final long seed) {
+		super(source);
 		this.seed = seed;
 		
-		if (this.source.getDataset() != null) {
-			Collections.shuffle(this.source.getDataset(), new Random(seed));
+		if (source.getDataset() != null) {
+			Collections.shuffle(source.getDataset(), new Random(seed));
 		}
-	}
-	
-	public final BufferedDataSource<M> getSource() {
-		return this.source;
 	}
 	
 	public final long getSeed() {
 		return this.seed;
-	}
-	
-	@Override
-	public final M getMetadata() {
-		return this.getSource().getMetadata();
 	}
 	
 	@Override
@@ -64,7 +50,7 @@ public final class ShuffledDataSource<M extends DataSource.Metadata> implements 
 			
 			private final Random random = new Random(ShuffledDataSource.this.getSeed());
 			
-			private final BufferedDataSource<M>.BufferedIterator i = (BufferedDataSource<M>.BufferedIterator) ShuffledDataSource.this.getSource().iterator();
+			private final BufferedDataSource.BufferedIterator i = (BufferedDataSource.BufferedIterator) ShuffledDataSource.this.getSource().iterator();
 			
 			private int j = n;
 			
