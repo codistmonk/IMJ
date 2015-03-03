@@ -1,7 +1,6 @@
 package imj3.draft.machinelearning;
 
 import java.util.Arrays;
-import java.util.Iterator;
 
 /**
  * @author codistmonk (creation 2015-02-09)
@@ -26,13 +25,13 @@ public final class Max extends TransformedDataSource {
 	}
 	
 	@Override
-	public final Iterator<Datum> iterator() {
+	public final Iterator iterator() {
 		final int n = this.getInputDimension();
 		final int stride = this.getClassDimension();
 		
-		return new Iterator<Datum>() {
+		return new Iterator.Abstract<Iterator>() {
 			
-			private final Iterator<Datum> i = Max.this.getSource().iterator();
+			private final Iterator i = Max.this.getSource().iterator();
 			
 			private final double[] datum = new double[Max.this.getClassDimension()];
 			
@@ -61,6 +60,8 @@ public final class Max extends TransformedDataSource {
 				
 				return this.result;
 			}
+			
+			private static final long serialVersionUID = 6126895304133041154L;
 			
 		};
 	}

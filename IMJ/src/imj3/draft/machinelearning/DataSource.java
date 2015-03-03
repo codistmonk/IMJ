@@ -2,25 +2,10 @@ package imj3.draft.machinelearning;
 
 import static net.sourceforge.aprog.tools.Tools.ignore;
 
-import java.io.Serializable;
-
 /**
  * @author codistmonk (creation 2015-02-04)
  */
-public abstract interface DataSource extends Serializable, Iterable<Datum> {
-	
-	public abstract DataSource getSource();
-	
-	@SuppressWarnings("unchecked")
-	public default <D extends DataSource> D findSource(Class<D> cls) {
-		DataSource result = this;
-		
-		while (result != null && ! cls.isInstance(result)) {
-			result = result.getSource();
-		}
-		
-		return (D) result;
-	}
+public abstract interface DataSource extends Source, Iterable<Datum> {
 	
 	public abstract int getInputDimension();
 	
@@ -39,24 +24,62 @@ public abstract interface DataSource extends Serializable, Iterable<Datum> {
 		return result;
 	}
 	
+	@Override
+	public abstract Iterator iterator();
+	
+	/**
+	 * @author codistmonk (creation 2015-03-03)
+	 */
+	public static abstract interface Iterator extends Source, java.util.Iterator<Datum> {
+		
+		public static Iterator wrap(final java.util.Iterator<Datum> iterator) {
+			return new Abstract<Iterator>() {
+				
+				@Override
+				public final boolean hasNext() {
+					return iterator.hasNext();
+				}
+				
+				@Override
+				public final Datum next() {
+					return iterator.next();
+				}
+				
+				private static final long serialVersionUID = -4234192592608156487L;
+				
+			};
+		}
+		
+		/**
+		 * @author codistmonk (creation 2015-03-03)
+		 */
+		public static abstract class Abstract<I extends Iterator> extends Source.Abstract<I> implements Iterator {
+			
+			protected Abstract() {
+				// NOP
+			}
+			
+			protected Abstract(final I source) {
+				super(source);
+			}
+			
+			private static final long serialVersionUID = 3124020024633605773L;
+			
+		}
+		
+	}
+	
 	/**
 	 * @author codistmonk (creation 2015-02-08)
 	 */
-	public static abstract class Abstract<D extends DataSource> implements DataSource {
-		
-		private final D source;
+	public static abstract class Abstract<D extends DataSource> extends Source.Abstract<D> implements DataSource {
 		
 		protected Abstract() {
-			this(null);
+			// NOP
 		}
 		
 		protected Abstract(final D source) {
-			this.source = source;
-		}
-		
-		@Override
-		public final D getSource() {
-			return this.source;
+			super(source);
 		}
 		
 		private static final long serialVersionUID = 8357748600830831869L;

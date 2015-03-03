@@ -46,8 +46,8 @@ public final class BufferedDataSource extends DataSource.Abstract<DataSource> {
 	}
 	
 	@Override
-	public final Iterator<Datum> iterator() {
-		return this.getDataset() != null ? this.getDataset().iterator() : this.new BufferedIterator();
+	public final Iterator iterator() {
+		return this.getDataset() != null ? Iterator.wrap(this.getDataset().iterator()) : this.new BufferedIterator();
 	}
 	
 	@Override
@@ -63,15 +63,15 @@ public final class BufferedDataSource extends DataSource.Abstract<DataSource> {
 	/**
 	 * @author codistmonk (creation 2015-02-08)
 	 */
-	public final class BufferedIterator implements Iterator<Datum> {
+	public final class BufferedIterator extends Iterator.Abstract<Iterator> {
 		
 		private final int bufferLimit = BufferedDataSource.this.getBufferLimit();
 		
-		private final Iterator<Datum> i = BufferedDataSource.this.getSource().iterator();
+		private final Iterator i = BufferedDataSource.this.getSource().iterator();
 		
 		private final List<Datum> buffer = new ArrayList<>(this.bufferLimit);
 		
-		private Iterator<Datum> j = this.buffer.iterator();
+		private java.util.Iterator<Datum> j = this.buffer.iterator();
 		
 		public final List<Datum> getBuffer() {
 			return this.buffer;
@@ -96,6 +96,8 @@ public final class BufferedDataSource extends DataSource.Abstract<DataSource> {
 			
 			return this.j.next();
 		}
+		
+		private static final long serialVersionUID = -3044893015706545294L;
 		
 	}
 	

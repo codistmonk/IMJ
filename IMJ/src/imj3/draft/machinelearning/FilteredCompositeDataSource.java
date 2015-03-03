@@ -1,7 +1,6 @@
 package imj3.draft.machinelearning;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
 
@@ -26,12 +25,12 @@ public final class FilteredCompositeDataSource extends DataSource.Abstract<DataS
 	}
 	
 	@Override
-	public final Iterator<Datum> iterator() {
-		final Iterator<DataSource> i = this.sources.iterator();
+	public final Iterator iterator() {
+		final java.util.Iterator<DataSource> i = this.sources.iterator();
 		
-		return new FilteredIterator<Datum>(new Iterator<Datum>() {
+		return Iterator.wrap(new FilteredIterator<Datum>(new java.util.Iterator<Datum>() {
 			
-			private Iterator<Datum> j;
+			private java.util.Iterator<Datum> j;
 			
 			{
 				this.update();
@@ -58,7 +57,7 @@ public final class FilteredCompositeDataSource extends DataSource.Abstract<DataS
 			}
 			
 			
-		}, this.filter);
+		}, this.filter));
 	}
 	
 	@Override

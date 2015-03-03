@@ -1,7 +1,5 @@
 package imj3.draft.machinelearning;
 
-import java.util.Iterator;
-
 import imj3.draft.machinelearning.DataSource.Abstract;
 
 /**
@@ -38,11 +36,11 @@ public final class DoublesDataSource extends Abstract<DataSource> {
 	}
 	
 	@Override
-	public final Iterator<Datum> iterator() {
+	public final Iterator iterator() {
 		final int d = this.getInputDimension();
 		final int n = this.size();
 		
-		return new Iterator<Datum>() {
+		return new Iterator.Abstract<Iterator>() {
 			
 			private final Datum result = new Datum.Default().setValue(new double[d]).setScore(0.0);
 			
@@ -61,6 +59,8 @@ public final class DoublesDataSource extends Abstract<DataSource> {
 				
 				return this.result;
 			}
+			
+			private static final long serialVersionUID = 6126895304133041154L;
 			
 		};
 	}

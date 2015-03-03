@@ -1,7 +1,6 @@
 package imj3.draft.machinelearning;
 
 import java.util.Arrays;
-import java.util.Iterator;
 
 import net.sourceforge.aprog.tools.Tools;
 
@@ -28,13 +27,13 @@ public final class Mean extends TransformedDataSource {
 	}
 	
 	@Override
-	public final Iterator<Datum> iterator() {
+	public final Iterator iterator() {
 		final int n = this.getInputDimension();
 		final int stride = this.getClassDimension();
 		
-		return new Iterator<Datum>() {
+		return new Iterator.Abstract<Iterator>() {
 			
-			private final Iterator<Datum> i = Mean.this.getSource().iterator();
+			private final Iterator i = Mean.this.getSource().iterator();
 			
 			private final double[] datum = new double[Mean.this.getClassDimension()];
 			
@@ -71,6 +70,8 @@ public final class Mean extends TransformedDataSource {
 				
 				return this.result;
 			}
+			
+			private static final long serialVersionUID = 6126895304133041154L;
 			
 		};
 	}

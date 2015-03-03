@@ -1,7 +1,6 @@
 package imj3.draft.machinelearning;
 
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.Random;
 
 /**
@@ -39,14 +38,14 @@ public final class ShuffledDataSource extends DataSource.Abstract<BufferedDataSo
 	}
 	
 	@Override
-	public final Iterator<Datum> iterator() {
+	public final Iterator iterator() {
 		if (this.getSource().getDataset() != null) {
-			return this.getSource().getDataset().iterator();
+			return Iterator.wrap(this.getSource().getDataset().iterator());
 		}
 		
 		final int n = this.getSource().getBufferLimit();
 		
-		return new Iterator<Datum>() {
+		return new Iterator.Abstract<Iterator>() {
 			
 			private final Random random = new Random(ShuffledDataSource.this.getSeed());
 			
@@ -68,6 +67,8 @@ public final class ShuffledDataSource extends DataSource.Abstract<BufferedDataSo
 				
 				return this.i.next();
 			}
+			
+			private static final long serialVersionUID = 6126895304133041154L;
 			
 		};
 	}

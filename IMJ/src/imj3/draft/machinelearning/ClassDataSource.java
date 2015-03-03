@@ -22,10 +22,10 @@ public final class ClassDataSource extends TransformedDataSource {
 	}
 	
 	@Override
-	public final Iterator<Datum> iterator() {
-		return new Iterator<Datum>() {
+	public final Iterator iterator() {
+		return new Iterator.Abstract<Iterator>() {
 			
-			private final Iterator<Datum> i = ClassDataSource.this.getSource().iterator();
+			private final Iterator i = ClassDataSource.this.getSource().iterator();
 			
 			private final Datum result = new Datum.Default();
 			
@@ -38,6 +38,8 @@ public final class ClassDataSource extends TransformedDataSource {
 			public final Datum next() {
 				return this.result.setValue(this.i.next().getPrototype().getValue());
 			}
+			
+			private static final long serialVersionUID = 6126895304133041154L;
 			
 		};
 	}
