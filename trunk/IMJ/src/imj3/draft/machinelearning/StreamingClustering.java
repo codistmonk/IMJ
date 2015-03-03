@@ -26,7 +26,11 @@ public final class StreamingClustering extends NearestNeighborClustering {
 			// XXX should the weights be considered instead of performing a normal classification?
 			final Classification<Prototype> c = classifier.classify(tmp, classification.getInput());
 			
-			if (c == null || 0.0 != c.getScore() && n < k) {
+			if (c == null) {
+				throw new NullPointerException();
+			}
+			
+			if (0.0 != c.getScore() && n < k) {
 				prototypes.add(new Prototype(c.getInput().clone()).setClassIndex(n));
 			} else if (0.0 == c.getScore()) {
 				c.getClassifierClass().updateWeight(1.0);
