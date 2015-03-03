@@ -18,51 +18,12 @@ public abstract class Image2DSource<M extends Image2DSource.Metadata> extends Pa
 	
 	@Override
 	public final Iterator<Datum> iterator() {
-		final int stride = this.getMetadata().getStride();
-		final int offset = stride / 2;
-		final Rectangle bounds = this.getMetadata().getBounds();
-		// bounds.x <= offset + k stride
-		// <- (bounds.x - offset) / stride <= k
-		// <- k = ceil((bounds.x - offset) / stride)
-		final int startX = offset + (bounds.x - offset + stride - 1) / stride * stride;
-		final int startY = offset + (bounds.y - offset + stride - 1) / stride * stride;
-		final int endX = bounds.x + bounds.width;
-		final int endY = bounds.y + bounds.height;
-		
-		return new Iterator<Datum>() {
-			
-			private int x = startX;
-			
-			private int y = startY;
-			
-			private final int[] patchData = new int[Image2DSource.this.getMetadata().getPatchPixelCount()];
-			
-			private final Object context = Image2DSource.this.newContext();
-			
-			@Override
-			public final boolean hasNext() {
-				return this.y < endY && this.x < endX;
-			}
-			
-			@Override
-			public final Datum next() {
-				Image2DSource.this.extractPatchValues(this.x, this.y, this.patchData);
-				
-				final Datum result = Image2DSource.this.convert(this.x, this.y, this.patchData, this.context);
-				
-				if (endX <= (this.x += stride)) {
-					this.x = startX;
-					this.y += stride;
-				}
-				
-				return result;
-			}
-			
-		};
+		return this.new PatchIterator();
 	}
 	
 	public final void extractPatchValues(final int x, final int y, final int[] result) {
 		Arrays.fill(result, 0);
+		
 		final int s = this.getMetadata().getPatchSize();
 		final int half = s / 2;
 		final int x0 = x - half;
@@ -92,8 +53,58 @@ public abstract class Image2DSource<M extends Image2DSource.Metadata> extends Pa
 	
 	protected abstract Datum convert(int x, int y, int[] patchValues, Object context);
 	
-	private static final long serialVersionUID = -774979627942684978L;
+	/**
+	 * @author codistmonk (creation 2015-03-03)
+	 */
+	public final class PatchIterator implements Iterator<Datum> {
+		
+		private final int stride = Image2DSource.this.getMetadata().getStride();
+		
+		private final int offset = this.stride / 2;
+		
+		private final Rectangle bounds = Image2DSource.this.getMetadata().getBounds();
+		
+		// bounds.x <= offset + k stride
+		// <- (bounds.x - offset) / stride <= k
+		// <- k = ceil((bounds.x - offset) / stride)
+		private final int startX = this.offset + (this.bounds.x - this.offset + this.stride - 1) / this.stride * this.stride;
+		
+		private final int startY = this.offset + (this.bounds.y - this.offset + this.stride - 1) / this.stride * this.stride;
+		
+		private final int endX = this.bounds.x + this.bounds.width;
+		
+		private final int endY = this.bounds.y + this.bounds.height;
+		
+		private int x = this.startX;
+		
+		private int y = this.startY;
+		
+		private final int[] patchData = new int[Image2DSource.this.getMetadata().getPatchPixelCount()];
+		
+		private final Object context = Image2DSource.this.newContext();
+		
+		@Override
+		public final boolean hasNext() {
+			return this.y < this.endY && this.x < this.endX;
+		}
+		
+		@Override
+		public final Datum next() {
+			Image2DSource.this.extractPatchValues(this.x, this.y, this.patchData);
+			
+			final Datum result = Image2DSource.this.convert(this.x, this.y, this.patchData, this.context);
+			
+			if (this.endX <= (this.x += this.stride)) {
+				this.x = this.startX;
+				this.y += this.stride;
+			}
+			
+			return result;
+		}
+	}
 	
+	private static final long serialVersionUID = -774979627942684978L;
+
 	/**
 	 * @author codistmonk (creation 2015-02-08)
 	 */
