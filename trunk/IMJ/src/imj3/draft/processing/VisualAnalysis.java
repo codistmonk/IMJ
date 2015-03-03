@@ -1420,7 +1420,34 @@ public final class VisualAnalysis {
 				
 				algorithm.train(trainingSet);
 				
-				// TODO create out
+				out[0].clear();
+				
+				final int n = trainingSet.getClassDimension();
+				
+				in[0].forEach(f -> {
+					final Image2D image = f.getImage();
+					final Image2D labels = f.getLabels();
+					final Image2DLabeledRawSource source = Image2DLabeledRawSource.raw(image, labels,
+							patchSize, patchSparsity, stride);
+					
+					final Image2D newImage = new DoubleImage2D(image.getId() + "_out",
+							image.getWidth() / stride, image.getHeight() / stride, n);
+					final Image2D newLabels = new DoubleImage2D(labels.getId() + "_tmp",
+							newImage.getWidth(), newImage.getHeight(), 1); // XXX doesn't have to be DoubleImage2D
+					
+					int pixel = -1;
+					
+					for (final Classification<ClassifierClass> c : source) {
+						final double[] prototype = c.getClassifierClass().toArray();
+						
+						++pixel;
+						
+						for (int i = 0; i < n; ++i) {
+							newImage.setPixelChannelValue(pixel, i, Double.doubleToRawLongBits(prototype[i]));
+						}
+					}
+					// TODO
+				});
 			}
 			
 			return this;
