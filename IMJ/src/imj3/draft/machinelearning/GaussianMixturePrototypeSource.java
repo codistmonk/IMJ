@@ -5,7 +5,6 @@ import static net.sourceforge.aprog.tools.MathTools.square;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 

@@ -1,7 +1,5 @@
 package imj3.draft.machinelearning;
 
-import java.util.Iterator;
-
 /**
  * @author codistmonk (creation 2015-02-08)
  */
