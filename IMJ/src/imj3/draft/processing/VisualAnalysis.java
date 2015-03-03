@@ -20,6 +20,7 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import imj3.core.Channels;
+import imj3.core.Image;
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -1344,6 +1345,25 @@ public final class VisualAnalysis {
 		@Override
 		public final int getHeight() {
 			return this.height;
+		}
+		
+		@Override
+		public final DoubleImage2D setPixelValue(final long pixel, final double[] value) {
+			final int n = this.getChannels().getChannelCount();
+			
+			System.arraycopy(value, 0, this.data, (int) (pixel * n), n);
+			
+			return this;
+		}
+		
+		@Override
+		public final double[] getPixelValue(final long pixel, final double[] result) {
+			final int n = this.getChannels().getChannelCount();
+			final double[] actualResult = Image.actualResult(result, n);
+			
+			System.arraycopy(this.data, (int) (pixel * n), actualResult, 0, n);
+			
+			return actualResult;
 		}
 		
 		@Override

@@ -133,15 +133,10 @@ public final class Pipeline implements Serializable {
 				int pixel = -1;
 				
 				for (final Datum c : source) {
-					final double[] prototype = c.getPrototype().getValue();
-					
-					++pixel;
-					
-					for (int i = 0; i < n; ++i) {
-						newImage.setPixelChannelValue(pixel, i, Double.doubleToRawLongBits(prototype[i]));
-					}
+					newImage.setPixelValue(++pixel, c.getPrototype().getValue());
 				}
-				// TODO
+				
+				// TODO update newLabels
 			});
 		}
 		

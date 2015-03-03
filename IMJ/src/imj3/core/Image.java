@@ -22,13 +22,23 @@ public abstract interface Image extends Serializable {
 	
 	public default double[] getPixelValue(final long pixel, final double[] result) {
 		final int channelCount = this.getChannels().getChannelCount();
-		final double[] actualResult = result != null && result.length == channelCount ? result : new double[channelCount];
+		final double[] actualResult = actualResult(result, channelCount);
 		
 		for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex) {
 			actualResult[channelIndex] = this.getPixelChannelValue(pixel, channelIndex);
 		}
 		
 		return actualResult;
+	}
+	
+	public default Image setPixelValue(final long pixel, final double[] value) {
+		final int channelCount = this.getChannels().getChannelCount();
+		
+		for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex) {
+			this.setPixelChannelValue(pixel, channelIndex, Double.doubleToRawLongBits(value[channelIndex]));
+		}
+		
+		return this;
 	}
 	
 	public default long getPixelChannelValue(final long pixel, final int channelIndex) {
@@ -47,6 +57,10 @@ public abstract interface Image extends Serializable {
 		}
 		
 		return this;
+	}
+	
+	public static double[] actualResult(final double[] result, final int expectedLength) {
+		return result != null && result.length == expectedLength ? result : new double[expectedLength];
 	}
 	
 	/**
