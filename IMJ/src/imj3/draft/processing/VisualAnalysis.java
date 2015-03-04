@@ -5,6 +5,7 @@ import static imj3.tools.CommonSwingTools.limitHeight;
 import static imj3.tools.CommonSwingTools.setModel;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.lang.String.format;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
@@ -20,10 +21,8 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import imj3.core.Image2D;
-import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
 import imj3.draft.machinelearning.Datum;
-import imj3.draft.machinelearning.FilteredCompositeDataSource;
 import imj3.draft.machinelearning.DataSource;
 import imj3.draft.processing.Pipeline.Algorithm;
 import imj3.draft.processing.Pipeline.ClassDescription;
@@ -255,6 +254,8 @@ public final class VisualAnalysis {
 	public static final File save(final String preferenceKey, final String title, final Component parent) {
 		final JFileChooser fileChooser = new JFileChooser(new File(preferences.get(preferenceKey, "")).getParentFile());
 		
+		fileChooser.setDialogTitle(title);
+		
 		if (JFileChooser.APPROVE_OPTION == fileChooser.showSaveDialog(parent)) {
 			return fileChooser.getSelectedFile();
 		}
@@ -264,6 +265,8 @@ public final class VisualAnalysis {
 	
 	public static final File open(final String preferenceKey, final String title, final Component parent) {
 		final JFileChooser fileChooser = new JFileChooser(new File(preferences.get(preferenceKey, "")).getParentFile());
+		
+		fileChooser.setDialogTitle(title);
 		
 		if (JFileChooser.APPROVE_OPTION == fileChooser.showOpenDialog(parent)) {
 			return fileChooser.getSelectedFile();
@@ -410,9 +413,10 @@ public final class VisualAnalysis {
 						
 						timer.toc();
 						
-						final long trainingMilliseconds = timer.toc();
+						final double trainingSeconds = timer.toc() / 1_000.0;
+						final double f1 = Pipeline.f1(pipeline.getTrainingConfusionMatrix());
 						
-						MainPanel.this.getTrainingSummaryView().setText(trainingMilliseconds + " ms");
+						MainPanel.this.getTrainingSummaryView().setText(format("seconds=%.3f, F1=%.3f", trainingSeconds, f1));
 					}
 				}
 				
@@ -764,6 +768,7 @@ public final class VisualAnalysis {
 			this.setContents(this.getImageComponent());
 		}
 		
+		@SuppressWarnings("null")
 		public final Color getBrushColor() {
 			if (MainPanel.this.getGroundTruthVisibilitySelector().isSelected()
 					&& !MainPanel.this.getContext().getGroundTruthName().isEmpty()) {
