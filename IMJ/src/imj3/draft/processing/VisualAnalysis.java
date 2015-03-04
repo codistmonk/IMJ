@@ -22,9 +22,6 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import imj3.core.Image2D;
-import imj3.draft.machinelearning.Classifier;
-import imj3.draft.machinelearning.Datum;
-import imj3.draft.machinelearning.DataSource;
 import imj3.draft.processing.Pipeline.Algorithm;
 import imj3.draft.processing.Pipeline.ClassDescription;
 import imj3.draft.processing.Pipeline.SupervisedAlgorithm;
@@ -441,7 +438,8 @@ public final class VisualAnalysis {
 						MainPanel.this.getClassificationSummaryView().setText(format(Locale.ENGLISH,
 								"seconds=%.3f, F1=%.3f", classificationSeconds, f1));
 						
-						// TODO update main view
+						MainPanel.this.getImageComponent().getLayers().get(2).getPainters().get(0).getUpdateNeeded().set(true);
+						MainPanel.this.getImageComponent().repaint();
 					}
 				}
 				
