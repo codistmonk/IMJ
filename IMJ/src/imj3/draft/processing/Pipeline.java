@@ -175,10 +175,10 @@ public final class Pipeline implements Serializable {
 				source.getBounds().setBounds(f.getBounds());
 				
 				final Image2D newImage = new DoubleImage2D(image.getId() + "_out",
-						f.getBounds().width / stride, f.getBounds().height / stride, n);
+						Patch2DSource.newSize(f.getBounds().x, f.getBounds().width, patchSize, stride),
+						Patch2DSource.newSize(f.getBounds().y, f.getBounds().height, patchSize, stride), n);
 				final Image2D newLabels = new UnsignedImage2D(labels.getId() + "_tmp",
 						newImage.getWidth(), newImage.getHeight());
-				
 				final Datum classification = datum();
 				int targetPixel = -1;
 				
@@ -188,7 +188,6 @@ public final class Pipeline implements Serializable {
 					final int expectedLabel = (int) labels.getPixelValue(sourceX, sourceY);
 					
 					classifier.classify(i.next(), classification);
-					
 					newImage.setPixelValue(++targetPixel, classification.getPrototype().getValue());
 					newLabels.setPixelValue(targetPixel, expectedLabel);
 					
@@ -230,7 +229,8 @@ public final class Pipeline implements Serializable {
 			final Classifier classifier = algorithm.getClassifier();
 			final int n = classifier.getClassDimension(inputs.getInputDimension());
 			final Image2D newImage = new DoubleImage2D(image.getId() + "_out",
-					bounds.width / stride, bounds.height / stride, n);
+					Patch2DSource.newSize(bounds.x, bounds.width, patchSize, stride),
+					Patch2DSource.newSize(bounds.y, bounds.height, patchSize, stride), n);
 			
 			if (algorithm == last) {
 				actualLabels = new UnsignedImage2D(image.getId() + "_outLabels", newImage.getWidth(), newImage.getHeight());
@@ -532,8 +532,6 @@ public final class Pipeline implements Serializable {
 				final NearestNeighborClassifier subClassifier = new MedianCutClustering(
 						measure, entry.getValue()).cluster(new FilteredCompositeDataSource(
 								c -> classLabel == (int) c.getPrototype().getValue()[0]).add(trainingSet));
-				
-				Tools.debugPrint(subClassifier.getPrototypes().size());
 				
 				for (final Datum prototype : subClassifier.getPrototypes()) {
 					classifier.getPrototypes().add(prototype.setIndex(classLabel));
