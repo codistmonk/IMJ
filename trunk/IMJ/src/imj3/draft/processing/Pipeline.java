@@ -244,7 +244,7 @@ public final class Pipeline implements Serializable {
 						classifier.classify(input, c).getPrototype().getValue());
 				
 				if (algorithm == last) {
-					actualLabels.setPixelValue(targetPixel, c.getIndex());
+					actualLabels.setPixelValue(targetPixel, c.getPrototype().getIndex());
 				}
 			}
 			
@@ -268,9 +268,11 @@ public final class Pipeline implements Serializable {
 					if (expectedLabels != null) {
 						final int expectedLabel = (int) expectedLabels.getPixelValue(x, y);
 						
-						this.getTrainingConfusionMatrix().computeIfAbsent(
-								expectedLabel, e -> new HashMap<>()).computeIfAbsent(
-										actualLabel, a -> new AtomicLong()).incrementAndGet();
+						if (expectedLabel != 0) {
+							this.getClassificationConfusionMatrix().computeIfAbsent(
+									expectedLabel, e -> new HashMap<>()).computeIfAbsent(
+											actualLabel, a -> new AtomicLong()).incrementAndGet();
+						}
 					}
 				}
 			}
