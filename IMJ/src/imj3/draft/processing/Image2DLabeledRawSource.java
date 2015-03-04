@@ -4,6 +4,7 @@ import static imj3.core.Channels.Predefined.blue8;
 import static imj3.core.Channels.Predefined.green8;
 import static imj3.core.Channels.Predefined.red8;
 import static imj3.draft.machinelearning.Datum.Default.datum;
+import static net.sourceforge.aprog.tools.Tools.ignore;
 
 import java.io.Serializable;
 
@@ -42,7 +43,7 @@ public final class Image2DLabeledRawSource extends Image2DSource {
 	}
 	
 	@Override
-	protected final Datum convert(final int x, final int y, final int[] patchValues, final Object context) {
+	protected final Datum convert(final int x, final int y, final double[] patchValues, final Object context) {
 		final Context c = (Context) context;
 		
 		this.convert(x, y, patchValues, c.getDatum());
@@ -52,14 +53,11 @@ public final class Image2DLabeledRawSource extends Image2DSource {
 		return c.getClassification();
 	}
 	
-	private final void convert(final int x, final int y, final int[] patchValues, final double[] result) {
-		int i = -1;
+	private final void convert(final int x, final int y, final double[] patchValues, final double[] result) {
+		ignore(x);
+		ignore(y);
 		
-		for (final int value : patchValues) {
-			result[++i] = red8(value);
-			result[++i] = green8(value);
-			result[++i] = blue8(value);
-		}
+		System.arraycopy(patchValues, 0, result, 0, patchValues.length);
 	}
 	
 	public static final Image2DLabeledRawSource raw(final Image2D image, final Image2D labels) {

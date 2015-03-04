@@ -45,7 +45,7 @@ public abstract class Image2DSource extends Patch2DSource {
 		return this.new PatchIterator();
 	}
 	
-	public final void extractPatchValues(final int x, final int y, final int[] result) {
+	public final void extractPatchValues(final int x, final int y, final double[] result) {
 		Arrays.fill(result, 0);
 		
 		final int s = this.getPatchSize();
@@ -59,23 +59,27 @@ public abstract class Image2DSource extends Patch2DSource {
 		final Image2D image = this.getImage();
 		final int imageWidth = image.getWidth();
 		final int imageHeight = image.getHeight();
+		final int n = image.getChannels().getChannelCount();
+		final double[] buffer = new double[n];
 		
 		for (int yy = y0, i = 0; yy < y1; yy += step) {
 			if (0 <= yy && yy < imageHeight) {
-				for (int xx = x0; xx < x1; xx += step, ++i) {
+				for (int xx = x0; xx < x1; xx += step, i += n) {
 					if (0 <= xx && xx < imageWidth) {
-						result[i] = (int) image.getPixelValue(xx, yy);
+						image.getPixelValue(xx, yy, buffer);
+						
+						System.arraycopy(buffer, 0, result, i, n);
 					}
 				}
 			} else {
-				i += bufferWidth;
+				i += bufferWidth * n;
 			}
 		}
 	}
 	
 	protected abstract Object newContext();
 	
-	protected abstract Datum convert(int x, int y, int[] patchValues, Object context);
+	protected abstract Datum convert(int x, int y, double[] patchValues, Object context);
 	
 	/**
 	 * @author codistmonk (creation 2015-03-03)
@@ -103,7 +107,7 @@ public abstract class Image2DSource extends Patch2DSource {
 		
 		private int y = this.startY;
 		
-		private final int[] patchData = new int[Image2DSource.this.getPatchPixelCount()];
+		private final double[] patchData = new double[Image2DSource.this.getPatchPixelCount() * Image2DSource.this.getImage().getChannels().getChannelCount()];
 		
 		private final Object context = Image2DSource.this.newContext();
 		

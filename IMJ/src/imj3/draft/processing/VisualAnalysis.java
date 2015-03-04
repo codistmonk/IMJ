@@ -95,6 +95,7 @@ import net.sourceforge.aprog.swing.MouseHandler;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
 /**
@@ -403,25 +404,15 @@ public final class VisualAnalysis {
 					
 					// TODO run in another thread
 					if (pipeline != null) {
-						final FilteredCompositeDataSource unbufferedTrainingSet = new FilteredCompositeDataSource(c -> c.getPrototype().getValue()[0] != 0.0);
+						final TicToc timer = new TicToc();
 						
-						pipeline.getTrainingFields().forEach(f -> {
-							Tools.debugPrint(f.getImagePath());
-							final Image2D image = read(f.getImagePath());
-							final Image2D labels = read(context.getGroundTruthPathFromImagePath(f.getImagePath()));
-							// TODO specify patch sparsity and stride
-							final Image2DLabeledRawSource source = Image2DLabeledRawSource.raw(image, labels);
-							
-							source.getBounds().setBounds(f.getBounds());
-							
-							unbufferedTrainingSet.add(source);
-						});
+						pipeline.train(context);
 						
-						final DataSource trainingSet = BufferedDataSource.buffer(unbufferedTrainingSet);
+						timer.toc();
 						
-						for (final Algorithm algorithm : pipeline.getAlgorithms()) {
-							algorithm.train(trainingSet);
-						}
+						final long trainingMilliseconds = timer.toc();
+						
+						MainPanel.this.getTrainingSummaryView().setText(trainingMilliseconds + " ms");
 					}
 				}
 				

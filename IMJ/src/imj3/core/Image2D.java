@@ -6,6 +6,8 @@ import static net.sourceforge.aprog.tools.Tools.ignore;
 
 import java.io.Serializable;
 
+import net.sourceforge.aprog.tools.Tools;
+
 /**
  * @author codistmonk (creation 2014-11-29)
  */
@@ -28,6 +30,10 @@ public abstract interface Image2D extends Image {
 	@Override
 	public default Image2D setPixelValue(final long pixel, final long value) {
 		return this.setPixelValue(this.getX(pixel), this.getY(pixel), value);
+	}
+	
+	public default double[] getPixelValue(final int x, final int y, double[] result) {
+		return this.getPixelValue(this.getPixel(x, y), result);
 	}
 	
 	public default long getPixelValue(final int x, final int y) {
