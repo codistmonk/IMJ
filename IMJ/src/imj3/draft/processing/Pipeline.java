@@ -5,11 +5,11 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
+
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
 import imj3.draft.machinelearning.DataSource;
-import imj3.draft.machinelearning.DataSource.Iterator;
 import imj3.draft.machinelearning.Datum;
 import imj3.draft.machinelearning.FilteredCompositeDataSource;
 import imj3.draft.machinelearning.Measure;
@@ -18,6 +18,7 @@ import imj3.draft.machinelearning.NearestNeighborClassifier;
 import imj3.draft.machinelearning.Measure.Predefined;
 import imj3.draft.processing.Image2DSource.PatchIterator;
 import imj3.draft.processing.VisualAnalysis.Context;
+import imj3.tools.AwtImage2D;
 import imj3.tools.CommonTools;
 import imj3.tools.CommonSwingTools.NestedList;
 import imj3.tools.CommonSwingTools.PropertyGetter;
@@ -26,6 +27,7 @@ import imj3.tools.CommonSwingTools.PropertySetter;
 import imj3.tools.CommonSwingTools.StringGetter;
 
 import java.awt.Rectangle;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -193,7 +195,9 @@ public final class Pipeline implements Serializable {
 					if (algorithm == supervisedLast && expectedLabel != 0) {
 						final int actualLabel = classification.getPrototype().getIndex();
 						
-						this.getTrainingConfusionMatrix().computeIfAbsent(expectedLabel, e -> new HashMap<>()).computeIfAbsent(actualLabel, a -> new AtomicLong()).incrementAndGet();
+						this.getTrainingConfusionMatrix().computeIfAbsent(
+								expectedLabel, e -> new HashMap<>()).computeIfAbsent(
+										actualLabel, a -> new AtomicLong()).incrementAndGet();
 					}
 				}
 				
@@ -206,12 +210,12 @@ public final class Pipeline implements Serializable {
 		return this;
 	}
 	
-	public final Pipeline classify(final Image2D image, final Image2D labels, final Image2D classification) {
+	public final Pipeline classify(final Context context) {
 		final TicToc timer = new TicToc();
-		final SupervisedAlgorithm supervisedLast = labels == null || this.getAlgorithms().isEmpty() ?
-				null : cast(SupervisedAlgorithm.class, last(this.getAlgorithms()));
+		final Image2D image = new AwtImage2D(null, context.getImage());
+		final Algorithm last = this.getAlgorithms().isEmpty() ? null : last(this.getAlgorithms());
 		Image2D tmp = image;
-		Image2D outLabels = null;
+		Image2D actualLabels = null;
 		
 		this.getClassificationConfusionMatrix().clear();
 		
@@ -228,8 +232,8 @@ public final class Pipeline implements Serializable {
 			final Image2D newImage = new DoubleImage2D(image.getId() + "_out",
 					bounds.width / stride, bounds.height / stride, n);
 			
-			if (algorithm == supervisedLast) {
-				outLabels = new UnsignedImage2D(image.getId() + "_outLabels", newImage.getWidth(), newImage.getHeight());
+			if (algorithm == last) {
+				actualLabels = new UnsignedImage2D(image.getId() + "_outLabels", newImage.getWidth(), newImage.getHeight());
 			}
 			
 			final Datum c = datum();
@@ -239,15 +243,38 @@ public final class Pipeline implements Serializable {
 				newImage.setPixelValue(++targetPixel,
 						classifier.classify(input, c).getPrototype().getValue());
 				
-				if (algorithm == supervisedLast) {
-					outLabels.setPixelValue(targetPixel, c.getIndex());
+				if (algorithm == last) {
+					actualLabels.setPixelValue(targetPixel, c.getIndex());
 				}
 			}
 			
 			tmp = newImage;
 		}
 		
-		// TODO
+		if (actualLabels != null) {
+			final Image2D expectedLabels = context.getGroundTruthName().isEmpty() ? null : new AwtImage2D(null, context.getGroundTruth().getImage());
+			final BufferedImage classification = context.getClassification().getImage();
+			final int right = classification.getWidth() - 1;
+			final int bottom = classification.getHeight() - 1;
+			final int r = actualLabels.getWidth() - 1;
+			final int b = actualLabels.getHeight() - 1;
+			
+			for (int y = 0; y <= bottom; ++y) {
+				for (int x = 0; x <= right; ++x) {
+					final int actualLabel = (int) actualLabels.getPixelValue(x * r / right, y * b / bottom);
+					
+					classification.setRGB(x, y, actualLabel);
+					
+					if (expectedLabels != null) {
+						final int expectedLabel = (int) expectedLabels.getPixelValue(x, y);
+						
+						this.getTrainingConfusionMatrix().computeIfAbsent(
+								expectedLabel, e -> new HashMap<>()).computeIfAbsent(
+										actualLabel, a -> new AtomicLong()).incrementAndGet();
+					}
+				}
+			}
+		}
 		
 		this.classificationMilliseconds = timer.toc();
 		

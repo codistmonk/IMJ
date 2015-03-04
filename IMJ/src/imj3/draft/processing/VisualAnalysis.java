@@ -410,7 +410,8 @@ public final class VisualAnalysis {
 					final double trainingSeconds = pipeline.getTrainingMilliseconds() / 1_000.0;
 					final double f1 = Pipeline.f1(pipeline.getTrainingConfusionMatrix());
 					
-					MainPanel.this.getTrainingSummaryView().setText(format(Locale.ENGLISH, "seconds=%.3f, F1=%.3f", trainingSeconds, f1));
+					MainPanel.this.getTrainingSummaryView().setText(format(Locale.ENGLISH,
+							"seconds=%.3f, F1=%.3f", trainingSeconds, f1));
 				}
 			});
 			showTrainingResultsButton.addActionListener(new ActionListener() {
@@ -418,38 +419,8 @@ public final class VisualAnalysis {
 				@Override
 				public final void actionPerformed(final ActionEvent event) {
 					final Pipeline pipeline = MainPanel.this.getPipeline();
-					@SuppressWarnings("unchecked")
-					final Map<Integer, Map<Integer, ?>> rows = (Map) pipeline.getTrainingConfusionMatrix();
-					final StringBuilder html = new StringBuilder("<html><body><table>");
-					final Map<String, Integer> classLabels = pipeline.getClassLabels();
 					
-					html.append("<tr><td></td>");
-					html.append(join("", classLabels.keySet().stream().map(k -> "<td>" + k + "</td>").toArray()));
-					html.append("</tr>");
-					
-					for (final Map.Entry<String, Integer> expected : classLabels.entrySet()) {
-						final String expectedName = expected.getKey();
-						final Integer expectedLabel = expected.getValue();
-						final Map<Integer, ?> row = rows.get(expectedLabel);
-						
-						html.append("<tr><td>").append(expectedName).append("</td>");
-						
-						if (row != null) {
-							for (final Integer actualLabel : classLabels.values()) {
-								final Object actualCount = row.get(actualLabel);
-								
-								html.append("<td>").append(actualCount != null ? actualCount : "").append("</td>");
-							}
-						}
-						
-						html.append("</tr>");
-					}
-					
-					html.append("</table></body></html>");
-					
-					final JLabel confusionMatrixView = new JLabel(html.toString());
-					
-					SwingTools.show(confusionMatrixView, "Training results", false);
+					showTable(pipeline.getTrainingConfusionMatrix(), pipeline.getClassLabels(), "Training results");
 				}
 				
 			});
@@ -460,42 +431,32 @@ public final class VisualAnalysis {
 				public final void actionPerformed(final ActionEvent event) {
 					final Pipeline pipeline = MainPanel.this.getPipeline();
 					
-					if (pipeline != null) {
-						// TODO
-						pipeline.classify(null, null, null);
-					}
-//					final BufferedImage awtImage = context.getImage();
-//					
 //					// TODO run in another thread
-//					if (pipeline != null && awtImage != null) {
-//						if (!pipeline.getAlgorithms().isEmpty()) {
-//							final Classifier classifier = pipeline.getAlgorithms().get(0).getClassifier();
-//							
-//							if (classifier != null) {
-//								final Image2D image = new AwtImage2D(context.getImageFile().getPath(), awtImage);
-//								final Image2DRawSource source = Image2DRawSource.raw(image);
-//								final DataSource classified = Analyze.classify(source, classifier);
-//								final Canvas classification = context.getClassification();
-//								
-//								Tools.debugPrint("Classifying...");
-//								final int w = image.getWidth();
-//								int pixel = 0;
-//								for (final Datum c : classified) {
-//									final int x = pixel % w;
-//									final int y = pixel / w;
-//									final int label = c.getPrototype().getIndex();
-//									
-//									classification.getImage().setRGB(x, y, 0xFF000000 | label);
-//									++pixel;
-//								}
-//								Tools.debugPrint("Classification done");
-//							}
-//						}
-//					}
+					if (pipeline != null) {
+						pipeline.classify(context);
+						
+						final double classificationSeconds = pipeline.getClassificationMilliseconds() / 1_000.0;
+						final double f1 = Pipeline.f1(pipeline.getClassificationConfusionMatrix());
+						
+						MainPanel.this.getClassificationSummaryView().setText(format(Locale.ENGLISH,
+								"seconds=%.3f, F1=%.3f", classificationSeconds, f1));
+						
+						// TODO update main view
+					}
 				}
 				
 			});
 //			saveClassificationButton.addActionListener(e -> context.saveClassification());
+			showClassificationResultsButton.addActionListener(new ActionListener() {
+				
+				@Override
+				public final void actionPerformed(final ActionEvent event) {
+					final Pipeline pipeline = MainPanel.this.getPipeline();
+					
+					showTable(pipeline.getClassificationConfusionMatrix(), pipeline.getClassLabels(), "Classification results");
+				}
+				
+			});
 			
 			this.imageVisibilitySelector.addActionListener(new ActionListener() {
 				
@@ -824,7 +785,7 @@ public final class VisualAnalysis {
 		}
 		
 		public final Rectangle getTrainingBounds() {
-			if ( !MainPanel.this.getContext().getGroundTruthName().isEmpty()) {
+			if (!MainPanel.this.getContext().getGroundTruthName().isEmpty()) {
 				final TreePath selectionPath = MainPanel.this.getTree().getSelectionPath();
 				final DefaultMutableTreeNode node = selectionPath == null ? null : cast(DefaultMutableTreeNode.class, selectionPath.getLastPathComponent());
 				final UserObject userObject = node == null ? null : cast(UserObject.class, node.getUserObject());
@@ -885,6 +846,39 @@ public final class VisualAnalysis {
 		
 		public static final void fillDisk(final Graphics g, final int x, final int y, final int size) {
 			g.fillOval(x - size / 2, y - size / 2, size, size);
+		}
+		
+		public static final <K, V> void showTable(final Map<K, Map<K, V>> labeledTable,
+				final Map<String, K> namedLabels, final String title) {
+			final StringBuilder html = new StringBuilder("<html><body><table>");
+			
+			html.append("<tr><td></td>");
+			html.append(join("", namedLabels.keySet().stream().map(k -> "<td>" + k + "</td>").toArray()));
+			html.append("</tr>");
+			
+			for (final Map.Entry<String, K> expected : namedLabels.entrySet()) {
+				final String expectedName = expected.getKey();
+				final K expectedLabel = expected.getValue();
+				final Map<K, ?> row = labeledTable.get(expectedLabel);
+				
+				html.append("<tr><td>").append(expectedName).append("</td>");
+				
+				if (row != null) {
+					for (final K actualLabel : namedLabels.values()) {
+						final Object actualCount = row.get(actualLabel);
+						
+						html.append("<td>").append(actualCount != null ? actualCount : "").append("</td>");
+					}
+				}
+				
+				html.append("</tr>");
+			}
+			
+			html.append("</table></body></html>");
+			
+			final JLabel tableView = new JLabel(html.toString());
+			
+			SwingTools.show(tableView, title, false);
 		}
 		
 		/**
