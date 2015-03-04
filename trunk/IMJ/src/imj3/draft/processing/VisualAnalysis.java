@@ -459,34 +459,39 @@ public final class VisualAnalysis {
 				@Override
 				public final void actionPerformed(final ActionEvent event) {
 					final Pipeline pipeline = MainPanel.this.getPipeline();
-					final BufferedImage awtImage = context.getImage();
 					
-					// TODO run in another thread
-					if (pipeline != null && awtImage != null) {
-						if (!pipeline.getAlgorithms().isEmpty()) {
-							final Classifier classifier = pipeline.getAlgorithms().get(0).getClassifier();
-							
-							if (classifier != null) {
-								final Image2D image = new AwtImage2D(context.getImageFile().getPath(), awtImage);
-								final Image2DRawSource source = Image2DRawSource.raw(image);
-								final DataSource classified = Analyze.classify(source, classifier);
-								final Canvas classification = context.getClassification();
-								
-								Tools.debugPrint("Classifying...");
-								final int w = image.getWidth();
-								int pixel = 0;
-								for (final Datum c : classified) {
-									final int x = pixel % w;
-									final int y = pixel / w;
-									final int label = c.getPrototype().getIndex();
-									
-									classification.getImage().setRGB(x, y, 0xFF000000 | label);
-									++pixel;
-								}
-								Tools.debugPrint("Classification done");
-							}
-						}
+					if (pipeline != null) {
+						// TODO
+						pipeline.classify(null, null, null);
 					}
+//					final BufferedImage awtImage = context.getImage();
+//					
+//					// TODO run in another thread
+//					if (pipeline != null && awtImage != null) {
+//						if (!pipeline.getAlgorithms().isEmpty()) {
+//							final Classifier classifier = pipeline.getAlgorithms().get(0).getClassifier();
+//							
+//							if (classifier != null) {
+//								final Image2D image = new AwtImage2D(context.getImageFile().getPath(), awtImage);
+//								final Image2DRawSource source = Image2DRawSource.raw(image);
+//								final DataSource classified = Analyze.classify(source, classifier);
+//								final Canvas classification = context.getClassification();
+//								
+//								Tools.debugPrint("Classifying...");
+//								final int w = image.getWidth();
+//								int pixel = 0;
+//								for (final Datum c : classified) {
+//									final int x = pixel % w;
+//									final int y = pixel / w;
+//									final int label = c.getPrototype().getIndex();
+//									
+//									classification.getImage().setRGB(x, y, 0xFF000000 | label);
+//									++pixel;
+//								}
+//								Tools.debugPrint("Classification done");
+//							}
+//						}
+//					}
 				}
 				
 			});
