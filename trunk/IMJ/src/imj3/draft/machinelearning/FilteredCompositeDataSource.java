@@ -28,7 +28,7 @@ public final class FilteredCompositeDataSource extends DataSource.Abstract<DataS
 	public final Iterator iterator() {
 		final java.util.Iterator<DataSource> i = this.sources.iterator();
 		
-		return Iterator.wrap(new FilteredIterator<Datum>(new java.util.Iterator<Datum>() {
+		return Iterator.wrap(new FilteredIterator<>(new java.util.Iterator<Datum>() {
 			
 			private java.util.Iterator<Datum> j;
 			
