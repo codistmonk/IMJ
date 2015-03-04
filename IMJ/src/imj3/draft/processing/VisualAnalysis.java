@@ -15,6 +15,7 @@ import static net.sourceforge.aprog.tools.Tools.append;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
+import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import com.thoughtworks.xstream.XStream;
@@ -64,6 +65,7 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
@@ -94,7 +96,6 @@ import net.sourceforge.aprog.swing.MouseHandler;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
 /**
@@ -399,25 +400,56 @@ public final class VisualAnalysis {
 			openPipelineButton.addActionListener(e -> context.setPipeline(open(PIPELINE, "Open pipeline", MainPanel.this)));
 			savePipelineButton.addActionListener(e -> context.savePipeline());
 			
-			runTrainingButton.addActionListener(new ActionListener() {
+			runTrainingButton.addActionListener(e -> {
+				final Pipeline pipeline = MainPanel.this.getPipeline();
+				
+				// TODO run in another thread
+				if (pipeline != null) {
+					pipeline.train(context);
+					
+					final double trainingSeconds = pipeline.getTrainingMilliseconds() / 1_000.0;
+					final double f1 = Pipeline.f1(pipeline.getTrainingConfusionMatrix());
+					
+					MainPanel.this.getTrainingSummaryView().setText(format(Locale.ENGLISH, "seconds=%.3f, F1=%.3f", trainingSeconds, f1));
+				}
+			});
+			showTrainingResultsButton.addActionListener(new ActionListener() {
 				
 				@Override
 				public final void actionPerformed(final ActionEvent event) {
 					final Pipeline pipeline = MainPanel.this.getPipeline();
+					@SuppressWarnings("unchecked")
+					final Map<Integer, Map<Integer, ?>> rows = (Map) pipeline.getTrainingConfusionMatrix();
+					final StringBuilder html = new StringBuilder("<html><body><table>");
+					final Map<String, Integer> classLabels = pipeline.getClassLabels();
 					
-					// TODO run in another thread
-					if (pipeline != null) {
-						final TicToc timer = new TicToc();
+					html.append("<tr><td></td>");
+					html.append(join("", classLabels.keySet().stream().map(k -> "<td>" + k + "</td>").toArray()));
+					html.append("</tr>");
+					
+					for (final Map.Entry<String, Integer> expected : classLabels.entrySet()) {
+						final String expectedName = expected.getKey();
+						final Integer expectedLabel = expected.getValue();
+						final Map<Integer, ?> row = rows.get(expectedLabel);
 						
-						pipeline.train(context);
+						html.append("<tr><td>").append(expectedName).append("</td>");
 						
-						timer.toc();
+						if (row != null) {
+							for (final Integer actualLabel : classLabels.values()) {
+								final Object actualCount = row.get(actualLabel);
+								
+								html.append("<td>").append(actualCount != null ? actualCount : "").append("</td>");
+							}
+						}
 						
-						final double trainingSeconds = timer.toc() / 1_000.0;
-						final double f1 = Pipeline.f1(pipeline.getTrainingConfusionMatrix());
-						
-						MainPanel.this.getTrainingSummaryView().setText(format("seconds=%.3f, F1=%.3f", trainingSeconds, f1));
+						html.append("</tr>");
 					}
+					
+					html.append("</table></body></html>");
+					
+					final JLabel confusionMatrixView = new JLabel(html.toString());
+					
+					SwingTools.show(confusionMatrixView, "Training results", false);
 				}
 				
 			});

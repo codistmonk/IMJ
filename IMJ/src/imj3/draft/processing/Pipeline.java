@@ -3,7 +3,6 @@ package imj3.draft.processing;
 import static imj3.draft.machinelearning.Datum.Default.datum;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.join;
-
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -37,6 +36,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
 /**
@@ -51,7 +51,11 @@ public final class Pipeline implements Serializable {
 	
 	private List<Pipeline.ClassDescription> classDescriptions;
 	
+	private long trainingMilliseconds;
+	
 	private Map<Integer, Map<Integer, AtomicLong>> trainingConfusionMatrix;
+	
+	private long classificationMilliseconds;
 	
 	private Map<Integer, Map<Integer, AtomicLong>> classificationConfusionMatrix;
 	
@@ -98,7 +102,16 @@ public final class Pipeline implements Serializable {
 		return this.classificationConfusionMatrix;
 	}
 	
+	public final long getTrainingMilliseconds() {
+		return this.trainingMilliseconds;
+	}
+	
+	public final long getClassificationMilliseconds() {
+		return this.classificationMilliseconds;
+	}
+	
 	public final Pipeline train(final Context context) {
+		final TicToc timer = new TicToc();
 		@SuppressWarnings("unchecked")
 		final List<ConcreteTrainingField>[] in = array(new ArrayList<>());
 		@SuppressWarnings("unchecked")
@@ -183,6 +196,8 @@ public final class Pipeline implements Serializable {
 			});
 		}
 		
+		this.trainingMilliseconds = timer.toc();
+		
 		return this;
 	}
 	
@@ -190,6 +205,14 @@ public final class Pipeline implements Serializable {
 		// TODO
 		
 		return this;
+	}
+	
+	public final Map<String, Integer> getClassLabels() {
+		final Map<String, Integer> result = new LinkedHashMap<>();
+		
+		this.getClassDescriptions().forEach(c -> result.put(c.getName(), c.getLabel()));
+		
+		return result;
 	}
 	
 	@Override
@@ -426,9 +449,7 @@ public final class Pipeline implements Serializable {
 		public final SupervisedAlgorithm train(final DataSource trainingSet) {
 			final Predefined measure = Measure.Predefined.L2_ES;
 			final NearestNeighborClassifier classifier = new NearestNeighborClassifier(measure);
-			final Map<String, Integer> classLabels = new HashMap<>();
-			
-			this.getPipeline().getClassDescriptions().forEach(c -> classLabels.put(c.getName(), c.getLabel()));
+			final Map<String, Integer> classLabels = this.getPipeline().getClassLabels();
 			
 			for (final Map.Entry<String, Integer> entry : this.getPrototypeCounts().entrySet()) {
 				final int classLabel = classLabels.get(entry.getKey());
