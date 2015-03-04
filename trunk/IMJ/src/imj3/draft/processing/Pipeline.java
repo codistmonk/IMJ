@@ -2,9 +2,7 @@ package imj3.draft.processing;
 
 import static imj3.draft.machinelearning.Datum.Default.datum;
 import static net.sourceforge.aprog.tools.Tools.array;
-import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
-import static net.sourceforge.aprog.tools.Tools.last;
 
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
@@ -37,7 +35,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import net.sourceforge.aprog.tools.Tools;
@@ -53,6 +50,10 @@ public final class Pipeline implements Serializable {
 	private List<Algorithm> algorithms;
 	
 	private List<Pipeline.ClassDescription> classDescriptions;
+	
+	private Map<Integer, Map<Integer, AtomicLong>> trainingConfusionMatrix;
+	
+	private Map<Integer, Map<Integer, AtomicLong>> classificationConfusionMatrix;
 	
 	@NestedList(name="classes", element="class", elementClass=Pipeline.ClassDescription.class)
 	public final List<Pipeline.ClassDescription> getClassDescriptions() {
@@ -81,6 +82,22 @@ public final class Pipeline implements Serializable {
 		return this.algorithms;
 	}
 	
+	public final Map<Integer, Map<Integer, AtomicLong>> getTrainingConfusionMatrix() {
+		if (this.trainingConfusionMatrix == null) {
+			this.trainingConfusionMatrix = new HashMap<>();
+		}
+		
+		return this.trainingConfusionMatrix;
+	}
+	
+	public final Map<Integer, Map<Integer, AtomicLong>> getClassificationConfusionMatrix() {
+		if (this.classificationConfusionMatrix == null) {
+			this.classificationConfusionMatrix = new HashMap<>();
+		}
+		
+		return this.classificationConfusionMatrix;
+	}
+	
 	public final Pipeline train(final Context context) {
 		@SuppressWarnings("unchecked")
 		final List<ConcreteTrainingField>[] in = array(new ArrayList<>());
@@ -96,10 +113,10 @@ public final class Pipeline implements Serializable {
 			out[0].add(new ConcreteTrainingField(image, labels, f.getBounds()));
 		});
 		
-		final Map<Long, Map<Long, AtomicLong>> confusionMatrix = new TreeMap<>();
-		
 		for (final Algorithm algorithm : this.getAlgorithms()) {
 			CommonTools.swap(in, 0, out, 0);
+			
+			this.getTrainingConfusionMatrix().clear();
 			
 			final int patchSize = algorithm.getPatchSize();
 			final int patchSparsity = algorithm.getPatchSparsity();
@@ -127,10 +144,6 @@ public final class Pipeline implements Serializable {
 			
 			out[0].clear();
 			
-			if (algorithm instanceof SupervisedAlgorithm) {
-				confusionMatrix.clear();
-			}
-			
 			final int n = trainingSet.getClassDimension();
 			
 			in[0].forEach(f -> {
@@ -152,37 +165,22 @@ public final class Pipeline implements Serializable {
 				for (final PatchIterator i = source.iterator(); i.hasNext();) {
 					final int sourceX = i.getX();
 					final int sourceY = i.getY();
-					final long expectedLabel = labels.getPixelValue(sourceX, sourceY);
+					final int expectedLabel = (int) labels.getPixelValue(sourceX, sourceY);
 					
 					classifier.classify(i.next(), classification);
 					
 					newImage.setPixelValue(++targetPixel, classification.getPrototype().getValue());
 					newLabels.setPixelValue(targetPixel, expectedLabel);
 					
-					if (algorithm instanceof SupervisedAlgorithm) {
-//						Tools.debugPrint(expectedLabel, classification.getPrototype().getIndex());
+					if (algorithm instanceof SupervisedAlgorithm && expectedLabel != 0) {
+						final int actualLabel = classification.getPrototype().getIndex();
+						
+						this.getTrainingConfusionMatrix().computeIfAbsent(expectedLabel, e -> new HashMap<>()).computeIfAbsent(actualLabel, a -> new AtomicLong()).incrementAndGet();
 					}
 				}
 				
 				out[0].add(new ConcreteTrainingField(newImage, newLabels));
 			});
-		}
-		
-		final SupervisedAlgorithm lastAlgorithm = cast(SupervisedAlgorithm.class, last(this.getAlgorithms()));
-		
-		if (lastAlgorithm != null) {
-			final int n = in[0].size();
-			
-			for (int i = 0; i < n; ++i) {
-				
-				final Image2D expectedLabels = in[0].get(i).getLabels();
-				final Image2D actualLabels = in[0].get(i).getLabels();
-				expectedLabels.forEachPixel(p -> {
-					return true;
-				});
-			}
-			// TODO evaluate training
-			
 		}
 		
 		return this;
@@ -453,6 +451,30 @@ public final class Pipeline implements Serializable {
 	}
 	
 	private static final long serialVersionUID = -4539259556658072410L;
+	
+	public static final <K, N extends Number> double f1(final Map<K, Map<K, N>> confusionMatrix) {
+		double numerator = 0.0;
+		double denominator = 0.0;
+		
+		for (final Map.Entry<K, Map<K, N>> entry : confusionMatrix.entrySet()) {
+			final Object expectedKey = entry.getKey();
+			
+			for (final Map.Entry<K, N> subEntry : entry.getValue().entrySet()) {
+				final Object actualKey = subEntry.getKey();
+				final double count = subEntry.getValue().doubleValue();
+				
+				if (expectedKey.equals(actualKey)) {
+					numerator += count;
+				} else {
+					denominator += count;
+				}
+			}
+		}
+		
+		denominator += (numerator *= 2.0);
+		
+		return denominator == 0.0 ? 0.0 : numerator / denominator;
+	}
 	
 	/**
 	 * @author codistmonk (creation 2015-02-16)

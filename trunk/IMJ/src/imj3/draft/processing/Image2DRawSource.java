@@ -1,8 +1,5 @@
 package imj3.draft.processing;
 
-import static imj3.core.Channels.Predefined.blue8;
-import static imj3.core.Channels.Predefined.green8;
-import static imj3.core.Channels.Predefined.red8;
 import static imj3.draft.machinelearning.Datum.Default.datum;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 
