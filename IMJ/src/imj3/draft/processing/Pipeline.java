@@ -10,7 +10,6 @@ import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
 import imj3.draft.machinelearning.DataSource;
 import imj3.draft.machinelearning.Datum;
-import imj3.draft.machinelearning.Datum.Default;
 import imj3.draft.machinelearning.FilteredCompositeDataSource;
 import imj3.draft.machinelearning.Measure;
 import imj3.draft.machinelearning.MedianCutClustering;
@@ -39,6 +38,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import net.sourceforge.aprog.tools.Tools;
 
@@ -104,7 +104,9 @@ public final class Pipeline implements Serializable {
 			final int patchSize = algorithm.getPatchSize();
 			final int patchSparsity = algorithm.getPatchSparsity();
 			final int stride = algorithm.getStride();
-			final FilteredCompositeDataSource unbufferedTrainingSet = new FilteredCompositeDataSource(c -> c.getPrototype().getValue()[0] != 0.0);
+			final FilteredCompositeDataSource unbufferedTrainingSet = new FilteredCompositeDataSource(c -> {
+				return c.getPrototype().getValue()[0] != 0.0;
+			});
 			
 			in[0].forEach(f -> {
 				final Image2D image = f.getImage();
@@ -113,6 +115,9 @@ public final class Pipeline implements Serializable {
 						patchSize, patchSparsity, stride);
 				
 				source.getBounds().setBounds(f.getBounds());
+				
+				Tools.debugPrint(source.getBounds());
+				Tools.debugPrint(source.getBounds().getWidth() * source.getBounds().getHeight());
 				
 				unbufferedTrainingSet.add(source);
 			});
@@ -134,8 +139,10 @@ public final class Pipeline implements Serializable {
 				final Image2DLabeledRawSource source = Image2DLabeledRawSource.raw(image, labels,
 						patchSize, patchSparsity, stride);
 				
+				source.getBounds().setBounds(f.getBounds());
+				
 				final Image2D newImage = new DoubleImage2D(image.getId() + "_out",
-						image.getWidth() / stride, image.getHeight() / stride, n);
+						f.getBounds().width / stride, f.getBounds().height / stride, n);
 				final Image2D newLabels = new UnsignedImage2D(labels.getId() + "_tmp",
 						newImage.getWidth(), newImage.getHeight());
 				
@@ -421,7 +428,10 @@ public final class Pipeline implements Serializable {
 		public final SupervisedAlgorithm train(final DataSource trainingSet) {
 			final Predefined measure = Measure.Predefined.L2_ES;
 			final NearestNeighborClassifier classifier = new NearestNeighborClassifier(measure);
+			final List<Integer> labels = this.getPipeline().getClassDescriptions().stream().map(ClassDescription::getLabel).collect(Collectors.toList());
 			int classIndex = -1;
+			
+			Tools.debugPrint(labels);
 			
 			for (final Map.Entry<String, Integer> entry : this.getPrototypeCounts().entrySet()) {
 				final int i = ++classIndex;
@@ -432,11 +442,15 @@ public final class Pipeline implements Serializable {
 				final NearestNeighborClassifier subClassifier = new MedianCutClustering(
 						measure, entry.getValue()).cluster(new FilteredCompositeDataSource(
 								c -> {
-									if (c.getPrototype().getValue()[0] != 0.0) {
+									final int label = (int) c.getPrototype().getValue()[0];
+									
+									if (label != 0) {
 										nonzero.incrementAndGet();
 									}
 									
 									total.incrementAndGet();
+									
+									Tools.debugPrint(label, labels.indexOf(label));
 									
 									return c.getPrototype().getIndex() == i;
 									}).add(trainingSet));

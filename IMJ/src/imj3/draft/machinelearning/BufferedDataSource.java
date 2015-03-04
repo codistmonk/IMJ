@@ -103,15 +103,7 @@ public final class BufferedDataSource extends DataSource.Abstract<DataSource> {
 	private static final long serialVersionUID = -3379089397400242050L;
 	
 	public static final void copyTo(final Collection<Datum> buffer, final Datum classification) {
-		final Datum prototype = classification.getPrototype();
-		
-		if (prototype != null && classification.getValue() == prototype.getValue()) {
-			final double[] input = classification.getValue().clone();
-			
-			buffer.add(new Datum.Default().setValue(input).setScore(classification.getScore()));
-		} else {
-			buffer.add(new Datum.Default().setValue(classification.getValue().clone()).setPrototype(prototype).setScore(classification.getScore()));
-		}
+		buffer.add(classification.copy());
 	}
 	
 	public static final BufferedDataSource buffer(final DataSource source) {

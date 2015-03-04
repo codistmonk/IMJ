@@ -3,6 +3,7 @@ package imj3.draft.machinelearning;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 /**
  * @author codistmonk (creation 2015-03-02)
@@ -60,6 +61,8 @@ public abstract interface Datum extends Serializable {
 		
 		throw new UnsupportedOperationException();
 	}
+	
+	public abstract Datum copy();
 	
 	/**
 	 * @author codistmonk (creation 2015-03-02)
@@ -136,10 +139,30 @@ public abstract interface Datum extends Serializable {
 			return this;
 		}
 		
+		@Override
+		public final Default copy() {
+			final Default result = new Default().setIndex(this.getIndex()).setScore(this.getScore());
+			
+			if (this.getValue() != null) {
+				result.setValue(this.getValue().clone());
+			}
+			
+			if (this.getPrototype() != this) {
+				result.setPrototype(this.getPrototype() == null ? null : this.getPrototype().copy());
+			}
+			
+			return result;
+		}
+		
+		@Override
+		public final String toString() {
+			return this.getIndex() + ":" + Arrays.toString(this.getValue());
+		}
+		
 		private static final long serialVersionUID = 2527401229608310695L;
 		
-		public static final Default datum(final double... input) {
-			return new Default().setValue(input);
+		public static final Default datum(final double... value) {
+			return new Default().setValue(value);
 		}
 		
 	}
@@ -156,15 +179,15 @@ public abstract interface Datum extends Serializable {
 		 */
 		public static final class Default<D extends Datum> implements Measure<D> {
 			
-			private final imj3.draft.machinelearning.Measure inputMeasure;
+			private final imj3.draft.machinelearning.Measure valueMeasure;
 			
-			public Default(final imj3.draft.machinelearning.Measure inputMeasure) {
-				this.inputMeasure = inputMeasure;
+			public Default(final imj3.draft.machinelearning.Measure valueMeasure) {
+				this.valueMeasure = valueMeasure;
 			}
 			
 			@Override
 			public final double compute(final D d1, final D d2) {
-				return this.inputMeasure.compute(d1.getValue(), d2.getValue(), Double.POSITIVE_INFINITY);
+				return this.valueMeasure.compute(d1.getValue(), d2.getValue(), Double.POSITIVE_INFINITY);
 			}
 			
 			private static final long serialVersionUID = -1398649605392286153L;
