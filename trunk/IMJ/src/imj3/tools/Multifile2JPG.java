@@ -4,13 +4,12 @@ import static net.sourceforge.aprog.tools.Tools.baseName;
 
 import java.awt.Image;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.util.Date;
 
 import imj2.draft.AutoCloseableImageWriter;
-
 import imj3.core.Image2D;
-
 import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -35,8 +34,15 @@ public final class Multifile2JPG {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String filePath = arguments.get("file", "");
 		final int[] lods = arguments.get("lod", 4);
+		final String format = "jpg";
 		
 		for (final int lod : lods) {
+			final File outputFile = new File(baseName(filePath) + "_lod" + lod + "." + format);
+			
+			if (outputFile.exists()) {
+				continue;
+			}
+			
 			final TicToc timer = new TicToc();
 			
 			Tools.debugPrint(new Date(timer.tic()));
@@ -55,14 +61,12 @@ public final class Multifile2JPG {
 				}
 			}
 			
-			final String format = "jpg";
-			final String outputPath = baseName(filePath) + "_lod" + lod + "." + format;
 			final float compressionQuality = 0.95F;
 			
-			Tools.debugPrint("Writing", outputPath);
+			Tools.debugPrint("Writing", outputFile);
 			
 			try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(format)
-					.setCompressionQuality(compressionQuality).setOutput(new FileOutputStream(outputPath))) {
+					.setCompressionQuality(compressionQuality).setOutput(new FileOutputStream(outputFile))) {
 				imageWriter.write(canvas.getImage());
 			} catch (final Exception exception) {
 				exception.printStackTrace();
