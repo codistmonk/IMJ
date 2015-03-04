@@ -208,13 +208,14 @@ public final class Pipeline implements Serializable {
 	
 	public final Pipeline classify(final Image2D image, final Image2D labels, final Image2D classification) {
 		final TicToc timer = new TicToc();
-		final SupervisedAlgorithm supervisedLast = this.getAlgorithms().isEmpty() ?
+		final SupervisedAlgorithm supervisedLast = labels == null || this.getAlgorithms().isEmpty() ?
 				null : cast(SupervisedAlgorithm.class, last(this.getAlgorithms()));
 		Image2D tmp = image;
+		Image2D outLabels = null;
+		
+		this.getClassificationConfusionMatrix().clear();
 		
 		for (final Algorithm algorithm : this.getAlgorithms()) {
-			this.getClassificationConfusionMatrix().clear();
-			
 			final int patchSize = algorithm.getPatchSize();
 			final int patchSparsity = algorithm.getPatchSparsity();
 			final int stride = algorithm.getStride();
@@ -226,23 +227,20 @@ public final class Pipeline implements Serializable {
 			final int n = classifier.getClassDimension(inputs.getInputDimension());
 			final Image2D newImage = new DoubleImage2D(image.getId() + "_out",
 					bounds.width / stride, bounds.height / stride, n);
+			
+			if (algorithm == supervisedLast) {
+				outLabels = new UnsignedImage2D(image.getId() + "_outLabels", newImage.getWidth(), newImage.getHeight());
+			}
+			
 			final Datum c = datum();
 			int targetPixel = -1;
-			final Iterator i = inputs.iterator();
-			final PatchIterator patch = i.findSource(PatchIterator.class);
 			
-			while (i.hasNext()) {
+			for (final Datum input : inputs) {
 				newImage.setPixelValue(++targetPixel,
-						classifier.classify(i.next(), c).getPrototype().getValue());
+						classifier.classify(input, c).getPrototype().getValue());
 				
-				if (labels != null && algorithm == supervisedLast) {
-					final int expectedLabel = (int) labels.getPixelValue(patch.getX(), patch.getY());
-					
-					if (expectedLabel != 0) {
-						final int actualLabel = c.getPrototype().getIndex();
-						
-						this.getTrainingConfusionMatrix().computeIfAbsent(expectedLabel, e -> new HashMap<>()).computeIfAbsent(actualLabel, a -> new AtomicLong()).incrementAndGet();
-					}
+				if (algorithm == supervisedLast) {
+					outLabels.setPixelValue(targetPixel, c.getIndex());
 				}
 			}
 			
