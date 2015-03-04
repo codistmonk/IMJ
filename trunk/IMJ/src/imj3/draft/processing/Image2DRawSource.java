@@ -36,7 +36,7 @@ public final class Image2DRawSource extends Image2DSource {
 	}
 	
 	@Override
-	protected final Datum convert(final int x, final int y, final int[] patchValues, final Object context) {
+	protected final Datum convert(final int x, final int y, final double[] patchValues, final Object context) {
 		final Context c = (Context) context;
 		
 		this.convert(x, y, patchValues, c.getDatum());
@@ -44,17 +44,11 @@ public final class Image2DRawSource extends Image2DSource {
 		return c.getClassification();
 	}
 	
-	private final void convert(final int x, final int y, final int[] patchValues, final double[] result) {
+	private final void convert(final int x, final int y, final double[] patchValues, final double[] result) {
 		ignore(x);
 		ignore(y);
 		
-		int i = -1;
-		
-		for (final int value : patchValues) {
-			result[++i] = red8(value);
-			result[++i] = green8(value);
-			result[++i] = blue8(value);
-		}
+		System.arraycopy(patchValues, 0, result, 0, patchValues.length);
 	}
 	
 	private static final long serialVersionUID = 3938160512172714562L;

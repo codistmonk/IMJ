@@ -1,13 +1,16 @@
 package imj3.draft.processing;
 
+import static imj3.draft.machinelearning.Datum.Default.datum;
 import static net.sourceforge.aprog.tools.Tools.array;
+import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
-
+import static net.sourceforge.aprog.tools.Tools.last;
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
 import imj3.draft.machinelearning.DataSource;
 import imj3.draft.machinelearning.Datum;
+import imj3.draft.machinelearning.Datum.Default;
 import imj3.draft.machinelearning.FilteredCompositeDataSource;
 import imj3.draft.machinelearning.Measure;
 import imj3.draft.machinelearning.MedianCutClustering;
@@ -34,6 +37,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import net.sourceforge.aprog.tools.Tools;
 
@@ -91,6 +96,8 @@ public final class Pipeline implements Serializable {
 			out[0].add(new ConcreteTrainingField(image, labels, f.getBounds()));
 		});
 		
+		final Map<Long, Map<Long, AtomicLong>> confusionMatrix = new TreeMap<>();
+		
 		for (final Algorithm algorithm : this.getAlgorithms()) {
 			CommonTools.swap(in, 0, out, 0);
 			
@@ -111,10 +118,13 @@ public final class Pipeline implements Serializable {
 			});
 			
 			final DataSource trainingSet = BufferedDataSource.buffer(unbufferedTrainingSet);
-			
-			algorithm.train(trainingSet);
+			final Classifier classifier = algorithm.train(trainingSet).getClassifier();
 			
 			out[0].clear();
+			
+			if (algorithm instanceof SupervisedAlgorithm) {
+				confusionMatrix.clear();
+			}
 			
 			final int n = trainingSet.getClassDimension();
 			
@@ -129,21 +139,44 @@ public final class Pipeline implements Serializable {
 				final Image2D newLabels = new UnsignedImage2D(labels.getId() + "_tmp",
 						newImage.getWidth(), newImage.getHeight());
 				
+				final Datum classification = datum();
 				int targetPixel = -1;
 				
 				for (final PatchIterator i = source.iterator(); i.hasNext();) {
 					final int sourceX = i.getX();
 					final int sourceY = i.getY();
+					final long expectedLabel = labels.getPixelValue(sourceX, sourceY);
 					
-					newImage.setPixelValue(++targetPixel, i.next().getPrototype().getValue());
-					newLabels.setPixelValue(targetPixel, labels.getPixelValue(sourceX, sourceY));
+					classifier.classify(i.next(), classification);
+					
+					newImage.setPixelValue(++targetPixel, classification.getPrototype().getValue());
+					newLabels.setPixelValue(targetPixel, expectedLabel);
+					
+					if (algorithm instanceof SupervisedAlgorithm) {
+//						Tools.debugPrint(expectedLabel, classification.getPrototype().getIndex());
+					}
 				}
 				
 				out[0].add(new ConcreteTrainingField(newImage, newLabels));
 			});
 		}
 		
-		// TODO evaluate training
+		final SupervisedAlgorithm lastAlgorithm = cast(SupervisedAlgorithm.class, last(this.getAlgorithms()));
+		
+		if (lastAlgorithm != null) {
+			final int n = in[0].size();
+			
+			for (int i = 0; i < n; ++i) {
+				
+				final Image2D expectedLabels = in[0].get(i).getLabels();
+				final Image2D actualLabels = in[0].get(i).getLabels();
+				expectedLabels.forEachPixel(p -> {
+					return true;
+				});
+			}
+			// TODO evaluate training
+			
+		}
 		
 		return this;
 	}
@@ -165,24 +198,24 @@ public final class Pipeline implements Serializable {
 	@PropertyOrdering({ "patchSize", "patchSparsity", "stride", "classifier" })
 	public abstract class Algorithm implements Serializable {
 		
-		private String classifierName = MedianCutClustering.class.getName();
+		private String clusteringName = MedianCutClustering.class.getName();
 		
 		private Classifier classifier;
 		
-		private int patchSize;
+		private int patchSize = 1;
 		
-		private int patchSparsity;
+		private int patchSparsity = 1;
 		
-		private int stride;
+		private int stride = 1;
 		
-		@PropertyGetter("classifier")
-		public final String getClassifierName() {
-			return this.classifierName;
+		@PropertyGetter("clustering")
+		public final String getClusteringName() {
+			return this.clusteringName;
 		}
 		
-		@PropertySetter("classifier")
-		public final Algorithm setClassifierName(final String classifierName) {
-			this.classifierName = classifierName;
+		@PropertySetter("clustering")
+		public final Algorithm setClusteringName(final String clusteringName) {
+			this.clusteringName = clusteringName;
 			
 			return this;
 		}
@@ -267,7 +300,7 @@ public final class Pipeline implements Serializable {
 		
 		@Override
 		public final String toString() {
-			final String classifierName = this.getClassifierName();
+			final String classifierName = this.getClusteringName();
 			final String suffix = this instanceof UnsupervisedAlgorithm ? " (unsupervised: " + this.getClassCount() + ")" : "";
 			
 			return classifierName.substring(classifierName.lastIndexOf('.') + 1) + suffix;
@@ -393,9 +426,22 @@ public final class Pipeline implements Serializable {
 			for (final Map.Entry<String, Integer> entry : this.getPrototypeCounts().entrySet()) {
 				final int i = ++classIndex;
 				
+				final AtomicLong nonzero = new AtomicLong();
+				final AtomicLong total = new AtomicLong();
+				
 				final NearestNeighborClassifier subClassifier = new MedianCutClustering(
 						measure, entry.getValue()).cluster(new FilteredCompositeDataSource(
-								c -> c.getPrototype().getIndex() == i).add(trainingSet));
+								c -> {
+									if (c.getPrototype().getValue()[0] != 0.0) {
+										nonzero.incrementAndGet();
+									}
+									
+									total.incrementAndGet();
+									
+									return c.getPrototype().getIndex() == i;
+									}).add(trainingSet));
+				
+				Tools.debugPrint(subClassifier.getPrototypes().size(), nonzero, total);
 				
 				for (final Datum prototype : subClassifier.getPrototypes()) {
 					classifier.getPrototypes().add(prototype.setIndex(i));

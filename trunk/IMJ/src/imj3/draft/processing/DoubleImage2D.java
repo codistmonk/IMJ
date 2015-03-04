@@ -59,6 +59,11 @@ public final class DoubleImage2D implements Image2D {
 	}
 	
 	@Override
+	public final long getPixelValue(final long pixel) {
+		throw new UnsupportedOperationException();
+	}
+	
+	@Override
 	public final DoubleImage2D setPixelValue(final long pixel, final double[] value) {
 		final int n = this.getChannels().getChannelCount();
 		
