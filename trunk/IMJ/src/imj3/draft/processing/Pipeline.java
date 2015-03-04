@@ -5,6 +5,7 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
+
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -38,7 +39,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
 import net.sourceforge.aprog.tools.Tools;
 
@@ -428,37 +428,20 @@ public final class Pipeline implements Serializable {
 		public final SupervisedAlgorithm train(final DataSource trainingSet) {
 			final Predefined measure = Measure.Predefined.L2_ES;
 			final NearestNeighborClassifier classifier = new NearestNeighborClassifier(measure);
-			final List<Integer> labels = this.getPipeline().getClassDescriptions().stream().map(ClassDescription::getLabel).collect(Collectors.toList());
-			int classIndex = -1;
+			final Map<String, Integer> classLabels = new HashMap<>();
 			
-			Tools.debugPrint(labels);
+			this.getPipeline().getClassDescriptions().forEach(c -> classLabels.put(c.getName(), c.getLabel()));
 			
 			for (final Map.Entry<String, Integer> entry : this.getPrototypeCounts().entrySet()) {
-				final int i = ++classIndex;
-				
-				final AtomicLong nonzero = new AtomicLong();
-				final AtomicLong total = new AtomicLong();
-				
+				final int classLabel = classLabels.get(entry.getKey());
 				final NearestNeighborClassifier subClassifier = new MedianCutClustering(
 						measure, entry.getValue()).cluster(new FilteredCompositeDataSource(
-								c -> {
-									final int label = (int) c.getPrototype().getValue()[0];
-									
-									if (label != 0) {
-										nonzero.incrementAndGet();
-									}
-									
-									total.incrementAndGet();
-									
-									Tools.debugPrint(label, labels.indexOf(label));
-									
-									return c.getPrototype().getIndex() == i;
-									}).add(trainingSet));
+								c -> classLabel == (int) c.getPrototype().getValue()[0]).add(trainingSet));
 				
-				Tools.debugPrint(subClassifier.getPrototypes().size(), nonzero, total);
+				Tools.debugPrint(subClassifier.getPrototypes().size());
 				
 				for (final Datum prototype : subClassifier.getPrototypes()) {
-					classifier.getPrototypes().add(prototype.setIndex(i));
+					classifier.getPrototypes().add(prototype.setIndex(classLabel));
 				}
 			}
 			
