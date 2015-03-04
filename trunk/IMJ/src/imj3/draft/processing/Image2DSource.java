@@ -26,18 +26,9 @@ public abstract class Image2DSource extends Patch2DSource {
 		return this.image;
 	}
 	
+	@Override
 	public final Rectangle getBounds() {
 		return this.bounds;
-	}
-	
-	@Override
-	public final int getBoundsWidth() {
-		return this.getBounds().width;
-	}
-	
-	@Override
-	public final int getBoundsHeight() {
-		return this.getBounds().height;
 	}
 	
 	@Override
