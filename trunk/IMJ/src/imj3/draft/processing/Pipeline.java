@@ -2,11 +2,14 @@ package imj3.draft.processing;
 
 import static imj3.draft.machinelearning.Datum.Default.datum;
 import static net.sourceforge.aprog.tools.Tools.array;
+import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
+import static net.sourceforge.aprog.tools.Tools.last;
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
 import imj3.draft.machinelearning.DataSource;
+import imj3.draft.machinelearning.DataSource.Iterator;
 import imj3.draft.machinelearning.Datum;
 import imj3.draft.machinelearning.FilteredCompositeDataSource;
 import imj3.draft.machinelearning.Measure;
@@ -112,6 +115,8 @@ public final class Pipeline implements Serializable {
 	
 	public final Pipeline train(final Context context) {
 		final TicToc timer = new TicToc();
+		final SupervisedAlgorithm supervisedLast = this.getAlgorithms().isEmpty() ?
+				null : cast(SupervisedAlgorithm.class, last(this.getAlgorithms()));
 		@SuppressWarnings("unchecked")
 		final List<ConcreteTrainingField>[] in = array(new ArrayList<>());
 		@SuppressWarnings("unchecked")
@@ -185,7 +190,7 @@ public final class Pipeline implements Serializable {
 					newImage.setPixelValue(++targetPixel, classification.getPrototype().getValue());
 					newLabels.setPixelValue(targetPixel, expectedLabel);
 					
-					if (algorithm instanceof SupervisedAlgorithm && expectedLabel != 0) {
+					if (algorithm == supervisedLast && expectedLabel != 0) {
 						final int actualLabel = classification.getPrototype().getIndex();
 						
 						this.getTrainingConfusionMatrix().computeIfAbsent(expectedLabel, e -> new HashMap<>()).computeIfAbsent(actualLabel, a -> new AtomicLong()).incrementAndGet();
@@ -201,8 +206,52 @@ public final class Pipeline implements Serializable {
 		return this;
 	}
 	
-	public final Pipeline classify(final Image2D image, final Image2D classification) {
+	public final Pipeline classify(final Image2D image, final Image2D labels, final Image2D classification) {
+		final TicToc timer = new TicToc();
+		final SupervisedAlgorithm supervisedLast = this.getAlgorithms().isEmpty() ?
+				null : cast(SupervisedAlgorithm.class, last(this.getAlgorithms()));
+		Image2D tmp = image;
+		
+		for (final Algorithm algorithm : this.getAlgorithms()) {
+			this.getClassificationConfusionMatrix().clear();
+			
+			final int patchSize = algorithm.getPatchSize();
+			final int patchSparsity = algorithm.getPatchSparsity();
+			final int stride = algorithm.getStride();
+			final Image2DRawSource unbufferedInputs = Image2DRawSource.raw(tmp,
+					patchSize, patchSparsity, stride);
+			final Rectangle bounds = unbufferedInputs.getBounds();
+			final DataSource inputs = BufferedDataSource.buffer(unbufferedInputs);
+			final Classifier classifier = algorithm.getClassifier();
+			final int n = classifier.getClassDimension(inputs.getInputDimension());
+			final Image2D newImage = new DoubleImage2D(image.getId() + "_out",
+					bounds.width / stride, bounds.height / stride, n);
+			final Datum c = datum();
+			int targetPixel = -1;
+			final Iterator i = inputs.iterator();
+			final PatchIterator patch = i.findSource(PatchIterator.class);
+			
+			while (i.hasNext()) {
+				newImage.setPixelValue(++targetPixel,
+						classifier.classify(i.next(), c).getPrototype().getValue());
+				
+				if (labels != null && algorithm == supervisedLast) {
+					final int expectedLabel = (int) labels.getPixelValue(patch.getX(), patch.getY());
+					
+					if (expectedLabel != 0) {
+						final int actualLabel = c.getPrototype().getIndex();
+						
+						this.getTrainingConfusionMatrix().computeIfAbsent(expectedLabel, e -> new HashMap<>()).computeIfAbsent(actualLabel, a -> new AtomicLong()).incrementAndGet();
+					}
+				}
+			}
+			
+			tmp = newImage;
+		}
+		
 		// TODO
+		
+		this.classificationMilliseconds = timer.toc();
 		
 		return this;
 	}
