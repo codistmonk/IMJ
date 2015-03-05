@@ -495,7 +495,7 @@ public final class TrainableSegmentation {
 					final Composite savedComposite = graphics.getComposite();
 					
 					if (cluster == null) {
-						graphics.setComposite(new InvertComposite());
+						graphics.setComposite(new HighlightComposite());
 					} else {
 						graphics.setColor(new Color(cluster.getLabel()));
 					}
