@@ -367,6 +367,8 @@ public final class CommonSwingTools {
 			};
 		}
 		
+		public static final InvertComposite INSTANCE = new InvertComposite();
+		
 	}
 	
 	/**
@@ -636,7 +638,7 @@ public final class CommonSwingTools {
 	 */
 	@Retention(RetentionPolicy.RUNTIME)
 	public static abstract @interface StringGetter {
-		
+		//
 	}
 	
 	/**
