@@ -33,6 +33,7 @@ import imj3.draft.segmentation.ImageComponent.Layer;
 import imj3.draft.segmentation.ImageComponent.Painter;
 import imj3.tools.AwtImage2D;
 import imj3.tools.CommonSwingTools.Instantiator;
+import imj3.tools.CommonSwingTools.InvertComposite;
 import imj3.tools.CommonSwingTools.UserObject;
 import imj3.tools.CommonTools;
 
@@ -652,18 +653,19 @@ public final class VisualAnalysis {
 				public final void paint(final Canvas canvas) {
 					final Point m = MainPanel.this.getMouse();
 					final Graphics2D g = canvas.getGraphics();
+					final Composite saved = g.getComposite();
+					
+					g.setComposite(InvertComposite.INSTANCE);
 					
 					if (0 < m.x && MainPanel.this.getBrushColor() != null) {
 						final int s = MainPanel.this.getBrushSize();
 						
-						g.setColor(Color.WHITE);
 						g.drawOval(m.x - s / 2, m.y - s / 2, s, s);
 					}
 					
 					final Rectangle trainingBounds = MainPanel.this.getTrainingBounds();
 					
 					if (trainingBounds != null) {
-						g.setColor(Color.WHITE);
 						g.draw(trainingBounds);
 						
 						final int size = 12;
@@ -683,6 +685,8 @@ public final class VisualAnalysis {
 						fillDisk(g, x + halfW, y + h, size);
 						fillDisk(g, x + w, y + h, size);
 					}
+					
+					g.setComposite(saved);
 				}
 				
 				private static final long serialVersionUID = -476876650788388190L;
