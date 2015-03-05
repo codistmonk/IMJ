@@ -704,6 +704,7 @@ public final class VisualAnalysis {
 					this.transform = Transform.get(MainPanel.this.getTrainingBounds(), event.getX(), event.getY());
 					
 					this.mouseMoved(event);
+					this.mouseDragged(event);
 				}
 				
 				@Override
