@@ -7,9 +7,12 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.Date;
+import javax.imageio.ImageIO;
 
 import imj2.draft.AutoCloseableImageWriter;
+
 import imj3.core.Image2D;
+
 import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -35,12 +38,26 @@ public final class Multifile2JPG {
 		final String filePath = arguments.get("file", "");
 		final int[] lods = arguments.get("lod", 4);
 		final String format = "jpg";
+		final float compressionQuality = 0.95F;
 		
 		for (final int lod : lods) {
 			final File outputFile = new File(baseName(filePath) + "_lod" + lod + "." + format);
 			
 			if (outputFile.exists()) {
-				continue;
+				final TicToc timer = new TicToc();
+				
+				Tools.debugPrint("Testing", outputFile, "(AWT)", new Date(timer.tic()));
+				
+				try {
+					final BufferedImage image = ImageIO.read(outputFile);
+					
+					Tools.debugPrint(image.getWidth(), image.getHeight(), image.getType());
+					Tools.debugPrint("Testing done in", timer.toc(), "ms");
+					
+					continue;
+				} catch (final Exception exception) {
+					exception.printStackTrace();
+				}
 			}
 			
 			final TicToc timer = new TicToc();
@@ -53,15 +70,13 @@ public final class Multifile2JPG {
 			final int height = image.getHeight();
 			final int optimalTileWidth = image.getOptimalTileWidth();
 			final int optimalTileHeight = image.getOptimalTileHeight();
-			final Canvas canvas = new Canvas().setFormat(width, height, BufferedImage.TYPE_3BYTE_BGR);
+			final Canvas canvas = new Canvas().setFormat(width, height, BufferedImage.TYPE_INT_ARGB);
 			
 			for (int tileY = 0; tileY < height; tileY += optimalTileHeight) {
 				for (int tileX = 0; tileX < width; tileX += optimalTileWidth) {
 					canvas.getGraphics().drawImage((Image) image.getTile(tileX, tileY).toAwt(), tileX, tileY, null);
 				}
 			}
-			
-			final float compressionQuality = 0.95F;
 			
 			Tools.debugPrint("Writing", outputFile);
 			
