@@ -41,6 +41,7 @@ import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Composite;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -613,7 +614,12 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void paint(final Canvas canvas) {
-					canvas.getGraphics().drawImage(MainPanel.this.getContext().getGroundTruth().getImage(), 0, 0, null);
+					final Graphics2D graphics = canvas.getGraphics();
+					final Composite saved = graphics.getComposite();
+					
+					graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3F));
+					graphics.drawImage(MainPanel.this.getContext().getGroundTruth().getImage(), 0, 0, null);
+					graphics.setComposite(saved);
 				}
 				
 				private static final long serialVersionUID = 4700895082820237288L;
@@ -628,7 +634,12 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void paint(final Canvas canvas) {
-					canvas.getGraphics().drawImage(MainPanel.this.getContext().getClassification().getImage(), 0, 0, null);
+					final Graphics2D graphics = canvas.getGraphics();
+					final Composite saved = graphics.getComposite();
+					
+					graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3F));
+					graphics.drawImage(MainPanel.this.getContext().getClassification().getImage(), 0, 0, null);
+					graphics.setComposite(saved);
 				}
 				
 				private static final long serialVersionUID = 7941391067177261093L;
