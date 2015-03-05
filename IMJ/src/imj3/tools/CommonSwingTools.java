@@ -336,7 +336,7 @@ public final class CommonSwingTools {
 	/**
 	 * @author codistmonk (creation 2015-01-19)
 	 */
-	public static final class InvertComposite implements Composite {
+	public static final class HighlightComposite implements Composite {
 		
 		@Override
 		public final CompositeContext createContext(final ColorModel srcColorModel,
@@ -357,7 +357,7 @@ public final class CommonSwingTools {
 					
 					for (int i = 0; i < n; ++i) {
 						if (((i + 1) % 4) != 0) {
-							buffer[i] ^= ~0;
+							buffer[i] ^= 0x808080;
 						}
 					}
 					
@@ -367,7 +367,7 @@ public final class CommonSwingTools {
 			};
 		}
 		
-		public static final InvertComposite INSTANCE = new InvertComposite();
+		public static final HighlightComposite INSTANCE = new HighlightComposite();
 		
 	}
 	

@@ -33,7 +33,7 @@ import imj3.draft.segmentation.ImageComponent.Layer;
 import imj3.draft.segmentation.ImageComponent.Painter;
 import imj3.tools.AwtImage2D;
 import imj3.tools.CommonSwingTools.Instantiator;
-import imj3.tools.CommonSwingTools.InvertComposite;
+import imj3.tools.CommonSwingTools.HighlightComposite;
 import imj3.tools.CommonSwingTools.UserObject;
 import imj3.tools.CommonTools;
 
@@ -655,7 +655,7 @@ public final class VisualAnalysis {
 					final Graphics2D g = canvas.getGraphics();
 					final Composite saved = g.getComposite();
 					
-					g.setComposite(InvertComposite.INSTANCE);
+					g.setComposite(HighlightComposite.INSTANCE);
 					
 					if (0 < m.x && MainPanel.this.getBrushColor() != null) {
 						final int s = MainPanel.this.getBrushSize();
