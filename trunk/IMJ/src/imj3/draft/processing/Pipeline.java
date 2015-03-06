@@ -133,6 +133,7 @@ public final class Pipeline implements Serializable {
 			out[0].add(new ConcreteTrainingField(image, labels, f.getBounds()));
 		});
 		
+		
 		for (final Algorithm algorithm : this.getAlgorithms()) {
 			CommonTools.swap(in, 0, out, 0);
 			
@@ -147,14 +148,11 @@ public final class Pipeline implements Serializable {
 			
 			in[0].forEach(f -> {
 				final Image2D image = f.getImage();
-				final Image2D labels = f.getLabels();
-				final Image2DLabeledRawSource source = Image2DLabeledRawSource.raw(image, labels,
+				final Image2D labels = algorithm instanceof SupervisedAlgorithm ? f.getLabels() : null;
+				final Image2DRawSource source = Image2DRawSource.raw(image, labels,
 						patchSize, patchSparsity, stride);
 				
 				source.getBounds().setBounds(f.getBounds());
-				
-				Tools.debugPrint(source.getBounds());
-				Tools.debugPrint(source.getBounds().getWidth() * source.getBounds().getHeight());
 				
 				unbufferedTrainingSet.add(source);
 			});
@@ -169,7 +167,7 @@ public final class Pipeline implements Serializable {
 			in[0].forEach(f -> {
 				final Image2D image = f.getImage();
 				final Image2D labels = f.getLabels();
-				final Image2DLabeledRawSource source = Image2DLabeledRawSource.raw(image, labels,
+				final Image2DRawSource source = Image2DRawSource.raw(image, labels,
 						patchSize, patchSparsity, stride);
 				
 				source.getBounds().setBounds(f.getBounds());
@@ -240,10 +238,11 @@ public final class Pipeline implements Serializable {
 			int targetPixel = -1;
 			
 			for (final Datum input : inputs) {
-				newImage.setPixelValue(++targetPixel,
-						classifier.classify(input, c).getPrototype().getValue());
+				classifier.classify(input, c);
 				
-				if (algorithm == last) {
+				newImage.setPixelValue(++targetPixel, c.getPrototype().getValue());
+				
+				if (actualLabels != null) {
 					actualLabels.setPixelValue(targetPixel, c.getPrototype().getIndex());
 				}
 			}
