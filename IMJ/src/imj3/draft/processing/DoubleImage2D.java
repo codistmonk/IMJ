@@ -7,6 +7,8 @@ import imj3.core.Image2D;
 import java.util.HashMap;
 import java.util.Map;
 
+import net.sourceforge.aprog.tools.Tools;
+
 /**
  * @author codistmonk (creation 2015-03-01)
  */
@@ -67,7 +69,13 @@ public final class DoubleImage2D implements Image2D {
 	public final DoubleImage2D setPixelValue(final long pixel, final double[] value) {
 		final int n = this.getChannels().getChannelCount();
 		
-		System.arraycopy(value, 0, this.data, (int) (pixel * n), n);
+		try {
+			System.arraycopy(value, 0, this.data, (int) (pixel * n), n);
+		} catch (final Exception exception) {
+			Tools.debugError(pixel, n, value.length, this.data.length);
+			
+			throw Tools.unchecked(exception);
+		}
 		
 		return this;
 	}
