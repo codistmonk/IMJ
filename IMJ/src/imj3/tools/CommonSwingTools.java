@@ -103,8 +103,11 @@ public final class CommonSwingTools {
 						
 						popup.add(item("Edit...", e -> userObject.edit()));
 						
-						if (userObject.isRemovable()) {
-							popup.add(item("Remove", e -> model.removeNodeFromParent((MutableTreeNode) path.getLastPathComponent())));
+						if (userObject.getContainer() != null) {
+							popup.add(item("Remove", e -> {
+								userObject.getContainer().remove(object);
+								model.removeNodeFromParent((MutableTreeNode) path.getLastPathComponent());
+							}));
 						}
 						
 						for (final Method inlineList : scaffold.getInlineLists()) {
@@ -158,7 +161,7 @@ public final class CommonSwingTools {
 							
 							@Override
 							public final void run() {
-								addNode(tree, newElementScaffold, nestingNode, element);
+								addNode(tree, newElementScaffold, nestingNode, element, list);
 								list.add(newElementScaffold.getObject());
 							}
 							
@@ -181,7 +184,7 @@ public final class CommonSwingTools {
 		
 		{
 			model.valueForPathChanged(new TreePath(model.getPathToRoot(result)),
-					new UserObject(scaffold, editTitle, tree, result, false));
+					new UserObject(scaffold, editTitle, tree, result, null));
 			
 			for (final Method method : scaffold.getInlineLists()) {
 				try {
@@ -189,7 +192,7 @@ public final class CommonSwingTools {
 					final List<Object> list = (List<Object>) method.invoke(object);
 					
 					for (final Object o : list) {
-						addNode(tree, new UIScaffold(o), result, method.getAnnotation(InlineList.class).element());
+						addNode(tree, new UIScaffold(o), result, method.getAnnotation(InlineList.class).element(), list);
 					}
 				} catch (final Exception exception) {
 					exception.printStackTrace();
@@ -206,7 +209,7 @@ public final class CommonSwingTools {
 					final List<Object> list = (List<Object>) method.invoke(object);
 					
 					for (final Object o : list) {
-						addNode(tree, new UIScaffold(o), nestingNode, method.getAnnotation(NestedList.class).element());
+						addNode(tree, new UIScaffold(o), nestingNode, method.getAnnotation(NestedList.class).element(), list);
 					}
 				} catch (final Exception exception) {
 					exception.printStackTrace();
@@ -217,11 +220,11 @@ public final class CommonSwingTools {
 		return result;
 	}
 	
-	static final void addNode(final JTree tree, final UIScaffold scaffold, final MutableTreeNode parent, final String element) {
+	static final void addNode(final JTree tree, final UIScaffold scaffold, final MutableTreeNode parent, final String element, final Collection<?> container) {
 		final DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
 		final DefaultMutableTreeNode newElementNode = buildNode(tree, scaffold, "Edit " + element);
 		
-		newElementNode.setUserObject(new UserObject(scaffold, element, tree, newElementNode, true));
+		newElementNode.setUserObject(new UserObject(scaffold, element, tree, newElementNode, container));
 		
 		model.insertNodeInto(newElementNode, parent, model.getChildCount(parent));
 	}
@@ -554,9 +557,9 @@ public final class CommonSwingTools {
 		
 		private final Runnable afterEdit;
 		
-		private final boolean removable;
+		private final Collection<?> container;
 		
-		public UserObject(final UIScaffold uiScaffold, final String editTitle, final JTree tree, final TreeNode node, final boolean removable) {
+		public UserObject(final UIScaffold uiScaffold, final String editTitle, final JTree tree, final TreeNode node, final Collection<?> container) {
 			this.uiScaffold = uiScaffold;
 			this.editTitle = editTitle;
 			final DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
@@ -570,7 +573,7 @@ public final class CommonSwingTools {
 				}
 				
 			};
-			this.removable = removable;
+			this.container = container;
 		}
 		
 		public final UIScaffold getUIScaffold() {
@@ -586,8 +589,8 @@ public final class CommonSwingTools {
 		}
 		
 		@Override
-		public final boolean isRemovable() {
-			return this.removable;
+		public final Collection<?> getContainer() {
+			return this.container;
 		}
 		
 		@Override
@@ -619,7 +622,7 @@ public final class CommonSwingTools {
 		
 		public abstract void edit();
 		
-		public abstract boolean isRemovable();
+		public abstract Collection<?> getContainer();
 		
 	}
 	

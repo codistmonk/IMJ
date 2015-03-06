@@ -275,10 +275,12 @@ public final class VisualAnalysis {
 		return null;
 	}
 	
-	public static final Image2D read(final String id) {
+	public static final Image2D read(final String path) {
 		try {
-			return new AwtImage2D(id);
+			return new AwtImage2D(path);
 		} catch (final Exception exception) {
+			Tools.debugError(path);
+			
 			// TODO try Bio-Formats
 			
 			throw unchecked(exception);
