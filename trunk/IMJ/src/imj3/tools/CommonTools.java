@@ -236,7 +236,13 @@ public final class CommonTools {
 		public abstract void process(File file);
 		
 		public static void deepForEachFileIn(final File root, final FileProcessor processor) {
-			for (final File file : root.listFiles()) {
+			final File[] files = root.listFiles();
+			
+			if (files == null) {
+				return;
+			}
+			
+			for (final File file : files) {
 				if (file.isDirectory()) {
 					deepForEachFileIn(file, processor);
 				} else {
