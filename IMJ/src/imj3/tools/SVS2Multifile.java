@@ -89,7 +89,7 @@ public final class SVS2Multifile {
 		Tools.debugPrint(tasks.getWorkerCount());
 		
 		if (!pathsAsString.isEmpty()) {
-			Arrays.stream(paths).forEach(p -> process(new File(p), null, outRoot));
+			Arrays.stream(paths).forEach(p -> tasks.submit(() -> process(new File(p), null, outRoot)));
 		} else {
 			FileProcessor.deepForEachFileIn(inRoot, f -> tasks.submit(() -> process(f, filter, outRoot)));
 		}
