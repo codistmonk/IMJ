@@ -6,7 +6,9 @@ import static java.lang.Math.min;
 import static java.util.Collections.synchronizedList;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj2.draft.AutoCloseableImageWriter;
+
 import imj3.core.Channels;
 import imj3.tools.CommonTools.FileProcessor;
 
@@ -36,6 +38,7 @@ import org.w3c.dom.Node;
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
+
 import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.ConsoleMonitor;
@@ -73,7 +76,7 @@ public final class SVS2Multifile {
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String pathsAsString = arguments.get("files", "");
-		final String[] paths = pathsAsString.split(",");
+		final String[] paths = pathsAsString.split(":");
 		final File inRoot = new File(arguments.get("in", ""));
 		final RegexFilter filter = new RegexFilter(arguments.get("filter", ".*\\.svs"));
 		final File outRoot = new File(arguments.get("out", ""));
