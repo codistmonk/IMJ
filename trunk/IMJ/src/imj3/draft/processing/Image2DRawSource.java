@@ -14,38 +14,16 @@ public final class Image2DRawSource extends Image2DSource {
 	
 	private final Image2D labels;
 	
-	private final boolean addingXY;
-	
-	private final boolean addingHomogeneousCoordinate;
-	
-	private final int inputDimension;
-	
 	private final int classDimension;
 	
 	public Image2DRawSource(final Image2D image, final Image2D labels, final int patchSize, final int patchSparsity, final int stride, final boolean addXY, final boolean addHomogenousCoordinate) {
-		super(image, patchSize, patchSparsity, stride);
+		super(image, patchSize, patchSparsity, stride, addXY, addHomogenousCoordinate);
 		this.labels = labels;
-		this.addingXY = addXY;
-		this.addingHomogeneousCoordinate = addHomogenousCoordinate;
-		this.inputDimension = image.getChannels().getChannelCount() * this.getPatchPixelCount() + (addXY ? 2 : 0) + (addHomogenousCoordinate ? 1 : 0);
-		this.classDimension = labels == null ? this.inputDimension : 1;
+		this.classDimension = labels == null ? this.getInputDimension() : 1;
 	}
 	
 	public final Image2D getLabels() {
 		return this.labels;
-	}
-	
-	public final boolean isAddingXY() {
-		return this.addingXY;
-	}
-	
-	public final boolean isAddingHomogeneousCoordinate() {
-		return this.addingHomogeneousCoordinate;
-	}
-	
-	@Override
-	public final int getInputDimension() {
-		return this.inputDimension;
 	}
 	
 	@Override
@@ -66,7 +44,7 @@ public final class Image2DRawSource extends Image2DSource {
 		
 		System.arraycopy(patchValues, 0, input, 0, n);
 		
-		if (this.addingXY) {
+		if (this.isAddingXY()) {
 			input[n + 0] = x;
 			input[n + 1] = y;
 			n += 2;
