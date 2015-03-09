@@ -5,7 +5,6 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
-
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -30,6 +29,10 @@ import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.Serializable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -41,6 +44,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -117,6 +121,99 @@ public final class Pipeline implements Serializable {
 	
 	public final Pipeline train(final Context context) {
 		final TicToc timer = new TicToc();
+		
+		final List<ParameterTraining> parameterTrainings = new ArrayList<>();
+		
+		for (final Algorithm algorithm : this.getAlgorithms()) {
+			for (final Method method : algorithm.getClass().getMethods()) {
+				final Trainable trainable = method.getAnnotation(Trainable.class);
+				
+				if (trainable != null) {
+					parameterTrainings.add(new ParameterTraining(algorithm, method));
+				}
+			}
+		}
+		
+		Tools.debugPrint(parameterTrainings.size());
+		
+		final int[] bestParameters = new int[parameterTrainings.size()];
+		
+		// TODO optimize parameters
+		
+		train1(context);
+		
+		this.trainingMilliseconds = timer.toc();
+		
+		return this;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-03-09)
+	 */
+	static final class ParameterTraining implements Serializable {
+		
+		private final Object object;
+		
+		private final Method setter;
+		
+		private final int[] candidates;
+		
+		private int currentIndex;
+		
+		public ParameterTraining(final Object object, final Method setter) {
+			this.object = object;
+			this.setter = setter;
+			
+			final Trainable trainable = setter.getAnnotation(Trainable.class);
+			int[] candidates = null;
+			
+			for (final Method method : object.getClass().getMethods()) {
+				final PropertyGetter getter = method.getAnnotation(PropertyGetter.class);
+				
+				if (getter != null && getter.value().equals(trainable.value())) {
+					try {
+						candidates = new CommandLineArgumentsParser("range", method.invoke(object).toString()).get("range", 1);
+						break;
+					} catch (final Exception exception) {
+						throw Tools.unchecked(exception);
+					}
+				}
+			}
+			
+			this.candidates = candidates;
+		}
+		
+		public final boolean hasNext() {
+			return this.currentIndex < this.candidates.length;
+		}
+		
+		public final int getCurrentIndex() {
+			return this.currentIndex;
+		}
+		
+		public final void setCurrentIndex(final int currentIndex) {
+			this.currentIndex = currentIndex;
+			
+			this.set();
+		}
+		
+		public final void next() {
+			this.setCurrentIndex(this.getCurrentIndex() + 1);
+		}
+		
+		public final void set() {
+			try {
+				this.setter.invoke(this.object, this.candidates[this.currentIndex]);
+			} catch (final Exception exception) {
+				throw Tools.unchecked(exception);
+			}
+		}
+		
+		private static final long serialVersionUID = 1071010309738220354L;
+		
+	}
+	
+	private final void train1(final Context context) {
 		final SupervisedAlgorithm supervisedLast = this.getAlgorithms().isEmpty() ?
 				null : cast(SupervisedAlgorithm.class, last(this.getAlgorithms()));
 		@SuppressWarnings("unchecked")
@@ -132,7 +229,6 @@ public final class Pipeline implements Serializable {
 			
 			out[0].add(new ConcreteTrainingField(image, labels, f.getBounds()));
 		});
-		
 		
 		for (final Algorithm algorithm : this.getAlgorithms()) {
 			CommonTools.swap(in, 0, out, 0);
@@ -201,53 +297,52 @@ public final class Pipeline implements Serializable {
 				out[0].add(new ConcreteTrainingField(newImage, newLabels));
 			});
 		}
-		
-		this.trainingMilliseconds = timer.toc();
-		
-		return this;
 	}
 	
 	public final Pipeline classify(final Context context) {
 		final TicToc timer = new TicToc();
 		final Image2D image = new AwtImage2D(null, context.getImage());
 		final Algorithm last = this.getAlgorithms().isEmpty() ? null : last(this.getAlgorithms());
-		Image2D tmp = image;
 		Image2D actualLabels = null;
 		
-		this.getClassificationConfusionMatrix().clear();
-		
-		for (final Algorithm algorithm : this.getAlgorithms()) {
-			final int patchSize = algorithm.getPatchSize();
-			final int patchSparsity = algorithm.getPatchSparsity();
-			final int stride = algorithm.getStride();
-			final Image2DRawSource unbufferedInputs = Image2DRawSource.raw(tmp,
-					patchSize, patchSparsity, stride);
-			final Rectangle bounds = unbufferedInputs.getBounds();
-			final DataSource inputs = BufferedDataSource.buffer(unbufferedInputs);
-			final Classifier classifier = algorithm.getClassifier();
-			final int n = classifier.getClassDimension(inputs.getInputDimension());
-			final Image2D newImage = new DoubleImage2D(image.getId() + "_out",
-					Patch2DSource.newSize(bounds.x, bounds.width, patchSize, stride),
-					Patch2DSource.newSize(bounds.y, bounds.height, patchSize, stride), n);
+		{
+			Image2D tmp = image;
 			
-			if (algorithm == last) {
-				actualLabels = new UnsignedImage2D(image.getId() + "_outLabels", newImage.getWidth(), newImage.getHeight());
-			}
+			this.getClassificationConfusionMatrix().clear();
 			
-			final Datum c = datum();
-			int targetPixel = -1;
-			
-			for (final Datum input : inputs) {
-				classifier.classify(input, c);
+			for (final Algorithm algorithm : this.getAlgorithms()) {
+				final int patchSize = algorithm.getPatchSize();
+				final int patchSparsity = algorithm.getPatchSparsity();
+				final int stride = algorithm.getStride();
+				final Image2DRawSource unbufferedInputs = Image2DRawSource.raw(tmp,
+						patchSize, patchSparsity, stride);
+				final Rectangle bounds = unbufferedInputs.getBounds();
+				final DataSource inputs = BufferedDataSource.buffer(unbufferedInputs);
+				final Classifier classifier = algorithm.getClassifier();
+				final int n = classifier.getClassDimension(inputs.getInputDimension());
+				final Image2D newImage = new DoubleImage2D(image.getId() + "_out",
+						Patch2DSource.newSize(bounds.x, bounds.width, patchSize, stride),
+						Patch2DSource.newSize(bounds.y, bounds.height, patchSize, stride), n);
 				
-				newImage.setPixelValue(++targetPixel, c.getPrototype().getValue());
-				
-				if (actualLabels != null) {
-					actualLabels.setPixelValue(targetPixel, c.getPrototype().getIndex());
+				if (algorithm == last) {
+					actualLabels = new UnsignedImage2D(image.getId() + "_outLabels", newImage.getWidth(), newImage.getHeight());
 				}
+				
+				final Datum c = datum();
+				int targetPixel = -1;
+				
+				for (final Datum input : inputs) {
+					classifier.classify(input, c);
+					
+					newImage.setPixelValue(++targetPixel, c.getPrototype().getValue());
+					
+					if (actualLabels != null) {
+						actualLabels.setPixelValue(targetPixel, c.getPrototype().getIndex());
+					}
+				}
+				
+				tmp = newImage;
 			}
-			
-			tmp = newImage;
 		}
 		
 		if (actualLabels != null) {
@@ -307,9 +402,15 @@ public final class Pipeline implements Serializable {
 		
 		private int patchSize = 1;
 		
+		private String patchSizeRange;
+		
 		private int patchSparsity = 1;
 		
+		private String patchSparsityRange;
+		
 		private int stride = 1;
+		
+		private String strideRange;
 		
 		@PropertyGetter("clustering")
 		public final String getClusteringName() {
@@ -339,8 +440,25 @@ public final class Pipeline implements Serializable {
 		}
 		
 		@PropertySetter("patchSize")
+		@Trainable("patchSizeRange")
 		public final Algorithm setPatchSize(final String patchSizeAsString) {
 			return this.setPatchSize(Integer.parseInt(patchSizeAsString));
+		}
+		
+		@PropertyGetter("patchSizeRange")
+		public final String getPatchSizeRange() {
+			if (this.patchSizeRange == null) {
+				this.patchSizeRange = "1";
+			}
+			
+			return this.patchSizeRange;
+		}
+		
+		@PropertySetter("patchSizeRange")
+		public final Algorithm setPatchSizeRange(final String patchSizeRange) {
+			this.patchSizeRange = patchSizeRange;
+			
+			return this;
 		}
 		
 		public final int getPatchSparsity() {
@@ -359,8 +477,25 @@ public final class Pipeline implements Serializable {
 		}
 		
 		@PropertySetter("patchSparsity")
+		@Trainable("patchSparsityRange")
 		public final Algorithm setPatchSparsity(final String patchSparsityAsString) {
 			return this.setPatchSparsity(Integer.parseInt(patchSparsityAsString));
+		}
+		
+		@PropertyGetter("patchSparsityRange")
+		public final String getPatchSparsityRange() {
+			if (this.patchSparsityRange == null) {
+				this.patchSparsityRange = "1";
+			}
+			
+			return this.patchSparsityRange;
+		}
+		
+		@PropertySetter("patchSparsityRange")
+		public final Algorithm setPatchSparsityRange(final String patchSparsityRange) {
+			this.patchSparsityRange = patchSparsityRange;
+			
+			return this;
 		}
 		
 		public final int getStride() {
@@ -379,8 +514,25 @@ public final class Pipeline implements Serializable {
 		}
 		
 		@PropertySetter("stride")
+		@Trainable("strideRange")
 		public final Algorithm setStride(final String strideAsString) {
 			return this.setStride(Integer.parseInt(strideAsString));
+		}
+		
+		@PropertyGetter("strideRange")
+		public final String getStrideRange() {
+			if (this.strideRange == null) {
+				this.strideRange = "1";
+			}
+			
+			return this.strideRange;
+		}
+		
+		@PropertySetter("strideRange")
+		public final Algorithm setStrideRange(final String strideRange) {
+			this.strideRange = strideRange;
+			
+			return this;
 		}
 		
 		public final Classifier getClassifier() {
@@ -568,6 +720,16 @@ public final class Pipeline implements Serializable {
 		denominator += (numerator *= 2.0);
 		
 		return denominator == 0.0 ? 0.0 : numerator / denominator;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-03-09)
+	 */
+	@Retention(RetentionPolicy.RUNTIME)
+	public static abstract @interface Trainable {
+		
+		public abstract String value();
+		
 	}
 	
 	/**
