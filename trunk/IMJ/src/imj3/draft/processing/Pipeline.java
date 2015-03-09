@@ -5,6 +5,7 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
+
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -31,7 +32,6 @@ import java.io.File;
 import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -134,13 +134,50 @@ public final class Pipeline implements Serializable {
 			}
 		}
 		
-		Tools.debugPrint(parameterTrainings.size());
+		final int n = parameterTrainings.size();
 		
-		final int[] bestParameters = new int[parameterTrainings.size()];
+		Tools.debugPrint(n);
 		
-		// TODO optimize parameters
+		int[] bestParameters = new int[n];
+		Map<Integer, Map<Integer, AtomicLong>> bestConfusionMatrix = null;
+		double bestScore = 0.0;
 		
-		train1(context);
+		optimize_parameters:
+		while (true) {
+			parameterTrainings.forEach(ParameterTraining::set);
+			
+			train1(context);
+			
+			final double score = f1(this.getTrainingConfusionMatrix());
+			
+			if (bestScore < score) {
+				bestScore = score;
+				bestConfusionMatrix = new HashMap<>(this.getTrainingConfusionMatrix());
+				bestParameters = parameterTrainings.stream().mapToInt(ParameterTraining::getCurrentIndex).toArray();
+			}
+			
+			for (int i = 0; i < n; ++i) {
+				final ParameterTraining parameterTraining = parameterTrainings.get(i);
+				
+				if (parameterTraining.hasNext()) {
+					parameterTraining.next();
+					break;
+				}
+				
+				parameterTraining.setCurrentIndex(0);
+				
+				if (--i < 0) {
+					break optimize_parameters;
+				}
+			}
+		}
+		
+		for (int i = 0; i < n; ++i) {
+			parameterTrainings.get(i).setCurrentIndex(bestParameters[i]);
+		}
+		
+		this.getTrainingConfusionMatrix().clear();
+		this.getTrainingConfusionMatrix().putAll(bestConfusionMatrix);
 		
 		this.trainingMilliseconds = timer.toc();
 		
@@ -184,7 +221,7 @@ public final class Pipeline implements Serializable {
 		}
 		
 		public final boolean hasNext() {
-			return this.currentIndex < this.candidates.length;
+			return this.getCurrentIndex() + 1 < this.candidates.length;
 		}
 		
 		public final int getCurrentIndex() {
@@ -203,7 +240,7 @@ public final class Pipeline implements Serializable {
 		
 		public final void set() {
 			try {
-				this.setter.invoke(this.object, this.candidates[this.currentIndex]);
+				this.setter.invoke(this.object, Integer.toString(this.candidates[this.currentIndex]));
 			} catch (final Exception exception) {
 				throw Tools.unchecked(exception);
 			}
