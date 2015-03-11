@@ -27,7 +27,6 @@ import imj3.draft.processing.Pipeline.ClassDescription;
 import imj3.draft.processing.Pipeline.SupervisedAlgorithm;
 import imj3.draft.processing.Pipeline.TrainingField;
 import imj3.draft.processing.Pipeline.UnsupervisedAlgorithm;
-import imj3.draft.processing.VisualAnalysis.Context.Refresh;
 import imj3.draft.segmentation.ImageComponent;
 import imj3.draft.segmentation.ImageComponent.Layer;
 import imj3.draft.segmentation.ImageComponent.Painter;
@@ -66,6 +65,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.prefs.Preferences;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
@@ -392,7 +393,7 @@ public final class VisualAnalysis {
 			});
 			this.imageSelector.setFileListener(e -> context.setImage(MainPanel.this.getImageSelector().getSelectedFile()));
 			
-			this.groundTruthSelector.setFileListener(e -> context.refreshGroundTruthAndClassification(Refresh.FROM_FILE));
+			this.groundTruthSelector.setFileListener(e -> context.refreshGroundTruthAndClassification());
 			newGroundTruthButton.addActionListener(e -> context.saveGroundTruth(JOptionPane.showInputDialog("Ground truth name:")));
 			saveGroundTruthButton.addActionListener(e -> context.saveGroundTruth());
 			
@@ -404,8 +405,10 @@ public final class VisualAnalysis {
 			runTrainingButton.addActionListener(e -> {
 				final Pipeline pipeline = MainPanel.this.getPipeline();
 				
-				// TODO run in another thread
 				if (pipeline != null) {
+					MainPanel.this.getTrainingSummaryView().setText("-");
+					
+					// TODO run in another thread
 					pipeline.train(context.getGroundTruthName());
 					
 					final double trainingSeconds = pipeline.getTrainingMilliseconds() / 1_000.0;
@@ -432,8 +435,10 @@ public final class VisualAnalysis {
 				public final void actionPerformed(final ActionEvent event) {
 					final Pipeline pipeline = MainPanel.this.getPipeline();
 					
-//					// TODO run in another thread
 					if (pipeline != null) {
+						MainPanel.this.getClassificationSummaryView().setText("-");
+						
+						// TODO run in another thread
 						pipeline.classify(context.getImage(),
 								context.getGroundTruthName().isEmpty() ? null : context.getGroundTruth().getImage(),
 								context.getClassification().getImage());
@@ -1091,12 +1096,6 @@ public final class VisualAnalysis {
 			return this.getMainPanel().getGroundTruthSelector().getText();
 		}
 		
-		public final Context setGroundTruthName(final String groundTruthName) {
-			this.getMainPanel().getGroundTruthSelector().setFile(new File(groundTruthName));
-			
-			return this;
-		}
-		
 		public final BufferedImage getImage() {
 			final MainPanel mainPanel = this.getMainPanel();
 			final ImageComponent imageComponent = mainPanel == null ? null : mainPanel.getImageComponent();
@@ -1189,7 +1188,7 @@ public final class VisualAnalysis {
 			return baseName(this.getImageFile().getPath()) + "_classification_" + this.getGroundTruthName() + "_" + this.getPipelineName() + ".png";
 		}
 		
-		public final void refreshGroundTruthAndClassification(final Refresh refresh) {
+		public final void refreshGroundTruthAndClassification() {
 			final BufferedImage image = this.getImage();
 			
 			if (image == null) {
@@ -1202,35 +1201,27 @@ public final class VisualAnalysis {
 			this.getGroundTruth().setFormat(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
 			this.getClassification().setFormat(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
 			
-			switch (refresh) {
-			case CLEAR:
-				this.getGroundTruth().clear(CLEAR);
-				this.getClassification().clear(CLEAR);
-				break;
-			case FROM_FILE:
 			{
-				{
-					final String groundTruthPath = this.getGroundTruthPath();
-					
-					if (new File(groundTruthPath).isFile()) {
-						this.getGroundTruth().getGraphics().drawImage(awtRead(groundTruthPath), 0, 0, null);
-					} else {
-						this.getGroundTruth().clear(CLEAR);
-					}
+				this.getGroundTruth().getGraphics().setComposite(AlphaComposite.Src);
+				
+				final String groundTruthPath = this.getGroundTruthPath();
+				
+				if (new File(groundTruthPath).isFile()) {
+					this.getGroundTruth().getGraphics().drawImage(awtRead(groundTruthPath), 0, 0, null);
+				} else {
+					this.getGroundTruth().clear(CLEAR);
 				}
-				{
-					final String classificationPath = this.getClassificationPath();
-					
-					if (new File(classificationPath).isFile()) {
-						this.getClassification().getGraphics().drawImage(awtRead(classificationPath), 0, 0, null);
-					} else {
-						this.getClassification().clear(CLEAR);
-					}
-				}
-				break;
 			}
-			case NOP:
-				break;
+			{
+				this.getClassification().getGraphics().setComposite(AlphaComposite.Src);
+				
+				final String classificationPath = this.getClassificationPath();
+				
+				if (new File(classificationPath).isFile()) {
+					this.getClassification().getGraphics().drawImage(awtRead(classificationPath), 0, 0, null);
+				} else {
+					this.getClassification().clear(CLEAR);
+				}
 			}
 		}
 		
@@ -1243,7 +1234,17 @@ public final class VisualAnalysis {
 				this.getMainPanel().setImage(imageFile.getPath());
 				this.getMainPanel().getImageSelector().setFile(imageFile);
 				
-				this.refreshGroundTruthAndClassification(Refresh.FROM_FILE);
+				final Pattern pattern = Pattern.compile(baseName(imageFile.getName()) + "_groundtruth_(.*)\\.[^.]+");
+				
+				for (final String name : imageFile.getParentFile().list()) {
+					final Matcher matcher = pattern.matcher(name);
+					
+					if (matcher.matches()) {
+						this.setGroundTruth(matcher.group(1));
+					}
+				}
+				
+				this.refreshGroundTruthAndClassification();
 				
 				preferences.put(IMAGE_PATH, imageFile.getPath());
 			}
@@ -1325,15 +1326,6 @@ public final class VisualAnalysis {
 		private static final long serialVersionUID = -2487965125442868238L;
 		
 		public static final Color CLEAR = new Color(0, true);
-		
-		/**
-		 * @author codistmonk (creation 2015-02-17)
-		 */
-		public static enum Refresh {
-			
-			NOP, CLEAR, FROM_FILE;
-			
-		}
 		
 	}
 	
