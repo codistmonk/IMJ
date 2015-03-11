@@ -283,6 +283,7 @@ public final class Pipeline implements Serializable {
 			final int patchSize = algorithm.getPatchSize();
 			final int patchSparsity = algorithm.getPatchSparsity();
 			final int stride = algorithm.getStride();
+			final boolean usingXY = algorithm.isUsingXY();
 			final FilteredCompositeDataSource unbufferedTrainingSet = new FilteredCompositeDataSource(c -> {
 				return c.getPrototype().getValue()[0] != 0.0;
 			});
@@ -290,8 +291,8 @@ public final class Pipeline implements Serializable {
 			in[0].forEach(f -> {
 				final Image2D image = f.getImage();
 				final Image2D labels = algorithm instanceof SupervisedAlgorithm ? f.getLabels() : null;
-				final Image2DRawSource source = Image2DRawSource.raw(image, labels,
-						patchSize, patchSparsity, stride);
+				final Image2DRawSource source = new Image2DRawSource(image, labels,
+						patchSize, patchSparsity, stride, usingXY);
 				
 				source.getBounds().setBounds(f.getBounds());
 				
@@ -308,8 +309,8 @@ public final class Pipeline implements Serializable {
 			in[0].forEach(f -> {
 				final Image2D image = f.getImage();
 				final Image2D labels = f.getLabels();
-				final Image2DRawSource source = Image2DRawSource.raw(image, labels,
-						patchSize, patchSparsity, stride);
+				final Image2DRawSource source = new Image2DRawSource(image, labels,
+						patchSize, patchSparsity, stride, usingXY);
 				
 				source.getBounds().setBounds(f.getBounds());
 				
@@ -359,8 +360,8 @@ public final class Pipeline implements Serializable {
 				final int patchSize = algorithm.getPatchSize();
 				final int patchSparsity = algorithm.getPatchSparsity();
 				final int stride = algorithm.getStride();
-				final Image2DRawSource unbufferedInputs = Image2DRawSource.raw(tmp,
-						patchSize, patchSparsity, stride);
+				final Image2DRawSource unbufferedInputs = new Image2DRawSource(tmp, null,
+						patchSize, patchSparsity, stride, algorithm.isUsingXY());
 				final Rectangle bounds = unbufferedInputs.getBounds();
 				final DataSource inputs = BufferedDataSource.buffer(unbufferedInputs);
 				final Classifier classifier = algorithm.getClassifier();
@@ -438,7 +439,7 @@ public final class Pipeline implements Serializable {
 	/**
 	 * @author codistmonk (creation 2015-02-27)
 	 */
-	@PropertyOrdering({ "patchSize", "patchSparsity", "stride", "classifier" })
+	@PropertyOrdering({ "patchSize", "patchSizeRange", "patchSparsity", "patchSparsityRange", "stride", "strideRange", "usingXY", "usingXYRange", "classifier" })
 	public abstract class Algorithm implements Serializable {
 		
 		private String clusteringName = MedianCutClustering.class.getName();
@@ -596,7 +597,7 @@ public final class Pipeline implements Serializable {
 		
 		@PropertyGetter("usingXY")
 		public final String getUsingXYAsString() {
-			return Integer.toString(this.getStride());
+			return this.isUsingXY() ? "1" : "0";
 		}
 		
 		@PropertySetter("usingXY")
