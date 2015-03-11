@@ -17,18 +17,15 @@ public abstract class Image2DSource extends Patch2DSource {
 	
 	private final boolean addingXY;
 	
-	private final boolean addingHomogeneousCoordinate;
-	
 	private final int inputDimension;
 	
 	protected Image2DSource(final Image2D image, final int patchSize,
-			final int patchSparsity, final int stride, final boolean addingXY, final boolean addingHomogenousCoordinate) {
+			final int patchSparsity, final int stride, final boolean addingXY) {
 		super(patchSize, patchSparsity, stride);
 		this.image = image;
 		this.bounds = new Rectangle(image.getWidth(), image.getHeight());
 		this.addingXY = addingXY;
-		this.addingHomogeneousCoordinate = addingHomogenousCoordinate;
-		this.inputDimension = image.getChannels().getChannelCount() * this.getPatchPixelCount() + (addingXY ? 2 : 0) + (addingHomogenousCoordinate ? 1 : 0);
+		this.inputDimension = image.getChannels().getChannelCount() * this.getPatchPixelCount() + (addingXY ? 2 : 0);
 	}
 	
 	public final Image2D getImage() {
@@ -47,10 +44,6 @@ public abstract class Image2DSource extends Patch2DSource {
 	
 	public final boolean isAddingXY() {
 		return this.addingXY;
-	}
-	
-	public final boolean isAddingHomogeneousCoordinate() {
-		return this.addingHomogeneousCoordinate;
 	}
 	
 	@Override
