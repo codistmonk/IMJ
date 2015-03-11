@@ -5,7 +5,6 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
-
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -156,7 +155,7 @@ public final class Pipeline implements Serializable {
 				bestParameters = parameterTrainings.stream().mapToInt(ParameterTraining::getCurrentIndex).toArray();
 			}
 			
-			for (int i = 0; i < n; ++i) {
+			for (int i = n - 1; 0 <= i; --i) {
 				final ParameterTraining parameterTraining = parameterTrainings.get(i);
 				
 				if (parameterTraining.hasNext()) {
@@ -166,7 +165,7 @@ public final class Pipeline implements Serializable {
 				
 				parameterTraining.setCurrentIndex(0);
 				
-				if (--i < 0) {
+				if (i == 0) {
 					break optimize_parameters;
 				}
 			}
@@ -220,8 +219,12 @@ public final class Pipeline implements Serializable {
 			this.candidates = candidates;
 		}
 		
+		public final int getCandidateCount() {
+			return this.candidates.length;
+		}
+		
 		public final boolean hasNext() {
-			return this.getCurrentIndex() + 1 < this.candidates.length;
+			return this.getCurrentIndex() + 1 < this.getCandidateCount();
 		}
 		
 		public final int getCurrentIndex() {
@@ -244,6 +247,11 @@ public final class Pipeline implements Serializable {
 			} catch (final Exception exception) {
 				throw Tools.unchecked(exception);
 			}
+		}
+		
+		@Override
+		public final String toString() {
+			return Arrays.toString(this.candidates) + "@" + this.currentIndex;
 		}
 		
 		private static final long serialVersionUID = 1071010309738220354L;
