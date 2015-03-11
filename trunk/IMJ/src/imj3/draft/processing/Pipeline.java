@@ -121,8 +121,9 @@ public final class Pipeline implements Serializable {
 	}
 	
 	public final Pipeline train(final String groundTruthName) {
-		final TicToc timer = new TicToc();
+		Tools.debugPrint("Starting training");
 		
+		final TicToc timer = new TicToc();
 		final List<ParameterTraining> parameterTrainings = new ArrayList<>();
 		
 		for (final Algorithm algorithm : this.getAlgorithms()) {
@@ -181,6 +182,8 @@ public final class Pipeline implements Serializable {
 		this.getTrainingConfusionMatrix().putAll(bestConfusionMatrix);
 		
 		this.trainingMilliseconds = timer.toc();
+		
+		Tools.debugPrint("Training done in", this.trainingMilliseconds, "ms");
 		
 		return this;
 	}
@@ -273,11 +276,14 @@ public final class Pipeline implements Serializable {
 	}
 	
 	public final Pipeline classify(final BufferedImage inputImage, final BufferedImage labels, final BufferedImage classification) {
+		Tools.debugPrint("Starting classification");
+		
 		final TicToc timer = new TicToc();
 		final Image2D image = new AwtImage2D(null, inputImage);
 		final Algorithm last = this.getAlgorithms().isEmpty() ? null : last(this.getAlgorithms());
 		Image2D actualLabels = null;
 		
+		// TODO process as tiles to reduce memory usage
 		{
 			Image2D tmp = image;
 			
@@ -290,7 +296,7 @@ public final class Pipeline implements Serializable {
 				final Image2DRawSource unbufferedInputs = new Image2DRawSource(tmp, null,
 						patchSize, patchSparsity, stride, algorithm.isUsingXY());
 				final Rectangle bounds = unbufferedInputs.getBounds();
-				final DataSource inputs = BufferedDataSource.buffer(unbufferedInputs);
+				final DataSource inputs = unbufferedInputs;
 				final Classifier classifier = algorithm.getClassifier();
 				final int n = classifier.getClassDimension(inputs.getInputDimension());
 				final Image2D newImage = new DoubleImage2D(image.getId() + "_out",
@@ -345,6 +351,8 @@ public final class Pipeline implements Serializable {
 		}
 		
 		this.classificationMilliseconds = timer.toc();
+		
+		Tools.debugPrint("Classification done in", this.classificationMilliseconds, "ms");
 		
 		return this;
 	}
