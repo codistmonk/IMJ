@@ -140,6 +140,7 @@ public final class Pipeline implements Serializable {
 		
 		Tools.debugPrint(n);
 		
+		Classifier[] bestClassifiers = null;
 		int[] bestParameters = new int[n];
 		Map<Integer, Map<Integer, AtomicLong>> bestConfusionMatrix = null;
 		double bestScore = 0.0;
@@ -154,8 +155,11 @@ public final class Pipeline implements Serializable {
 			
 			if (bestScore < score) {
 				bestScore = score;
+				Tools.debugPrint(bestConfusionMatrix);
 				bestConfusionMatrix = new HashMap<>(this.getTrainingConfusionMatrix());
+				Tools.debugPrint(bestConfusionMatrix);
 				bestParameters = parameterTrainings.stream().mapToInt(ParameterTraining::getCurrentIndex).toArray();
+				bestClassifiers = this.getAlgorithms().stream().map(Algorithm::getClassifier).toArray(Classifier[]::new);
 			}
 			
 			for (int i = n - 1; 0 <= i; --i) {
@@ -174,12 +178,22 @@ public final class Pipeline implements Serializable {
 			}
 		}
 		
-		for (int i = 0; i < n; ++i) {
-			parameterTrainings.get(i).setCurrentIndex(bestParameters[i]);
+		{
+			for (int i = 0; i < n; ++i) {
+				parameterTrainings.get(i).setCurrentIndex(bestParameters[i]);
+			}
+			
+			this.getTrainingConfusionMatrix().clear();
+			this.getTrainingConfusionMatrix().putAll(bestConfusionMatrix);
+			
+			{
+				final int m = bestClassifiers.length;
+				
+				for (int i = 0; i < m; ++i) {
+					this.getAlgorithms().get(i).setClassifier(bestClassifiers[i]);
+				}
+			}
 		}
-		
-		this.getTrainingConfusionMatrix().clear();
-		this.getTrainingConfusionMatrix().putAll(bestConfusionMatrix);
 		
 		this.trainingMilliseconds = timer.toc();
 		
@@ -298,6 +312,8 @@ public final class Pipeline implements Serializable {
 				final Rectangle bounds = unbufferedInputs.getBounds();
 				final DataSource inputs = unbufferedInputs;
 				final Classifier classifier = algorithm.getClassifier();
+				Tools.debugPrint(algorithm.hashCode(), patchSize, patchSparsity, stride);
+				Tools.debugPrint(((NearestNeighborClassifier) classifier).getPrototypes().size());
 				final int n = classifier.getClassDimension(inputs.getInputDimension());
 				final Image2D newImage = new DoubleImage2D(image.getId() + "_out",
 						Patch2DSource.newSize(bounds.x, bounds.width, patchSize, stride),
