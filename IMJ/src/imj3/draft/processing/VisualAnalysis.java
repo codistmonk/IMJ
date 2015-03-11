@@ -406,7 +406,7 @@ public final class VisualAnalysis {
 				
 				// TODO run in another thread
 				if (pipeline != null) {
-					pipeline.train(context);
+					pipeline.train(context.getGroundTruthName());
 					
 					final double trainingSeconds = pipeline.getTrainingMilliseconds() / 1_000.0;
 					final double f1 = Pipeline.f1(pipeline.getTrainingConfusionMatrix());
@@ -434,7 +434,9 @@ public final class VisualAnalysis {
 					
 //					// TODO run in another thread
 					if (pipeline != null) {
-						pipeline.classify(context);
+						pipeline.classify(context.getImage(),
+								context.getGroundTruthName().isEmpty() ? null : context.getGroundTruth().getImage(),
+								context.getClassification().getImage());
 						
 						final double classificationSeconds = pipeline.getClassificationMilliseconds() / 1_000.0;
 						final double f1 = Pipeline.f1(pipeline.getClassificationConfusionMatrix());
@@ -1176,11 +1178,11 @@ public final class VisualAnalysis {
 		}
 		
 		public final String getGroundTruthPath(final String name) {
-			return baseName(this.getImageFile().getPath()) + "_groundtruth_" + name + ".png";
+			return Pipeline.getGroundTruthPathFromImagePath(this.getImageFile().getPath(), name);
 		}
 		
 		public final String getGroundTruthPathFromImagePath(final String imagePath) {
-			return baseName(imagePath) + "_groundtruth_" + this.getGroundTruthName() + ".png";
+			return Pipeline.getGroundTruthPathFromImagePath(imagePath, this.getGroundTruthName());
 		}
 		
 		public final String getClassificationPath() {

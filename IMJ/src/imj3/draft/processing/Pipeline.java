@@ -2,9 +2,11 @@ package imj3.draft.processing;
 
 import static imj3.draft.machinelearning.Datum.Default.datum;
 import static net.sourceforge.aprog.tools.Tools.array;
+import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
+
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -16,7 +18,6 @@ import imj3.draft.machinelearning.MedianCutClustering;
 import imj3.draft.machinelearning.NearestNeighborClassifier;
 import imj3.draft.machinelearning.Measure.Predefined;
 import imj3.draft.processing.Image2DSource.PatchIterator;
-import imj3.draft.processing.VisualAnalysis.Context;
 import imj3.tools.AwtImage2D;
 import imj3.tools.CommonTools;
 import imj3.tools.CommonSwingTools.NestedList;
@@ -118,7 +119,7 @@ public final class Pipeline implements Serializable {
 		return this.classificationMilliseconds;
 	}
 	
-	public final Pipeline train(final Context context) {
+	public final Pipeline train(final String groundTruthName) {
 		final TicToc timer = new TicToc();
 		
 		final List<ParameterTraining> parameterTrainings = new ArrayList<>();
@@ -145,7 +146,7 @@ public final class Pipeline implements Serializable {
 		while (true) {
 			parameterTrainings.forEach(ParameterTraining::set);
 			
-			train1(context);
+			train1(groundTruthName);
 			
 			final double score = f1(this.getTrainingConfusionMatrix());
 			
@@ -183,82 +184,7 @@ public final class Pipeline implements Serializable {
 		return this;
 	}
 	
-	/**
-	 * @author codistmonk (creation 2015-03-09)
-	 */
-	static final class ParameterTraining implements Serializable {
-		
-		private final Object object;
-		
-		private final Method setter;
-		
-		private final int[] candidates;
-		
-		private int currentIndex;
-		
-		public ParameterTraining(final Object object, final Method setter) {
-			this.object = object;
-			this.setter = setter;
-			
-			final Trainable trainable = setter.getAnnotation(Trainable.class);
-			int[] candidates = null;
-			
-			for (final Method method : object.getClass().getMethods()) {
-				final PropertyGetter getter = method.getAnnotation(PropertyGetter.class);
-				
-				if (getter != null && getter.value().equals(trainable.value())) {
-					try {
-						candidates = new CommandLineArgumentsParser("range", method.invoke(object).toString()).get("range", 1);
-						break;
-					} catch (final Exception exception) {
-						throw Tools.unchecked(exception);
-					}
-				}
-			}
-			
-			this.candidates = candidates;
-		}
-		
-		public final int getCandidateCount() {
-			return this.candidates.length;
-		}
-		
-		public final boolean hasNext() {
-			return this.getCurrentIndex() + 1 < this.getCandidateCount();
-		}
-		
-		public final int getCurrentIndex() {
-			return this.currentIndex;
-		}
-		
-		public final void setCurrentIndex(final int currentIndex) {
-			this.currentIndex = currentIndex;
-			
-			this.set();
-		}
-		
-		public final void next() {
-			this.setCurrentIndex(this.getCurrentIndex() + 1);
-		}
-		
-		public final void set() {
-			try {
-				this.setter.invoke(this.object, Integer.toString(this.candidates[this.currentIndex]));
-			} catch (final Exception exception) {
-				throw Tools.unchecked(exception);
-			}
-		}
-		
-		@Override
-		public final String toString() {
-			return Arrays.toString(this.candidates) + "@" + this.currentIndex;
-		}
-		
-		private static final long serialVersionUID = 1071010309738220354L;
-		
-	}
-	
-	private final void train1(final Context context) {
+	private final void train1(final String groundTruthName) {
 		final SupervisedAlgorithm supervisedLast = this.getAlgorithms().isEmpty() ?
 				null : cast(SupervisedAlgorithm.class, last(this.getAlgorithms()));
 		@SuppressWarnings("unchecked")
@@ -270,7 +196,7 @@ public final class Pipeline implements Serializable {
 			Tools.debugPrint(f.getImagePath());
 			
 			final Image2D image = VisualAnalysis.read(f.getImagePath());
-			final Image2D labels = VisualAnalysis.read(context.getGroundTruthPathFromImagePath(f.getImagePath()));
+			final Image2D labels = VisualAnalysis.read(getGroundTruthPathFromImagePath(f.getImagePath(), groundTruthName));
 			
 			out[0].add(new ConcreteTrainingField(image, labels, f.getBounds()));
 		});
@@ -345,9 +271,9 @@ public final class Pipeline implements Serializable {
 		}
 	}
 	
-	public final Pipeline classify(final Context context) {
+	public final Pipeline classify(final BufferedImage inputImage, final BufferedImage labels, final BufferedImage classification) {
 		final TicToc timer = new TicToc();
-		final Image2D image = new AwtImage2D(null, context.getImage());
+		final Image2D image = new AwtImage2D(null, inputImage);
 		final Algorithm last = this.getAlgorithms().isEmpty() ? null : last(this.getAlgorithms());
 		Image2D actualLabels = null;
 		
@@ -392,8 +318,7 @@ public final class Pipeline implements Serializable {
 		}
 		
 		if (actualLabels != null) {
-			final Image2D expectedLabels = context.getGroundTruthName().isEmpty() ? null : new AwtImage2D(null, context.getGroundTruth().getImage());
-			final BufferedImage classification = context.getClassification().getImage();
+			final Image2D expectedLabels =  labels == null ? null : new AwtImage2D(null, labels);
 			final int right = classification.getWidth() - 1;
 			final int bottom = classification.getHeight() - 1;
 			final int r = actualLabels.getWidth() - 1;
@@ -785,6 +710,10 @@ public final class Pipeline implements Serializable {
 	
 	private static final long serialVersionUID = -4539259556658072410L;
 	
+	public static final String getGroundTruthPathFromImagePath(final String imagePath, final String groundTruthName) {
+		return baseName(imagePath) + "_groundtruth_" + groundTruthName + ".png";
+	}
+	
 	public static final <K, N extends Number> double f1(final Map<K, Map<K, N>> confusionMatrix) {
 		double numerator = 0.0;
 		double denominator = 0.0;
@@ -950,6 +879,81 @@ public final class Pipeline implements Serializable {
 		}
 		
 		private static final long serialVersionUID = 1918328132237430637L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-03-09)
+	 */
+	static final class ParameterTraining implements Serializable {
+		
+		private final Object object;
+		
+		private final Method setter;
+		
+		private final int[] candidates;
+		
+		private int currentIndex;
+		
+		public ParameterTraining(final Object object, final Method setter) {
+			this.object = object;
+			this.setter = setter;
+			
+			final Trainable trainable = setter.getAnnotation(Trainable.class);
+			int[] candidates = null;
+			
+			for (final Method method : object.getClass().getMethods()) {
+				final PropertyGetter getter = method.getAnnotation(PropertyGetter.class);
+				
+				if (getter != null && getter.value().equals(trainable.value())) {
+					try {
+						candidates = new CommandLineArgumentsParser("range", method.invoke(object).toString()).get("range", 1);
+						break;
+					} catch (final Exception exception) {
+						throw Tools.unchecked(exception);
+					}
+				}
+			}
+			
+			this.candidates = candidates;
+		}
+		
+		public final int getCandidateCount() {
+			return this.candidates.length;
+		}
+		
+		public final boolean hasNext() {
+			return this.getCurrentIndex() + 1 < this.getCandidateCount();
+		}
+		
+		public final int getCurrentIndex() {
+			return this.currentIndex;
+		}
+		
+		public final void setCurrentIndex(final int currentIndex) {
+			this.currentIndex = currentIndex;
+			
+			this.set();
+		}
+		
+		public final void next() {
+			this.setCurrentIndex(this.getCurrentIndex() + 1);
+		}
+		
+		public final void set() {
+			try {
+				this.setter.invoke(this.object, Integer.toString(this.candidates[this.currentIndex]));
+			} catch (final Exception exception) {
+				throw Tools.unchecked(exception);
+			}
+		}
+		
+		@Override
+		public final String toString() {
+			return Arrays.toString(this.candidates) + "@" + this.currentIndex;
+		}
+		
+		private static final long serialVersionUID = 1071010309738220354L;
 		
 	}
 	
