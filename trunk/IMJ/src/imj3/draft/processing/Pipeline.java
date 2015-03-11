@@ -6,6 +6,7 @@ import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
@@ -129,7 +130,7 @@ public final class Pipeline implements Serializable {
 				final Trainable trainable = method.getAnnotation(Trainable.class);
 				
 				if (trainable != null) {
-					parameterTrainings.add(new ParameterTraining(algorithm, method));
+					ParameterTraining.addTo(parameterTrainings, algorithm, method);
 				}
 			}
 		}
@@ -625,6 +626,7 @@ public final class Pipeline implements Serializable {
 		
 		private Map<String, String> prototypeCountRanges;
 		
+		@Trainable("prototypeRanges")
 		public final Map<String, Integer> getPrototypeCounts() {
 			if (this.prototypeCounts == null) {
 				this.prototypeCounts = new LinkedHashMap<>();
@@ -714,19 +716,7 @@ public final class Pipeline implements Serializable {
 		@PropertySetter("prototypeRanges")
 		public final SupervisedAlgorithm setPrototypeCountRanges(final String prototypeCountRangesAsString) {
 			final Map<String, String> prototypeCountRanges = this.getPrototypeCountRanges();
-			final Map<String, String> tmp = new HashMap<>();
-			
-			for (final String keyValue : prototypeCountRangesAsString.split(";")) {
-				final String[] keyAndValue = keyValue.split("=");
-				final String key = keyAndValue[0].trim();
-				final String value = keyAndValue[1].trim();
-				
-				if (!prototypeCountRanges.containsKey(key)) {
-					throw new IllegalArgumentException();
-				}
-				
-				tmp.put(key, value);
-			}
+			final Map<String, String> tmp = parseRangeMap(prototypeCountRangesAsString, prototypeCountRanges.keySet());
 			
 			if (!tmp.keySet().containsAll(prototypeCountRanges.keySet())) {
 				throw new IllegalArgumentException();
@@ -767,6 +757,24 @@ public final class Pipeline implements Serializable {
 	}
 	
 	private static final long serialVersionUID = -4539259556658072410L;
+	
+	public static final Map<String, String> parseRangeMap(final String mapAsString, final Collection<String> keys) {
+		final Map<String, String> tmp = new HashMap<>();
+		
+		for (final String keyValue : mapAsString.split(";")) {
+			final String[] keyAndValue = keyValue.split("=");
+			final String key = keyAndValue[0].trim();
+			final String value = keyAndValue[1].trim();
+			
+			if (!keys.contains(key)) {
+				throw new IllegalArgumentException();
+			}
+			
+			tmp.put(key, value);
+		}
+		
+		return tmp;
+	}
 	
 	public static final String getGroundTruthPathFromImagePath(final String imagePath, final String groundTruthName) {
 		return baseName(imagePath) + "_groundtruth_" + groundTruthName + ".png";
@@ -947,32 +955,18 @@ public final class Pipeline implements Serializable {
 		
 		private final Object object;
 		
-		private final Method setter;
+		private final Method accessor;
+		
+		private final Object key;
 		
 		private final int[] candidates;
 		
 		private int currentIndex;
 		
-		public ParameterTraining(final Object object, final Method setter) {
+		public ParameterTraining(final Object object, final Method accessor, final Object key, final int[] candidates) {
 			this.object = object;
-			this.setter = setter;
-			
-			final Trainable trainable = setter.getAnnotation(Trainable.class);
-			int[] candidates = null;
-			
-			for (final Method method : object.getClass().getMethods()) {
-				final PropertyGetter getter = method.getAnnotation(PropertyGetter.class);
-				
-				if (getter != null && getter.value().equals(trainable.value())) {
-					try {
-						candidates = new CommandLineArgumentsParser("range", method.invoke(object).toString()).get("range", 1);
-						break;
-					} catch (final Exception exception) {
-						throw Tools.unchecked(exception);
-					}
-				}
-			}
-			
+			this.accessor = accessor;
+			this.key = key;
 			this.candidates = candidates;
 		}
 		
@@ -1000,7 +994,11 @@ public final class Pipeline implements Serializable {
 		
 		public final void set() {
 			try {
-				this.setter.invoke(this.object, Integer.toString(this.candidates[this.currentIndex]));
+				if (this.key == null) {
+					this.accessor.invoke(this.object, Integer.toString(this.candidates[this.currentIndex]));
+				} else {
+					((Map<Object, Object>) this.accessor.invoke(this.object)).put(this.key, this.candidates[this.currentIndex]);
+				}
 			} catch (final Exception exception) {
 				throw Tools.unchecked(exception);
 			}
@@ -1012,6 +1010,52 @@ public final class Pipeline implements Serializable {
 		}
 		
 		private static final long serialVersionUID = 1071010309738220354L;
+		
+		public static final int[] getCandidates(final Object object, final Method setter) {
+			try {
+				final Method trainer = getTrainer(object, setter.getAnnotation(Trainable.class));
+				
+				return new CommandLineArgumentsParser("range",
+						trainer.invoke(object).toString()).get("range", 1);
+			} catch (final Exception exception) {
+				throw unchecked(exception);
+			}
+		}
+		
+		public static final Method getTrainer(final Object object, final Trainable trainable) {
+			for (final Method method : object.getClass().getMethods()) {
+				final PropertyGetter getter = method.getAnnotation(PropertyGetter.class);
+				
+				if (getter != null && getter.value().equals(trainable.value())) {
+					return method;
+				}
+			}
+			
+			return null;
+		}
+		
+		public static final void addTo(final List<ParameterTraining> parameterTrainings, final Object object, final Method accessor) {
+			if (accessor.getParameterCount() == 1) {
+				parameterTrainings.add(new ParameterTraining(object, accessor, null, getCandidates(object, accessor)));
+			} else if (accessor.getParameterCount() == 0 && Map.class.isAssignableFrom(accessor.getReturnType())) {
+				try {
+					final Map<String, ?> map = (Map<String, ?>) accessor.invoke(object);
+					final Method trainer = getTrainer(object, accessor.getAnnotation(Trainable.class));
+					final Map<?, String> trainerMap = parseRangeMap(trainer.invoke(object).toString(), map.keySet());
+					
+					for (final Object key : map.keySet()) {
+						parameterTrainings.add(new ParameterTraining(object, accessor, key,
+								new CommandLineArgumentsParser("range", trainerMap.get(key)).get("range", 1)));
+					}
+				} catch (final Exception exception) {
+					throw unchecked(exception);
+				}
+			} else {
+				Tools.debugError(accessor);
+				Tools.debugError(accessor.getParameterCount());
+				throw new IllegalArgumentException();
+			}
+		}
 		
 	}
 	
