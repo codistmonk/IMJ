@@ -457,6 +457,10 @@ public final class Pipeline implements Serializable {
 		
 		private String strideRange;
 		
+		private boolean usingXY = false;
+		
+		private String usingXYRange;
+		
 		@PropertyGetter("clustering")
 		public final String getClusteringName() {
 			return this.clusteringName;
@@ -576,6 +580,43 @@ public final class Pipeline implements Serializable {
 		@PropertySetter("strideRange")
 		public final Algorithm setStrideRange(final String strideRange) {
 			this.strideRange = strideRange;
+			
+			return this;
+		}
+		
+		public final boolean isUsingXY() {
+			return this.usingXY;
+		}
+		
+		public final Algorithm setUsingXY(final boolean usingXY) {
+			this.usingXY = usingXY;
+			
+			return this;
+		}
+		
+		@PropertyGetter("usingXY")
+		public final String getUsingXYAsString() {
+			return Integer.toString(this.getStride());
+		}
+		
+		@PropertySetter("usingXY")
+		@Trainable("usingXYRange")
+		public final Algorithm setUsingXY(final String usingXYAsString) {
+			return this.setUsingXY(Integer.parseInt(usingXYAsString) != 0);
+		}
+		
+		@PropertyGetter("usingXYRange")
+		public final String getUsingXYRange() {
+			if (this.usingXYRange == null) {
+				this.usingXYRange = "0";
+			}
+			
+			return this.usingXYRange;
+		}
+		
+		@PropertySetter("usingXYRange")
+		public final Algorithm setUsingXYRange(final String usingXYRange) {
+			this.usingXYRange = usingXYRange;
 			
 			return this;
 		}
