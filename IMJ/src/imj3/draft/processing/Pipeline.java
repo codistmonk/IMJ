@@ -618,9 +618,12 @@ public final class Pipeline implements Serializable {
 	/**
 	 * @author codistmonk (creation 2015-02-24)
 	 */
+	@PropertyOrdering({ "prototypes", "prototypeRanges" })
 	public final class SupervisedAlgorithm extends Algorithm {
 		
 		private Map<String, Integer> prototypeCounts;
+		
+		private Map<String, String> prototypeCountRanges;
 		
 		public final Map<String, Integer> getPrototypeCounts() {
 			if (this.prototypeCounts == null) {
@@ -650,7 +653,7 @@ public final class Pipeline implements Serializable {
 		public final String getPrototypeCountsAsString() {
 			final String string = this.getPrototypeCounts().toString();
 			
-			return string.substring(1, string.length() - 1);
+			return string.substring(1, string.length() - 1).replace(',', ';');
 		}
 		
 		@PropertySetter("prototypes")
@@ -658,7 +661,7 @@ public final class Pipeline implements Serializable {
 			final Map<String, Integer> prototypeCounts = this.getPrototypeCounts();
 			final Map<String, Integer> tmp = new HashMap<>();
 			
-			for (final String keyValue : prototypeCountsAsString.split(",")) {
+			for (final String keyValue : prototypeCountsAsString.split(";")) {
 				final String[] keyAndValue = keyValue.split("=");
 				final String key = keyAndValue[0].trim();
 				final int value = Integer.parseInt(keyAndValue[1].trim());
@@ -675,6 +678,61 @@ public final class Pipeline implements Serializable {
 			}
 			
 			this.prototypeCounts.putAll(tmp);
+			
+			return this;
+		}
+		
+		public final Map<String, String> getPrototypeCountRanges() {
+			if (this.prototypeCountRanges == null) {
+				this.prototypeCountRanges = new LinkedHashMap<>();
+			}
+			
+			{
+				final Collection<String> classes = new LinkedHashSet<>();
+				
+				for (final Pipeline.ClassDescription classDescription : this.getPipeline().getClassDescriptions()) {
+					final String name = classDescription.getName();
+					
+					classes.add(name);
+					
+					if (!this.prototypeCountRanges.containsKey(name)) {
+						this.prototypeCountRanges.put(name, "1");
+					}
+				}
+				
+				this.prototypeCountRanges.keySet().retainAll(classes);
+			}
+			
+			return this.prototypeCountRanges;
+		}
+		
+		@PropertyGetter("prototypeRanges")
+		public final String getPrototypeCountRangesAsString() {
+			return Tools.join("; ", this.getPrototypeCountRanges().entrySet().toArray());
+		}
+		
+		@PropertySetter("prototypeRanges")
+		public final SupervisedAlgorithm setPrototypeCountRanges(final String prototypeCountRangesAsString) {
+			final Map<String, String> prototypeCountRanges = this.getPrototypeCountRanges();
+			final Map<String, String> tmp = new HashMap<>();
+			
+			for (final String keyValue : prototypeCountRangesAsString.split(";")) {
+				final String[] keyAndValue = keyValue.split("=");
+				final String key = keyAndValue[0].trim();
+				final String value = keyAndValue[1].trim();
+				
+				if (!prototypeCountRanges.containsKey(key)) {
+					throw new IllegalArgumentException();
+				}
+				
+				tmp.put(key, value);
+			}
+			
+			if (!tmp.keySet().containsAll(prototypeCountRanges.keySet())) {
+				throw new IllegalArgumentException();
+			}
+			
+			this.prototypeCountRanges.putAll(tmp);
 			
 			return this;
 		}
