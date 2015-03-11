@@ -16,8 +16,8 @@ public final class Image2DRawSource extends Image2DSource {
 	
 	private final int classDimension;
 	
-	public Image2DRawSource(final Image2D image, final Image2D labels, final int patchSize, final int patchSparsity, final int stride, final boolean addXY, final boolean addHomogenousCoordinate) {
-		super(image, patchSize, patchSparsity, stride, addXY, addHomogenousCoordinate);
+	public Image2DRawSource(final Image2D image, final Image2D labels, final int patchSize, final int patchSparsity, final int stride, final boolean addXY) {
+		super(image, patchSize, patchSparsity, stride, addXY);
 		this.labels = labels;
 		this.classDimension = labels == null ? this.getInputDimension() : 1;
 	}
@@ -50,10 +50,6 @@ public final class Image2DRawSource extends Image2DSource {
 			n += 2;
 		}
 		
-		if (this.isAddingHomogeneousCoordinate()) {
-			input[n] = 1.0;
-		}
-		
 		if (this.getLabels() != null) {
 			c.getLabel()[0] = this.getLabels().getPixelValue(x, y);
 		}
@@ -82,19 +78,11 @@ public final class Image2DRawSource extends Image2DSource {
 	}
 	
 	public static final Image2DRawSource raw(final Image2D image, final Image2D labels, final int patchSize, final int patchSparsity, final int stride) {
-		return new Image2DRawSource(image, labels, patchSize, patchSparsity, stride, false, false);
+		return new Image2DRawSource(image, labels, patchSize, patchSparsity, stride, false);
 	}
 	
 	public static final Image2DRawSource rawXY(final Image2D image, final Image2D labels, final int patchSize, final int patchSparsity, final int stride) {
-		return new Image2DRawSource(image, labels, patchSize, patchSparsity, stride, true, false);
-	}
-	
-	public static final Image2DRawSource raw1(final Image2D image, final Image2D labels, final int patchSize, final int patchSparsity, final int stride) {
-		return new Image2DRawSource(image, labels, patchSize, patchSparsity, stride, false, true);
-	}
-	
-	public static final Image2DRawSource rawXY1(final Image2D image, final Image2D labels, final int patchSize, final int patchSparsity, final int stride) {
-		return new Image2DRawSource(image, labels, patchSize, patchSparsity, stride, true, true);
+		return new Image2DRawSource(image, labels, patchSize, patchSparsity, stride, true);
 	}
 	
 	private static final long serialVersionUID = 761861479813211873L;
