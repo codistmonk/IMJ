@@ -16,12 +16,7 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
-import static net.sourceforge.aprog.tools.Tools.unchecked;
 
-import com.thoughtworks.xstream.XStream;
-import com.thoughtworks.xstream.io.xml.StaxDriver;
-
-import imj3.core.Image2D;
 import imj3.draft.processing.Pipeline.Algorithm;
 import imj3.draft.processing.Pipeline.ClassDescription;
 import imj3.draft.processing.Pipeline.SupervisedAlgorithm;
