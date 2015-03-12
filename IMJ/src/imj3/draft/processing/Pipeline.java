@@ -2,6 +2,7 @@ package imj3.draft.processing;
 
 import static imj3.draft.machinelearning.Datum.Default.datum;
 import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
@@ -289,16 +290,42 @@ public final class Pipeline implements Serializable {
 		Tools.debugPrint("Starting classification");
 		
 		final TicToc timer = new TicToc();
-//		final Rectangle imageBounds = new Rectangle(image.getWidth() / 2 - 128, image.getHeight() / 2 - 128, 256, 256);
-		final Rectangle imageBounds = new Rectangle(image.getWidth(), image.getHeight());
+		final int width = image.getWidth();
+		final int height = image.getHeight();
+		final Rectangle imageBounds = new Rectangle(width, height);
+		final int tileSize = 512;
+		
+		this.getClassificationConfusionMatrix().clear();
+		
+		for (int y = 0; y < height; y += tileSize) {
+			Tools.debugPrint(y, "/", height);
+			
+			final int h = min(tileSize, height - y);
+			
+			for (int x = 0; x < width; x += tileSize) {
+				final int w = min(tileSize, width - x);
+				
+				imageBounds.setBounds(x, y, w, h);
+				
+				this.classify1(image, imageBounds, labels, classification);
+			}
+		}
+		
+		this.classificationMilliseconds = timer.toc();
+		
+		Tools.debugPrint("Classification done in", this.classificationMilliseconds, "ms");
+		
+		return this;
+	}
+	
+	private final void classify1(final Image2D image, final Rectangle imageBounds, final Image2D labels,
+			final Image2D classification) {
 		final Algorithm last = this.getAlgorithms().isEmpty() ? null : last(this.getAlgorithms());
 		Image2D actualLabels = null;
 		
 		// TODO process as tiles to reduce memory usage
 		{
 			Image2D tmp = image;
-			
-			this.getClassificationConfusionMatrix().clear();
 			
 			for (final Algorithm algorithm : this.getAlgorithms()) {
 				final int patchSize = algorithm.getPatchSize();
@@ -369,12 +396,6 @@ public final class Pipeline implements Serializable {
 				}
 			}
 		}
-		
-		this.classificationMilliseconds = timer.toc();
-		
-		Tools.debugPrint("Classification done in", this.classificationMilliseconds, "ms");
-		
-		return this;
 	}
 	
 	public final Map<String, Integer> getClassLabels() {

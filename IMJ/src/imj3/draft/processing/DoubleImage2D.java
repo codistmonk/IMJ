@@ -32,7 +32,6 @@ public final class DoubleImage2D implements Image2D {
 		this.width = width;
 		this.height = height;
 		this.channels = new Channels.Default(channelCount, Double.SIZE);
-		Tools.debugPrint(width, height, channelCount);
 		this.data = new double[width * height * channelCount];
 	}
 	
