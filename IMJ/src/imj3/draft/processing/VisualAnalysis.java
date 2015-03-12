@@ -109,8 +109,6 @@ public final class VisualAnalysis {
 	
 	static final Preferences preferences = Preferences.userNodeForPackage(VisualAnalysis.class);
 	
-	static final XStream xstream = new XStream(new StaxDriver());
-	
 	public static final String IMAGE_PATH = "image.path";
 	
 	public static final String GROUND_TRUTH = "groundtruth";
@@ -274,18 +272,6 @@ public final class VisualAnalysis {
 		}
 		
 		return null;
-	}
-	
-	public static final Image2D read(final String path) {
-		try {
-			return new AwtImage2D(path);
-		} catch (final Exception exception) {
-			Tools.debugError(path);
-			
-			// TODO try Bio-Formats
-			
-			throw unchecked(exception);
-		}
 	}
 	
 	/**
@@ -1187,7 +1173,7 @@ public final class VisualAnalysis {
 		}
 		
 		public final String getClassificationPath() {
-			return baseName(this.getImageFile().getPath()) + "_classification_" + this.getGroundTruthName() + "_" + this.getPipelineName() + ".png";
+			return Pipeline.getClassificationPathFromImagePath(this.getImageFile().getPath(), this.getGroundTruthName(), this.getPipelineName());
 		}
 		
 		public final void refreshGroundTruthAndClassification() {
@@ -1266,7 +1252,7 @@ public final class VisualAnalysis {
 		
 		public final Context setPipeline(final File pipelineFile) {
 			if (pipelineFile != null && pipelineFile.isFile()) {
-				this.getMainPanel().setPipeline((Pipeline) xstream.fromXML(pipelineFile));
+				this.getMainPanel().setPipeline((Pipeline) Pipeline.xstream.fromXML(pipelineFile));
 				this.getMainPanel().getPipelineSelector().setFile(pipelineFile);
 				
 				preferences.put(PIPELINE, pipelineFile.getPath());
@@ -1286,7 +1272,7 @@ public final class VisualAnalysis {
 				}
 				
 				try (final OutputStream output = new FileOutputStream(pipelineFile)) {
-					xstream.toXML(pipeline, output);
+					Pipeline.xstream.toXML(pipeline, output);
 				} catch (final IOException exception) {
 					throw new UncheckedIOException(exception);
 				}
@@ -1302,7 +1288,7 @@ public final class VisualAnalysis {
 			
 			if (pipelineFile != null && this.getMainPanel().getPipeline() != null) {
 				try (final OutputStream output = new FileOutputStream(pipelineFile)) {
-					xstream.toXML(this.getMainPanel().getPipeline(), output);
+					Pipeline.xstream.toXML(this.getMainPanel().getPipeline(), output);
 				} catch (final IOException exception) {
 					throw new UncheckedIOException(exception);
 				}

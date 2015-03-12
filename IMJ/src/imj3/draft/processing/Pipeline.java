@@ -20,15 +20,20 @@ import imj3.draft.machinelearning.MedianCutClustering;
 import imj3.draft.machinelearning.NearestNeighborClassifier;
 import imj3.draft.machinelearning.Measure.Predefined;
 import imj3.draft.processing.Image2DSource.PatchIterator;
+import imj3.tools.AwtImage2D;
 import imj3.tools.CommonTools;
 import imj3.tools.CommonSwingTools.NestedList;
 import imj3.tools.CommonSwingTools.PropertyGetter;
 import imj3.tools.CommonSwingTools.PropertyOrdering;
 import imj3.tools.CommonSwingTools.PropertySetter;
 import imj3.tools.CommonSwingTools.StringGetter;
+import imj3.tools.IMJTools;
 
 import java.awt.Rectangle;
+import java.awt.image.BufferedImage;
+import java.awt.image.RenderedImage;
 import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -43,6 +48,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+
+import javax.imageio.ImageIO;
+
+import com.thoughtworks.xstream.XStream;
+import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.TicToc;
@@ -210,8 +220,8 @@ public final class Pipeline implements Serializable {
 		this.getTrainingFields().forEach(f -> {
 			Tools.debugPrint(f.getImagePath());
 			
-			final Image2D image = VisualAnalysis.read(f.getImagePath());
-			final Image2D labels = VisualAnalysis.read(getGroundTruthPathFromImagePath(f.getImagePath(), groundTruthName));
+			final Image2D image = IMJTools.read(f.getImagePath(), 0);
+			final Image2D labels = IMJTools.read(getGroundTruthPathFromImagePath(f.getImagePath(), groundTruthName), 0);
 			
 			out[0].add(new ConcreteTrainingField(image, labels, f.getBounds()));
 		});
@@ -807,6 +817,29 @@ public final class Pipeline implements Serializable {
 	
 	private static final long serialVersionUID = -4539259556658072410L;
 	
+	static final XStream xstream = new XStream(new StaxDriver());
+	
+	/**
+	 * @param commandLineArguments
+	 * <br>Must not be null
+	 * @throws IOException 
+	 */
+	public static final void main(final String[] commandLineArguments) throws IOException {
+		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
+		final File pipelineFile = new File(arguments.get("xml", ""));
+		final String groundTruthName = arguments.get("groundtruth", "");
+		final File inputFile = new File(arguments.get("in", ""));
+		final int lod = arguments.get("lod", 0)[0];
+		final File outputFile = new File(arguments.get("out", getClassificationPathFromImagePath(inputFile.getPath(), groundTruthName, baseName(pipelineFile.getName()))));
+		final Pipeline pipeline = (Pipeline) xstream.fromXML(pipelineFile);
+		final Image2D image = IMJTools.read(inputFile.getPath(), lod);
+		final Image2D result = new AwtImage2D(null, new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB));
+		
+		pipeline.classify(image, null, result);
+		
+		ImageIO.write((RenderedImage) result.toAwt(), "png", outputFile);
+	}
+	
 	public static final Map<String, String> parseRangeMap(final String mapAsString, final Collection<String> keys) {
 		final Map<String, String> tmp = new HashMap<>();
 		
@@ -827,6 +860,10 @@ public final class Pipeline implements Serializable {
 	
 	public static final String getGroundTruthPathFromImagePath(final String imagePath, final String groundTruthName) {
 		return baseName(imagePath) + "_groundtruth_" + groundTruthName + ".png";
+	}
+	
+	public static final String getClassificationPathFromImagePath(final String imagePath, final String groundTruthName, final String pipelineName) {
+		return baseName(imagePath) + "_classification_" + groundTruthName + "_" + pipelineName + ".png";
 	}
 	
 	public static final <K, N extends Number> double f1(final Map<K, Map<K, N>> confusionMatrix) {

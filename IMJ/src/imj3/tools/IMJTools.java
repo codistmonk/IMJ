@@ -4,6 +4,9 @@ import static imj3.tools.CommonTools.classForName;
 import static imj3.tools.CommonTools.fieldValue;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.invoke;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
+
+import imj3.core.Image2D;
 
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
@@ -72,6 +75,22 @@ public final class IMJTools {
 					return;
 				}
 			}
+		}
+	}
+	
+	public static final Image2D read(final String path, final int lod) {
+		if (path.endsWith(".zip")) {
+			return new MultifileImage2D(new MultifileSource(path), lod);
+		}
+		
+		try {
+			return new AwtImage2D(path);
+		} catch (final Exception exception) {
+			Tools.debugError(path);
+			
+			// TODO try Bio-Formats
+			
+			throw unchecked(exception);
 		}
 	}
 	
