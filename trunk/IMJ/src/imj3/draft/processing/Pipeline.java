@@ -19,7 +19,6 @@ import imj3.draft.machinelearning.MedianCutClustering;
 import imj3.draft.machinelearning.NearestNeighborClassifier;
 import imj3.draft.machinelearning.Measure.Predefined;
 import imj3.draft.processing.Image2DSource.PatchIterator;
-import imj3.tools.AwtImage2D;
 import imj3.tools.CommonTools;
 import imj3.tools.CommonSwingTools.NestedList;
 import imj3.tools.CommonSwingTools.PropertyGetter;
@@ -28,7 +27,6 @@ import imj3.tools.CommonSwingTools.PropertySetter;
 import imj3.tools.CommonSwingTools.StringGetter;
 
 import java.awt.Rectangle;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.Serializable;
 import java.lang.annotation.Retention;
@@ -155,9 +153,7 @@ public final class Pipeline implements Serializable {
 			
 			if (bestScore < score) {
 				bestScore = score;
-				Tools.debugPrint(bestConfusionMatrix);
 				bestConfusionMatrix = new HashMap<>(this.getTrainingConfusionMatrix());
-				Tools.debugPrint(bestConfusionMatrix);
 				bestParameters = parameterTrainings.stream().mapToInt(ParameterTraining::getCurrentIndex).toArray();
 				bestClassifiers = this.getAlgorithms().stream().map(Algorithm::getClassifier).toArray(Classifier[]::new);
 			}
@@ -289,11 +285,11 @@ public final class Pipeline implements Serializable {
 		}
 	}
 	
-	public final Pipeline classify(final BufferedImage inputImage, final BufferedImage labels, final BufferedImage classification) {
+	public final Pipeline classify(final Image2D inputImage, final Image2D labels, final Image2D classification) {
 		Tools.debugPrint("Starting classification");
 		
 		final TicToc timer = new TicToc();
-		final Image2D image = new AwtImage2D(null, inputImage);
+		final Image2D image = inputImage;
 		final Algorithm last = this.getAlgorithms().isEmpty() ? null : last(this.getAlgorithms());
 		Image2D actualLabels = null;
 		
@@ -312,8 +308,6 @@ public final class Pipeline implements Serializable {
 				final Rectangle bounds = unbufferedInputs.getBounds();
 				final DataSource inputs = unbufferedInputs;
 				final Classifier classifier = algorithm.getClassifier();
-				Tools.debugPrint(algorithm.hashCode(), patchSize, patchSparsity, stride);
-				Tools.debugPrint(((NearestNeighborClassifier) classifier).getPrototypes().size());
 				final int n = classifier.getClassDimension(inputs.getInputDimension());
 				final Image2D newImage = new DoubleImage2D(image.getId() + "_out",
 						Patch2DSource.newSize(bounds.x, bounds.width, patchSize, stride),
@@ -341,7 +335,7 @@ public final class Pipeline implements Serializable {
 		}
 		
 		if (actualLabels != null) {
-			final Image2D expectedLabels =  labels == null ? null : new AwtImage2D(null, labels);
+			final Image2D expectedLabels = labels;
 			final int right = classification.getWidth() - 1;
 			final int bottom = classification.getHeight() - 1;
 			final int r = actualLabels.getWidth() - 1;
@@ -351,7 +345,7 @@ public final class Pipeline implements Serializable {
 				for (int x = 0; x <= right; ++x) {
 					final int actualLabel = (int) actualLabels.getPixelValue(x * r / right, y * b / bottom);
 					
-					classification.setRGB(x, y, actualLabel);
+					classification.setPixelValue(x, y, actualLabel);
 					
 					if (expectedLabels != null) {
 						final int expectedLabel = (int) expectedLabels.getPixelValue(x, y);
