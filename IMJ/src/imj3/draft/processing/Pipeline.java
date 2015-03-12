@@ -9,6 +9,9 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
+import imj2.draft.AutoCloseableImageWriter;
+
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -333,7 +336,6 @@ public final class Pipeline implements Serializable {
 		final Algorithm last = this.getAlgorithms().isEmpty() ? null : last(this.getAlgorithms());
 		Image2D actualLabels = null;
 		
-		// TODO process as tiles to reduce memory usage
 		{
 			Image2D tmp = image;
 			
@@ -832,7 +834,6 @@ public final class Pipeline implements Serializable {
 		final int lod = arguments.get("lod", 0)[0];
 		final String pipelineName = baseName(pipelineFile.getName());
 		final File classificationFile = new File(arguments.get("out", getClassificationPathFromImagePath(inputPath, groundTruthName, pipelineName)));
-		final File overlayedContoursFile = new File(baseName(inputPath) + "_overlayedcontours_" + groundTruthName + "_" + pipelineName + ".jpg");
 		final Pipeline pipeline = (Pipeline) xstream.fromXML(pipelineFile);
 		final Image2D image = IMJTools.read(inputPath, lod);
 		final int width = image.getWidth();
@@ -847,7 +848,9 @@ public final class Pipeline implements Serializable {
 		}
 		
 		{
-			final Image2D overlayedCountours = new AwtImage2D(null, new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB));
+			final String overlayedContoursFormat = "jpg";
+			final File overlayedContoursFile = new File(baseName(inputPath) + "_overlayedcontours_" + groundTruthName + "_" + pipelineName + "." + overlayedContoursFormat);
+			final Image2D overlayedCountours = new AwtImage2D(null, new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB));
 			
 			for (int y = 0; y < height; ++y) {
 				for (int x = 0; x < width; ++x) {
@@ -866,7 +869,8 @@ public final class Pipeline implements Serializable {
 			}
 			
 			Tools.debugPrint("Writing", overlayedContoursFile);
-			ImageIO.write((RenderedImage) overlayedCountours.toAwt(), "jpg", overlayedContoursFile);
+			AutoCloseableImageWriter.write((RenderedImage) overlayedCountours.toAwt(),
+					overlayedContoursFormat, 0.9F, overlayedContoursFile);
 		}
 	}
 	

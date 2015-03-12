@@ -3,6 +3,9 @@ package imj2.draft;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.awt.image.RenderedImage;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
@@ -62,5 +65,25 @@ public final class AutoCloseableImageWriter implements AutoCloseable, Serializab
 	 * {@value}.
 	 */
 	private static final long serialVersionUID = -3450450668038280563L;
+	
+	public static final void write(final RenderedImage image, final String format, final float quality, final String outputPath) {
+		write(image, format, quality, new File(outputPath));
+	}
+	
+	public static final void write(final RenderedImage image, final String format, final float quality, final File outputFile) {
+		try {
+			write(image, format, quality, new FileOutputStream(outputFile));
+		} catch (final FileNotFoundException exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	public static final void write(final RenderedImage image, final String format, final float quality, final OutputStream output) {
+		try (final AutoCloseableImageWriter writer = new AutoCloseableImageWriter(format)) {
+			writer.setCompressionQuality(quality).setOutput(output).write(image);
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
 	
 }
