@@ -449,6 +449,8 @@ public final class VisualAnalysis {
 						MainPanel.this.getClassificationSummaryView().setText(format(Locale.ENGLISH,
 								"seconds=%.3f, F1=%.3f", classificationSeconds, f1));
 						
+						context.saveClassification();
+						
 						MainPanel.this.getImageComponent().getLayers().get(2).getPainters().get(0).getUpdateNeeded().set(true);
 						MainPanel.this.getImageComponent().repaint();
 					}
