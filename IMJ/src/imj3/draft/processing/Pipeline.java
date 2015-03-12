@@ -9,7 +9,6 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -831,8 +830,9 @@ public final class Pipeline implements Serializable {
 		final String groundTruthName = arguments.get("groundtruth", "");
 		final String inputPath = arguments.get("in", "");
 		final int lod = arguments.get("lod", 0)[0];
-		final File classificationFile = new File(arguments.get("out", getClassificationPathFromImagePath(inputPath, groundTruthName, baseName(pipelineFile.getName()))));
-		final File overlayedContoursFile = new File(classificationFile.getPath().replace("_classification_", "_overlayedcontours"));
+		final String pipelineName = baseName(pipelineFile.getName());
+		final File classificationFile = new File(arguments.get("out", getClassificationPathFromImagePath(inputPath, groundTruthName, pipelineName)));
+		final File overlayedContoursFile = new File(baseName(inputPath) + "_overlayedcontours_" + groundTruthName + "_" + pipelineName + ".jpg");
 		final Pipeline pipeline = (Pipeline) xstream.fromXML(pipelineFile);
 		final Image2D image = IMJTools.read(inputPath, lod);
 		final int width = image.getWidth();
@@ -866,7 +866,7 @@ public final class Pipeline implements Serializable {
 			}
 			
 			Tools.debugPrint("Writing", overlayedContoursFile);
-			ImageIO.write((RenderedImage) overlayedCountours.toAwt(), "png", overlayedContoursFile);
+			ImageIO.write((RenderedImage) overlayedCountours.toAwt(), "jpg", overlayedContoursFile);
 		}
 	}
 	
