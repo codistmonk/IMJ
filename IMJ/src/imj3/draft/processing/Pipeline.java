@@ -1,13 +1,13 @@
 package imj3.draft.processing;
 
 import static imj3.draft.machinelearning.Datum.Default.datum;
+import static java.lang.Math.max;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -285,11 +285,12 @@ public final class Pipeline implements Serializable {
 		}
 	}
 	
-	public final Pipeline classify(final Image2D inputImage, final Image2D labels, final Image2D classification) {
+	public final Pipeline classify(final Image2D image, final Image2D labels, final Image2D classification) {
 		Tools.debugPrint("Starting classification");
 		
 		final TicToc timer = new TicToc();
-		final Image2D image = inputImage;
+//		final Rectangle imageBounds = new Rectangle(image.getWidth() / 2 - 128, image.getHeight() / 2 - 128, 256, 256);
+		final Rectangle imageBounds = new Rectangle(image.getWidth(), image.getHeight());
 		final Algorithm last = this.getAlgorithms().isEmpty() ? null : last(this.getAlgorithms());
 		Image2D actualLabels = null;
 		
@@ -305,6 +306,11 @@ public final class Pipeline implements Serializable {
 				final int stride = algorithm.getStride();
 				final Image2DRawSource unbufferedInputs = new Image2DRawSource(tmp, null,
 						patchSize, patchSparsity, stride, algorithm.isUsingXY());
+				
+				if (tmp == image) {
+					unbufferedInputs.getBounds().setBounds(imageBounds);
+				}
+				
 				final Rectangle bounds = unbufferedInputs.getBounds();
 				final DataSource inputs = unbufferedInputs;
 				final Classifier classifier = algorithm.getClassifier();
@@ -336,14 +342,18 @@ public final class Pipeline implements Serializable {
 		
 		if (actualLabels != null) {
 			final Image2D expectedLabels = labels;
-			final int right = classification.getWidth() - 1;
-			final int bottom = classification.getHeight() - 1;
+			final int left = imageBounds.x;
+			final int top = imageBounds.y;
+			final int right = left + imageBounds.width - 1;
+			final int bottom = top + imageBounds.height - 1;
+			final int dx = max(1, right - left);
+			final int dy = max(1, bottom - top);
 			final int r = actualLabels.getWidth() - 1;
 			final int b = actualLabels.getHeight() - 1;
 			
-			for (int y = 0; y <= bottom; ++y) {
-				for (int x = 0; x <= right; ++x) {
-					final int actualLabel = (int) actualLabels.getPixelValue(x * r / right, y * b / bottom);
+			for (int y = top; y <= bottom; ++y) {
+				for (int x = left; x <= right; ++x) {
+					final int actualLabel = (int) actualLabels.getPixelValue((x - left) * r / dx, (y - top) * b / dy);
 					
 					classification.setPixelValue(x, y, actualLabel);
 					
