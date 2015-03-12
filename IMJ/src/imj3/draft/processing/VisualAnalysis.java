@@ -439,9 +439,9 @@ public final class VisualAnalysis {
 						MainPanel.this.getClassificationSummaryView().setText("-");
 						
 						// TODO run in another thread
-						pipeline.classify(context.getImage(),
-								context.getGroundTruthName().isEmpty() ? null : context.getGroundTruth().getImage(),
-								context.getClassification().getImage());
+						pipeline.classify(new AwtImage2D(null, context.getImage()),
+								context.getGroundTruthName().isEmpty() ? null : new AwtImage2D(null, context.getGroundTruth().getImage()),
+								new AwtImage2D(null, context.getClassification().getImage()));
 						
 						final double classificationSeconds = pipeline.getClassificationMilliseconds() / 1_000.0;
 						final double f1 = Pipeline.f1(pipeline.getClassificationConfusionMatrix());
