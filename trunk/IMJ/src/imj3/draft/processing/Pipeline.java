@@ -9,6 +9,7 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -828,16 +829,45 @@ public final class Pipeline implements Serializable {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final File pipelineFile = new File(arguments.get("xml", ""));
 		final String groundTruthName = arguments.get("groundtruth", "");
-		final File inputFile = new File(arguments.get("in", ""));
+		final String inputPath = arguments.get("in", "");
 		final int lod = arguments.get("lod", 0)[0];
-		final File outputFile = new File(arguments.get("out", getClassificationPathFromImagePath(inputFile.getPath(), groundTruthName, baseName(pipelineFile.getName()))));
+		final File classificationFile = new File(arguments.get("out", getClassificationPathFromImagePath(inputPath, groundTruthName, baseName(pipelineFile.getName()))));
+		final File overlayedContoursFile = new File(classificationFile.getPath().replace("_classification_", "_overlayedcontours"));
 		final Pipeline pipeline = (Pipeline) xstream.fromXML(pipelineFile);
-		final Image2D image = IMJTools.read(inputFile.getPath(), lod);
-		final Image2D result = new AwtImage2D(null, new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB));
+		final Image2D image = IMJTools.read(inputPath, lod);
+		final int width = image.getWidth();
+		final int height = image.getHeight();
+		final Image2D result = new AwtImage2D(null, new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB));
 		
 		pipeline.classify(image, null, result);
 		
-		ImageIO.write((RenderedImage) result.toAwt(), "png", outputFile);
+		{
+			Tools.debugPrint("Writing", classificationFile);
+			ImageIO.write((RenderedImage) result.toAwt(), "png", classificationFile);
+		}
+		
+		{
+			final Image2D overlayedCountours = new AwtImage2D(null, new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB));
+			
+			for (int y = 0; y < height; ++y) {
+				for (int x = 0; x < width; ++x) {
+					final long label = result.getPixelValue(x, y);
+					final long north = label != 0L && 0 < y ? result.getPixelValue(x, y - 1) : label;
+					final long west = label != 0L && 0 < x ? result.getPixelValue(x - 1, y) : label;
+					final long east = label != 0L && x + 1 < width ? result.getPixelValue(x + 1, y) : label;
+					final long south = label != 0L && y + 1 < height ? result.getPixelValue(x, y + 1) : label;
+					
+					if (label == north && label == west && label == east && label == south) {
+						overlayedCountours.setPixelValue(x, y, image.getPixelValue(x, y));
+					} else {
+						overlayedCountours.setPixelValue(x, y, label);
+					}
+				}
+			}
+			
+			Tools.debugPrint("Writing", overlayedContoursFile);
+			ImageIO.write((RenderedImage) overlayedCountours.toAwt(), "png", overlayedContoursFile);
+		}
 	}
 	
 	public static final Map<String, String> parseRangeMap(final String mapAsString, final Collection<String> keys) {
