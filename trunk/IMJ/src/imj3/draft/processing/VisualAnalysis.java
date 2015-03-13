@@ -734,6 +734,8 @@ public final class VisualAnalysis {
 					if (this.transform != null && event.getClickCount() == 2) {
 						MainPanel.this.getTrainingBounds().setBounds(
 								MainPanel.this.getImageComponent().getVisibleRect());
+						MainPanel.this.getImageComponent().getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
+						MainPanel.this.getImageComponent().repaint();
 					}
 				}
 				
