@@ -700,6 +700,14 @@ public final class VisualAnalysis {
 				}
 				
 				@Override
+				public final void mouseClicked(final MouseEvent event) {
+					if (this.transform != null && event.getClickCount() == 2) {
+						MainPanel.this.getTrainingBounds().setBounds(
+								MainPanel.this.getImageComponent().getVisibleRect());
+					}
+				}
+				
+				@Override
 				public final void mouseReleased(final MouseEvent event) {
 					this.dragging = false;
 				}
