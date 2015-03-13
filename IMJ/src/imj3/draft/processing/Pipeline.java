@@ -159,7 +159,8 @@ public final class Pipeline implements Serializable {
 		
 		optimize_parameters:
 		while (true) {
-			Tools.debugPrint(parameterTrainings.stream().map(ParameterTraining::getCurrentIndex));
+			Tools.debugPrint(bestScore, bestConfusionMatrix);
+			Tools.debugPrint(parameterTrainings.stream().map(ParameterTraining::getCurrentIndex).toArray());
 			
 			parameterTrainings.forEach(ParameterTraining::set);
 			
