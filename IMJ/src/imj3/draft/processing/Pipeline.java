@@ -159,6 +159,8 @@ public final class Pipeline implements Serializable {
 		
 		optimize_parameters:
 		while (true) {
+			Tools.debugPrint(parameterTrainings.stream().map(ParameterTraining::getCurrentIndex));
+			
 			parameterTrainings.forEach(ParameterTraining::set);
 			
 			train1(groundTruthName);
