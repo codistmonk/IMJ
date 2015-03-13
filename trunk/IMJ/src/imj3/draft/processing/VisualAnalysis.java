@@ -16,7 +16,6 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
-
 import imj3.draft.processing.Pipeline.Algorithm;
 import imj3.draft.processing.Pipeline.ClassDescription;
 import imj3.draft.processing.Pipeline.SupervisedAlgorithm;
@@ -81,6 +80,7 @@ import javax.swing.JTextField;
 import javax.swing.JTree;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -389,14 +389,30 @@ public final class VisualAnalysis {
 				if (pipeline != null) {
 					MainPanel.this.getTrainingSummaryView().setText("-");
 					
-					// TODO run in another thread
-					pipeline.train(context.getGroundTruthName());
-					
-					final double trainingSeconds = pipeline.getTrainingMilliseconds() / 1_000.0;
-					final double f1 = Pipeline.f1(pipeline.getTrainingConfusionMatrix());
-					
-					MainPanel.this.getTrainingSummaryView().setText(format(Locale.ENGLISH,
-							"seconds=%.3f, F1=%.3f", trainingSeconds, f1));
+					new SwingWorker<Void, Void>() {
+						
+						@Override
+						protected final Void doInBackground() throws Exception {
+							context.saveGroundTruth();
+							context.savePipeline();
+							
+							pipeline.train(context.getGroundTruthName());
+							
+							context.savePipeline();
+							
+							return null;
+						}
+						
+						@Override
+						protected final void done() {
+							final double trainingSeconds = pipeline.getTrainingMilliseconds() / 1_000.0;
+							final double f1 = Pipeline.f1(pipeline.getTrainingConfusionMatrix());
+							
+							MainPanel.this.getTrainingSummaryView().setText(format(Locale.ENGLISH,
+									"seconds=%.3f, F1=%.3f", trainingSeconds, f1));
+						}
+						
+					}.execute();
 				}
 			});
 			showTrainingResultsButton.addActionListener(new ActionListener() {
@@ -419,21 +435,35 @@ public final class VisualAnalysis {
 					if (pipeline != null) {
 						MainPanel.this.getClassificationSummaryView().setText("-");
 						
-						// TODO run in another thread
-						pipeline.classify(new AwtImage2D(null, context.getImage()),
-								context.getGroundTruthName().isEmpty() ? null : new AwtImage2D(null, context.getGroundTruth().getImage()),
-								new AwtImage2D(null, context.getClassification().getImage()));
-						
-						final double classificationSeconds = pipeline.getClassificationMilliseconds() / 1_000.0;
-						final double f1 = Pipeline.f1(pipeline.getClassificationConfusionMatrix());
-						
-						MainPanel.this.getClassificationSummaryView().setText(format(Locale.ENGLISH,
-								"seconds=%.3f, F1=%.3f", classificationSeconds, f1));
-						
-						context.saveClassification();
-						
-						MainPanel.this.getImageComponent().getLayers().get(2).getPainters().get(0).getUpdateNeeded().set(true);
-						MainPanel.this.getImageComponent().repaint();
+						new SwingWorker<Void, Void>() {
+							
+							@Override
+							protected final Void doInBackground() throws Exception {
+								context.saveGroundTruth();
+								context.savePipeline();
+								
+								pipeline.classify(new AwtImage2D(null, context.getImage()),
+										context.getGroundTruthName().isEmpty() ? null : new AwtImage2D(null, context.getGroundTruth().getImage()),
+												new AwtImage2D(null, context.getClassification().getImage()));
+								
+								context.saveClassification();
+								
+								return null;
+							}
+							
+							@Override
+							protected final void done() {
+								final double classificationSeconds = pipeline.getClassificationMilliseconds() / 1_000.0;
+								final double f1 = Pipeline.f1(pipeline.getClassificationConfusionMatrix());
+								
+								MainPanel.this.getClassificationSummaryView().setText(format(Locale.ENGLISH,
+										"seconds=%.3f, F1=%.3f", classificationSeconds, f1));
+								
+								MainPanel.this.getImageComponent().getLayers().get(2).getPainters().get(0).getUpdateNeeded().set(true);
+								MainPanel.this.getImageComponent().repaint();
+							}
+							
+						}.execute();
 					}
 				}
 				
