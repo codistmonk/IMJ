@@ -9,9 +9,7 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.draft.AutoCloseableImageWriter;
-
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -81,6 +79,8 @@ public final class Pipeline implements Serializable {
 	
 	private Map<Integer, Map<Integer, AtomicLong>> classificationConfusionMatrix;
 	
+	private ComputationStatus computationStatus;
+	
 	@NestedList(name="classes", element="class", elementClass=Pipeline.ClassDescription.class)
 	public final List<Pipeline.ClassDescription> getClassDescriptions() {
 		if (this.classDescriptions == null) {
@@ -132,7 +132,27 @@ public final class Pipeline implements Serializable {
 		return this.classificationMilliseconds;
 	}
 	
+	public final synchronized ComputationStatus getComputationStatus() {
+		if (this.computationStatus == null) {
+			this.computationStatus = ComputationStatus.IDLE;
+		}
+		
+		return this.computationStatus;
+	}
+	
+	public final synchronized void setComputationStatus(final ComputationStatus computationStatus) {
+		this.computationStatus = computationStatus;
+	}
+	
+	public final void checkComputing() {
+		if (!ComputationStatus.COMPUTING.equals(this.getComputationStatus())) {
+			throw new RuntimeException("Computation canceled");
+		}
+	}
+	
 	public final Pipeline train(final String groundTruthName) {
+		this.setComputationStatus(ComputationStatus.COMPUTING);
+		
 		Tools.debugPrint("Starting training");
 		
 		final TicToc timer = new TicToc();
@@ -212,6 +232,8 @@ public final class Pipeline implements Serializable {
 		
 		Tools.debugPrint("Training done in", this.trainingMilliseconds, "ms");
 		
+		this.setComputationStatus(ComputationStatus.IDLE);
+		
 		return this;
 	}
 	
@@ -233,6 +255,8 @@ public final class Pipeline implements Serializable {
 		});
 		
 		for (final Algorithm algorithm : this.getAlgorithms()) {
+			this.checkComputing();
+			
 			CommonTools.swap(in, 0, out, 0);
 			
 			this.getTrainingConfusionMatrix().clear();
@@ -305,6 +329,8 @@ public final class Pipeline implements Serializable {
 	public final Pipeline classify(final Image2D image, final Image2D labels, final Image2D classification) {
 		Tools.debugPrint("Starting classification");
 		
+		this.setComputationStatus(ComputationStatus.COMPUTING);
+		
 		final TicToc timer = new TicToc();
 		final int width = image.getWidth();
 		final int height = image.getHeight();
@@ -319,6 +345,8 @@ public final class Pipeline implements Serializable {
 			final int h = min(tileSize, height - y);
 			
 			for (int x = 0; x < width; x += tileSize) {
+				this.checkComputing();
+				
 				final int w = min(tileSize, width - x);
 				
 				imageBounds.setBounds(x, y, w, h);
@@ -330,6 +358,8 @@ public final class Pipeline implements Serializable {
 		this.classificationMilliseconds = timer.toc();
 		
 		Tools.debugPrint("Classification done in", this.classificationMilliseconds, "ms");
+		
+		this.setComputationStatus(ComputationStatus.IDLE);
 		
 		return this;
 	}
@@ -1179,6 +1209,15 @@ public final class Pipeline implements Serializable {
 				throw new IllegalArgumentException();
 			}
 		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-03-14)
+	 */
+	public static enum ComputationStatus {
+		
+		COMPUTING, CANCELED, IDLE;
 		
 	}
 	
