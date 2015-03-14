@@ -18,6 +18,7 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import imj3.draft.processing.Pipeline.Algorithm;
 import imj3.draft.processing.Pipeline.ClassDescription;
+import imj3.draft.processing.Pipeline.ComputationStatus;
 import imj3.draft.processing.Pipeline.SupervisedAlgorithm;
 import imj3.draft.processing.Pipeline.TrainingField;
 import imj3.draft.processing.Pipeline.UnsupervisedAlgorithm;
@@ -158,12 +159,16 @@ public final class VisualAnalysis {
 	}
 	
 	public static final JButton button(final String type) {
-		final JButton result = new JButton(new ImageIcon(Tools.getResourceURL("lib/tango/" + type + ".png")));
+		final JButton result = new JButton(buttonIcon(type));
 		final int size = max(result.getIcon().getIconWidth(), result.getIcon().getIconHeight());
 		
 		result.setPreferredSize(new Dimension(size + 2, size + 2));
 		
 		return result;
+	}
+	
+	public static final ImageIcon buttonIcon(final String type) {
+		return new ImageIcon(Tools.getResourceURL("lib/tango/" + type + ".png"));
 	}
 	
 	/**
@@ -387,6 +392,17 @@ public final class VisualAnalysis {
 				final Pipeline pipeline = MainPanel.this.getPipeline();
 				
 				if (pipeline != null) {
+					switch (pipeline.getComputationStatus()) {
+					case COMPUTING:
+						runTrainingButton.setIcon(buttonIcon("warning"));
+						pipeline.setComputationStatus(ComputationStatus.CANCELED);
+					case CANCELED:
+						return;
+					case IDLE:
+						break;
+					}
+					
+					runTrainingButton.setIcon(buttonIcon("stop"));
 					MainPanel.this.getTrainingSummaryView().setText("-");
 					
 					new SwingWorker<Void, Void>() {
@@ -405,6 +421,9 @@ public final class VisualAnalysis {
 						
 						@Override
 						protected final void done() {
+							pipeline.setComputationStatus(ComputationStatus.IDLE);
+							runTrainingButton.setIcon(buttonIcon("process"));
+							
 							final double trainingSeconds = pipeline.getTrainingMilliseconds() / 1_000.0;
 							final double f1 = Pipeline.f1(pipeline.getTrainingConfusionMatrix());
 							
@@ -433,6 +452,17 @@ public final class VisualAnalysis {
 					final Pipeline pipeline = MainPanel.this.getPipeline();
 					
 					if (pipeline != null) {
+						switch (pipeline.getComputationStatus()) {
+						case COMPUTING:
+							runClassificationButton.setIcon(buttonIcon("warning"));
+							pipeline.setComputationStatus(ComputationStatus.CANCELED);
+						case CANCELED:
+							return;
+						case IDLE:
+							break;
+						}
+						
+						runClassificationButton.setIcon(buttonIcon("stop"));
 						MainPanel.this.getClassificationSummaryView().setText("-");
 						
 						new SwingWorker<Void, Void>() {
@@ -453,6 +483,9 @@ public final class VisualAnalysis {
 							
 							@Override
 							protected final void done() {
+								pipeline.setComputationStatus(ComputationStatus.IDLE);
+								runClassificationButton.setIcon(buttonIcon("process"));
+								
 								final double classificationSeconds = pipeline.getClassificationMilliseconds() / 1_000.0;
 								final double f1 = Pipeline.f1(pipeline.getClassificationConfusionMatrix());
 								
