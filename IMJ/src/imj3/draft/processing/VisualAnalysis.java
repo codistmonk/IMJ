@@ -16,6 +16,7 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
+
 import imj3.draft.processing.Pipeline.Algorithm;
 import imj3.draft.processing.Pipeline.ClassDescription;
 import imj3.draft.processing.Pipeline.ComputationStatus;
@@ -50,9 +51,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
@@ -421,6 +420,8 @@ public final class VisualAnalysis {
 						
 						@Override
 						protected final void done() {
+							Tools.debugPrint();
+							
 							pipeline.setComputationStatus(ComputationStatus.IDLE);
 							runTrainingButton.setIcon(buttonIcon("process"));
 							
@@ -429,6 +430,8 @@ public final class VisualAnalysis {
 							
 							MainPanel.this.getTrainingSummaryView().setText(format(Locale.ENGLISH,
 									"seconds=%.3f, F1=%.3f", trainingSeconds, f1));
+							
+							Tools.debugPrint();
 						}
 						
 					}.execute();
@@ -473,6 +476,7 @@ public final class VisualAnalysis {
 								context.savePipeline();
 								
 								pipeline.classify(new AwtImage2D(null, context.getImage()),
+										MainPanel.this.getImageComponent().getVisibleRect(),
 										context.getGroundTruthName().isEmpty() ? null : new AwtImage2D(null, context.getGroundTruth().getImage()),
 												new AwtImage2D(null, context.getClassification().getImage()));
 								
@@ -483,6 +487,8 @@ public final class VisualAnalysis {
 							
 							@Override
 							protected final void done() {
+								Tools.debugPrint();
+								
 								pipeline.setComputationStatus(ComputationStatus.IDLE);
 								runClassificationButton.setIcon(buttonIcon("process"));
 								
@@ -494,6 +500,8 @@ public final class VisualAnalysis {
 								
 								MainPanel.this.getImageComponent().getLayers().get(2).getPainters().get(0).getUpdateNeeded().set(true);
 								MainPanel.this.getImageComponent().repaint();
+								
+								Tools.debugPrint();
 							}
 							
 						}.execute();
@@ -1320,7 +1328,12 @@ public final class VisualAnalysis {
 		
 		public final Context setPipeline(final File pipelineFile) {
 			if (pipelineFile != null && pipelineFile.isFile()) {
-				this.getMainPanel().setPipeline((Pipeline) Pipeline.xstream.fromXML(pipelineFile));
+//				this.getMainPanel().setPipeline((Pipeline) Pipeline.xstream.fromXML(pipelineFile));
+				
+//				final String joPath = baseName(pipelineFile.getPath()) + ".jo";
+//				this.getMainPanel().setPipeline((Pipeline) Tools.readObject(joPath));
+				
+				this.getMainPanel().setPipeline((Pipeline) Tools.readObject(pipelineFile.getPath()));
 				this.getMainPanel().getPipelineSelector().setFile(pipelineFile);
 				
 				preferences.put(PIPELINE, pipelineFile.getPath());
@@ -1339,11 +1352,12 @@ public final class VisualAnalysis {
 					Tools.debugPrint();
 				}
 				
-				try (final OutputStream output = new FileOutputStream(pipelineFile)) {
-					Pipeline.xstream.toXML(pipeline, output);
-				} catch (final IOException exception) {
-					throw new UncheckedIOException(exception);
-				}
+				Tools.writeObject(pipeline, pipelineFile.getPath());
+//				try (final OutputStream output = new FileOutputStream(pipelineFile)) {
+//					Pipeline.xstream.toXML(pipeline, output);
+//				} catch (final IOException exception) {
+//					throw new UncheckedIOException(exception);
+//				}
 				
 				this.setPipeline(pipelineFile);
 			}
@@ -1355,11 +1369,12 @@ public final class VisualAnalysis {
 			final File pipelineFile = this.getPipelineFile();
 			
 			if (pipelineFile != null && this.getMainPanel().getPipeline() != null) {
-				try (final OutputStream output = new FileOutputStream(pipelineFile)) {
-					Pipeline.xstream.toXML(this.getMainPanel().getPipeline(), output);
-				} catch (final IOException exception) {
-					throw new UncheckedIOException(exception);
-				}
+				Tools.writeObject(this.getMainPanel().getPipeline(), pipelineFile.getPath());
+//				try (final OutputStream output = new FileOutputStream(pipelineFile)) {
+//					Pipeline.xstream.toXML(this.getMainPanel().getPipeline(), output);
+//				} catch (final IOException exception) {
+//					throw new UncheckedIOException(exception);
+//				}
 			}
 			
 			return this;
