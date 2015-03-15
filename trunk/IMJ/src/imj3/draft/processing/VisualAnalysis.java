@@ -16,7 +16,6 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
-
 import imj3.draft.processing.Pipeline.Algorithm;
 import imj3.draft.processing.Pipeline.ClassDescription;
 import imj3.draft.processing.Pipeline.ComputationStatus;
@@ -51,10 +50,13 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -92,6 +94,7 @@ import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
+import net.sourceforge.aprog.xml.XMLTools;
 
 /**
  * @author codistmonk (creation 2015-02-13)
@@ -1337,6 +1340,13 @@ public final class VisualAnalysis {
 				this.getMainPanel().getPipelineSelector().setFile(pipelineFile);
 				
 				preferences.put(PIPELINE, pipelineFile.getPath());
+				
+				XMLTools.write(this.getMainPanel().getPipeline().toXML(XMLTools.newDocument(), new HashMap<>()), new File("test.xml"), 0);
+				try {
+					Tools.debugPrint(XMLSerializable.objectFromXML(XMLTools.parse(new FileInputStream("test.xml")).getDocumentElement(), new HashMap<>()));
+				} catch (final FileNotFoundException exception) {
+					exception.printStackTrace();
+				}
 			}
 			
 			return this;
