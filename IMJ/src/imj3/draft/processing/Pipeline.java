@@ -9,9 +9,7 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.draft.AutoCloseableImageWriter;
-
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -40,6 +38,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -124,8 +123,8 @@ public final class Pipeline implements XMLSerializable {
 			this.getClassDescriptions().add(XMLSerializable.objectFromXML((Element) node, objects));
 		}
 		
-		this.trainingResult = XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "trainingResult"), objects);
-		this.classificationResult = XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "classificationResult"), objects);
+		this.trainingResult = XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "trainingResult").getFirstChild(), objects);
+		this.classificationResult = XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "classificationResult").getFirstChild(), objects);
 		
 		return this;
 	}
@@ -837,17 +836,21 @@ public final class Pipeline implements XMLSerializable {
 		private Map<String, String> prototypeCountRanges;
 		
 		@Override
-		protected Element subclassToXML(Document document,
-				Map<Object, Integer> ids, Element result) {
-			// TODO Auto-generated method stub
-			return null;
+		protected final Element subclassToXML(final Document document,
+				final Map<Object, Integer> ids, final Element result) {
+			result.appendChild(XMLSerializable.newElement("prototypeCounts", this.getPrototypeCounts(), document, ids));
+			result.appendChild(XMLSerializable.newElement("prototypeCountRanges", this.getPrototypeCountRanges(), document, ids));
+			
+			return result;
 		}
 		
 		@Override
-		protected Algorithm subclassFromXML(Element xml,
-				Map<Integer, Object> objects) {
-			// TODO Auto-generated method stub
-			return null;
+		protected final SupervisedAlgorithm subclassFromXML(final Element xml,
+				final Map<Integer, Object> objects) {
+			this.prototypeCounts = XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "prototypeCounts").getFirstChild(), objects);
+			this.prototypeCountRanges = XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "prototypeCountRanges").getFirstChild(), objects);
+			
+			return this;
 		}
 		
 		@Trainable("prototypeRanges")
@@ -1446,7 +1449,7 @@ public final class Pipeline implements XMLSerializable {
 abstract interface XMLSerializable extends Serializable {
 	
 	public default Element toXML(final Document document, final Map<Object, Integer> ids) {
-		final Element result = document.createElement(this.getClass().getName());
+		final Element result = document.createElement(this.getClass().getName().replace("$", ".."));
 		final Integer id = ids.computeIfAbsent(this, o -> ids.size());
 		
 		result.setAttribute("id", id.toString());
@@ -1478,16 +1481,35 @@ abstract interface XMLSerializable extends Serializable {
 		}
 		
 		final Element result = document.createElement(object.getClass().getName());
-		final Map<?, ?> map = cast(Map.class, object);
 		
-		if (map != null) {
-			for (final Map.Entry<?, ?> entry : map.entrySet()) {
-				final Element entryElement = (Element) result.appendChild(document.createElement("entry"));
-				final Element keyElement = (Element) entryElement.appendChild(document.createElement("key"));
-				final Element valueElement = (Element) entryElement.appendChild(document.createElement("value"));
-				
-				keyElement.appendChild(objectToXML(entry.getKey(), document, ids));
-				valueElement.appendChild(objectToXML(entry.getValue(), document, ids));
+		{
+			final Map<?, ?> map = cast(Map.class, object);
+			
+			if (map != null) {
+				for (final Map.Entry<?, ?> entry : map.entrySet()) {
+					final Element entryElement = (Element) result.appendChild(document.createElement("entry"));
+					final Element keyElement = (Element) entryElement.appendChild(document.createElement("key"));
+					final Element valueElement = (Element) entryElement.appendChild(document.createElement("value"));
+					
+					keyElement.appendChild(objectToXML(entry.getKey(), document, ids));
+					valueElement.appendChild(objectToXML(entry.getValue(), document, ids));
+				}
+			}
+		}
+		
+		{
+			final String string = cast(String.class, object);
+			
+			if (string != null) {
+				result.setTextContent(string);
+			}
+		}
+		
+		{
+			final Number number = cast(Number.class, object);
+			
+			if (number != null) {
+				result.setTextContent(number.toString());
 			}
 		}
 		
@@ -1500,12 +1522,26 @@ abstract interface XMLSerializable extends Serializable {
 			return null;
 		}
 		
+		if (String.class.getName().equals(element.getTagName())) {
+			return (T) element.getTextContent();
+		}
+		
+		for (final Class<?> primitiveWrapperClass : array(Boolean.class, Byte.class, Short.class, Character.class, Integer.class, Long.class, Float.class, Double.class)) {
+			if (primitiveWrapperClass.getName().equals(element.getTagName())) {
+				try {
+					return (T) primitiveWrapperClass.getConstructor(String.class).newInstance(element.getTextContent());
+				} catch (final Exception exception) {
+					throw unchecked(exception);
+				}
+			}
+		}
+		
 		try {
-			final Class<T> resultClass = (Class<T>) Class.forName(element.getTagName());
+			final Class<T> resultClass = (Class<T>) Class.forName(element.getTagName().replace("..", "$"));
 			final String enclosingInstanceIdAsString = element.getAttribute(ENCLOSING_INSTANCE_ID);
 			final T result;
 			
-			if (enclosingInstanceIdAsString != null) {
+			if (enclosingInstanceIdAsString != null && !enclosingInstanceIdAsString.isEmpty()) {
 				final Object enclosingInstance = objects.get(Integer.decode(enclosingInstanceIdAsString));
 				result = resultClass.getConstructor(enclosingInstance.getClass()).newInstance(enclosingInstance);
 			} else {
@@ -1518,14 +1554,16 @@ abstract interface XMLSerializable extends Serializable {
 				return (T) serializable.fromXML(element, objects);
 			}
 			
-			final Map<Object, Object> map = cast(Map.class, result);
-			
-			if (map != null) {
-				for (final Node entryNode : XMLTools.getNodes(element, "entry")) {
-					final Object key = objectFromXML((Element) XMLTools.getNode(entryNode, "key").getChildNodes().item(0), objects);
-					final Object value = objectFromXML((Element) XMLTools.getNode(entryNode, "value").getChildNodes().item(0), objects);
-					
-					map.put(key, value);
+			{
+				final Map<Object, Object> map = cast(Map.class, result);
+				
+				if (map != null) {
+					for (final Node entryNode : XMLTools.getNodes(element, "entry")) {
+						final Object key = objectFromXML((Element) XMLTools.getNode(entryNode, "key").getChildNodes().item(0), objects);
+						final Object value = objectFromXML((Element) XMLTools.getNode(entryNode, "value").getChildNodes().item(0), objects);
+						
+						map.put(key, value);
+					}
 				}
 			}
 			
