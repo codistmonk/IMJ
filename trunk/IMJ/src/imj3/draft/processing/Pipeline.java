@@ -9,7 +9,9 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj2.draft.AutoCloseableImageWriter;
+
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -51,9 +53,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.imageio.ImageIO;
-
-import com.thoughtworks.xstream.XStream;
-import com.thoughtworks.xstream.io.xml.StaxDriver;
 
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.TicToc;
@@ -287,6 +286,8 @@ public final class Pipeline implements Serializable {
 			
 			final int n = trainingSet.getClassDimension();
 			
+			Tools.debugPrint("Validating...");
+			
 			in[0].forEach(f -> {
 				final Image2D image = f.getImage();
 				final Image2D labels = f.getLabels();
@@ -327,31 +328,39 @@ public final class Pipeline implements Serializable {
 	}
 	
 	public final Pipeline classify(final Image2D image, final Image2D labels, final Image2D classification) {
-		Tools.debugPrint("Starting classification");
+		return this.classify(image, new Rectangle(image.getWidth(), image.getHeight()), labels, classification);
+	}
+	
+	public final Pipeline classify(final Image2D image, final Rectangle imageBounds, final Image2D labels, final Image2D classification) {
+		Tools.debugPrint("Starting classification in", imageBounds);
 		
 		this.setComputationStatus(ComputationStatus.COMPUTING);
 		
 		final TicToc timer = new TicToc();
+		final int tileSize = 512;
+		final int left = imageBounds.x / tileSize * tileSize;
+		final int top = imageBounds.y / tileSize * tileSize;
+		final int rightEnd = (imageBounds.x + imageBounds.width + tileSize - 1) / tileSize * tileSize;
+		final int bottomEnd = (imageBounds.y + imageBounds.height + tileSize - 1) / tileSize * tileSize;
 		final int width = image.getWidth();
 		final int height = image.getHeight();
-		final Rectangle imageBounds = new Rectangle(width, height);
-		final int tileSize = 512;
+		final Rectangle tileBounds = new Rectangle(width, height);
 		
 		this.getClassificationConfusionMatrix().clear();
 		
-		for (int y = 0; y < height; y += tileSize) {
-			Tools.debugPrint(y, "/", height);
+		for (int y = top; y < bottomEnd; y += tileSize) {
+			Tools.debugPrint(y, "/", bottomEnd);
 			
 			final int h = min(tileSize, height - y);
 			
-			for (int x = 0; x < width; x += tileSize) {
+			for (int x = left; x < rightEnd; x += tileSize) {
 				this.checkComputing();
 				
 				final int w = min(tileSize, width - x);
 				
-				imageBounds.setBounds(x, y, w, h);
+				tileBounds.setBounds(x, y, w, h);
 				
-				this.classify1(image, imageBounds, labels, classification);
+				this.classify1(image, tileBounds, labels, classification);
 			}
 		}
 		
@@ -852,8 +861,6 @@ public final class Pipeline implements Serializable {
 	
 	private static final long serialVersionUID = -4539259556658072410L;
 	
-	static final XStream xstream = new XStream(new StaxDriver());
-	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
@@ -861,13 +868,14 @@ public final class Pipeline implements Serializable {
 	 */
 	public static final void main(final String[] commandLineArguments) throws IOException {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
-		final File pipelineFile = new File(arguments.get("xml", ""));
+		final File pipelineFile = new File(arguments.get("jo", ""));
 		final String groundTruthName = arguments.get("groundtruth", "");
 		final String inputPath = arguments.get("in", "");
 		final int lod = arguments.get("lod", 0)[0];
 		final String pipelineName = baseName(pipelineFile.getName());
 		final File classificationFile = new File(arguments.get("out", getClassificationPathFromImagePath(inputPath, groundTruthName, pipelineName)));
-		final Pipeline pipeline = (Pipeline) xstream.fromXML(pipelineFile);
+//		final Pipeline pipeline = (Pipeline) xstream.fromXML(pipelineFile);
+		final Pipeline pipeline = (Pipeline) Tools.readObject(pipelineFile.getPath());
 		final Image2D image = IMJTools.read(inputPath, lod);
 		final int width = image.getWidth();
 		final int height = image.getHeight();
