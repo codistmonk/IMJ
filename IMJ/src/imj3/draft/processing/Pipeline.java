@@ -9,7 +9,9 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj2.draft.AutoCloseableImageWriter;
+
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -21,7 +23,6 @@ import imj3.draft.machinelearning.MedianCutClustering;
 import imj3.draft.machinelearning.NearestNeighborClassifier;
 import imj3.draft.machinelearning.Measure.Predefined;
 import imj3.draft.processing.Image2DSource.PatchIterator;
-import imj3.draft.processing.Pipeline.Algorithm;
 import imj3.tools.AwtImage2D;
 import imj3.tools.CommonTools;
 import imj3.tools.CommonSwingTools.NestedList;
@@ -53,14 +54,14 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import javax.imageio.ImageIO;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 /**
  * @author codistmonk (creation 2015-02-16)
@@ -74,13 +75,9 @@ public final class Pipeline implements XMLSerializable {
 	
 	private List<ClassDescription> classDescriptions;
 	
-	private long trainingMilliseconds;
+	private Result trainingResult;
 	
-	private Map<Integer, Map<Integer, AtomicLong>> trainingConfusionMatrix;
-	
-	private long classificationMilliseconds;
-	
-	private Map<Integer, Map<Integer, AtomicLong>> classificationConfusionMatrix;
+	private Result classificationResult;
 	
 	private ComputationStatus computationStatus;
 	
@@ -105,7 +102,9 @@ public final class Pipeline implements XMLSerializable {
 			classDescriptionsNode.appendChild(classDescription.toXML(document, ids));
 		}
 		
-		// TODO Auto-generated method stub
+		result.appendChild(XMLSerializable.newElement("trainingResult", this.getTrainingResult(), document, ids));
+		result.appendChild(XMLSerializable.newElement("classificationResult", this.getClassificationResult(), document, ids));
+		
 		return result;
 	}
 	
@@ -113,10 +112,20 @@ public final class Pipeline implements XMLSerializable {
 	public final Pipeline fromXML(final Element xml, final Map<Integer, Object> objects) {
 		XMLSerializable.super.fromXML(xml, objects);
 		
-		for (final Node node : XMLTools.getNodes(xml, "trainingFields/trainingField")) {
-			this.getTrainingFields().add(new TrainingField().fromXML((Element) node, objects));
+		for (final Node node : XMLTools.getNodes(xml, "trainingFields/*")) {
+			this.getTrainingFields().add(XMLSerializable.objectFromXML((Element) node, objects));
 		}
-		// TODO Auto-generated method stub
+		
+		for (final Node node : XMLTools.getNodes(xml, "algorithms/*")) {
+			this.getAlgorithms().add(XMLSerializable.objectFromXML((Element) node, objects));
+		}
+		
+		for (final Node node : XMLTools.getNodes(xml, "classDescriptions/*")) {
+			this.getClassDescriptions().add(XMLSerializable.objectFromXML((Element) node, objects));
+		}
+		
+		this.trainingResult = XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "trainingResult"), objects);
+		this.classificationResult = XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "classificationResult"), objects);
 		
 		return this;
 	}
@@ -148,28 +157,36 @@ public final class Pipeline implements XMLSerializable {
 		return this.algorithms;
 	}
 	
-	public final Map<Integer, Map<Integer, AtomicLong>> getTrainingConfusionMatrix() {
-		if (this.trainingConfusionMatrix == null) {
-			this.trainingConfusionMatrix = new HashMap<>();
+	public final Result getTrainingResult() {
+		if (this.trainingResult == null) {
+			this.trainingResult = new Result();
 		}
 		
-		return this.trainingConfusionMatrix;
+		return this.trainingResult;
+	}
+	
+	public final Result getClassificationResult() {
+		if (this.classificationResult == null) {
+			this.classificationResult = new Result();
+		}
+		
+		return this.classificationResult;
+	}
+	
+	public final Map<Integer, Map<Integer, AtomicLong>> getTrainingConfusionMatrix() {
+		return this.getTrainingResult().getConfusionMatrix();
 	}
 	
 	public final Map<Integer, Map<Integer, AtomicLong>> getClassificationConfusionMatrix() {
-		if (this.classificationConfusionMatrix == null) {
-			this.classificationConfusionMatrix = new HashMap<>();
-		}
-		
-		return this.classificationConfusionMatrix;
+		return this.getClassificationResult().getConfusionMatrix();
 	}
 	
 	public final long getTrainingMilliseconds() {
-		return this.trainingMilliseconds;
+		return this.getTrainingResult().getMilliseconds();
 	}
 	
 	public final long getClassificationMilliseconds() {
-		return this.classificationMilliseconds;
+		return this.getClassificationResult().getMilliseconds();
 	}
 	
 	public final synchronized ComputationStatus getComputationStatus() {
@@ -268,9 +285,9 @@ public final class Pipeline implements XMLSerializable {
 			}
 		}
 		
-		this.trainingMilliseconds = timer.toc();
+		this.getTrainingResult().setMilliseconds(timer.toc());
 		
-		Tools.debugPrint("Training done in", this.trainingMilliseconds, "ms");
+		Tools.debugPrint("Training done in", this.getTrainingMilliseconds(), "ms");
 		
 		this.setComputationStatus(ComputationStatus.IDLE);
 		
@@ -405,9 +422,9 @@ public final class Pipeline implements XMLSerializable {
 			}
 		}
 		
-		this.classificationMilliseconds = timer.toc();
+		this.getClassificationResult().setMilliseconds(timer.toc());
 		
-		Tools.debugPrint("Classification done in", this.classificationMilliseconds, "ms");
+		Tools.debugPrint("Classification done in", this.getClassificationMilliseconds(), "ms");
 		
 		this.setComputationStatus(ComputationStatus.IDLE);
 		
@@ -1373,6 +1390,54 @@ public final class Pipeline implements XMLSerializable {
 		
 	}
 	
+	/**
+	 * @author codistmonk (creation 2015-03-15)
+	 */
+	public static final class Result implements XMLSerializable {
+		
+		private long milliseconds;
+		
+		private Map<Integer, Map<Integer, AtomicLong>> confusionMatrix;
+		
+		@Override
+		public final Element toXML(final Document document, final Map<Object, Integer> ids) {
+			final Element result = XMLSerializable.super.toXML(document, ids);
+			
+			result.setAttribute("milliseconds", Long.toString(this.getMilliseconds()));
+			result.appendChild(XMLSerializable.objectToXML(this.getConfusionMatrix(), document, ids));
+			
+			return result;
+		}
+		
+		@Override
+		public Result fromXML(final Element xml, final Map<Integer, Object> objects) {
+			XMLSerializable.super.fromXML(xml, objects);
+			
+			this.setMilliseconds(Long.parseLong(xml.getAttribute("milliseconds")));
+			this.confusionMatrix = XMLSerializable.objectFromXML((Element) xml.getFirstChild(), objects);
+			
+			return this;
+		}
+		
+		public final long getMilliseconds() {
+			return this.milliseconds;
+		}
+		
+		public final void setMilliseconds(final long milliseconds) {
+			this.milliseconds = milliseconds;
+		}
+		
+		public final Map<Integer, Map<Integer, AtomicLong>> getConfusionMatrix() {
+			if (this.confusionMatrix == null)  {
+				this.confusionMatrix = new HashMap<>();
+			}
+			return this.confusionMatrix;
+		}
+		
+		private static final long serialVersionUID = -7054191235319173687L;
+		
+	}
+	
 }
 
 /**
@@ -1430,7 +1495,7 @@ abstract interface XMLSerializable extends Serializable {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public static <T> T objectFromXML(final Element element, final Map<Integer, Object> ids) {
+	public static <T> T objectFromXML(final Element element, final Map<Integer, Object> objects) {
 		if ("null".equals(element.getTagName())) {
 			return null;
 		}
@@ -1441,7 +1506,7 @@ abstract interface XMLSerializable extends Serializable {
 			final T result;
 			
 			if (enclosingInstanceIdAsString != null) {
-				final Object enclosingInstance = ids.get(Integer.decode(enclosingInstanceIdAsString));
+				final Object enclosingInstance = objects.get(Integer.decode(enclosingInstanceIdAsString));
 				result = resultClass.getConstructor(enclosingInstance.getClass()).newInstance(enclosingInstance);
 			} else {
 				result = resultClass.newInstance();
@@ -1450,15 +1515,15 @@ abstract interface XMLSerializable extends Serializable {
 			final XMLSerializable serializable = cast(XMLSerializable.class, result);
 			
 			if (serializable != null) {
-				return (T) serializable.fromXML(element, ids);
+				return (T) serializable.fromXML(element, objects);
 			}
 			
 			final Map<Object, Object> map = cast(Map.class, result);
 			
 			if (map != null) {
 				for (final Node entryNode : XMLTools.getNodes(element, "entry")) {
-					final Object key = objectFromXML((Element) XMLTools.getNode(entryNode, "key").getChildNodes().item(0), ids);
-					final Object value = objectFromXML((Element) XMLTools.getNode(entryNode, "value").getChildNodes().item(0), ids);
+					final Object key = objectFromXML((Element) XMLTools.getNode(entryNode, "key").getChildNodes().item(0), objects);
+					final Object value = objectFromXML((Element) XMLTools.getNode(entryNode, "value").getChildNodes().item(0), objects);
 					
 					map.put(key, value);
 				}
@@ -1468,6 +1533,14 @@ abstract interface XMLSerializable extends Serializable {
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
+	}
+	
+	public static Element newElement(final String tagName, final Object object, final Document document, final Map<Object, Integer> ids) {
+		final Element result = document.createElement(tagName);
+		
+		result.appendChild(objectToXML(object, document, ids));
+		
+		return result;
 	}
 	
 }
