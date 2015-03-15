@@ -9,9 +9,7 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.draft.AutoCloseableImageWriter;
-
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -23,6 +21,7 @@ import imj3.draft.machinelearning.MedianCutClustering;
 import imj3.draft.machinelearning.NearestNeighborClassifier;
 import imj3.draft.machinelearning.Measure.Predefined;
 import imj3.draft.processing.Image2DSource.PatchIterator;
+import imj3.draft.processing.Pipeline.Algorithm;
 import imj3.tools.AwtImage2D;
 import imj3.tools.CommonTools;
 import imj3.tools.CommonSwingTools.NestedList;
@@ -54,21 +53,26 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import javax.imageio.ImageIO;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
+import net.sourceforge.aprog.xml.XMLTools;
 
 /**
  * @author codistmonk (creation 2015-02-16)
  */
 @PropertyOrdering({ "classes", "training", "algorithms" })
-public final class Pipeline implements Serializable {
+public final class Pipeline implements XMLSerializable {
 	
-	private List<Pipeline.TrainingField> trainingFields;
+	private List<TrainingField> trainingFields;
 	
 	private List<Algorithm> algorithms;
 	
-	private List<Pipeline.ClassDescription> classDescriptions;
+	private List<ClassDescription> classDescriptions;
 	
 	private long trainingMilliseconds;
 	
@@ -80,6 +84,43 @@ public final class Pipeline implements Serializable {
 	
 	private ComputationStatus computationStatus;
 	
+	@Override
+	public final Element toXML(final Document document, final Map<Object, Integer> ids) {
+		final Element result = XMLSerializable.super.toXML(document, ids);
+		final Node trainingFieldsNode = result.appendChild(document.createElement("trainingFields"));
+		
+		for (final TrainingField trainingField : this.getTrainingFields()) {
+			trainingFieldsNode.appendChild(trainingField.toXML(document, ids));
+		}
+		
+		final Node algorithmsNode = result.appendChild(document.createElement("algorithms"));
+		
+		for (final Algorithm algorithm : this.getAlgorithms()) {
+			algorithmsNode.appendChild(algorithm.toXML(document, ids));
+		}
+		
+		final Node classDescriptionsNode = result.appendChild(document.createElement("classDescriptions"));
+		
+		for (final ClassDescription classDescription : this.getClassDescriptions()) {
+			classDescriptionsNode.appendChild(classDescription.toXML(document, ids));
+		}
+		
+		// TODO Auto-generated method stub
+		return result;
+	}
+	
+	@Override
+	public final Pipeline fromXML(final Element xml, final Map<Integer, Object> objects) {
+		XMLSerializable.super.fromXML(xml, objects);
+		
+		for (final Node node : XMLTools.getNodes(xml, "trainingFields/trainingField")) {
+			this.getTrainingFields().add(new TrainingField().fromXML((Element) node, objects));
+		}
+		// TODO Auto-generated method stub
+		
+		return this;
+	}
+
 	@NestedList(name="classes", element="class", elementClass=Pipeline.ClassDescription.class)
 	public final List<Pipeline.ClassDescription> getClassDescriptions() {
 		if (this.classDescriptions == null) {
@@ -469,7 +510,7 @@ public final class Pipeline implements Serializable {
 	 * @author codistmonk (creation 2015-02-27)
 	 */
 	@PropertyOrdering({ "patchSize", "patchSizeRange", "patchSparsity", "patchSparsityRange", "stride", "strideRange", "usingXY", "usingXYRange", "classifier" })
-	public abstract class Algorithm implements Serializable {
+	public abstract class Algorithm implements XMLSerializable {
 		
 		private String clusteringName = MedianCutClustering.class.getName();
 		
@@ -490,6 +531,42 @@ public final class Pipeline implements Serializable {
 		private boolean usingXY = false;
 		
 		private String usingXYRange;
+		
+		@Override
+		public final Element toXML(final Document document, final Map<Object, Integer> ids) {
+			final Element result = XMLSerializable.super.toXML(document, ids);
+			
+			result.setAttribute(ENCLOSING_INSTANCE_ID, ids.get(this.getPipeline()).toString());
+			result.setAttribute("patchSize", this.getPatchSizeAsString());
+			result.setAttribute("patchSizeRange", this.getPatchSizeRange());
+			result.setAttribute("patchSparsity", this.getPatchSparsityAsString());
+			result.setAttribute("stride", this.getStrideAsString());
+			result.setAttribute("strideRange", this.getStrideRange());
+			result.setAttribute("usingXY", this.getUsingXYAsString());
+			result.setAttribute("usingXYRange", this.getUsingXYRange());
+			
+			return this.subclassToXML(document, ids, result);
+		}
+		
+		protected abstract Element subclassToXML(Document document, Map<Object, Integer> ids, Element result);
+		
+		@Override
+		public final Algorithm fromXML(final Element xml, final Map<Integer, Object> objects) {
+			XMLSerializable.super.fromXML(xml, objects);
+			
+			this.setPatchSize(xml.getAttribute("patchSize"));
+			this.setPatchSizeRange(xml.getAttribute("patchSizeRange"));
+			this.setPatchSparsity(xml.getAttribute("patchSparsity"));
+			this.setPatchSparsityRange(xml.getAttribute("patchSparsityRange"));
+			this.setStride(xml.getAttribute("stride"));
+			this.setStrideRange(xml.getAttribute("strideRange"));
+			this.setUsingXY(xml.getAttribute("usingXY"));
+			this.setUsingXYRange(xml.getAttribute("usingXYRange"));
+			
+			return this.subclassFromXML(xml, objects);
+		}
+		
+		protected abstract Algorithm subclassFromXML(Element xml, Map<Integer, Object> objects);
 		
 		@PropertyGetter("clustering")
 		public final String getClusteringName() {
@@ -689,6 +766,19 @@ public final class Pipeline implements Serializable {
 		private int classCount;
 		
 		@Override
+		protected final Element subclassToXML(final Document document, final Map<Object, Integer> ids,
+				final Element result) {
+			result.setAttribute("classCount", this.getClassCountAsString());
+			
+			return result;
+		}
+		
+		@Override
+		protected final UnsupervisedAlgorithm subclassFromXML(final Element xml, final Map<Integer, Object> objects) {
+			return this.setClassCount(xml.getAttribute("classCount"));
+		}
+		
+		@Override
 		public final int getClassCount() {
 			return this.classCount;
 		}
@@ -728,6 +818,20 @@ public final class Pipeline implements Serializable {
 		private Map<String, Integer> prototypeCounts;
 		
 		private Map<String, String> prototypeCountRanges;
+		
+		@Override
+		protected Element subclassToXML(Document document,
+				Map<Object, Integer> ids, Element result) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+		
+		@Override
+		protected Algorithm subclassFromXML(Element xml,
+				Map<Integer, Object> objects) {
+			// TODO Auto-generated method stub
+			return null;
+		}
 		
 		@Trainable("prototypeRanges")
 		public final Map<String, Integer> getPrototypeCounts() {
@@ -979,11 +1083,31 @@ public final class Pipeline implements Serializable {
 	 * @author codistmonk (creation 2015-02-16)
 	 */
 	@PropertyOrdering({ "name", "label" })
-	public static final class ClassDescription implements Serializable {
+	public static final class ClassDescription implements XMLSerializable {
 		
 		private String name = "class";
 		
 		private int label = 0xFF000000;
+		
+		@Override
+		public final Element toXML(final Document document, final Map<Object, Integer> ids) {
+			final Element result = XMLSerializable.super.toXML(document, ids);
+			
+			result.setAttribute("name", this.getName());
+			result.setAttribute("label", this.getLabelAsString());
+			
+			return result;
+		}
+		
+		@Override
+		public final ClassDescription fromXML(final Element xml, final Map<Integer, Object> objects) {
+			XMLSerializable.super.fromXML(xml, objects);
+			
+			this.setName(xml.getAttribute("name"));
+			this.setLabel(xml.getAttribute("label"));
+			
+			return this;
+		}
 		
 		@StringGetter
 		@PropertyGetter("name")
@@ -1026,11 +1150,31 @@ public final class Pipeline implements Serializable {
 	 * @author codistmonk (creation 2015-02-17)
 	 */
 	@PropertyOrdering({ "image", "bounds" })
-	public static final class TrainingField implements Serializable {
+	public static final class TrainingField implements XMLSerializable {
 		
 		private String imagePath = "";
 		
 		private final Rectangle bounds = new Rectangle();
+		
+		@Override
+		public final Element toXML(final Document document, final Map<Object, Integer> ids) {
+			final Element result = XMLSerializable.super.toXML(document, ids);
+			
+			result.setAttribute("imagePath", this.getImagePath());
+			result.setAttribute("bounds", this.getBoundsAsString());
+			
+			return result;
+		}
+		
+		@Override
+		public final TrainingField fromXML(final Element xml, final Map<Integer, Object> objects) {
+			XMLSerializable.super.fromXML(xml, objects);
+			
+			this.setImagePath(xml.getAttribute("imagePath"));
+			this.setBounds(xml.getAttribute("bounds"));
+			
+			return this;
+		}
 		
 		@PropertyGetter("image")
 		public final String getImagePath() {
@@ -1227,6 +1371,103 @@ public final class Pipeline implements Serializable {
 		
 		COMPUTING, CANCELED, IDLE;
 		
+	}
+	
+}
+
+/**
+ * @author codistmonk (creation 2015-03-15)
+ */
+abstract interface XMLSerializable extends Serializable {
+	
+	public default Element toXML(final Document document, final Map<Object, Integer> ids) {
+		final Element result = document.createElement(this.getClass().getName());
+		final Integer id = ids.computeIfAbsent(this, o -> ids.size());
+		
+		result.setAttribute("id", id.toString());
+		
+		return result;
+	}
+	
+	public default XMLSerializable fromXML(final Element xml, final Map<Integer, Object> objects) {
+		final Integer id = Integer.decode(xml.getAttribute("id"));
+		
+		if (null != objects.put(id, this)) {
+			Tools.debugError("Id clash detected");
+		}
+		
+		return this;
+	}
+	
+	public static final String ENCLOSING_INSTANCE_ID = "enclosingInstanceId";
+	
+	public static Element objectToXML(final Object object, final Document document, final Map<Object, Integer> ids) {
+		final XMLSerializable serializable = cast(XMLSerializable.class, object);
+		
+		if (serializable != null) {
+			return serializable.toXML(document, ids);
+		}
+		
+		if (object == null) {
+			return document.createElement("null");
+		}
+		
+		final Element result = document.createElement(object.getClass().getName());
+		final Map<?, ?> map = cast(Map.class, object);
+		
+		if (map != null) {
+			for (final Map.Entry<?, ?> entry : map.entrySet()) {
+				final Element entryElement = (Element) result.appendChild(document.createElement("entry"));
+				final Element keyElement = (Element) entryElement.appendChild(document.createElement("key"));
+				final Element valueElement = (Element) entryElement.appendChild(document.createElement("value"));
+				
+				keyElement.appendChild(objectToXML(entry.getKey(), document, ids));
+				valueElement.appendChild(objectToXML(entry.getValue(), document, ids));
+			}
+		}
+		
+		return result;
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static <T> T objectFromXML(final Element element, final Map<Integer, Object> ids) {
+		if ("null".equals(element.getTagName())) {
+			return null;
+		}
+		
+		try {
+			final Class<T> resultClass = (Class<T>) Class.forName(element.getTagName());
+			final String enclosingInstanceIdAsString = element.getAttribute(ENCLOSING_INSTANCE_ID);
+			final T result;
+			
+			if (enclosingInstanceIdAsString != null) {
+				final Object enclosingInstance = ids.get(Integer.decode(enclosingInstanceIdAsString));
+				result = resultClass.getConstructor(enclosingInstance.getClass()).newInstance(enclosingInstance);
+			} else {
+				result = resultClass.newInstance();
+			}
+			
+			final XMLSerializable serializable = cast(XMLSerializable.class, result);
+			
+			if (serializable != null) {
+				return (T) serializable.fromXML(element, ids);
+			}
+			
+			final Map<Object, Object> map = cast(Map.class, result);
+			
+			if (map != null) {
+				for (final Node entryNode : XMLTools.getNodes(element, "entry")) {
+					final Object key = objectFromXML((Element) XMLTools.getNode(entryNode, "key").getChildNodes().item(0), ids);
+					final Object value = objectFromXML((Element) XMLTools.getNode(entryNode, "value").getChildNodes().item(0), ids);
+					
+					map.put(key, value);
+				}
+			}
+			
+			return result;
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
 	}
 	
 }
