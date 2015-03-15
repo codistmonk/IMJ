@@ -1,7 +1,16 @@
 package imj3.draft.machinelearning;
 
+import imj3.tools.XMLSerializable;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
+import net.sourceforge.aprog.xml.XMLTools;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 /**
  * @author codistmonk (creation 2015-02-04)
@@ -20,6 +29,32 @@ public final class NearestNeighborClassifier implements Classifier {
 		this.prototypeMeasure = new Datum.Measure.Default<>(measure);
 	}
 	
+	@Override
+	public final Element toXML(final Document document, final Map<Object, Integer> ids) {
+		final Element result = Classifier.super.toXML(document, ids);
+		
+		final Node prototypesNode = result.appendChild(document.createElement("prototypes"));
+		
+		for (final Datum prototype : this.getPrototypes()) {
+			prototypesNode.appendChild(XMLSerializable.objectToXML(prototype, document, ids));
+		}
+		
+		result.appendChild(XMLSerializable.newElement("measure", this.getMeasure(), document, ids));
+		
+		return result;
+	}
+	
+	@Override
+	public final NearestNeighborClassifier fromXML(final Element xml, final Map<Integer, Object> objects) {
+		Classifier.super.fromXML(xml, objects);
+		
+		for (final Node node : XMLTools.getNodes(xml, "prototypes/*")) {
+			this.getPrototypes().add(XMLSerializable.objectFromXML((Element) node, objects));
+		}
+		
+		return this;
+	}
+
 	public final NearestNeighborClassifier updatePrototypeIndices() {
 		final int n = this.getPrototypes().size();
 		

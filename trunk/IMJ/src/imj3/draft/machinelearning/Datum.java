@@ -1,14 +1,21 @@
 package imj3.draft.machinelearning;
 
 import static net.sourceforge.aprog.tools.Tools.ignore;
+import imj3.tools.XMLSerializable;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Map;
+
+import net.sourceforge.aprog.xml.XMLTools;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 /**
  * @author codistmonk (creation 2015-03-02)
  */
-public abstract interface Datum extends Serializable {
+public abstract interface Datum extends XMLSerializable {
 	
 	public default int getIndex() {
 		return -1;
@@ -78,6 +85,40 @@ public abstract interface Datum extends Serializable {
 		private Datum prototype = this;
 		
 		private double score;
+		
+		@Override
+		public final Element toXML(final Document document, final Map<Object, Integer> ids) {
+			final Element result = Datum.super.toXML(document, ids);
+			
+			result.setAttribute("index", Integer.toString(this.getIndex()));
+			result.setAttribute("weight", Double.toString(this.getWeight()));
+			result.setAttribute("value", this.getValue() == null ? "null" : trim(Arrays.toString(this.getValue())));
+			result.setAttribute("score", Double.toString(this.getScore()));
+			
+			result.appendChild(XMLSerializable.newElement("prototype", this.getPrototype(), document, ids));
+			
+			return result;
+		}
+		
+		public static final String trim(final String string) {
+			return string.substring(1, string.length() - 1);
+		}
+		
+		@Override
+		public final Default fromXML(final Element xml, final Map<Integer, Object> objects) {
+			Datum.super.fromXML(xml, objects);
+			
+			this.setIndex(Integer.parseInt(xml.getAttribute("index")));
+			this.setWeight(Double.parseDouble(xml.getAttribute("weight")));
+			final String valueAsString = xml.getAttribute("value");
+			this.setValue("null".equals(valueAsString) ? null : Arrays.stream(
+					valueAsString.split(",")).mapToDouble(Double::parseDouble).toArray());
+			this.setScore(Double.parseDouble(xml.getAttribute("score")));
+			
+			this.setPrototype(XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "prototype").getFirstChild(), objects));
+			
+			return this;
+		}
 		
 		@Override
 		public final int getIndex() {
