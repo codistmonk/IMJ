@@ -9,7 +9,9 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj2.draft.AutoCloseableImageWriter;
+
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -23,6 +25,7 @@ import imj3.draft.machinelearning.Measure.Predefined;
 import imj3.draft.processing.Image2DSource.PatchIterator;
 import imj3.tools.AwtImage2D;
 import imj3.tools.CommonTools;
+import imj3.tools.XMLSerializable;
 import imj3.tools.CommonSwingTools.NestedList;
 import imj3.tools.CommonSwingTools.PropertyGetter;
 import imj3.tools.CommonSwingTools.PropertyOrdering;
@@ -38,7 +41,6 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -553,6 +555,8 @@ public final class Pipeline implements XMLSerializable {
 			final Element result = XMLSerializable.super.toXML(document, ids);
 			
 			result.setAttribute(ENCLOSING_INSTANCE_ID, ids.get(this.getPipeline()).toString());
+			result.setAttribute("clusteringName", this.getClusteringName());
+			result.appendChild(XMLSerializable.newElement("classifier", this.getClassifier(), document, ids));
 			result.setAttribute("patchSize", this.getPatchSizeAsString());
 			result.setAttribute("patchSizeRange", this.getPatchSizeRange());
 			result.setAttribute("patchSparsity", this.getPatchSparsityAsString());
@@ -570,6 +574,8 @@ public final class Pipeline implements XMLSerializable {
 		public final Algorithm fromXML(final Element xml, final Map<Integer, Object> objects) {
 			XMLSerializable.super.fromXML(xml, objects);
 			
+			this.setClusteringName(xml.getAttribute("clusteringName"));
+			this.setClassifier(XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "classifier").getFirstChild(), objects));
 			this.setPatchSize(xml.getAttribute("patchSize"));
 			this.setPatchSizeRange(xml.getAttribute("patchSizeRange"));
 			this.setPatchSparsity(xml.getAttribute("patchSparsity"));
@@ -1439,146 +1445,6 @@ public final class Pipeline implements XMLSerializable {
 		
 		private static final long serialVersionUID = -7054191235319173687L;
 		
-	}
-	
-}
-
-/**
- * @author codistmonk (creation 2015-03-15)
- */
-abstract interface XMLSerializable extends Serializable {
-	
-	public default Element toXML(final Document document, final Map<Object, Integer> ids) {
-		final Element result = document.createElement(this.getClass().getName().replace("$", ".."));
-		final Integer id = ids.computeIfAbsent(this, o -> ids.size());
-		
-		result.setAttribute("id", id.toString());
-		
-		return result;
-	}
-	
-	public default XMLSerializable fromXML(final Element xml, final Map<Integer, Object> objects) {
-		final Integer id = Integer.decode(xml.getAttribute("id"));
-		
-		if (null != objects.put(id, this)) {
-			Tools.debugError("Id clash detected");
-		}
-		
-		return this;
-	}
-	
-	public static final String ENCLOSING_INSTANCE_ID = "enclosingInstanceId";
-	
-	public static Element objectToXML(final Object object, final Document document, final Map<Object, Integer> ids) {
-		final XMLSerializable serializable = cast(XMLSerializable.class, object);
-		
-		if (serializable != null) {
-			return serializable.toXML(document, ids);
-		}
-		
-		if (object == null) {
-			return document.createElement("null");
-		}
-		
-		final Element result = document.createElement(object.getClass().getName());
-		
-		{
-			final Map<?, ?> map = cast(Map.class, object);
-			
-			if (map != null) {
-				for (final Map.Entry<?, ?> entry : map.entrySet()) {
-					final Element entryElement = (Element) result.appendChild(document.createElement("entry"));
-					final Element keyElement = (Element) entryElement.appendChild(document.createElement("key"));
-					final Element valueElement = (Element) entryElement.appendChild(document.createElement("value"));
-					
-					keyElement.appendChild(objectToXML(entry.getKey(), document, ids));
-					valueElement.appendChild(objectToXML(entry.getValue(), document, ids));
-				}
-			}
-		}
-		
-		{
-			final String string = cast(String.class, object);
-			
-			if (string != null) {
-				result.setTextContent(string);
-			}
-		}
-		
-		{
-			final Number number = cast(Number.class, object);
-			
-			if (number != null) {
-				result.setTextContent(number.toString());
-			}
-		}
-		
-		return result;
-	}
-	
-	@SuppressWarnings("unchecked")
-	public static <T> T objectFromXML(final Element element, final Map<Integer, Object> objects) {
-		if ("null".equals(element.getTagName())) {
-			return null;
-		}
-		
-		if (String.class.getName().equals(element.getTagName())) {
-			return (T) element.getTextContent();
-		}
-		
-		for (final Class<?> primitiveWrapperClass : array(Boolean.class, Byte.class, Short.class, Character.class, Integer.class, Long.class, Float.class, Double.class)) {
-			if (primitiveWrapperClass.getName().equals(element.getTagName())) {
-				try {
-					return (T) primitiveWrapperClass.getConstructor(String.class).newInstance(element.getTextContent());
-				} catch (final Exception exception) {
-					throw unchecked(exception);
-				}
-			}
-		}
-		
-		try {
-			final Class<T> resultClass = (Class<T>) Class.forName(element.getTagName().replace("..", "$"));
-			final String enclosingInstanceIdAsString = element.getAttribute(ENCLOSING_INSTANCE_ID);
-			final T result;
-			
-			if (enclosingInstanceIdAsString != null && !enclosingInstanceIdAsString.isEmpty()) {
-				final Object enclosingInstance = objects.get(Integer.decode(enclosingInstanceIdAsString));
-				result = resultClass.getConstructor(enclosingInstance.getClass()).newInstance(enclosingInstance);
-			} else {
-				result = resultClass.newInstance();
-			}
-			
-			final XMLSerializable serializable = cast(XMLSerializable.class, result);
-			
-			if (serializable != null) {
-				return (T) serializable.fromXML(element, objects);
-			}
-			
-			{
-				final Map<Object, Object> map = cast(Map.class, result);
-				
-				if (map != null) {
-					for (final Node entryNode : XMLTools.getNodes(element, "entry")) {
-						final Object key = objectFromXML((Element) XMLTools.getNode(entryNode, "key").getChildNodes().item(0), objects);
-						final Object value = objectFromXML((Element) XMLTools.getNode(entryNode, "value").getChildNodes().item(0), objects);
-						
-						map.put(key, value);
-					}
-				}
-			}
-			
-			return result;
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
-	}
-	
-	public static Element newElement(final String tagName, final Object object, final Document document, final Map<Object, Integer> ids) {
-		final Element result = document.createElement(tagName);
-		
-		result.appendChild(objectToXML(object, document, ids));
-		
-		return result;
 	}
 	
 }

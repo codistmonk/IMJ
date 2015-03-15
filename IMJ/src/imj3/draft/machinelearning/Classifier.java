@@ -1,11 +1,11 @@
 package imj3.draft.machinelearning;
 
-import java.io.Serializable;
+import imj3.tools.XMLSerializable;
 
 /**
  * @author codistmonk (creation 2015-02-04)
  */
-public abstract interface Classifier extends Serializable {
+public abstract interface Classifier extends XMLSerializable {
 	
 	public abstract int getClassCount();
 	

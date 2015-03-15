@@ -16,6 +16,7 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
+
 import imj3.draft.processing.Pipeline.Algorithm;
 import imj3.draft.processing.Pipeline.ClassDescription;
 import imj3.draft.processing.Pipeline.ComputationStatus;
@@ -26,6 +27,7 @@ import imj3.draft.segmentation.ImageComponent;
 import imj3.draft.segmentation.ImageComponent.Layer;
 import imj3.draft.segmentation.ImageComponent.Painter;
 import imj3.tools.AwtImage2D;
+import imj3.tools.XMLSerializable;
 import imj3.tools.CommonSwingTools.Instantiator;
 import imj3.tools.CommonSwingTools.HighlightComposite;
 import imj3.tools.CommonSwingTools.UserObject;
@@ -1341,7 +1343,7 @@ public final class VisualAnalysis {
 				
 				preferences.put(PIPELINE, pipelineFile.getPath());
 				
-				XMLTools.write(this.getMainPanel().getPipeline().toXML(XMLTools.newDocument(), new HashMap<>()), new File("test.xml"), 0);
+				XMLTools.write(this.getMainPanel().getPipeline().toXML(), new File("test.xml"), 0);
 				try {
 					Tools.debugPrint(XMLSerializable.objectFromXML(XMLTools.parse(new FileInputStream("test.xml")).getDocumentElement(), new HashMap<>()));
 				} catch (final FileNotFoundException exception) {
