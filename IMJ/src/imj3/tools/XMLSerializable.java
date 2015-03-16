@@ -2,11 +2,11 @@ package imj3.tools;
 
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
+import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-import imj3.draft.machinelearning.Measure;
-import imj3.draft.machinelearning.NearestNeighborClassifier;
 
 import java.io.Serializable;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -52,12 +52,27 @@ public abstract interface XMLSerializable extends Serializable {
 	public static final String ENCLOSING_INSTANCE_ID = "enclosingInstanceId";
 	
 	public static Element objectToXML(final Object object, final Document document, final Map<Object, Integer> ids) {
-		final Integer id = ids.get(object);
+		Integer id = ids.get(object);
 		
 		if (id != null) {
 			final Element result = document.createElement("object");
 			
 			result.setTextContent(id.toString());
+			
+			return result;
+		}
+		
+		if (object == null) {
+			return document.createElement("null");
+		}
+		
+		ids.put(object, id = ids.size());
+		
+		if (object instanceof Enum<?>) {
+			final Element result = document.createElement(object.getClass().getEnclosingClass().getName().replace("$", ".."));
+			
+			result.setAttribute("id", id.toString());
+			result.setTextContent(object.toString());
 			
 			return result;
 		}
@@ -68,19 +83,9 @@ public abstract interface XMLSerializable extends Serializable {
 			return serializable.toXML(document, ids);
 		}
 		
-		if (object == null) {
-			return document.createElement("null");
-		}
-		
-		if (object instanceof Enum<?>) {
-			final Element result = document.createElement(object.getClass().getEnclosingClass().getName().replace("$", ".."));
-			
-			result.setTextContent(object.toString());
-			
-			return result;
-		}
-		
 		final Element result = document.createElement(object.getClass().getName().replace("$", ".."));
+		
+		result.setAttribute("id", id.toString());
 		
 		{
 			final Map<?, ?> map = cast(Map.class, object);
@@ -142,14 +147,25 @@ public abstract interface XMLSerializable extends Serializable {
 			}
 		}
 		
-		if (NearestNeighborClassifier.class.getName().equals(className)) {
-			final Measure measure = objectFromXML((Element) XMLTools.getNode(element, "measure").getFirstChild(), objects);
-			
-			return (T) new NearestNeighborClassifier(measure);
+		final Class<T> resultClass;
+		
+		try {
+			resultClass = (Class<T>) Class.forName(className);
+		} catch (final ClassNotFoundException exception) {
+			throw unchecked(exception);
 		}
 		
 		try {
-			final Class<T> resultClass = (Class<T>) Class.forName(className);
+			final Method objectFromXML = resultClass.getDeclaredMethod("objectFromXML", Element.class, Map.class);
+			
+			return (T) objectFromXML.invoke(null, element, objects);
+		} catch (final NoSuchMethodException exception) {
+			ignore(exception);
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+		
+		try {
 			final String enclosingInstanceIdAsString = element.getAttribute(ENCLOSING_INSTANCE_ID);
 			final T result;
 			

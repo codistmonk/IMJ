@@ -1,9 +1,9 @@
 package imj3.draft.machinelearning;
 
 import static net.sourceforge.aprog.tools.Tools.ignore;
+
 import imj3.tools.XMLSerializable;
 
-import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -211,7 +211,7 @@ public abstract interface Datum extends XMLSerializable {
 	/**
 	 * @author codistmonk (creation 2015-02-04)
 	 */
-	public static abstract interface Measure<D extends Datum> extends Serializable {
+	public static abstract interface Measure<D extends Datum> extends XMLSerializable {
 		
 		public double compute(D d1, D d2);
 		
@@ -227,11 +227,24 @@ public abstract interface Datum extends XMLSerializable {
 			}
 			
 			@Override
+			public final Element toXML(final Document document, final Map<Object, Integer> ids) {
+				final Element result = Measure.super.toXML(document, ids);
+				
+				result.appendChild(this.valueMeasure.toXML(document, ids));
+				
+				return result;
+			}
+			
+			@Override
 			public final double compute(final D d1, final D d2) {
 				return this.valueMeasure.compute(d1.getValue(), d2.getValue(), Double.POSITIVE_INFINITY);
 			}
 			
 			private static final long serialVersionUID = -1398649605392286153L;
+			
+			public static final <D extends Datum> Default<D> objectFromXML(final Element element, final Map<Integer, Object> objects) {
+				return new Default<>(XMLSerializable.objectFromXML((Element) element.getFirstChild(), objects));
+			}
 			
 		}
 		

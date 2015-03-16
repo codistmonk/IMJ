@@ -1,5 +1,10 @@
 package imj3.draft.machinelearning;
 
+import java.util.Map;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+
 import net.sourceforge.aprog.tools.Tools;
 
 /**
@@ -16,6 +21,20 @@ public final class LinearTransform implements Classifier {
 		this.transformedMeasure = new Datum.Measure.Default<>(measure);
 	}
 	
+	@Override
+	public final Element toXML(final Document document, final Map<Object, Integer> ids) {
+		final Element result = Classifier.super.toXML(document, ids);
+		// TODO Auto-generated method stub
+		return result;
+	}
+	
+	@Override
+	public final LinearTransform fromXML(final Element xml, final Map<Integer, Object> objects) {
+		Classifier.super.fromXML(xml, objects);
+		// TODO Auto-generated method stub
+		return this;
+	}
+
 	public final double[][] getMatrix() {
 		return this.matrix;
 	}
