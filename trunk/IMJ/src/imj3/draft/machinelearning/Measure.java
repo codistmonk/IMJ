@@ -3,13 +3,12 @@ package imj3.draft.machinelearning;
 import static java.lang.Math.abs;
 import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.MathTools.square;
-
-import java.io.Serializable;
+import imj3.tools.XMLSerializable;
 
 /**
  * @author codistmonk (creation 2015-02-04)
  */
-public abstract interface Measure extends Serializable {
+public abstract interface Measure extends XMLSerializable {
 	
 	public abstract double compute(double[] v1, double[] v2, double limit);
 	
