@@ -52,13 +52,10 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -1333,22 +1330,19 @@ public final class VisualAnalysis {
 		
 		public final Context setPipeline(final File pipelineFile) {
 			if (pipelineFile != null && pipelineFile.isFile()) {
-//				this.getMainPanel().setPipeline((Pipeline) Pipeline.xstream.fromXML(pipelineFile));
+				final String path = pipelineFile.getPath();
 				
-//				final String joPath = baseName(pipelineFile.getPath()) + ".jo";
-//				this.getMainPanel().setPipeline((Pipeline) Tools.readObject(joPath));
+				if (path.endsWith(".jo")) {
+					this.getMainPanel().setPipeline((Pipeline) Tools.readObject(path));
+				} else if (path.endsWith(".xml")) {
+					this.getMainPanel().setPipeline(XMLSerializable.objectFromXML(pipelineFile));
+				} else {
+					Tools.debugError("Invalid file name:", pipelineFile.getName());
+				}
 				
-				this.getMainPanel().setPipeline((Pipeline) Tools.readObject(pipelineFile.getPath()));
 				this.getMainPanel().getPipelineSelector().setFile(pipelineFile);
 				
 				preferences.put(PIPELINE, pipelineFile.getPath());
-				
-				XMLTools.write(this.getMainPanel().getPipeline().toXML(), new File("test.xml"), 0);
-				try {
-					Tools.debugPrint(XMLSerializable.objectFromXML(XMLTools.parse(new FileInputStream("test.xml")).getDocumentElement(), new HashMap<>()));
-				} catch (final FileNotFoundException exception) {
-					exception.printStackTrace();
-				}
 			}
 			
 			return this;
@@ -1359,17 +1353,18 @@ public final class VisualAnalysis {
 				Pipeline pipeline = this.getMainPanel().getPipeline();
 				
 				if (pipeline == null) {
-					Tools.debugPrint();
 					pipeline = new Pipeline();
-					Tools.debugPrint();
 				}
 				
-				Tools.writeObject(pipeline, pipelineFile.getPath());
-//				try (final OutputStream output = new FileOutputStream(pipelineFile)) {
-//					Pipeline.xstream.toXML(pipeline, output);
-//				} catch (final IOException exception) {
-//					throw new UncheckedIOException(exception);
-//				}
+				final String path = pipelineFile.getPath();
+				
+				if (path.endsWith(".jo")) {
+					Tools.writeObject(pipeline, path);
+				} else if (path.endsWith(".xml")) {
+					XMLTools.write(this.getMainPanel().getPipeline().toXML(), pipelineFile, 0);
+				} else {
+					Tools.debugError("Invalid file name:", pipelineFile.getName());
+				}
 				
 				this.setPipeline(pipelineFile);
 			}
@@ -1381,12 +1376,15 @@ public final class VisualAnalysis {
 			final File pipelineFile = this.getPipelineFile();
 			
 			if (pipelineFile != null && this.getMainPanel().getPipeline() != null) {
-				Tools.writeObject(this.getMainPanel().getPipeline(), pipelineFile.getPath());
-//				try (final OutputStream output = new FileOutputStream(pipelineFile)) {
-//					Pipeline.xstream.toXML(this.getMainPanel().getPipeline(), output);
-//				} catch (final IOException exception) {
-//					throw new UncheckedIOException(exception);
-//				}
+				final String path = pipelineFile.getPath();
+				
+				if (path.endsWith(".jo")) {
+					Tools.writeObject(this.getMainPanel().getPipeline(), path);
+				} else if (path.endsWith(".xml")) {
+					XMLTools.write(this.getMainPanel().getPipeline().toXML(), pipelineFile, 0);
+				} else {
+					Tools.debugError("Invalid file name:", pipelineFile.getName());
+				}
 			}
 			
 			return this;
