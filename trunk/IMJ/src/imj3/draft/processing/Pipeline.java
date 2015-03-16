@@ -217,14 +217,20 @@ public final class Pipeline implements XMLSerializable {
 		final List<ParameterTraining> parameterTrainings = new ArrayList<>();
 		
 		for (final Algorithm algorithm : this.getAlgorithms()) {
+			Tools.debugPrint();
 			for (final Method method : algorithm.getClass().getMethods()) {
 				final Trainable trainable = method.getAnnotation(Trainable.class);
 				
 				if (trainable != null) {
+					Tools.debugPrint();
 					ParameterTraining.addTo(parameterTrainings, algorithm, method);
+					Tools.debugPrint();
 				}
 			}
+			Tools.debugPrint();
 		}
+		
+		Tools.debugPrint();
 		
 		final int n = parameterTrainings.size();
 		
@@ -560,6 +566,7 @@ public final class Pipeline implements XMLSerializable {
 			result.setAttribute("patchSize", this.getPatchSizeAsString());
 			result.setAttribute("patchSizeRange", this.getPatchSizeRange());
 			result.setAttribute("patchSparsity", this.getPatchSparsityAsString());
+			result.setAttribute("patchSparsityRange", this.getPatchSparsityRange());
 			result.setAttribute("stride", this.getStrideAsString());
 			result.setAttribute("strideRange", this.getStrideRange());
 			result.setAttribute("usingXY", this.getUsingXYAsString());
@@ -1366,19 +1373,29 @@ public final class Pipeline implements XMLSerializable {
 		}
 		
 		public static final void addTo(final List<ParameterTraining> parameterTrainings, final Object object, final Method accessor) {
+			Tools.debugPrint(object);
+			Tools.debugPrint(accessor);
 			if (accessor.getParameterCount() == 1) {
+				Tools.debugPrint();
 				parameterTrainings.add(new ParameterTraining(object, accessor, null, getCandidates(object, accessor)));
+				Tools.debugPrint();
 			} else if (accessor.getParameterCount() == 0 && Map.class.isAssignableFrom(accessor.getReturnType())) {
 				try {
 					final Map<String, ?> map = (Map<String, ?>) accessor.invoke(object);
 					final Method trainer = getTrainer(object, accessor.getAnnotation(Trainable.class));
 					final Map<?, String> trainerMap = parseRangeMap(trainer.invoke(object).toString(), map.keySet());
 					
+					Tools.debugPrint(map);
+					
+					Tools.debugPrint(parameterTrainings);
 					for (final Object key : map.keySet()) {
 						parameterTrainings.add(new ParameterTraining(object, accessor, key,
 								new CommandLineArgumentsParser("range", trainerMap.get(key)).get("range", 1)));
 					}
+					Tools.debugPrint(parameterTrainings);
 				} catch (final Exception exception) {
+					exception.printStackTrace();
+					
 					throw unchecked(exception);
 				}
 			} else {
