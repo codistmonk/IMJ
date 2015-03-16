@@ -9,9 +9,7 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.draft.AutoCloseableImageWriter;
-
 import imj3.core.Image2D;
 import imj3.draft.machinelearning.BufferedDataSource;
 import imj3.draft.machinelearning.Classifier;
@@ -999,14 +997,23 @@ public final class Pipeline implements XMLSerializable {
 	 */
 	public static final void main(final String[] commandLineArguments) throws IOException {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
-		final File pipelineFile = new File(arguments.get("jo", ""));
+		final File pipelineFile = new File(arguments.get("pipeline", ""));
+		final String pipelinePath = pipelineFile.getPath();
 		final String groundTruthName = arguments.get("groundtruth", "");
 		final String inputPath = arguments.get("in", "");
 		final int lod = arguments.get("lod", 0)[0];
 		final String pipelineName = baseName(pipelineFile.getName());
 		final File classificationFile = new File(arguments.get("out", getClassificationPathFromImagePath(inputPath, groundTruthName, pipelineName)));
-//		final Pipeline pipeline = (Pipeline) xstream.fromXML(pipelineFile);
-		final Pipeline pipeline = (Pipeline) Tools.readObject(pipelineFile.getPath());
+		final Pipeline pipeline;
+		
+		if (pipelinePath.endsWith(".jo")) {
+			pipeline = Tools.readObject(pipelinePath);
+		} else if (pipelinePath.endsWith(".xml")) {
+			pipeline = XMLSerializable.objectFromXML(pipelineFile);
+		} else {
+			throw new IllegalArgumentException();
+		}
+		
 		final Image2D image = IMJTools.read(inputPath, lod);
 		final int width = image.getWidth();
 		final int height = image.getHeight();
@@ -1333,6 +1340,7 @@ public final class Pipeline implements XMLSerializable {
 			this.setCurrentIndex(this.getCurrentIndex() + 1);
 		}
 		
+		@SuppressWarnings("unchecked")
 		public final void set() {
 			try {
 				if (this.key == null) {
@@ -1380,6 +1388,7 @@ public final class Pipeline implements XMLSerializable {
 				parameterTrainings.add(new ParameterTraining(object, accessor, null, getCandidates(object, accessor)));
 			} else if (accessor.getParameterCount() == 0 && Map.class.isAssignableFrom(accessor.getReturnType())) {
 				try {
+					@SuppressWarnings("unchecked")
 					final Map<String, ?> map = (Map<String, ?>) accessor.invoke(object);
 					final Method trainer = getTrainer(object, accessor.getAnnotation(Trainable.class));
 					final Map<?, String> trainerMap = parseRangeMap(trainer.invoke(object).toString(), map.keySet());
