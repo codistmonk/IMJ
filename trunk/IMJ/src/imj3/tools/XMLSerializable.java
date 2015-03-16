@@ -5,6 +5,11 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -119,6 +124,14 @@ public abstract interface XMLSerializable extends Serializable {
 		}
 		
 		return result;
+	}
+	
+	public static <T> T objectFromXML(final File file) {
+		try (final InputStream input = new FileInputStream(file)) {
+			return objectFromXML(XMLTools.parse(input).getDocumentElement(), new HashMap<>());
+		} catch (final IOException exception) {
+			throw unchecked(exception);
+		}
 	}
 	
 	@SuppressWarnings("unchecked")
