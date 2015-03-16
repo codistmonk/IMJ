@@ -7,7 +7,6 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
@@ -143,17 +142,27 @@ public abstract interface XMLSerializable extends Serializable {
 		}
 		
 		if ("object".equals(className)) {
-			return (T) objects.get(Integer.parseInt(element.getTextContent()));
+			return (T) objects.get(Integer.decode(element.getTextContent()));
 		}
 		
+		final Integer id = Integer.decode(element.getAttribute("id"));
+		
 		if (String.class.getName().equals(className)) {
-			return (T) element.getTextContent();
+			final T result = (T) element.getTextContent();
+			
+			objects.put(id, result);
+			
+			return result;
 		}
 		
 		for (final Class<?> primitiveWrapperClass : array(Boolean.class, Byte.class, Short.class, Character.class, Integer.class, Long.class, Float.class, Double.class)) {
 			if (primitiveWrapperClass.getName().equals(className)) {
 				try {
-					return (T) primitiveWrapperClass.getConstructor(String.class).newInstance(element.getTextContent());
+					final T result = (T) primitiveWrapperClass.getConstructor(String.class).newInstance(element.getTextContent());
+					
+					objects.put(id, result);
+					
+					return result;
 				} catch (final Exception exception) {
 					throw unchecked(exception);
 				}
@@ -202,13 +211,15 @@ public abstract interface XMLSerializable extends Serializable {
 				
 				if (map != null) {
 					for (final Node entryNode : XMLTools.getNodes(element, "entry")) {
-						final Object key = objectFromXML((Element) XMLTools.getNode(entryNode, "key").getChildNodes().item(0), objects);
-						final Object value = objectFromXML((Element) XMLTools.getNode(entryNode, "value").getChildNodes().item(0), objects);
+						final Object key = objectFromXML((Element) XMLTools.getNode(entryNode, "key").getFirstChild(), objects);
+						final Object value = objectFromXML((Element) XMLTools.getNode(entryNode, "value").getFirstChild(), objects);
 						
 						map.put(key, value);
 					}
 				}
 			}
+			
+			objects.put(id, result);
 			
 			return result;
 		} catch (final Exception exception) {
