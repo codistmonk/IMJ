@@ -1361,7 +1361,7 @@ public final class VisualAnalysis {
 				if (path.endsWith(".jo")) {
 					Tools.writeObject(pipeline, path);
 				} else if (path.endsWith(".xml")) {
-					XMLTools.write(this.getMainPanel().getPipeline().toXML(), pipelineFile, 0);
+					XMLTools.write(pipeline.toXML(), pipelineFile, 0);
 				} else {
 					Tools.debugError("Invalid file name:", pipelineFile.getName());
 				}
