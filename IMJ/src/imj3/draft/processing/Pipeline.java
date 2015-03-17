@@ -525,24 +525,16 @@ public final class Pipeline implements XMLSerializable {
 	/**
 	 * @author codistmonk (creation 2015-02-27)
 	 */
-	@PropertyOrdering({ "patchSize", "patchSizeRange", "patchSparsity", "patchSparsityRange", "stride", "strideRange", "usingXY", "usingXYRange", "classifier" })
+	@PropertyOrdering({ "patching", "patchingRanges", "usingXY", "usingXYRange", "classifier" })
 	public abstract class Algorithm implements XMLSerializable {
 		
 		private String clusteringName = MedianCutClustering.class.getName();
 		
 		private Classifier classifier;
 		
-		private int patchSize = 1;
+		private Map<String, Integer> patching;
 		
-		private String patchSizeRange;
-		
-		private int patchSparsity = 1;
-		
-		private String patchSparsityRange;
-		
-		private int stride = 1;
-		
-		private String strideRange;
+		private Map<String, String> patchingRanges;
 		
 		private boolean usingXY = false;
 		
@@ -555,12 +547,8 @@ public final class Pipeline implements XMLSerializable {
 			result.setAttribute(ENCLOSING_INSTANCE_ID, ids.get(this.getPipeline()).toString());
 			result.setAttribute("clusteringName", this.getClusteringName());
 			result.appendChild(XMLSerializable.newElement("classifier", this.getClassifier(), document, ids));
-			result.setAttribute("patchSize", this.getPatchSizeAsString());
-			result.setAttribute("patchSizeRange", this.getPatchSizeRange());
-			result.setAttribute("patchSparsity", this.getPatchSparsityAsString());
-			result.setAttribute("patchSparsityRange", this.getPatchSparsityRange());
-			result.setAttribute("stride", this.getStrideAsString());
-			result.setAttribute("strideRange", this.getStrideRange());
+			result.appendChild(XMLSerializable.newElement("patching", this.getPatching(), document, ids));
+			result.appendChild(XMLSerializable.newElement("patchingRanges", this.getPatchingRanges(), document, ids));
 			result.setAttribute("usingXY", this.getUsingXYAsString());
 			result.setAttribute("usingXYRange", this.getUsingXYRange());
 			
@@ -575,12 +563,8 @@ public final class Pipeline implements XMLSerializable {
 			
 			this.setClusteringName(xml.getAttribute("clusteringName"));
 			this.setClassifier(XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "classifier").getFirstChild(), objects));
-			this.setPatchSize(xml.getAttribute("patchSize"));
-			this.setPatchSizeRange(xml.getAttribute("patchSizeRange"));
-			this.setPatchSparsity(xml.getAttribute("patchSparsity"));
-			this.setPatchSparsityRange(xml.getAttribute("patchSparsityRange"));
-			this.setStride(xml.getAttribute("stride"));
-			this.setStrideRange(xml.getAttribute("strideRange"));
+			this.patching = XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "patching").getFirstChild(), objects);
+			this.patchingRanges = XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "patchingRanges").getFirstChild(), objects);
 			this.setUsingXY(xml.getAttribute("usingXY"));
 			this.setUsingXYRange(xml.getAttribute("usingXYRange"));
 			
@@ -601,115 +585,75 @@ public final class Pipeline implements XMLSerializable {
 			return this;
 		}
 		
-		public final int getPatchSize() {
-			return this.patchSize;
-		}
-		
-		public final Algorithm setPatchSize(final int patchSize) {
-			this.patchSize = patchSize;
-			
-			return this;
-		}
-		
-		@PropertyGetter("patchSize")
-		public final String getPatchSizeAsString() {
-			return Integer.toString(this.getPatchSize());
-		}
-		
-		@PropertySetter("patchSize")
-		@Trainable("patchSizeRange")
-		public final Algorithm setPatchSize(final String patchSizeAsString) {
-			return this.setPatchSize(Integer.parseInt(patchSizeAsString));
-		}
-		
-		@PropertyGetter("patchSizeRange")
-		public final String getPatchSizeRange() {
-			if (this.patchSizeRange == null) {
-				this.patchSizeRange = "1";
+		@Trainable("patchingRanges")
+		public final Map<String, Integer> getPatching() {
+			if (this.patching == null) {
+				this.patching = new LinkedHashMap<>();
+				
+				this.patching.put("size", 1);
+				this.patching.put("sparsity", 1);
+				this.patching.put("stride", 1);
 			}
 			
-			return this.patchSizeRange;
+			return this.patching;
 		}
 		
-		@PropertySetter("patchSizeRange")
-		public final Algorithm setPatchSizeRange(final String patchSizeRange) {
-			this.patchSizeRange = patchSizeRange;
+		@PropertyGetter("patching")
+		public final String getPatchingAsString() {
+			return join(";", this.getPatching().entrySet().toArray());
+		}
+		
+		@PropertySetter("patching")
+		public final Algorithm setPatching(final String patchingAsString) {
+			final Map<String, Integer> patching = this.getPatching();
+			
+			for (final String entryAsString : patchingAsString.split(";")) {
+				final String[] keyAndValue = entryAsString.split("=");
+				patching.put(keyAndValue[0], Integer.decode(keyAndValue[1]));
+			}
 			
 			return this;
+		}
+		
+		public final Map<String, String> getPatchingRanges() {
+			if (this.patchingRanges == null) {
+				this.patchingRanges = new LinkedHashMap<>();
+				
+				for (final Map.Entry<String, Integer> entry : this.getPatching().entrySet()) {
+					this.patchingRanges.put(entry.getKey(), entry.getValue().toString());
+				}
+			}
+			
+			return this.patchingRanges;
+		}
+		
+		@PropertyGetter("patchingRanges")
+		public final String getPatchingRangesAsString() {
+			return join(";", this.getPatchingRanges().entrySet().toArray());
+		}
+		
+		@PropertySetter("patchingRanges")
+		public final Algorithm setPatchingRanges(final String patchingRangesAsString) {
+			final Map<String, String> patchingRanges = this.getPatchingRanges();
+			
+			for (final String entryAsString : patchingRangesAsString.split(";")) {
+				final String[] keyAndValue = entryAsString.split("=");
+				patchingRanges.put(keyAndValue[0], keyAndValue[1]);
+			}
+			
+			return this;
+		}
+		
+		public final int getPatchSize() {
+			return this.getPatching().get("size");
 		}
 		
 		public final int getPatchSparsity() {
-			return this.patchSparsity;
-		}
-		
-		public final Algorithm setPatchSparsity(final int patchSparsity) {
-			this.patchSparsity = patchSparsity;
-			
-			return this;
-		}
-		
-		@PropertyGetter("patchSparsity")
-		public final String getPatchSparsityAsString() {
-			return Integer.toString(this.getPatchSparsity());
-		}
-		
-		@PropertySetter("patchSparsity")
-		@Trainable("patchSparsityRange")
-		public final Algorithm setPatchSparsity(final String patchSparsityAsString) {
-			return this.setPatchSparsity(Integer.parseInt(patchSparsityAsString));
-		}
-		
-		@PropertyGetter("patchSparsityRange")
-		public final String getPatchSparsityRange() {
-			if (this.patchSparsityRange == null) {
-				this.patchSparsityRange = "1";
-			}
-			
-			return this.patchSparsityRange;
-		}
-		
-		@PropertySetter("patchSparsityRange")
-		public final Algorithm setPatchSparsityRange(final String patchSparsityRange) {
-			this.patchSparsityRange = patchSparsityRange;
-			
-			return this;
+			return this.getPatching().get("sparsity");
 		}
 		
 		public final int getStride() {
-			return this.stride;
-		}
-		
-		public final Algorithm setStride(final int stride) {
-			this.stride = stride;
-			
-			return this;
-		}
-		
-		@PropertyGetter("stride")
-		public final String getStrideAsString() {
-			return Integer.toString(this.getStride());
-		}
-		
-		@PropertySetter("stride")
-		@Trainable("strideRange")
-		public final Algorithm setStride(final String strideAsString) {
-			return this.setStride(Integer.parseInt(strideAsString));
-		}
-		
-		@PropertyGetter("strideRange")
-		public final String getStrideRange() {
-			if (this.strideRange == null) {
-				this.strideRange = "1";
-			}
-			
-			return this.strideRange;
-		}
-		
-		@PropertySetter("strideRange")
-		public final Algorithm setStrideRange(final String strideRange) {
-			this.strideRange = strideRange;
-			
-			return this;
+			return this.getPatching().get("size");
 		}
 		
 		public final boolean isUsingXY() {
