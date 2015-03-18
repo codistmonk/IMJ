@@ -653,7 +653,7 @@ public final class Pipeline implements XMLSerializable {
 		}
 		
 		public final int getStride() {
-			return this.getPatching().get("size");
+			return this.getPatching().get("stride");
 		}
 		
 		public final boolean isUsingXY() {
