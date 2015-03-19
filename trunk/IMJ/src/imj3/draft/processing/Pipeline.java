@@ -1387,6 +1387,7 @@ public final class Pipeline implements XMLSerializable {
 			
 			this.setMilliseconds(Long.parseLong(xml.getAttribute("milliseconds")));
 			this.confusionMatrix = XMLSerializable.objectFromXML((Element) xml.getFirstChild(), objects);
+			Tools.debugPrint(this.confusionMatrix);
 			
 			return this;
 		}

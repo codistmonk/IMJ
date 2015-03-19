@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
 
 import org.w3c.dom.Document;
@@ -110,7 +111,7 @@ public final class NearestNeighborClassifier implements Classifier {
 	public static final NearestNeighborClassifier objectFromXML(final Element element, final Map<Integer, Object> objects) {
 		final Measure measure = XMLSerializable.objectFromXML((Element) XMLTools.getNode(element, "measure").getFirstChild(), objects);
 		
-		return new NearestNeighborClassifier(measure);
+		return new NearestNeighborClassifier(measure).fromXML(element, objects);
 	}
 	
 }
