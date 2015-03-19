@@ -16,7 +16,8 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
-
+import imj3.draft.machinelearning.Classifier;
+import imj3.draft.machinelearning.NearestNeighborClassifier;
 import imj3.draft.processing.Pipeline.Algorithm;
 import imj3.draft.processing.Pipeline.ClassDescription;
 import imj3.draft.processing.Pipeline.ComputationStatus;
@@ -1341,6 +1342,8 @@ public final class VisualAnalysis {
 					this.getMainPanel().setPipeline((Pipeline) Tools.readObject(path));
 				} else if (path.endsWith(".xml")) {
 					this.getMainPanel().setPipeline(XMLSerializable.objectFromXML(pipelineFile));
+					final NearestNeighborClassifier classifier = (NearestNeighborClassifier) this.getMainPanel().getPipeline().getAlgorithms().get(0).getClassifier();
+					Tools.debugPrint(classifier.getPrototypes());
 				} else {
 					Tools.debugError("Invalid file name:", pipelineFile.getName());
 				}
