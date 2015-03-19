@@ -10,7 +10,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -185,6 +187,53 @@ public abstract interface XMLSerializable extends Serializable {
 			ignore(exception);
 		} catch (final Exception exception) {
 			throw unchecked(exception);
+		}
+		
+		if (element.getFirstChild() != null && element.getFirstChild().getNodeType() == Node.TEXT_NODE) {
+			try {
+				final T result = resultClass.getConstructor(String.class).newInstance(element.getTextContent());
+				
+				objects.put(id, result);
+				
+				return result;
+			} catch (final Exception exception) {
+				ignore(exception);
+			}
+			
+			try {
+				final Number number = new BigDecimal(element.getTextContent());
+				
+				for (final Constructor<?> constructor : resultClass.getConstructors()) {
+					if (constructor.getParameterCount() != 1) {
+						continue;
+					}
+					
+					final Class<?> parameterType = constructor.getParameterTypes()[0];
+					final T result;
+					
+					if (parameterType == byte.class || parameterType == Byte.class) {
+						result = (T) constructor.newInstance(number.byteValue());
+					} else if (parameterType == short.class || parameterType == Short.class) {
+						result = (T) constructor.newInstance(number.shortValue());
+					} else if (parameterType == int.class || parameterType == Integer.class) {
+						result = (T) constructor.newInstance(number.intValue());
+					} else if (parameterType == long.class || parameterType == Long.class) {
+						result = (T) constructor.newInstance(number.intValue());
+					} else if (parameterType == float.class || parameterType == Float.class) {
+						result = (T) constructor.newInstance(number.floatValue());
+					} else if (parameterType == double.class || parameterType == Double.class) {
+						result = (T) constructor.newInstance(number.doubleValue());
+					} else {
+						continue;
+					}
+					
+					objects.put(id, result);
+					
+					return result;
+				}
+			} catch (final Exception exception) {
+				ignore(exception);
+			}
 		}
 		
 		try {

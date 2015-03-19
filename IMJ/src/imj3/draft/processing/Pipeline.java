@@ -1382,12 +1382,11 @@ public final class Pipeline implements XMLSerializable {
 		}
 		
 		@Override
-		public Result fromXML(final Element xml, final Map<Integer, Object> objects) {
+		public final Result fromXML(final Element xml, final Map<Integer, Object> objects) {
 			XMLSerializable.super.fromXML(xml, objects);
 			
 			this.setMilliseconds(Long.parseLong(xml.getAttribute("milliseconds")));
 			this.confusionMatrix = XMLSerializable.objectFromXML((Element) xml.getFirstChild(), objects);
-			Tools.debugPrint(this.confusionMatrix);
 			
 			return this;
 		}
