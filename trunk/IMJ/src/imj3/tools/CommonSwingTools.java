@@ -70,6 +70,10 @@ public final class CommonSwingTools {
 		throw new IllegalInstantiationException();
 	}
 	
+	public static final TreePath getPath(final DefaultTreeModel model, final TreeNode node) {
+		return new TreePath(model.getPathToRoot(node));
+	}
+	
 	public static final void setModel(final JTree tree, final Object object, final String rootEditTitle, final Instantiator instantiator) {
 		final DefaultTreeModel model = new DefaultTreeModel(buildNode(tree, new UIScaffold(object), rootEditTitle));
 		
@@ -161,8 +165,9 @@ public final class CommonSwingTools {
 							
 							@Override
 							public final void run() {
-								addNode(tree, newElementScaffold, nestingNode, element, list);
+								final DefaultMutableTreeNode newNode = addNode(tree, newElementScaffold, nestingNode, element, list);
 								list.add(newElementScaffold.getObject());
+								tree.setSelectionPath(getPath(model, newNode));
 							}
 							
 						});
@@ -220,13 +225,15 @@ public final class CommonSwingTools {
 		return result;
 	}
 	
-	static final void addNode(final JTree tree, final UIScaffold scaffold, final MutableTreeNode parent, final String element, final Collection<?> container) {
+	static final DefaultMutableTreeNode addNode(final JTree tree, final UIScaffold scaffold, final MutableTreeNode parent, final String element, final Collection<?> container) {
 		final DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
-		final DefaultMutableTreeNode newElementNode = buildNode(tree, scaffold, "Edit " + element);
+		final DefaultMutableTreeNode result = buildNode(tree, scaffold, "Edit " + element);
 		
-		newElementNode.setUserObject(new UserObject(scaffold, element, tree, newElementNode, container));
+		result.setUserObject(new UserObject(scaffold, element, tree, result, container));
 		
-		model.insertNodeInto(newElementNode, parent, model.getChildCount(parent));
+		model.insertNodeInto(result, parent, model.getChildCount(parent));
+		
+		return result;
 	}
 	
 	public static final void showEditDialog(final String title, final Runnable ifOkClicked, final Property... properties) {

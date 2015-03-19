@@ -579,6 +579,7 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final synchronized void drop(final DropTargetDropEvent event) {
+//					System.setProperty("java.util.Arrays.useLegacyMergeSort", "true");
 					final File file = SwingTools.getFiles(event).get(0);
 					
 					if (file.getName().toLowerCase(Locale.ENGLISH).endsWith(".xml")) {
@@ -634,7 +635,11 @@ public final class VisualAnalysis {
 						
 						if (image != null) {
 							result.setImagePath(MainPanel.this.getContext().getImageFile().getPath());
-							result.setBounds("0,0," + image.getWidth() + "," + image.getHeight());
+							result.getBounds().setBounds(MainPanel.this.getImageComponent().getVisibleRect());
+							result.getBounds().setBounds(
+									(int) (result.getBounds().getCenterX() - 128),
+									(int) (result.getBounds().getCenterY() - 128),
+									256, 256);
 						}
 						
 						return (T) result;
