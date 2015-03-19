@@ -70,7 +70,7 @@ public final class Multifile2JPG {
 			final int height = image.getHeight();
 			final int optimalTileWidth = image.getOptimalTileWidth();
 			final int optimalTileHeight = image.getOptimalTileHeight();
-			final Canvas canvas = new Canvas().setFormat(width, height, BufferedImage.TYPE_INT_ARGB);
+			final Canvas canvas = new Canvas().setFormat(width, height, BufferedImage.TYPE_INT_BGR);
 			
 			for (int tileY = 0; tileY < height; tileY += optimalTileHeight) {
 				for (int tileX = 0; tileX < width; tileX += optimalTileWidth) {
