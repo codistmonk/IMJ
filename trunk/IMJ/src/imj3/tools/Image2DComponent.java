@@ -15,6 +15,7 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
@@ -53,6 +54,8 @@ public final class Image2DComponent extends JComponent {
 		this.setOpaque(true);
 		this.setPreferredSize(new Dimension(800, 600));
 		
+		this.view.translate(-image.getWidth() / 2.0 + 400.0, -image.getHeight() / 2.0 + 300.0);
+		
 		new MouseHandler() {
 			
 			private final Point mouse = new Point(-1, 0);
@@ -64,9 +67,49 @@ public final class Image2DComponent extends JComponent {
 			
 			@Override
 			public final void mouseDragged(final MouseEvent event) {
-				Image2DComponent.this.getView().translate(event.getX() - this.mouse.x, event.getY() - this.mouse.y);
+				final AffineTransform view = Image2DComponent.this.getView();
+				final Point2D translation = new Point2D.Double((event.getX() - this.mouse.x) / view.getScaleX(), (event.getY() - this.mouse.y) / view.getScaleY());
+				
+				view.translate(translation.getX(), translation.getY());
 				
 				this.mousePressed(event);
+				
+				Image2DComponent.this.repaint();
+			}
+			
+			@Override
+			public final void mouseWheelMoved(final MouseWheelEvent event) {
+				final AffineTransform view = Image2DComponent.this.getView();
+				final Point2D center = new Point2D.Double(getWidth() / 2.0, getHeight() / 2.0);
+				final Point2D newCenter = new Point2D.Double(getWidth() / 2.0, getHeight() / 2.0);
+				
+				try {
+					view.inverseTransform(center, center);
+				} catch (final NoninvertibleTransformException exception) {
+					exception.printStackTrace();
+				}
+				
+				if (event.getWheelRotation() < 0) {
+					view.scale(0.5, 0.5);
+				} else {
+					view.scale(2.0, 2.0);
+				}
+				
+				try {
+					view.inverseTransform(newCenter, newCenter);
+				} catch (final NoninvertibleTransformException exception) {
+					exception.printStackTrace();
+				}
+				
+				view.translate(-(center.getX() - newCenter.getX()), -(center.getY() - newCenter.getY()));
+				
+				newCenter.setLocation(getWidth() / 2.0, getHeight() / 2.0);
+				
+				try {
+					view.inverseTransform(newCenter, newCenter);
+				} catch (final NoninvertibleTransformException exception) {
+					exception.printStackTrace();
+				}
 				
 				Image2DComponent.this.repaint();
 			}
