@@ -15,7 +15,6 @@ import java.awt.Point;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
-import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.HashMap;
@@ -28,7 +27,6 @@ import org.w3c.dom.Document;
 
 import net.sourceforge.aprog.swing.MouseHandler;
 import net.sourceforge.aprog.swing.SwingTools;
-import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -55,7 +53,7 @@ public final class MultifileImage2D implements Image2D {
 	
 	private final Channels channels;
 	
-	private final Tile tile;
+	private final TileHolder tileHolder;
 	
 	public MultifileImage2D(final MultifileSource source, final int lod) {
 		this.metadata = new HashMap<>();
@@ -70,24 +68,12 @@ public final class MultifileImage2D implements Image2D {
 		this.optimalTileWidth = getNumber(metadata, imageXPath + "@tileWidth").intValue();
 		this.optimalTileHeight = getNumber(metadata, imageXPath + "@tileHeight").intValue();
 		this.tileFormat = getString(metadata, imageXPath + "@tileFormat");
-		this.tile = this.new Tile().load(0, 0);
-		this.channels = this.tile.getChannels();
+		this.channels = this.getTile(0, 0).getChannels();
+		this.tileHolder = new TileHolder();
 		
 		if (lod == 0) {
 			this.metadata.put("micronsPerPixel", getNumber(metadata, imageXPath + "@micronsPerPixel"));
 		}
-	}
-	
-	public final BufferedImage getAwtTile(final int tileX, final int tileY) {
-		final String tileName = this.getTileName(tileX, tileY);
-		
-		return IMJTools.cache(this.getId() + "/" + tileName, () -> {
-			try {
-				return ImageIO.read(MultifileImage2D.this.getSource().open(tileName));
-			} catch (final IOException exception) {
-				throw new UncheckedIOException(exception);
-			}
-		});
 	}
 	
 	public final String getTileName(final int tileX, final int tileY) {
@@ -137,8 +123,17 @@ public final class MultifileImage2D implements Image2D {
 	}
 	
 	@Override
-	public final Tile getTile(final int tileX, final int tileY) {
-		return this.tile.load(tileX, tileY);
+	public final AwtImage2D getTile(final int tileX, final int tileY) {
+		try {
+			return new AwtImage2D(this.getTileKey(tileX, tileY), ImageIO.read(MultifileImage2D.this.getSource().open(this.getTileName(tileX, tileY))));
+		} catch (final IOException exception) {
+			throw new UncheckedIOException(exception);
+		}
+	}
+	
+	@Override
+	public final TileHolder getTileHolder() {
+		return this.tileHolder;
 	}
 	
 	@Override
@@ -149,65 +144,6 @@ public final class MultifileImage2D implements Image2D {
 	@Override
 	public final int getHeight() {
 		return this.height;
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-02-27)
-	 */
-	public final class Tile implements Image2D {
-		
-		private final Canvas canvas = new Canvas();
-		
-		public final Tile load(final int tileX, final int tileY) {
-			final BufferedImage awtTile = MultifileImage2D.this.getAwtTile(tileX, tileY);
-			
-			this.getCanvas().setFormat(awtTile.getWidth(), awtTile.getHeight(), awtTile.getType());
-			this.getCanvas().getGraphics().drawImage(awtTile, 0, 0, null);
-			
-			return this;
-		}
-		
-		public final Canvas getCanvas() {
-			return this.canvas;
-		}
-		
-		@Override	
-		public final Map<String, Object> getMetadata() {
-			return null;
-		}
-		
-		@Override
-		public final String getId() {
-			return null;
-		}
-		
-		@Override
-		public final Channels getChannels() {
-			return AwtImage2D.predefinedChannelsFor(this.getCanvas().getImage());
-		}
-		
-		@Override
-		public final int getWidth() {
-			return this.getCanvas().getWidth();
-		}
-		
-		@Override
-		public final int getHeight() {
-			return this.getCanvas().getHeight();
-		}
-		
-		@Override
-		public final long getPixelValue(final int x, final int y) {
-			return this.getCanvas().getImage().getRGB(x, y);
-		}
-		
-		@Override
-		public BufferedImage toAwt() {
-			return this.getCanvas().getImage();
-		}
-		
-		private static final long serialVersionUID = 4021134779378231129L;
-		
 	}
 	
 	private static final long serialVersionUID = -4265650676493772608L;
