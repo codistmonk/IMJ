@@ -18,10 +18,7 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 
@@ -46,14 +43,14 @@ public final class Image2DComponent extends JComponent {
 	
 	private final AffineTransform view;
 	
-	private final Collection<Point> activeTiles;
+	private int statusHasCode;
 	
 	public Image2DComponent(final Image2D image) {
 		this.canvas = new Canvas();
 		this.image = image;
 		this.view = new AffineTransform();
-		this.activeTiles = Collections.synchronizedSet(new HashSet<>());
 		
+		this.setOpaque(true);
 		this.setPreferredSize(new Dimension(800, 600));
 		
 		new MouseHandler() {
@@ -91,39 +88,44 @@ public final class Image2DComponent extends JComponent {
 	protected final void paintComponent(final Graphics g) {
 		super.paintComponent(g);
 		
-		final Point2D topLeft = new Point2D.Double();
-		final Point2D topRight = new Point2D.Double(this.getWidth() - 1.0, 0.0);
-		final Point2D bottomRight = new Point2D.Double(this.getWidth() - 1.0, this.getHeight() - 1.0);
-		final Point2D bottomLeft = new Point2D.Double(0, this.getHeight() - 1.0);
-		
-		try {
-			this.view.inverseTransform(topLeft, topLeft);
-			this.view.inverseTransform(topRight, topRight);
-			this.view.inverseTransform(bottomRight, bottomRight);
-			this.view.inverseTransform(bottomLeft, bottomLeft);
-		} catch (final NoninvertibleTransformException exception) {
-			exception.printStackTrace();
-		}
-		
-		final double top = min(min(topLeft.getY(), topRight.getY()), min(bottomLeft.getY(), bottomRight.getY()));
-		final double bottom = max(max(topLeft.getY(), topRight.getY()), max(bottomLeft.getY(), bottomRight.getY()));
-		final double left = min(min(topLeft.getX(), topRight.getX()), min(bottomLeft.getX(), bottomRight.getX()));
-		final double right = max(max(topLeft.getX(), topRight.getX()), max(bottomLeft.getX(), bottomRight.getX()));
-		final int optimalTileWidth = this.getImage().getOptimalTileWidth();
-		final int optimalTileHeight = this.getImage().getOptimalTileHeight();
-		final int firstTileX = max(0, quantize((int) left, optimalTileWidth));
-		final int lastTileX = min(quantize((int) right, optimalTileWidth), quantize(this.getImage().getWidth() - 1, optimalTileWidth));
-		final int firstTileY = max(0, quantize((int) top, optimalTileHeight));
-		final int lastTileY = min(quantize((int) bottom, optimalTileHeight), quantize(this.getImage().getHeight() - 1, optimalTileHeight));
 		final Graphics2D canvasGraphics = this.canvas.setFormat(this.getWidth(), this.getHeight()).getGraphics();
+		final int statusHashCode = this.view.hashCode() + canvasGraphics.hashCode();
 		
-		canvasGraphics.setTransform(this.view);
-		
-		for (int tileY = firstTileY; tileY <= lastTileY; tileY += optimalTileHeight) {
-			for (int tileX = firstTileX; tileX <= lastTileX; tileX += optimalTileWidth) {
-				final Point tileXY = new Point(tileX, tileY);
-				
-				if (this.activeTiles.add(tileXY)) {
+		if (this.statusHasCode != statusHashCode) {
+			canvasGraphics.clearRect(0, 0, this.getWidth(), this.getHeight());
+			
+			this.statusHasCode = statusHashCode;
+			final Point2D topLeft = new Point2D.Double();
+			final Point2D topRight = new Point2D.Double(this.getWidth() - 1.0, 0.0);
+			final Point2D bottomRight = new Point2D.Double(this.getWidth() - 1.0, this.getHeight() - 1.0);
+			final Point2D bottomLeft = new Point2D.Double(0, this.getHeight() - 1.0);
+			
+			try {
+				this.view.inverseTransform(topLeft, topLeft);
+				this.view.inverseTransform(topRight, topRight);
+				this.view.inverseTransform(bottomRight, bottomRight);
+				this.view.inverseTransform(bottomLeft, bottomLeft);
+			} catch (final NoninvertibleTransformException exception) {
+				exception.printStackTrace();
+			}
+			
+			final double top = min(min(topLeft.getY(), topRight.getY()), min(bottomLeft.getY(), bottomRight.getY()));
+			final double bottom = max(max(topLeft.getY(), topRight.getY()), max(bottomLeft.getY(), bottomRight.getY()));
+			final double left = min(min(topLeft.getX(), topRight.getX()), min(bottomLeft.getX(), bottomRight.getX()));
+			final double right = max(max(topLeft.getX(), topRight.getX()), max(bottomLeft.getX(), bottomRight.getX()));
+			final int optimalTileWidth = this.getImage().getOptimalTileWidth();
+			final int optimalTileHeight = this.getImage().getOptimalTileHeight();
+			final int firstTileX = max(0, quantize((int) left, optimalTileWidth));
+			final int lastTileX = min(quantize((int) right, optimalTileWidth), quantize(this.getImage().getWidth() - 1, optimalTileWidth));
+			final int firstTileY = max(0, quantize((int) top, optimalTileHeight));
+			final int lastTileY = min(quantize((int) bottom, optimalTileHeight), quantize(this.getImage().getHeight() - 1, optimalTileHeight));
+			
+			canvasGraphics.setTransform(this.view);
+			
+			for (int tileY = firstTileY; tileY <= lastTileY; tileY += optimalTileHeight) {
+				for (int tileX = firstTileX; tileX <= lastTileX; tileX += optimalTileWidth) {
+					final Point tileXY = new Point(tileX, tileY);
+					
 					MultiThreadTools.getExecutor().submit(new Runnable() {
 						
 						@Override
@@ -135,8 +137,6 @@ public final class Image2DComponent extends JComponent {
 							}
 							
 							repaint();
-							
-							activeTiles.remove(tileXY);
 						}
 						
 					});
