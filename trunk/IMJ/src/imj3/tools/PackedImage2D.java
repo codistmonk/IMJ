@@ -105,7 +105,8 @@ public final class PackedImage2D implements Image2D {
 		if (result == null) {
 			final int width = this.getWidth();
 			final int height = this.getHeight();
-			result = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+			
+			result = new BufferedImage(width, height, this.getChannels().getChannelCount() == 4 ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_BGR);
 			
 			for (int y = 0; y < height; ++y) {
 				for (int x = 0; x < width; ++x) {
