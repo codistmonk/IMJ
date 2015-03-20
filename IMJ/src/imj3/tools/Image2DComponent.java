@@ -19,7 +19,10 @@ import java.awt.event.MouseWheelEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 
@@ -44,12 +47,15 @@ public final class Image2DComponent extends JComponent {
 	
 	private final AffineTransform view;
 	
+	private final Collection<Point> activeTiles;
+	
 	private int statusHasCode;
 	
 	public Image2DComponent(final Image2D image) {
 		this.canvas = new Canvas();
 		this.image = image;
 		this.view = new AffineTransform();
+		this.activeTiles = Collections.synchronizedSet(new HashSet<>());
 		
 		this.setOpaque(true);
 		this.setPreferredSize(new Dimension(800, 600));
@@ -132,10 +138,15 @@ public final class Image2DComponent extends JComponent {
 		super.paintComponent(g);
 		
 		final Graphics2D canvasGraphics = this.canvas.setFormat(this.getWidth(), this.getHeight()).getGraphics();
-		final int statusHashCode = this.view.hashCode() + canvasGraphics.hashCode();
+		final int statusHashCode;
+		
+		synchronized (canvasGraphics) {
+			statusHashCode = this.view.hashCode() + canvasGraphics.hashCode();
+			canvasGraphics.setTransform(this.view);
+		}
 		
 		if (this.statusHasCode != statusHashCode) {
-			canvasGraphics.clearRect(0, 0, this.getWidth(), this.getHeight());
+			final HashSet<Point> newActiveTiles = new HashSet<>();
 			
 			this.statusHasCode = statusHashCode;
 			final Point2D topLeft = new Point2D.Double();
@@ -163,31 +174,51 @@ public final class Image2DComponent extends JComponent {
 			final int firstTileY = max(0, quantize((int) top, optimalTileHeight));
 			final int lastTileY = min(quantize((int) bottom, optimalTileHeight), quantize(this.getImage().getHeight() - 1, optimalTileHeight));
 			
-			canvasGraphics.setTransform(this.view);
-			
 			for (int tileY = firstTileY; tileY <= lastTileY; tileY += optimalTileHeight) {
 				for (int tileX = firstTileX; tileX <= lastTileX; tileX += optimalTileWidth) {
 					final Point tileXY = new Point(tileX, tileY);
 					
-					MultiThreadTools.getExecutor().submit(new Runnable() {
-						
-						@Override
-						public final void run() {
-							final Image tile = (Image) getImage().getTileContaining(tileXY.x, tileXY.y).toAwt();
+					newActiveTiles.add(tileXY);
+					
+					if (this.getActiveTiles().add(tileXY)) {
+						MultiThreadTools.getExecutor().submit(new Runnable() {
 							
-							synchronized (canvasGraphics) {
-								canvasGraphics.drawImage(tile, tileXY.x, tileXY.y, null);
+							@Override
+							public final void run() {
+								if (!getActiveTiles().contains(tileXY)) {
+									return;
+								}
+								
+								final Image tile = (Image) getImage().getTileContaining(tileXY.x, tileXY.y).toAwt();
+								
+								if (!getActiveTiles().contains(tileXY)) {
+									return;
+								}
+								
+								synchronized (canvasGraphics) {
+									canvasGraphics.drawImage(tile, tileXY.x, tileXY.y, null);
+								}
+								
+								if (getActiveTiles().remove(tileXY)) {
+									repaint();
+								}
 							}
 							
-							repaint();
-						}
-						
-					});
+						});
+					}
 				}
 			}
+			
+			this.getActiveTiles().retainAll(newActiveTiles);
 		}
 		
-		g.drawImage(this.canvas.getImage(), 0, 0, null);
+		synchronized (canvasGraphics) {
+			g.drawImage(this.canvas.getImage(), 0, 0, null);
+		}
+	}
+	
+	final Collection<Point> getActiveTiles() {
+		return this.activeTiles;
 	}
 	
 	private static final long serialVersionUID = -1359039061498719576L;
