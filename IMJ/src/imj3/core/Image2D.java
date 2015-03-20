@@ -109,9 +109,13 @@ public abstract interface Image2D extends Image {
 			return tileHolder.getTile();
 		}
 		
-		final String tileKey = this.getId() + "_x" + tileX + "_y" + tileY;
+		final String tileKey = this.getTileKey(tileX, tileY);
 		
 		return tileHolder.setTile(tileX, tileY, cache(tileKey, () -> this.getTile(tileX, tileY))).getTile();
+	}
+	
+	public default String getTileKey(final int tileX, final int tileY) {
+		return this.getId() + "_x" + tileX + "_y" + tileY;
 	}
 	
 	public default Image2D getTile(final int tileX, final int tileY) {

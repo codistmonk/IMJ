@@ -9,9 +9,7 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj2.draft.AutoCloseableImageWriter;
-
 import imj3.core.Image2D;
 import imj3.machinelearning.BufferedDataSource;
 import imj3.machinelearning.Classifier;
@@ -25,6 +23,7 @@ import imj3.machinelearning.Measure.Predefined;
 import imj3.processing.Image2DSource.PatchIterator;
 import imj3.tools.AwtImage2D;
 import imj3.tools.CommonTools;
+import imj3.tools.DoubleImage2D;
 import imj3.tools.XMLSerializable;
 import imj3.tools.CommonSwingTools.NestedList;
 import imj3.tools.CommonSwingTools.PropertyGetter;

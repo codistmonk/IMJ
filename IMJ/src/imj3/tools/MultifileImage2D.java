@@ -5,12 +5,12 @@ import static java.lang.Math.min;
 import static net.sourceforge.aprog.xml.XMLTools.getNumber;
 import static net.sourceforge.aprog.xml.XMLTools.getString;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
+
 import imj3.core.Channels;
 import imj3.core.Image2D;
 
 import java.awt.Dimension;
 import java.awt.Graphics;
-import java.awt.Image;
 import java.awt.Point;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -373,7 +373,7 @@ public final class MultifileImage2D implements Image2D {
 					for (int xInImage = this.getOffset().x >> lod, x = -(xInImage % optimalTileWidth), tileX = xInImage / optimalTileWidth * optimalTileWidth;
 							x < width && tileX < imageWidth; x += optimalTileHeight, xInImage += optimalTileWidth, tileX += optimalTileWidth) {
 						if (0 <= tileX) {
-							g.drawImage((Image) image.getTile(tileX, tileY).toAwt(), x, y, null);
+							g.drawImage(image.getTile(tileX, tileY).toAwt(), x, y, null);
 						}
 					}
 				}

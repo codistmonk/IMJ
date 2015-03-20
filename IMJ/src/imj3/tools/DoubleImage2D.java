@@ -1,4 +1,4 @@
-package imj3.processing;
+package imj3.tools;
 
 import imj3.core.Channels;
 import imj3.core.Image;
