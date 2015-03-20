@@ -6,8 +6,6 @@ import static net.sourceforge.aprog.tools.Tools.ignore;
 
 import java.io.Serializable;
 
-import net.sourceforge.aprog.tools.Tools;
-
 /**
  * @author codistmonk (creation 2014-11-29)
  */
@@ -164,7 +162,7 @@ public abstract interface Image2D extends Image {
 	 */
 	public static final class TileHolder implements Serializable {
 		
-		private int x;
+		private int x = -1;
 		
 		private int y;
 		
