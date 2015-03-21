@@ -3,11 +3,13 @@ package imj3.tools;
 import static imj3.tools.IMJTools.quantize;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static net.sourceforge.aprog.tools.Tools.last;
 
 import imj2.tools.MultiThreadTools;
 
 import imj3.core.Image2D;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -18,10 +20,14 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
+import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JComponent;
 
@@ -37,6 +43,8 @@ public final class Image2DComponent extends JComponent {
 	
 	private final Canvas canvas;
 	
+	private final List<Layer> layers;
+	
 	private Image2D image;
 	
 	private final AffineTransform view;
@@ -46,6 +54,7 @@ public final class Image2DComponent extends JComponent {
 	private int statusHasCode;
 	
 	public Image2DComponent(final Image2D image) {
+		this.layers = new ArrayList<>();
 		this.canvas = new Canvas();
 		this.image = image;
 		this.view = new AffineTransform();
@@ -117,6 +126,17 @@ public final class Image2DComponent extends JComponent {
 			private static final long serialVersionUID = -8787564920294626502L;
 			
 		}.addTo(this);
+		
+		this.addLayer().getPainters().add(new Painter.Abstract() {
+			
+			@Override
+			public final void paint(final Canvas canvas) {
+//				canvas.getGraphics().drawImage(ImageComponent2D.this.getImage(), 0, 0, null);
+			}
+			
+			private static final long serialVersionUID = 7401374809131989838L;
+			
+		});
 	}
 	
 	public final Image2D getImage() {
@@ -125,6 +145,19 @@ public final class Image2DComponent extends JComponent {
 	
 	public final AffineTransform getView() {
 		return this.view;
+	}
+	
+	public final List<Layer> getLayers() {
+		return this.layers;
+	}
+	
+	public final Layer addLayer() {
+		final Layer result = this.getLayers().isEmpty() ? this.new Layer(this.getImage().getWidth(), this.getImage().getHeight())
+			: this.new Layer(last(this.getLayers()));
+		
+		this.getLayers().add(result);
+		
+		return result;
 	}
 	
 	@Override
@@ -235,6 +268,8 @@ public final class Image2DComponent extends JComponent {
 	
 	private static final long serialVersionUID = -1359039061498719576L;
 	
+	public static final Color CLEAR = new Color(0, true);
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
@@ -262,6 +297,114 @@ public final class Image2DComponent extends JComponent {
 		}
 		
 		return result;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-01-16)
+	 */
+	public static abstract interface Painter extends Serializable {
+		
+		public abstract void paint(Canvas canvas);
+		
+		public abstract AtomicBoolean getActive();
+		
+		public abstract AtomicBoolean getUpdateNeeded();
+		
+		/**
+		 * @author codistmonk (creation 2015-02-18)
+		 */
+		public static abstract class Abstract implements Painter {
+			
+			private final AtomicBoolean active;
+			
+			private final AtomicBoolean updateNeeded;
+			
+			protected Abstract() {
+				this(new AtomicBoolean(true), new AtomicBoolean(true));
+			}
+			
+			protected Abstract(final AtomicBoolean active, final AtomicBoolean updateNeeded) {
+				this.active = active;
+				this.updateNeeded = updateNeeded;
+			}
+			
+			@Override
+			public final AtomicBoolean getActive() {
+				return this.active;
+			}
+			
+			@Override
+			public final AtomicBoolean getUpdateNeeded() {
+				return this.updateNeeded;
+			}
+			
+			private static final long serialVersionUID = -6462246646444465973L;
+			
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-01-16)
+	 */
+	public final class Layer implements Serializable {
+		
+		private final Layer previous;
+		
+		private final Canvas canvas;
+		
+		private final List<Painter> painters;
+		
+		public Layer(final Layer previous) {
+			this(previous, previous.getCanvas().getWidth(), previous.getCanvas().getHeight());
+		}
+		
+		public Layer(final int width, final int height) {
+			this(null, width, height);
+		}
+		
+		private Layer(final Layer previous, final int width, final int height) {
+			this.previous = previous;
+			this.canvas = new Canvas().setFormat(width, height, BufferedImage.TYPE_INT_ARGB);
+			this.painters = new ArrayList<>();
+		}
+		
+		public final Layer getPrevious() {
+			return this.previous;
+		}
+		
+		public final boolean update() {
+			boolean result = this.getPrevious() != null && this.getPrevious().update();
+			
+			for (final Painter painter : this.getPainters()) {
+				result |= painter.getUpdateNeeded().getAndSet(false);
+			}
+			
+			if (result) {
+				if (this.getPrevious() != null) {
+					this.getCanvas().getGraphics().drawImage(this.getPrevious().getCanvas().getImage(), 0, 0, null);
+				}
+				
+				this.getPainters().forEach(painter -> {
+					if (painter.getActive().get()) {
+						painter.paint(this.getCanvas());
+					}
+				});
+			}
+			
+			return result;
+		}
+		
+		public final Canvas getCanvas() {
+			return this.canvas;
+		}
+		
+		public final List<Painter> getPainters() {
+			return this.painters;
+		}
+		
+		private static final long serialVersionUID = 6101324389175368308L;
+		
 	}
 	
 }
