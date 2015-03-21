@@ -131,8 +131,6 @@ public final class MultifileImage2D implements Image2D {
 			return this;
 		}
 		
-		Tools.debugPrint(scale, newLod, this.getLod());
-		
 		return new MultifileImage2D(this.getSource(), newLod);
 	}
 	
