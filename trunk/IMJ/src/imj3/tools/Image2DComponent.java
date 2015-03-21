@@ -242,21 +242,26 @@ public final class Image2DComponent extends JComponent {
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String path = arguments.get("file", "");
-		Image2D image = null;
-		int lod = 0;
+		
+		SwingTools.show(new Image2DComponent(read(path, 0)), path, false);
+	}
+	
+	public static Image2D read(final String path, int lod) {
+		Image2D result = null;
 		
 		if (path.toLowerCase(Locale.ENGLISH).endsWith(".zip")) {
-			image = new MultifileImage2D(new MultifileSource(path), lod);
+			result = new MultifileImage2D(new MultifileSource(path), lod);
 		} else {
 			try {
-				image = new AwtImage2D(path);
+				result = new AwtImage2D(path);
 			} catch (final Exception exception) {
 				IMJTools.toneDownBioFormatsLogger();
-				image = new BioFormatsImage2D(path);
+				
+				result = new BioFormatsImage2D(path);
 			}
 		}
 		
-		SwingTools.show(new Image2DComponent(image), path, false);
+		return result;
 	}
 	
 }
