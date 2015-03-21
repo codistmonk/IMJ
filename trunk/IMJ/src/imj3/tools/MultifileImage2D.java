@@ -1,11 +1,12 @@
 package imj3.tools;
 
+import static java.lang.Math.log;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.lang.Math.round;
 import static net.sourceforge.aprog.xml.XMLTools.getNumber;
 import static net.sourceforge.aprog.xml.XMLTools.getString;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
-
 import imj3.core.Channels;
 import imj3.core.Image2D;
 
@@ -80,6 +81,11 @@ public final class MultifileImage2D implements Image2D {
 		return "tile_lod" + this.getLod() + "_y"+ tileY + "_x" + tileX + "." + this.getTileFormat();
 	}
 	
+	@Override
+	public final String getTileKey(final int tileX, final int tileY) {
+		return this.getId() + "@" + this.getTileName(tileX, tileY);
+	}
+	
 	public final String getTileFormat() {
 		return this.tileFormat;
 	}
@@ -110,6 +116,24 @@ public final class MultifileImage2D implements Image2D {
 	
 	public final int getLod() {
 		return this.lod;
+	}
+	
+	@Override
+	public final double getScale() {
+		return 1.0 / (1 << this.getLod());
+	}
+	
+	@Override
+	public final Image2D getScaledImage(final double scale) {
+		final int newLod = max(0, (int) round(-log(scale) / log(2.0)));
+		
+		if (this.getLod() == newLod) {
+			return this;
+		}
+		
+		Tools.debugPrint(scale, newLod, this.getLod());
+		
+		return new MultifileImage2D(this.getSource(), newLod);
 	}
 	
 	@Override
