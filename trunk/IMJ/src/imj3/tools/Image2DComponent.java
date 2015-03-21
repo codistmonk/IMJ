@@ -90,9 +90,9 @@ public final class Image2DComponent extends JComponent {
 				}
 				
 				if (event.getWheelRotation() < 0) {
-					view.scale(0.5, 0.5);
+					view.scale(0.8, 0.8);
 				} else {
-					view.scale(2.0, 2.0);
+					view.scale(1.2, 1.2);
 				}
 				
 				try {
@@ -140,7 +140,6 @@ public final class Image2DComponent extends JComponent {
 			if (image != this.getImage()) {
 				synchronized (canvasGraphics) {
 					canvasGraphics.setTransform(new AffineTransform());
-					canvasGraphics.clearRect(0, 0, this.getWidth(), this.getHeight());
 				}
 			}
 		}
