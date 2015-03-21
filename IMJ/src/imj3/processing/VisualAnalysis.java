@@ -17,21 +17,22 @@ import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 
+import imj3.core.Image2D;
 import imj3.processing.Pipeline.Algorithm;
 import imj3.processing.Pipeline.ClassDescription;
 import imj3.processing.Pipeline.ComputationStatus;
 import imj3.processing.Pipeline.SupervisedAlgorithm;
 import imj3.processing.Pipeline.TrainingField;
 import imj3.processing.Pipeline.UnsupervisedAlgorithm;
-import imj3.draft.segmentation.ImageComponent;
-import imj3.draft.segmentation.ImageComponent.Layer;
-import imj3.draft.segmentation.ImageComponent.Painter;
 import imj3.tools.AwtImage2D;
+import imj3.tools.Image2DComponent;
 import imj3.tools.XMLSerializable;
 import imj3.tools.CommonSwingTools.Instantiator;
 import imj3.tools.CommonSwingTools.HighlightComposite;
 import imj3.tools.CommonSwingTools.UserObject;
 import imj3.tools.CommonTools;
+import imj3.tools.Image2DComponent.Layer;
+import imj3.tools.Image2DComponent.Painter;
 
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
@@ -302,7 +303,7 @@ public final class VisualAnalysis {
 		
 		private final JSplitPane mainSplitPane;
 		
-		private ImageComponent imageComponent;
+		private Image2DComponent imageComponent;
 		
 		private Pipeline pipeline;
 		
@@ -330,7 +331,7 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void valueChanged(final TreeSelectionEvent event) {
-					final ImageComponent imageComponent = MainPanel.this.getImageComponent();
+					final Image2DComponent imageComponent = MainPanel.this.getImageComponent();
 					
 					if (imageComponent != null) {
 						imageComponent.getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
@@ -477,7 +478,7 @@ public final class VisualAnalysis {
 								context.saveGroundTruth();
 								context.savePipeline();
 								
-								pipeline.classify(new AwtImage2D(null, context.getImage()),
+								pipeline.classify(context.getImage(),
 										MainPanel.this.getImageComponent().getVisibleRect(),
 										context.getGroundTruthName().isEmpty() ? null : new AwtImage2D(null, context.getGroundTruth().getImage()),
 												new AwtImage2D(null, context.getClassification().getImage()));
@@ -631,7 +632,7 @@ public final class VisualAnalysis {
 				public final <T> T newInstanceOf(final Class<T> cls) {
 					if (TrainingField.class.equals(cls)) {
 						final TrainingField result = (TrainingField) CommonTools.newInstanceOf(cls);
-						final BufferedImage image = MainPanel.this.getContext().getImage();
+						final Image2D image = MainPanel.this.getContext().getImage();
 						
 						if (image != null) {
 							result.setImagePath(MainPanel.this.getContext().getImageFile().getPath());
@@ -670,12 +671,13 @@ public final class VisualAnalysis {
 			});
 		}
 		
-		public final ImageComponent getImageComponent() {
+		public final Image2DComponent getImageComponent() {
 			return this.imageComponent;
 		}
 		
 		final void setImage(final String path) {
-			this.imageComponent = new ImageComponent(awtRead(path));
+//			this.imageComponent = new ImageComponent(awtRead(path));
+			this.imageComponent = new Image2DComponent(Image2DComponent.read(path, 0));
 			
 			this.getImageComponent().addLayer().getPainters().add(new Painter.Abstract() {
 				
@@ -822,7 +824,7 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void mouseDragged(final MouseEvent event) {
-					final BufferedImage image = MainPanel.this.getImageComponent().getImage();
+					final Image2D image = MainPanel.this.getImageComponent().getImage();
 					
 					if (image != null) {
 						final Color brushColor = MainPanel.this.getBrushColor();
@@ -1167,9 +1169,9 @@ public final class VisualAnalysis {
 			return this.getMainPanel().getGroundTruthSelector().getText();
 		}
 		
-		public final BufferedImage getImage() {
+		public final Image2D getImage() {
 			final MainPanel mainPanel = this.getMainPanel();
-			final ImageComponent imageComponent = mainPanel == null ? null : mainPanel.getImageComponent();
+			final Image2DComponent imageComponent = mainPanel == null ? null : mainPanel.getImageComponent();
 			
 			return imageComponent == null ? null : imageComponent.getImage();
 		}
@@ -1260,7 +1262,7 @@ public final class VisualAnalysis {
 		}
 		
 		public final void refreshGroundTruthAndClassification() {
-			final BufferedImage image = this.getImage();
+			final Image2D image = this.getImage();
 			
 			if (image == null) {
 				return;
@@ -1396,7 +1398,7 @@ public final class VisualAnalysis {
 		}
 		
 		private final Context format(final Canvas canvas) {
-			final BufferedImage image = this.getImage();
+			final Image2D image = this.getImage();
 			
 			if (image != null) {
 				canvas.setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
