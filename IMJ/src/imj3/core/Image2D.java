@@ -144,6 +144,14 @@ public abstract interface Image2D extends Image {
 		return this;
 	}
 	
+	public default double getScale() {
+		return 1.0;
+	}
+	
+	public default Image2D getScaledImage(final double scale) {
+		return this;
+	}
+	
 	public default Object toAwt() {
 		return null;
 	}

@@ -11,13 +11,13 @@ import imj3.core.Image2D;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Image;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
+import java.awt.image.BufferedImage;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -37,7 +37,7 @@ public final class Image2DComponent extends JComponent {
 	
 	private final Canvas canvas;
 	
-	private final Image2D image;
+	private Image2D image;
 	
 	private final AffineTransform view;
 	
@@ -132,15 +132,31 @@ public final class Image2DComponent extends JComponent {
 		super.paintComponent(g);
 		
 		final Graphics2D canvasGraphics = this.canvas.setFormat(this.getWidth(), this.getHeight()).getGraphics();
+		final double canvasScale = max(canvasGraphics.getTransform().getScaleX(), canvasGraphics.getTransform().getScaleY());
+		{
+			final Image2D image = this.getImage();
+			this.image = image.getScaledImage(canvasScale);
+			
+			if (image != this.getImage()) {
+				synchronized (canvasGraphics) {
+					canvasGraphics.setTransform(new AffineTransform());
+					canvasGraphics.clearRect(0, 0, this.getWidth(), this.getHeight());
+				}
+			}
+		}
+		
 		final int statusHashCode;
 		
 		synchronized (canvasGraphics) {
-			statusHashCode = this.view.hashCode() + canvasGraphics.hashCode();
+			// XXX not perfect but works for now
+			statusHashCode = this.view.hashCode() + canvasGraphics.hashCode() + this.getImage().hashCode() + this.getSize().hashCode();
 			canvasGraphics.setTransform(this.view);
 		}
 		
 		if (this.statusHasCode != statusHashCode) {
 			final HashSet<Point> newActiveTiles = new HashSet<>();
+			final Image2D image = this.getImage();
+			final double imageScale = image.getScale();
 			
 			this.statusHasCode = statusHashCode;
 			final Point2D topLeft = new Point2D.Double();
@@ -157,16 +173,16 @@ public final class Image2DComponent extends JComponent {
 				exception.printStackTrace();
 			}
 			
-			final double top = min(min(topLeft.getY(), topRight.getY()), min(bottomLeft.getY(), bottomRight.getY()));
-			final double bottom = max(max(topLeft.getY(), topRight.getY()), max(bottomLeft.getY(), bottomRight.getY()));
-			final double left = min(min(topLeft.getX(), topRight.getX()), min(bottomLeft.getX(), bottomRight.getX()));
-			final double right = max(max(topLeft.getX(), topRight.getX()), max(bottomLeft.getX(), bottomRight.getX()));
-			final int optimalTileWidth = this.getImage().getOptimalTileWidth();
-			final int optimalTileHeight = this.getImage().getOptimalTileHeight();
+			final double top = min(min(topLeft.getY(), topRight.getY()), min(bottomLeft.getY(), bottomRight.getY())) * imageScale;
+			final double bottom = max(max(topLeft.getY(), topRight.getY()), max(bottomLeft.getY(), bottomRight.getY())) * imageScale;
+			final double left = min(min(topLeft.getX(), topRight.getX()), min(bottomLeft.getX(), bottomRight.getX())) * imageScale;
+			final double right = max(max(topLeft.getX(), topRight.getX()), max(bottomLeft.getX(), bottomRight.getX())) * imageScale;
+			final int optimalTileWidth = image.getOptimalTileWidth();
+			final int optimalTileHeight = image.getOptimalTileHeight();
 			final int firstTileX = max(0, quantize((int) left, optimalTileWidth));
-			final int lastTileX = min(quantize((int) right, optimalTileWidth), quantize(this.getImage().getWidth() - 1, optimalTileWidth));
+			final int lastTileX = min(quantize((int) right, optimalTileWidth), quantize(image.getWidth() - 1, optimalTileWidth));
 			final int firstTileY = max(0, quantize((int) top, optimalTileHeight));
-			final int lastTileY = min(quantize((int) bottom, optimalTileHeight), quantize(this.getImage().getHeight() - 1, optimalTileHeight));
+			final int lastTileY = min(quantize((int) bottom, optimalTileHeight), quantize(image.getHeight() - 1, optimalTileHeight));
 			
 			for (int tileY = firstTileY; tileY <= lastTileY; tileY += optimalTileHeight) {
 				for (int tileX = firstTileX; tileX <= lastTileX; tileX += optimalTileWidth) {
@@ -183,14 +199,17 @@ public final class Image2DComponent extends JComponent {
 									return;
 								}
 								
-								final Image tile = (Image) getImage().getTileContaining(tileXY.x, tileXY.y).toAwt();
+								final BufferedImage tile = (BufferedImage) image.getTileContaining(tileXY.x, tileXY.y).toAwt();
 								
 								if (!getActiveTiles().contains(tileXY)) {
 									return;
 								}
 								
 								synchronized (canvasGraphics) {
-									canvasGraphics.drawImage(tile, tileXY.x, tileXY.y, null);
+									canvasGraphics.drawImage(tile,
+											(int) (tileXY.x / imageScale), (int) (tileXY.y / imageScale),
+											(int) (tile.getWidth() / imageScale), (int) (tile.getHeight() / imageScale),
+											null);
 								}
 								
 								if (getActiveTiles().remove(tileXY)) {
