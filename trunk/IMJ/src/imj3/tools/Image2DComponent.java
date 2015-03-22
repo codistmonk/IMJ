@@ -4,9 +4,7 @@ import static imj3.tools.IMJTools.quantize;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.last;
-
 import imj2.tools.MultiThreadTools;
-
 import imj3.core.Image2D;
 
 import java.awt.Color;
@@ -14,6 +12,7 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.geom.AffineTransform;
@@ -42,6 +41,10 @@ import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 public final class Image2DComponent extends JComponent {
 	
 	private final Canvas canvas;
+	
+	private TileOverlay tileOverlay;
+	
+	private Overlay overlay;
 	
 	private final List<Layer> layers;
 	
@@ -139,6 +142,22 @@ public final class Image2DComponent extends JComponent {
 		});
 	}
 	
+	public final TileOverlay getTileOverlay() {
+		return this.tileOverlay;
+	}
+	
+	public final void setTileOverlay(final TileOverlay tileOverlay) {
+		this.tileOverlay = tileOverlay;
+	}
+	
+	public final Overlay getOverlay() {
+		return this.overlay;
+	}
+	
+	public final void setOverlay(final Overlay overlay) {
+		this.overlay = overlay;
+	}
+	
 	public final Image2D getImage() {
 		return this.image;
 	}
@@ -227,26 +246,7 @@ public final class Image2DComponent extends JComponent {
 							
 							@Override
 							public final void run() {
-								if (!getActiveTiles().contains(tileXY)) {
-									return;
-								}
-								
-								final BufferedImage tile = (BufferedImage) image.getTileContaining(tileXY.x, tileXY.y).toAwt();
-								
-								if (!getActiveTiles().contains(tileXY)) {
-									return;
-								}
-								
-								synchronized (canvasGraphics) {
-									canvasGraphics.drawImage(tile,
-											(int) (tileXY.x / imageScale), (int) (tileXY.y / imageScale),
-											(int) (tile.getWidth() / imageScale), (int) (tile.getHeight() / imageScale),
-											null);
-								}
-								
-								if (getActiveTiles().remove(tileXY)) {
-									repaint();
-								}
+								drawTile(image, tileXY, imageScale, canvasGraphics);
 							}
 							
 						});
@@ -259,6 +259,12 @@ public final class Image2DComponent extends JComponent {
 		
 		synchronized (canvasGraphics) {
 			g.drawImage(this.canvas.getImage(), 0, 0, null);
+			
+			final Overlay overlay = this.getOverlay();
+			
+			if (overlay != null) {
+				overlay.update((Graphics2D) g, this.getVisibleRect());
+			}
 		}
 	}
 	
@@ -266,6 +272,36 @@ public final class Image2DComponent extends JComponent {
 		return this.activeTiles;
 	}
 	
+	final void drawTile(final Image2D image, final Point tileXY,
+			final double imageScale, final Graphics2D canvasGraphics) {
+		if (!getActiveTiles().contains(tileXY)) {
+			return;
+		}
+		
+		final BufferedImage tile = (BufferedImage) image.getTileContaining(tileXY.x, tileXY.y).toAwt();
+		
+		if (!getActiveTiles().contains(tileXY)) {
+			return;
+		}
+		
+		synchronized (canvasGraphics) {
+			final Rectangle region = new Rectangle((int) (tileXY.x / imageScale), (int) (tileXY.y / imageScale),
+					(int) (tile.getWidth() / imageScale), (int) (tile.getHeight() / imageScale));
+			
+			canvasGraphics.drawImage(tile, region.x, region.y, region.width, region.height, null);
+			
+			final TileOverlay tileOverlay = this.getTileOverlay();
+			
+			if (tileOverlay != null) {
+				tileOverlay.update(canvasGraphics, tileXY, region);
+			}
+		}
+		
+		if (getActiveTiles().remove(tileXY)) {
+			repaint();
+		}
+	}
+
 	private static final long serialVersionUID = -1359039061498719576L;
 	
 	public static final Color CLEAR = new Color(0, true);
@@ -404,6 +440,24 @@ public final class Image2DComponent extends JComponent {
 		}
 		
 		private static final long serialVersionUID = 6101324389175368308L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-03-22)
+	 */
+	public static abstract interface TileOverlay extends Serializable {
+		
+		public abstract void update(Graphics2D graphics, Point tileXY, Rectangle region);
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-03-22)
+	 */
+	public static abstract interface Overlay extends Serializable {
+		
+		public abstract void update(Graphics2D graphics, Rectangle region);
 		
 	}
 	
