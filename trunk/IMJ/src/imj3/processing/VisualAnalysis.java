@@ -16,7 +16,6 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
-
 import imj3.core.Image2D;
 import imj3.processing.Pipeline.Algorithm;
 import imj3.processing.Pipeline.ClassDescription;
@@ -598,6 +597,19 @@ public final class VisualAnalysis {
 			});
 			
 			this.setPreferredSize(new Dimension(800, 600));
+			
+			this.tree.getSelectionModel().addTreeSelectionListener(new TreeSelectionListener() {
+				
+				@Override
+				public final void valueChanged(final TreeSelectionEvent event) {
+					final DefaultMutableTreeNode node = (DefaultMutableTreeNode) event.getPath().getLastPathComponent();
+					final UserObject userObject = cast(UserObject.class, node.getUserObject());
+					final Object object = userObject == null ? null : userObject.getUIScaffold().getObject();
+					
+					getImageComponent().setWheelZoomEnabled(!(object instanceof ClassDescription));
+				}
+				
+			});
 			
 			context.setMainPanel(this);
 		}
