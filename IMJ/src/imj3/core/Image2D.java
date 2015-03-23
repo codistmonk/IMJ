@@ -2,6 +2,7 @@ package imj3.core;
 
 import static imj3.tools.IMJTools.cache;
 import static imj3.tools.IMJTools.quantize;
+import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 
 import java.io.Serializable;
@@ -121,6 +122,22 @@ public abstract interface Image2D extends Image {
 		ignore(tileY);
 		
 		return this;
+	}
+	
+	public default Image2D setTile(final int tileX, final int tileY, final Image2D tile) {
+		ignore(tileX);
+		ignore(tileY);
+		ignore(tile);
+		
+		return this;
+	}
+	
+	public default int getTileWidth(final int tileX) {
+		return min(this.getOptimalTileWidth(), this.getWidth() - tileX);
+	}
+	
+	public default int getTileHeight(final int tileY) {
+		return min(this.getOptimalTileHeight(), this.getHeight() - tileY);
 	}
 	
 	public default TileHolder getTileHolder() {

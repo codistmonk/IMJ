@@ -18,6 +18,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.awt.image.RenderedImage;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -171,15 +172,27 @@ public final class MultifileImage2D implements Image2D {
 			throw new UncheckedIOException(exception);
 		} catch (final Exception exception) {
 			if (exception.getCause() instanceof FileNotFoundException) {
-				final int tileWidth = min(this.getOptimalTileWidth(), this.getWidth() - tileX);
-				final int tileHeight = min(this.getOptimalTileHeight(), this.getHeight() - tileY);
-				
 				return new AwtImage2D(this.getTileKey(tileX, tileY),
-						new BufferedImage(tileWidth, tileHeight, BufferedImage.TYPE_3BYTE_BGR));
+						new BufferedImage(this.getTileWidth(tileX), this.getTileHeight(tileY), BufferedImage.TYPE_3BYTE_BGR));
 			}
 			
 			throw unchecked(exception);
 		}
+	}
+	
+	@Override
+	public final Image2D setTile(final int tileX, final int tileY, final Image2D tile) {
+		if (tile.getWidth() != this.getTileWidth(tileX) || tile.getHeight() != this.getTileHeight(tileY)) {
+			throw new IllegalArgumentException();
+		}
+		
+		try (final OutputStream output = this.getSource().getOutputStream(this.getTileKey(tileX, tileY))) {
+			ImageIO.write((RenderedImage) tile.toAwt(), this.getTileFormat(), output);
+		} catch (final IOException exception) {
+			throw new UncheckedIOException(exception);
+		}
+		
+		return this;
 	}
 	
 	@Override
