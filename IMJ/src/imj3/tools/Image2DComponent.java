@@ -56,12 +56,18 @@ public final class Image2DComponent extends JComponent {
 	
 	private int statusHasCode;
 	
+	private boolean dragEnabled;
+	
+	private boolean wheelZoomEnabled;
+	
 	public Image2DComponent(final Image2D image) {
 		this.layers = new ArrayList<>();
 		this.canvas = new Canvas();
 		this.image = image;
 		this.view = new AffineTransform();
 		this.activeTiles = Collections.synchronizedSet(new HashSet<>());
+		this.dragEnabled = true;
+		this.wheelZoomEnabled = true;
 		
 		this.setOpaque(true);
 		this.setPreferredSize(new Dimension(800, 600));
@@ -79,6 +85,10 @@ public final class Image2DComponent extends JComponent {
 			
 			@Override
 			public final void mouseDragged(final MouseEvent event) {
+				if (!isDragEnabled()) {
+					return;
+				}
+				
 				final AffineTransform view = Image2DComponent.this.getView();
 				final Point2D translation = new Point2D.Double((event.getX() - this.mouse.x) / view.getScaleX(), (event.getY() - this.mouse.y) / view.getScaleY());
 				
@@ -91,6 +101,10 @@ public final class Image2DComponent extends JComponent {
 			
 			@Override
 			public final void mouseWheelMoved(final MouseWheelEvent event) {
+				if (!isWheelZoomEnabled()) {
+					return;
+				}
+				
 				final AffineTransform view = Image2DComponent.this.getView();
 				final Point2D center = new Point2D.Double(getWidth() / 2.0, getHeight() / 2.0);
 				final Point2D newCenter = new Point2D.Double(getWidth() / 2.0, getHeight() / 2.0);
@@ -140,6 +154,22 @@ public final class Image2DComponent extends JComponent {
 			private static final long serialVersionUID = 7401374809131989838L;
 			
 		});
+	}
+	
+	public final boolean isDragEnabled() {
+		return this.dragEnabled;
+	}
+	
+	public final void setDragEnabled(final boolean dragEnabled) {
+		this.dragEnabled = dragEnabled;
+	}
+	
+	public final boolean isWheelZoomEnabled() {
+		return this.wheelZoomEnabled;
+	}
+	
+	public final void setWheelZoomEnabled(final boolean wheelZoomEnabled) {
+		this.wheelZoomEnabled = wheelZoomEnabled;
 	}
 	
 	public final TileOverlay getTileOverlay() {
