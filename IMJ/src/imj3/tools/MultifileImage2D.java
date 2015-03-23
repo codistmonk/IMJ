@@ -17,6 +17,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -61,7 +62,12 @@ public final class MultifileImage2D implements Image2D {
 		this.source = source;
 		this.lod = lod;
 		
-		final Document metadata = parse(source.open("metadata.xml"));
+		final Document metadata;
+		try (final InputStream metadataInput = source.getInputStream("metadata.xml")) {
+			metadata = parse(metadataInput);
+		} catch (final IOException exception) {
+			throw new UncheckedIOException(exception);
+		}
 		final String imageXPath = "group/image[" + (lod + 1) + "]/";
 		
 		this.width = getNumber(metadata, imageXPath + "@width").intValue();
@@ -146,8 +152,8 @@ public final class MultifileImage2D implements Image2D {
 	
 	@Override
 	public final AwtImage2D getTile(final int tileX, final int tileY) {
-		try {
-			return new AwtImage2D(this.getTileKey(tileX, tileY), ImageIO.read(MultifileImage2D.this.getSource().open(this.getTileName(tileX, tileY))));
+		try (final InputStream input = MultifileImage2D.this.getSource().getInputStream(this.getTileName(tileX, tileY))) {
+			return new AwtImage2D(this.getTileKey(tileX, tileY), ImageIO.read(input));
 		} catch (final IOException exception) {
 			throw new UncheckedIOException(exception);
 		}
