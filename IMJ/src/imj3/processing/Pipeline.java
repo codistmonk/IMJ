@@ -1017,11 +1017,11 @@ public final class Pipeline implements XMLSerializable {
 	}
 	
 	public static final String getGroundTruthPathFromImagePath(final String imagePath, final String groundTruthName) {
-		return baseName(imagePath) + "_groundtruth_" + groundTruthName + ".png";
+		return baseName(imagePath) + "_groundtruth_" + groundTruthName + ".zip";
 	}
 	
 	public static final String getClassificationPathFromImagePath(final String imagePath, final String groundTruthName, final String pipelineName) {
-		return baseName(imagePath) + "_classification_" + groundTruthName + "_" + pipelineName + ".png";
+		return baseName(imagePath) + "_classification_" + groundTruthName + "_" + pipelineName + ".zip";
 	}
 	
 	public static final <K, N extends Number> double f1(final Map<K, Map<K, N>> confusionMatrix) {

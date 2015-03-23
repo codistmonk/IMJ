@@ -4,6 +4,7 @@ import static java.lang.Math.log;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.round;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.getNumber;
 import static net.sourceforge.aprog.xml.XMLTools.getString;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
@@ -16,8 +17,11 @@ import java.awt.Point;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,6 +35,7 @@ import net.sourceforge.aprog.swing.MouseHandler;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.Tools;
+import net.sourceforge.aprog.xml.XMLTools;
 
 /**
  * @author codistmonk (creation 2015-02-26)
@@ -57,17 +62,25 @@ public final class MultifileImage2D implements Image2D {
 	
 	private final TileHolder tileHolder;
 	
+	public MultifileImage2D(final MultifileSource source, final Document metadata) {
+		this(source, metadata, 0);
+		
+		try (final OutputStream output = source.getOutputStream("metadata.xml")) {
+			XMLTools.write(metadata, output, 0);
+		} catch (final IOException exception) {
+			throw new UncheckedIOException(exception);
+		}
+	}
+	
 	public MultifileImage2D(final MultifileSource source, final int lod) {
+		this(source, getMetadataFrom(source), lod);
+	}
+	
+	private MultifileImage2D(final MultifileSource source, final Document metadata, final int lod) {
 		this.metadata = new HashMap<>();
 		this.source = source;
 		this.lod = lod;
 		
-		final Document metadata;
-		try (final InputStream metadataInput = source.getInputStream("metadata.xml")) {
-			metadata = parse(metadataInput);
-		} catch (final IOException exception) {
-			throw new UncheckedIOException(exception);
-		}
 		final String imageXPath = "group/image[" + (lod + 1) + "]/";
 		
 		this.width = getNumber(metadata, imageXPath + "@width").intValue();
@@ -156,6 +169,16 @@ public final class MultifileImage2D implements Image2D {
 			return new AwtImage2D(this.getTileKey(tileX, tileY), ImageIO.read(input));
 		} catch (final IOException exception) {
 			throw new UncheckedIOException(exception);
+		} catch (final Exception exception) {
+			if (exception.getCause() instanceof FileNotFoundException) {
+				final int tileWidth = min(this.getOptimalTileWidth(), this.getWidth() - tileX);
+				final int tileHeight = min(this.getOptimalTileHeight(), this.getHeight() - tileY);
+				
+				return new AwtImage2D(this.getTileKey(tileX, tileY),
+						new BufferedImage(tileWidth, tileHeight, BufferedImage.TYPE_3BYTE_BGR));
+			}
+			
+			throw unchecked(exception);
 		}
 	}
 	
@@ -175,6 +198,14 @@ public final class MultifileImage2D implements Image2D {
 	}
 	
 	private static final long serialVersionUID = -4265650676493772608L;
+	
+	public static final Document getMetadataFrom(final MultifileSource source) {
+		try (final InputStream metadataInput = source.getInputStream("metadata.xml")) {
+			return parse(metadataInput);
+		} catch (final IOException exception) {
+			throw new UncheckedIOException(exception);
+		}
+	}
 	
 	/**
 	 * @param commandLineArguments

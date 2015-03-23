@@ -122,32 +122,7 @@ public final class SVS2Multifile {
 					
 					{
 						final String mpp = Array.get(getFieldValue(((ImageReader) reader).getReader(), "pixelSize"), 0).toString();
-						final Document xml = document(() ->
-							element("group", () -> {
-								final int[] level = { 0 };
-								final int[] w = { imageWidth };
-								final int[] h = { imageHeight };
-								
-								while (0 < w[0] && 0 < h[0]) {
-									element("image", () -> {
-										attribute("type", "lod" + level[0]);
-										attribute("width", w[0]);
-										attribute("height", h[0]);
-										attribute("tileFormat", tileFormat);
-										attribute("tileWidth", tileSize);
-										attribute("tileHeight", tileSize);
-										
-										if (0 == level[0]) {
-											attribute("micronsPerPixel", mpp);
-										}
-									});
-									
-									++level[0];
-									w[0] /= 2;
-									h[0] /= 2;
-								}
-							})
-						);
+						final Document xml = newMetadata(imageWidth, imageHeight, tileSize, tileFormat, mpp);
 						
 						output.putNextEntry(new ZipEntry("metadata.xml"));
 						XMLTools.write(xml, output, 0);
@@ -179,6 +154,37 @@ public final class SVS2Multifile {
 				}
 			}
 		}
+	}
+	
+	public static final Document newMetadata(final int imageWidth, final int imageHeight,
+			final int tileSize, final String tileFormat, final String micronsPerPixel) {
+		final Document xml = document(() ->
+			element("group", () -> {
+				final int[] level = { 0 };
+				final int[] w = { imageWidth };
+				final int[] h = { imageHeight };
+				
+				while (0 < w[0] && 0 < h[0]) {
+					element("image", () -> {
+						attribute("type", "lod" + level[0]);
+						attribute("width", w[0]);
+						attribute("height", h[0]);
+						attribute("tileFormat", tileFormat);
+						attribute("tileWidth", tileSize);
+						attribute("tileHeight", tileSize);
+						
+						if (0 == level[0]) {
+							attribute("micronsPerPixel", micronsPerPixel);
+						}
+					});
+					
+					++level[0];
+					w[0] /= 2;
+					h[0] /= 2;
+				}
+			})
+		);
+		return xml;
 	}
 	
 	/**
