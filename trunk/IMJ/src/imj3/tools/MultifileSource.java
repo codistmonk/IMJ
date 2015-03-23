@@ -1,84 +1,57 @@
 package imj3.tools;
 
-import static net.sourceforge.aprog.tools.Tools.iterable;
-import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import java.io.Closeable;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
+import java.io.UncheckedIOException;
+
+import de.schlichtherle.truezip.file.TFile;
+import de.schlichtherle.truezip.file.TFileInputStream;
+import de.schlichtherle.truezip.file.TFileOutputStream;
 
 /**
- * @author codistmonk (creation 2014-09-09)
+ * @author codistmonk (creation 2015-03-23)
  */
 public final class MultifileSource implements Serializable, Closeable {
 	
-	private final File file;
+	private final TFile file;
 	
-	private final ZipFile zip;
+	public MultifileSource(final String path) {
+		this.file = new TFile(path);
+	}
 	
-	private final Map<String, ZipEntry> zipEntries;
-	
-	public MultifileSource(final String id) {
-		this.file = new File(id);
-		
-		if (id.endsWith(".zip")) {
-			try {
-				this.zip = new ZipFile(id);
-				this.zipEntries = new HashMap<>();
-				
-				for (final ZipEntry entry : iterable(this.zip.entries())) {
-					if (null != this.zipEntries.put(entry.getName(), entry)) {
-						throw new IllegalArgumentException();
-					}
-				}
-			} catch (final IOException exception) {
-				throw unchecked(exception);
-			}
-		} else {
-			this.zip = null;
-			this.zipEntries = null;
+	public final InputStream getInputStream(final String key) {
+		try {
+			return new TFileInputStream(this.getPath(key));
+		} catch (final FileNotFoundException exception) {
+			throw new UncheckedIOException(exception);
 		}
+	}
+	
+	public final OutputStream getOutputStream(final String key) {
+		try {
+			return new TFileOutputStream(this.getPath(key));
+		} catch (final FileNotFoundException exception) {
+			throw new UncheckedIOException(exception);
+		}
+	}
+	
+	public final String getPath(final String key) {
+		return this.getId() + "/" + key;
 	}
 	
 	public final String getId() {
 		return this.file.getPath();
 	}
 	
-	public final InputStream open(final String key) {
-		try {
-			if (this.zip != null) {
-				if (this.zipEntries.get(key) == null) {
-					new FileNotFoundException(key).printStackTrace();
-					System.exit(-1);
-				}
-				
-				return this.zip.getInputStream(this.zipEntries.get(key));
-			}
-			
-			return new FileInputStream(new File(this.file, key));
-		} catch (final IOException exception) {
-			throw unchecked(exception);
-		}
-	}
-	
 	@Override
 	public final void close() throws IOException {
-		if (this.zip != null) {
-			this.zip.close();
-		}
+		// NOP
 	}
 	
-	/**
-	 * {@value}.
-	 */
-	private static final long serialVersionUID = 115519844836294165L;
+	private static final long serialVersionUID = -537686043074775519L;
 	
 }

@@ -305,6 +305,8 @@ public final class VisualAnalysis {
 		
 		private Image2DComponent imageComponent;
 		
+		private Image2D groundTruthImage;
+		
 		private Pipeline pipeline;
 		
 		private final Point mouse;
