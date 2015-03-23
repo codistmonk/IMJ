@@ -25,6 +25,7 @@ import imj3.processing.Pipeline.TrainingField;
 import imj3.processing.Pipeline.UnsupervisedAlgorithm;
 import imj3.tools.AwtImage2D;
 import imj3.tools.Image2DComponent;
+import imj3.tools.Image2DComponent.Overlay;
 import imj3.tools.XMLSerializable;
 import imj3.tools.CommonSwingTools.Instantiator;
 import imj3.tools.CommonSwingTools.HighlightComposite;
@@ -366,7 +367,7 @@ public final class VisualAnalysis {
 							label(" Training: ", this.trainingSummaryView))),
 					limitHeight(horizontalBox(this.classificationVisibilitySelector, runClassificationButton, showClassificationResultsButton,
 							label(" Classification: ", this.classificationSummaryView))),
-					scrollable(this.tree))), scrollable(new JLabel("Drop file here")));
+					scrollable(this.tree))), new JLabel("Drop file here"));
 			
 			this.mainSplitPane.setResizeWeight(0.25);
 			this.add(this.mainSplitPane, BorderLayout.CENTER);
@@ -777,6 +778,49 @@ public final class VisualAnalysis {
 				
 			});
 			
+			this.getImageComponent().setOverlay(new Overlay() {
+				
+				@Override
+				public final void update(final Graphics2D g, final Rectangle region) {
+					final Point m = MainPanel.this.getMouse();
+					final Composite saved = g.getComposite();
+					
+					g.setComposite(HighlightComposite.INSTANCE);
+					
+//					final Rectangle trainingBounds = MainPanel.this.getTrainingBounds();
+//					
+//					if (trainingBounds != null) {
+//						g.draw(trainingBounds);
+//						
+//						final int size = 12;
+//						final int x = trainingBounds.x;
+//						final int y = trainingBounds.y;
+//						final int w = trainingBounds.width;
+//						final int halfW = w / 2;
+//						final int h = trainingBounds.height;
+//						final int halfH = h / 2;
+//						
+//						fillDisk(g, x, y, size);
+//						fillDisk(g, x + halfW, y, size);
+//						fillDisk(g, x + w, y, size);
+//						fillDisk(g, x, y + halfH, size);
+//						fillDisk(g, x + w, y + halfH, size);
+//						fillDisk(g, x, y + h, size);
+//						fillDisk(g, x + halfW, y + h, size);
+//						fillDisk(g, x + w, y + h, size);
+//					}
+					
+					if (0 < m.x && MainPanel.this.getBrushColor() != null) {
+						final int s = MainPanel.this.getBrushSize();
+						
+						g.drawOval(m.x - s / 2, m.y - s / 2, s, s);
+					}
+					
+					g.setComposite(saved);
+				}
+				
+			});
+			
 			new MouseHandler() {
 				
 				private boolean dragging;
@@ -945,7 +989,8 @@ public final class VisualAnalysis {
 		}
 		
 		public final void setContents(final Component component) {
-			this.mainSplitPane.setRightComponent(scrollable(component));
+//			this.mainSplitPane.setRightComponent(scrollable(component));
+			this.mainSplitPane.setRightComponent(component);
 		}
 		
 		private static final long serialVersionUID = 2173077945563031333L;
