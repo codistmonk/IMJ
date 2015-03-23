@@ -26,6 +26,9 @@ import imj3.processing.Pipeline.UnsupervisedAlgorithm;
 import imj3.tools.AwtImage2D;
 import imj3.tools.Image2DComponent;
 import imj3.tools.Image2DComponent.Overlay;
+import imj3.tools.MultifileImage2D;
+import imj3.tools.MultifileSource;
+import imj3.tools.SVS2Multifile;
 import imj3.tools.XMLSerializable;
 import imj3.tools.CommonSwingTools.Instantiator;
 import imj3.tools.CommonSwingTools.HighlightComposite;
@@ -1329,32 +1332,39 @@ public final class VisualAnalysis {
 			
 			final int imageWidth = image.getWidth();
 			final int imageHeight = image.getHeight();
+			final String groundTruthPath = this.getGroundTruthPath();
 			
-			this.getGroundTruth().setFormat(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
-			this.getClassification().setFormat(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
+			Tools.debugPrint();
 			
-			{
-				this.getGroundTruth().getGraphics().setComposite(AlphaComposite.Src);
-				
-				final String groundTruthPath = this.getGroundTruthPath();
-				
-				if (new File(groundTruthPath).isFile()) {
-					this.getGroundTruth().getGraphics().drawImage(awtRead(groundTruthPath), 0, 0, null);
-				} else {
-					this.getGroundTruth().clear(CLEAR);
-				}
-			}
-			{
-				this.getClassification().getGraphics().setComposite(AlphaComposite.Src);
-				
-				final String classificationPath = this.getClassificationPath();
-				
-				if (new File(classificationPath).isFile()) {
-					this.getClassification().getGraphics().drawImage(awtRead(classificationPath), 0, 0, null);
-				} else {
-					this.getClassification().clear(CLEAR);
-				}
-			}
+			this.mainPanel.groundTruthImage = new MultifileImage2D(new MultifileSource(groundTruthPath), SVS2Multifile.newMetadata(
+					imageWidth, imageHeight, 512, "jpg", image.getMetadata().getOrDefault("micronsPerPixel", "0.25").toString()));
+			
+			
+//			this.getGroundTruth().setFormat(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
+//			this.getClassification().setFormat(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
+//			
+//			{
+//				this.getGroundTruth().getGraphics().setComposite(AlphaComposite.Src);
+//				
+//				final String groundTruthPath = this.getGroundTruthPath();
+//				
+//				if (new File(groundTruthPath).isFile()) {
+//					this.getGroundTruth().getGraphics().drawImage(awtRead(groundTruthPath), 0, 0, null);
+//				} else {
+//					this.getGroundTruth().clear(CLEAR);
+//				}
+//			}
+//			{
+//				this.getClassification().getGraphics().setComposite(AlphaComposite.Src);
+//				
+//				final String classificationPath = this.getClassificationPath();
+//				
+//				if (new File(classificationPath).isFile()) {
+//					this.getClassification().getGraphics().drawImage(awtRead(classificationPath), 0, 0, null);
+//				} else {
+//					this.getClassification().clear(CLEAR);
+//				}
+//			}
 		}
 		
 		public final Context setImage(final File imageFile) {
