@@ -108,7 +108,7 @@ public final class NearestNeighborClassifier implements Classifier {
 	private static final long serialVersionUID = 8724283262153100459L;
 	
 	public static final NearestNeighborClassifier objectFromXML(final Element element, final Map<Integer, Object> objects) {
-		final Measure measure = XMLSerializable.objectFromXML((Element) XMLTools.getNode(element, "measure").getFirstChild(), objects);
+		final Measure measure = XMLSerializable.objectFromXML(XMLSerializable.getFirstElement(XMLTools.getNode(element, "measure")), objects);
 		
 		return new NearestNeighborClassifier(measure).fromXML(element, objects);
 	}
