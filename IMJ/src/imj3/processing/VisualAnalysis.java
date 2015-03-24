@@ -15,7 +15,11 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
+
+import de.schlichtherle.truezip.fs.FsEntryNotFoundException;
+
 import imj2.tools.MultiThreadTools;
+
 import imj3.core.Image2D;
 import imj3.processing.Pipeline.Algorithm;
 import imj3.processing.Pipeline.ClassDescription;
@@ -34,8 +38,6 @@ import imj3.tools.CommonSwingTools.Instantiator;
 import imj3.tools.CommonSwingTools.HighlightComposite;
 import imj3.tools.CommonSwingTools.UserObject;
 import imj3.tools.CommonTools;
-import imj3.tools.Image2DComponent.Layer;
-import imj3.tools.Image2DComponent.Painter;
 
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
@@ -106,16 +108,14 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-
-import de.schlichtherle.truezip.fs.FsEntryNotFoundException;
 import net.sourceforge.aprog.swing.MouseHandler;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
+
+import org.w3c.dom.Document;
 
 /**
  * @author codistmonk (creation 2015-02-13)
@@ -358,7 +358,6 @@ public final class VisualAnalysis {
 					final Image2DComponent imageComponent = MainPanel.this.getImageComponent();
 					
 					if (imageComponent != null) {
-						imageComponent.getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
 						imageComponent.repaint();
 					}
 				}
@@ -525,7 +524,6 @@ public final class VisualAnalysis {
 								MainPanel.this.getClassificationSummaryView().setText(format(Locale.ENGLISH,
 										"seconds=%.3f, F1=%.3f", classificationSeconds, f1));
 								
-								MainPanel.this.getImageComponent().getLayers().get(2).getPainters().get(0).getUpdateNeeded().set(true);
 								MainPanel.this.getImageComponent().repaint();
 								
 								Tools.debugPrint();
@@ -551,18 +549,10 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void actionPerformed(final ActionEvent event) {
-					final Layer imageLayer = MainPanel.this.getImageComponent().getLayers().get(0);
-					final Painter imagePainter = imageLayer.getPainters().get(0);
-					final boolean imageVisible = MainPanel.this.getImageVisibilitySelector().isSelected();
+					final Image2DComponent imageComponent = MainPanel.this.getImageComponent();
 					
-					if (!imageVisible) {
-						imageLayer.getCanvas().clear(Color.GRAY);
-					}
-					
-					imagePainter.getActive().set(imageVisible);
-					imagePainter.getUpdateNeeded().set(true);
-					
-					MainPanel.this.getImageComponent().repaint();
+					imageComponent.setImageEnabled(!imageComponent.isImageEnabled());
+					imageComponent.repaint();
 				}
 				
 			});
@@ -571,13 +561,6 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void actionPerformed(final ActionEvent event) {
-					final Layer groundTruthLayer = MainPanel.this.getImageComponent().getLayers().get(1);
-					final Painter groundTruthPainter = groundTruthLayer.getPainters().get(0);
-					final boolean groundTruthVisible = MainPanel.this.getGroundTruthVisibilitySelector().isSelected();
-					
-					groundTruthPainter.getActive().set(groundTruthVisible);
-					groundTruthPainter.getUpdateNeeded().set(true);
-					
 					MainPanel.this.getImageComponent().repaint();
 				}
 				
@@ -587,13 +570,6 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void actionPerformed(final ActionEvent event) {
-					final Layer classificationLayer = MainPanel.this.getImageComponent().getLayers().get(2);
-					final Painter classificationPainter = classificationLayer.getPainters().get(0);
-					final boolean classificationVisible = MainPanel.this.getClassificationVisibilitySelector().isSelected();
-					
-					classificationPainter.getActive().set(classificationVisible);
-					classificationPainter.getUpdateNeeded().set(true);
-					
 					MainPanel.this.getImageComponent().repaint();
 				}
 				
@@ -714,94 +690,7 @@ public final class VisualAnalysis {
 		}
 		
 		final void setImage(final String path) {
-//			this.imageComponent = new ImageComponent(awtRead(path));
 			this.imageComponent = new Image2DComponent(Image2DComponent.read(path, 0));
-			
-			this.getImageComponent().addLayer().getPainters().add(new Painter.Abstract() {
-				
-				{
-					this.getActive().set(MainPanel.this.getGroundTruthVisibilitySelector().isSelected());
-				}
-				
-				@Override
-				public final void paint(final Canvas canvas) {
-					final Graphics2D graphics = canvas.getGraphics();
-					final Composite saved = graphics.getComposite();
-					
-					graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3F));
-					graphics.drawImage(MainPanel.this.getContext().getGroundTruth().getImage(), 0, 0, null);
-					graphics.setComposite(saved);
-				}
-				
-				private static final long serialVersionUID = 4700895082820237288L;
-				
-			});
-			
-			this.getImageComponent().addLayer().getPainters().add(new Painter.Abstract() {
-				
-				{
-					this.getActive().set(MainPanel.this.getClassificationVisibilitySelector().isSelected());
-				}
-				
-				@Override
-				public final void paint(final Canvas canvas) {
-					final Graphics2D graphics = canvas.getGraphics();
-					final Composite saved = graphics.getComposite();
-					
-					graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3F));
-					graphics.drawImage(MainPanel.this.getContext().getClassification().getImage(), 0, 0, null);
-					graphics.setComposite(saved);
-				}
-				
-				private static final long serialVersionUID = 7941391067177261093L;
-				
-			});
-			
-			this.getImageComponent().addLayer().getPainters().add(new Painter.Abstract() {
-				
-				@Override
-				public final void paint(final Canvas canvas) {
-//					final Point m = MainPanel.this.getMouse();
-//					final Graphics2D g = canvas.getGraphics();
-//					final Composite saved = g.getComposite();
-//					
-//					g.setComposite(HighlightComposite.INSTANCE);
-//					
-//					if (0 < m.x && MainPanel.this.getBrushColor() != null) {
-//						final int s = MainPanel.this.getBrushSize();
-//						
-//						g.drawOval(m.x - s / 2, m.y - s / 2, s, s);
-//					}
-//					
-//					final Rectangle trainingBounds = MainPanel.this.getTrainingBounds();
-//					
-//					if (trainingBounds != null) {
-//						g.draw(trainingBounds);
-//						
-//						final int size = 12;
-//						final int x = trainingBounds.x;
-//						final int y = trainingBounds.y;
-//						final int w = trainingBounds.width;
-//						final int halfW = w / 2;
-//						final int h = trainingBounds.height;
-//						final int halfH = h / 2;
-//						
-//						fillDisk(g, x, y, size);
-//						fillDisk(g, x + halfW, y, size);
-//						fillDisk(g, x + w, y, size);
-//						fillDisk(g, x, y + halfH, size);
-//						fillDisk(g, x + w, y + halfH, size);
-//						fillDisk(g, x, y + h, size);
-//						fillDisk(g, x + halfW, y + h, size);
-//						fillDisk(g, x + w, y + h, size);
-//					}
-//					
-//					g.setComposite(saved);
-				}
-				
-				private static final long serialVersionUID = -476876650788388190L;
-				
-			});
 			
 			this.getImageComponent().setOverlay(new Overlay() {
 				
@@ -884,6 +773,9 @@ public final class VisualAnalysis {
 							g.drawOval(m.x - s / 2, m.y - s / 2, s, s);
 							g.setStroke(DASH1);
 							g.setColor(Color.WHITE);
+						} else {
+							g.setStroke(new BasicStroke());
+							g.setComposite(HighlightComposite.INSTANCE);
 						}
 						
 						g.drawOval(m.x - s / 2, m.y - s / 2, s, s);
@@ -915,7 +807,6 @@ public final class VisualAnalysis {
 					if (this.transform != null && event.getClickCount() == 2) {
 						MainPanel.this.getTrainingBounds().setBounds(
 								MainPanel.this.getImageComponent().getVisibleRect());
-						MainPanel.this.getImageComponent().getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
 						MainPanel.this.getImageComponent().repaint();
 					}
 				}
@@ -928,7 +819,6 @@ public final class VisualAnalysis {
 				@Override
 				public final void mouseMoved(final MouseEvent event) {
 					MainPanel.this.getMouse().setLocation(event.getX(), event.getY());
-					MainPanel.this.getImageComponent().getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
 					MainPanel.this.getImageComponent().repaint();
 				}
 				
@@ -936,7 +826,6 @@ public final class VisualAnalysis {
 				public final void mouseExited(final MouseEvent event) {
 					if (!this.dragging) {
 						MainPanel.this.getMouse().x = -1;
-						MainPanel.this.getImageComponent().getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
 						MainPanel.this.getImageComponent().repaint();
 						
 						// XXX this mysteriously fixes a mysterious GUI defect on Linux (overlay is shifted to the left when mouse exits to the left and goes over the split pane separator)
@@ -952,7 +841,6 @@ public final class VisualAnalysis {
 						MainPanel.this.setBrushSize(MainPanel.this.getBrushSize() - 1);
 					}
 					
-					MainPanel.this.getImageComponent().getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
 					MainPanel.this.getImageComponent().repaint();
 				}
 				
@@ -969,7 +857,6 @@ public final class VisualAnalysis {
 							final Point m = MainPanel.this.getMouse();
 							final int x = event.getX();
 							final int y = event.getY();
-							final Graphics2D g = MainPanel.this.getContext().getGroundTruth().getGraphics();
 							final int rgb = brushColor.getRGB();
 							final int brushSize = MainPanel.this.getBrushSize();
 							final double r = brushSize / 2.0;
@@ -1002,17 +889,10 @@ public final class VisualAnalysis {
 							}
 							
 							MainPanel.this.getImageComponent().repaint();
-//							g.setColor(brushColor);
-//							g.setStroke(new BasicStroke(brushSize, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-//							g.setComposite(AlphaComposite.Src);
-//							g.drawLine(m.x, m.y, x, y);
-//							
-//							MainPanel.this.getImageComponent().getLayers().get(1).getPainters().get(0).getUpdateNeeded().set(true);
 						} else if (this.transform != null) {
 							this.transform.updateBounds(MainPanel.this.getTrainingBounds(),
 									event.getX(), event.getY(), image.getWidth(), image.getHeight());
 							
-							MainPanel.this.getImageComponent().getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
 							MainPanel.this.getTree().repaint();
 						}
 					}
