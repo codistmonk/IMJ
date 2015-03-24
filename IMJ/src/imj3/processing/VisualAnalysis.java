@@ -1,6 +1,5 @@
 package imj3.processing;
 
-import static imj3.tools.AwtImage2D.awtRead;
 import static imj3.tools.CommonSwingTools.limitHeight;
 import static imj3.tools.CommonSwingTools.setModel;
 import static java.lang.Math.max;
@@ -16,6 +15,7 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
+
 import imj3.core.Image2D;
 import imj3.processing.Pipeline.Algorithm;
 import imj3.processing.Pipeline.ClassDescription;
@@ -26,9 +26,6 @@ import imj3.processing.Pipeline.UnsupervisedAlgorithm;
 import imj3.tools.AwtImage2D;
 import imj3.tools.Image2DComponent;
 import imj3.tools.Image2DComponent.Overlay;
-import imj3.tools.MultifileImage2D;
-import imj3.tools.MultifileSource;
-import imj3.tools.SVS2Multifile;
 import imj3.tools.XMLSerializable;
 import imj3.tools.CommonSwingTools.Instantiator;
 import imj3.tools.CommonSwingTools.HighlightComposite;
@@ -38,7 +35,6 @@ import imj3.tools.Image2DComponent.Layer;
 import imj3.tools.Image2DComponent.Painter;
 
 import java.awt.AlphaComposite;
-import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -48,18 +44,25 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.Shape;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Area;
+import java.awt.geom.NoninvertibleTransformException;
+import java.awt.geom.Point2D;
+import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -308,7 +311,7 @@ public final class VisualAnalysis {
 		
 		private Image2DComponent imageComponent;
 		
-		private Image2D groundTruthImage;
+		private final Map<Integer, Area> groundTruthRegions;
 		
 		private Pipeline pipeline;
 		
@@ -331,6 +334,7 @@ public final class VisualAnalysis {
 			this.tree = new JTree(new DefaultTreeModel(new DefaultMutableTreeNode("No pipeline")));
 			this.mouse = new Point();
 			this.brushSize = 1;
+			this.groundTruthRegions = new HashMap<>();
 			
 			this.tree.addTreeSelectionListener(new TreeSelectionListener() {
 				
@@ -611,8 +615,10 @@ public final class VisualAnalysis {
 					final DefaultMutableTreeNode node = (DefaultMutableTreeNode) event.getPath().getLastPathComponent();
 					final UserObject userObject = cast(UserObject.class, node.getUserObject());
 					final Object object = userObject == null ? null : userObject.getUIScaffold().getObject();
+					final boolean painting = (object instanceof ClassDescription) || "classes".equals(node.getUserObject());
 					
-					getImageComponent().setWheelZoomEnabled(!(object instanceof ClassDescription));
+					getImageComponent().setWheelZoomEnabled(!painting);
+					getImageComponent().setDragEnabled(!painting);
 				}
 				
 			});
@@ -787,8 +793,23 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void update(final Graphics2D g, final Rectangle region) {
+					final Composite savedComposite = g.getComposite();
+					
+					if (MainPanel.this.getGroundTruthVisibilitySelector().isSelected()) {
+						final AffineTransform savedTransform = g.getTransform();
+						
+						g.setTransform(MainPanel.this.getImageComponent().getView());
+						g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3F));
+						
+						for (final Map.Entry<Integer, Area> entry : MainPanel.this.groundTruthRegions.entrySet()) {
+							g.setColor(new Color(entry.getKey(), true));
+							g.fill(entry.getValue());
+						}
+						
+						g.setTransform(savedTransform);
+					}
+					
 					final Point m = MainPanel.this.getMouse();
-					final Composite saved = g.getComposite();
 					
 					g.setComposite(HighlightComposite.INSTANCE);
 					
@@ -821,11 +842,13 @@ public final class VisualAnalysis {
 						g.drawOval(m.x - s / 2, m.y - s / 2, s, s);
 					}
 					
-					g.setComposite(saved);
+					g.setComposite(savedComposite);
 				}
 				
+				private static final long serialVersionUID = -1285261310324357936L;
+				
 			});
-			
+
 			new MouseHandler() {
 				
 				private boolean dragging;
@@ -893,17 +916,48 @@ public final class VisualAnalysis {
 						if (brushColor != null) {
 							this.dragging = true;
 							
-							final Graphics2D g = MainPanel.this.getContext().getGroundTruth().getGraphics();
 							final Point m = MainPanel.this.getMouse();
 							final int x = event.getX();
 							final int y = event.getY();
+							final Graphics2D g = MainPanel.this.getContext().getGroundTruth().getGraphics();
+							final int rgb = brushColor.getRGB();
+							final int brushSize = MainPanel.this.getBrushSize();
+							final double r = brushSize / 2.0;
+							final double strokeLength = m.distance(x, y);
+							final Point2D p1 = new Point2D.Double(m.x, m.y);
+							final Point2D p2 = new Point2D.Double(x, y);
 							
-							g.setColor(brushColor);
-							g.setStroke(new BasicStroke(MainPanel.this.getBrushSize(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-							g.setComposite(AlphaComposite.Src);
-							g.drawLine(m.x, m.y, x, y);
+							try {
+								final AffineTransform view = MainPanel.this.getImageComponent().getView();
+								view.inverseTransform(p1, p1);
+								view.inverseTransform(p2, p2);
+							} catch (final NoninvertibleTransformException exception) {
+								exception.printStackTrace();
+							}
 							
-							MainPanel.this.getImageComponent().getLayers().get(1).getPainters().get(0).getUpdateNeeded().set(true);
+							final Shape strokeShape = new RoundRectangle2D.Double(-r, -r, strokeLength + brushSize, brushSize, brushSize, brushSize);
+							final AffineTransform transform = new AffineTransform();
+							transform.rotate(p2.getX() - p1.getX(), p2.getY() - p1.getY(), p1.getX(), p1.getY());
+							transform.translate(p1.getX(), p1.getY());
+							final Area stroke = new Area(strokeShape).createTransformedArea(transform);
+							
+							for (final Map.Entry<Integer, Area> entry : MainPanel.this.groundTruthRegions.entrySet()) {
+								if (entry.getKey() != rgb) {
+									entry.getValue().subtract(stroke);
+								}
+							}
+							
+							if (rgb != 0) {
+								MainPanel.this.groundTruthRegions.computeIfAbsent(rgb, l -> new Area()).add(stroke);
+							}
+							
+							MainPanel.this.getImageComponent().repaint();
+//							g.setColor(brushColor);
+//							g.setStroke(new BasicStroke(brushSize, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+//							g.setComposite(AlphaComposite.Src);
+//							g.drawLine(m.x, m.y, x, y);
+//							
+//							MainPanel.this.getImageComponent().getLayers().get(1).getPainters().get(0).getUpdateNeeded().set(true);
 						} else if (this.transform != null) {
 							this.transform.updateBounds(MainPanel.this.getTrainingBounds(),
 									event.getX(), event.getY(), image.getWidth(), image.getHeight());
@@ -1336,8 +1390,8 @@ public final class VisualAnalysis {
 			
 			Tools.debugPrint();
 			
-			this.mainPanel.groundTruthImage = new MultifileImage2D(new MultifileSource(groundTruthPath), SVS2Multifile.newMetadata(
-					imageWidth, imageHeight, 512, "jpg", image.getMetadata().getOrDefault("micronsPerPixel", "0.25").toString()));
+//			this.mainPanel.groundTruthImage = new MultifileImage2D(new MultifileSource(groundTruthPath), SVS2Multifile.newMetadata(
+//					imageWidth, imageHeight, 512, "jpg", image.getMetadata().getOrDefault("micronsPerPixel", "0.25").toString()));
 			
 			
 //			this.getGroundTruth().setFormat(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
