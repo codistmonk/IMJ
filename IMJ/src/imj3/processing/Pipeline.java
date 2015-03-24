@@ -124,8 +124,8 @@ public final class Pipeline implements XMLSerializable {
 			this.getClassDescriptions().add(XMLSerializable.objectFromXML((Element) node, objects));
 		}
 		
-		this.trainingResult = XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "trainingResult").getFirstChild(), objects);
-		this.classificationResult = XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "classificationResult").getFirstChild(), objects);
+		this.trainingResult = XMLSerializable.objectFromXML(XMLSerializable.getFirstElement(XMLTools.getNode(xml, "trainingResult")), objects);
+		this.classificationResult = XMLSerializable.objectFromXML(XMLSerializable.getFirstElement(XMLTools.getNode(xml, "classificationResult")), objects);
 		
 		return this;
 	}
@@ -563,9 +563,9 @@ public final class Pipeline implements XMLSerializable {
 			XMLSerializable.super.fromXML(xml, objects);
 			
 			this.setClusteringName(xml.getAttribute("clusteringName"));
-			this.setClassifier(XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "classifier").getFirstChild(), objects));
-			this.patching = XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "patching").getFirstChild(), objects);
-			this.patchingRanges = XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "patchingRanges").getFirstChild(), objects);
+			this.setClassifier(XMLSerializable.objectFromXML(XMLSerializable.getFirstElement(XMLTools.getNode(xml, "classifier")), objects));
+			this.patching = XMLSerializable.objectFromXML(XMLSerializable.getFirstElement(XMLTools.getNode(xml, "patching")), objects);
+			this.patchingRanges = XMLSerializable.objectFromXML(XMLSerializable.getFirstElement(XMLTools.getNode(xml, "patchingRanges")), objects);
 			this.setUsingXY(xml.getAttribute("usingXY"));
 			this.setUsingXYRange(xml.getAttribute("usingXYRange"));
 			
@@ -797,8 +797,8 @@ public final class Pipeline implements XMLSerializable {
 		@Override
 		protected final SupervisedAlgorithm subclassFromXML(final Element xml,
 				final Map<Integer, Object> objects) {
-			this.prototypeCounts = XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "prototypeCounts").getFirstChild(), objects);
-			this.prototypeCountRanges = XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "prototypeCountRanges").getFirstChild(), objects);
+			this.prototypeCounts = XMLSerializable.objectFromXML(XMLSerializable.getFirstElement(XMLTools.getNode(xml, "prototypeCounts")), objects);
+			this.prototypeCountRanges = XMLSerializable.objectFromXML(XMLSerializable.getFirstElement(XMLTools.getNode(xml, "prototypeCountRanges")), objects);
 			
 			return this;
 		}
@@ -1387,7 +1387,7 @@ public final class Pipeline implements XMLSerializable {
 			XMLSerializable.super.fromXML(xml, objects);
 			
 			this.setMilliseconds(Long.parseLong(xml.getAttribute("milliseconds")));
-			this.confusionMatrix = XMLSerializable.objectFromXML((Element) xml.getFirstChild(), objects);
+			this.confusionMatrix = XMLSerializable.objectFromXML(XMLSerializable.getFirstElement(xml), objects);
 			
 			return this;
 		}

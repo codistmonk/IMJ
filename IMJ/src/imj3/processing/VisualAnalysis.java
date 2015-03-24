@@ -64,6 +64,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
@@ -104,6 +105,9 @@ import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 import net.sourceforge.aprog.swing.MouseHandler;
 import net.sourceforge.aprog.swing.SwingTools;
@@ -1507,11 +1511,17 @@ public final class VisualAnalysis {
 				return;
 			}
 			
-			final int imageWidth = image.getWidth();
-			final int imageHeight = image.getHeight();
 			final String groundTruthPath = this.getGroundTruthPath();
 			
-			Tools.debugPrint();
+			Tools.debugPrint(groundTruthPath);
+			
+			try (final InputStream input = new MultifileSource(groundTruthPath).getInputStream("annotations.xml")) {
+				final Document xml = XMLTools.parse(input);
+				
+				this.getMainPanel().groundTruthRegions.putAll(XMLSerializable.objectFromXML(xml.getDocumentElement(), new HashMap<>()));
+			} catch (final IOException exception) {
+				throw new UncheckedIOException(exception);
+			}
 			
 //			this.mainPanel.groundTruthImage = new MultifileImage2D(new MultifileSource(groundTruthPath), SVS2Multifile.newMetadata(
 //					imageWidth, imageHeight, 512, "jpg", image.getMetadata().getOrDefault("micronsPerPixel", "0.25").toString()));

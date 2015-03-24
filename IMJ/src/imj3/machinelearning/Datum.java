@@ -115,7 +115,7 @@ public abstract interface Datum extends XMLSerializable {
 					valueAsString.split(",")).mapToDouble(Double::parseDouble).toArray());
 			this.setScore(Double.parseDouble(xml.getAttribute("score")));
 			
-			this.setPrototype(XMLSerializable.objectFromXML((Element) XMLTools.getNode(xml, "prototype").getFirstChild(), objects));
+			this.setPrototype(XMLSerializable.objectFromXML(XMLSerializable.getFirstElement(XMLTools.getNode(xml, "prototype")), objects));
 			
 			return this;
 		}
@@ -243,7 +243,7 @@ public abstract interface Datum extends XMLSerializable {
 			private static final long serialVersionUID = -1398649605392286153L;
 			
 			public static final <D extends Datum> Default<D> objectFromXML(final Element element, final Map<Integer, Object> objects) {
-				return new Default<>(XMLSerializable.objectFromXML((Element) element.getFirstChild(), objects));
+				return new Default<>(XMLSerializable.objectFromXML(XMLSerializable.getFirstElement(element), objects));
 			}
 			
 		}

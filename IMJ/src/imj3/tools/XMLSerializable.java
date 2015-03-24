@@ -8,6 +8,7 @@ import imj3.tools.AwtGeometryTools.PathElement;
 
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
+import java.awt.geom.Path2D;
 import java.awt.geom.PathIterator;
 import java.io.File;
 import java.io.FileInputStream;
@@ -60,6 +61,16 @@ public abstract interface XMLSerializable extends Serializable {
 	}
 	
 	public static final String ENCLOSING_INSTANCE_ID = "enclosingInstanceId";
+	
+	public static Element getFirstElement(final Node node) {
+		Node result = node.getFirstChild();
+		
+		while (!(result instanceof Element)) {
+			result = result.getNextSibling();
+		}
+		
+		return (Element) result;
+	}
 	
 	public static Element newElement(final String tagName, final Object object, final Document document, final Map<Object, Integer> ids) {
 		final Element result = document.createElement(tagName);
@@ -201,6 +212,18 @@ public abstract interface XMLSerializable extends Serializable {
 			}
 		}
 		
+		if (Area.class.getName().equals(className)) {
+			final Path2D path = new Path2D.Float();
+			
+			for (final Node child : XMLTools.getNodes(element, "*")) {
+				if (child instanceof Element) {
+					((PathElement) objectFromXML((Element) child, objects)).update(path);
+				}
+			}
+			
+			return (T) new Area(path);
+		}
+		
 		final Class<T> resultClass;
 		
 		try {
@@ -210,7 +233,7 @@ public abstract interface XMLSerializable extends Serializable {
 		}
 		
 		try {
-			final Method objectFromXML = resultClass.getDeclaredMethod("objectFromXML", Element.class, Map.class);
+			final Method objectFromXML = resultClass.getMethod("objectFromXML", Element.class, Map.class);
 			
 			return (T) objectFromXML.invoke(null, element, objects);
 		} catch (final NoSuchMethodException exception) {
@@ -290,8 +313,8 @@ public abstract interface XMLSerializable extends Serializable {
 				
 				if (map != null) {
 					for (final Node entryNode : XMLTools.getNodes(element, "entry")) {
-						final Object key = objectFromXML((Element) XMLTools.getNode(entryNode, "key").getFirstChild(), objects);
-						final Object value = objectFromXML((Element) XMLTools.getNode(entryNode, "value").getFirstChild(), objects);
+						final Object key = objectFromXML(XMLSerializable.getFirstElement(XMLTools.getNode(entryNode, "key")), objects);
+						final Object value = objectFromXML(XMLSerializable.getFirstElement(XMLTools.getNode(entryNode, "value")), objects);
 						
 						map.put(key, value);
 					}

@@ -166,7 +166,7 @@ public final class AwtGeometryTools {
 		
 		public static PathElement objectFromXML(final Element xml, final Map<Integer, Object> objects) {
 			try {
-				return (PathElement) Class.forName(xml.getTagName()).getConstructor(float[].class).newInstance(parseFloats(xml.getTextContent(), ","));
+				return (PathElement) Class.forName(xml.getTagName().replace("..", "$")).getConstructor(float[].class).newInstance(parseFloats(xml.getTextContent(), ","));
 			} catch (final Exception exception) {
 				throw unchecked(exception);
 			}
@@ -231,6 +231,10 @@ public final class AwtGeometryTools {
 		 */
 		public static final String TYPE = "closePath";
 		
+		public static final PathElement objectFromXML(final Element xml, final Map<Integer, Object> objects) {
+			return PathElement.objectFromXML(xml, objects);
+		}
+		
 	}
 	
 	/**
@@ -291,6 +295,10 @@ public final class AwtGeometryTools {
 		 */
 		public static final String TYPE = "move";
 		
+		public static final PathElement objectFromXML(final Element xml, final Map<Integer, Object> objects) {
+			return PathElement.objectFromXML(xml, objects);
+		}
+		
 	}
 	
 	/**
@@ -350,6 +358,10 @@ public final class AwtGeometryTools {
 		 * {@value}.
 		 */
 		public static final String TYPE = "line";
+		
+		public static final PathElement objectFromXML(final Element xml, final Map<Integer, Object> objects) {
+			return PathElement.objectFromXML(xml, objects);
+		}
 		
 	}
 	
@@ -416,6 +428,10 @@ public final class AwtGeometryTools {
 		 * {@value}.
 		 */
 		public static final String TYPE = "quad";
+		
+		public static final PathElement objectFromXML(final Element xml, final Map<Integer, Object> objects) {
+			return PathElement.objectFromXML(xml, objects);
+		}
 		
 	}
 	
@@ -490,6 +506,10 @@ public final class AwtGeometryTools {
 		 * {@value}.
 		 */
 		public static final String TYPE = "curve";
+		
+		public static final PathElement objectFromXML(final Element xml, final Map<Integer, Object> objects) {
+			return PathElement.objectFromXML(xml, objects);
+		}
 		
 	}
 	
