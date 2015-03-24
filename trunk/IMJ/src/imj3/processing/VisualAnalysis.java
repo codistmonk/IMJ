@@ -25,6 +25,9 @@ import imj3.processing.Pipeline.UnsupervisedAlgorithm;
 import imj3.tools.AwtImage2D;
 import imj3.tools.Image2DComponent;
 import imj3.tools.Image2DComponent.Overlay;
+import imj3.tools.MultifileImage2D;
+import imj3.tools.MultifileSource;
+import imj3.tools.SVS2Multifile;
 import imj3.tools.XMLSerializable;
 import imj3.tools.CommonSwingTools.Instantiator;
 import imj3.tools.CommonSwingTools.HighlightComposite;
@@ -824,6 +827,8 @@ public final class VisualAnalysis {
 							g.setStroke(DASH0);
 							g.setColor(Color.BLACK);
 							useDashing = true;
+						} else {
+							throw error;
 						}
 					}
 					
@@ -1328,18 +1333,7 @@ public final class VisualAnalysis {
 		}
 		
 		public final Context saveGroundTruth() {
-			if (this.getImage() != null && !this.getGroundTruthName().isEmpty()) {
-				final File outputFile = new File(this.getGroundTruthPath());
-				
-				try {
-					Tools.debugPrint("Writing", outputFile);
-					ImageIO.write(this.getGroundTruth().getImage(), "png", outputFile);
-				} catch (final IOException exception) {
-					throw new UncheckedIOException(exception);
-				}
-			}
-			
-			return this;
+			return this.saveGroundTruth(this.getGroundTruthName());
 		}
 		
 		public final Context saveClassification() {
@@ -1358,16 +1352,26 @@ public final class VisualAnalysis {
 		}
 		
 		public final Context saveGroundTruth(final String name) {
-			if (name != null && this.getImage() != null) {
-				final File outputFile = new File(this.getGroundTruthPath(name));
+			final Image2D image = this.getImage();
+			
+			if (name != null && image != null) {
+				final String groundTruthPath = this.getGroundTruthPath(name);
+				final int imageWidth = image.getWidth();
+				final int imageHeight = image.getHeight();
 				
-				try {
-					Tools.debugPrint("Writing", outputFile);
-					ImageIO.write(this.formatGroundTruth().getGroundTruth().getImage(), "png", outputFile);
-				} catch (final IOException exception) {
-					throw new UncheckedIOException(exception);
-				}
+				Tools.debugPrint("Writing", groundTruthPath);
 				
+				final Image2D groundTtruthImage = new MultifileImage2D(new MultifileSource(groundTruthPath), SVS2Multifile.newMetadata(
+						imageWidth, imageHeight, 512, "jpg", image.getMetadata().getOrDefault("micronsPerPixel", "0.25").toString()));
+//				final File outputFile = new File(this.getGroundTruthPath(name));
+//				
+//				try {
+//					Tools.debugPrint("Writing", outputFile);
+//					ImageIO.write(this.formatGroundTruth().getGroundTruth().getImage(), "png", outputFile);
+//				} catch (final IOException exception) {
+//					throw new UncheckedIOException(exception);
+//				}
+//				
 				this.setGroundTruth(name);
 			}
 			
