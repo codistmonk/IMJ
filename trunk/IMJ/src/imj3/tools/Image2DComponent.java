@@ -235,11 +235,10 @@ public final class Image2DComponent extends JComponent {
 		}
 		
 		if (this.statusHasCode != statusHashCode) {
+			this.statusHasCode = statusHashCode;
 			final HashSet<Point> newActiveTiles = new HashSet<>();
 			final Image2D image = this.getImage();
 			final double imageScale = image.getScale();
-			
-			this.statusHasCode = statusHashCode;
 			final Point2D topLeft = new Point2D.Double();
 			final Point2D topRight = new Point2D.Double(this.getWidth() - 1.0, 0.0);
 			final Point2D bottomRight = new Point2D.Double(this.getWidth() - 1.0, this.getHeight() - 1.0);

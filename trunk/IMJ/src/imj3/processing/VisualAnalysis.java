@@ -15,7 +15,6 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
-
 import imj3.core.Image2D;
 import imj3.processing.Pipeline.Algorithm;
 import imj3.processing.Pipeline.ClassDescription;
@@ -35,6 +34,7 @@ import imj3.tools.Image2DComponent.Layer;
 import imj3.tools.Image2DComponent.Painter;
 
 import java.awt.AlphaComposite;
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -747,42 +747,42 @@ public final class VisualAnalysis {
 				
 				@Override
 				public final void paint(final Canvas canvas) {
-					final Point m = MainPanel.this.getMouse();
-					final Graphics2D g = canvas.getGraphics();
-					final Composite saved = g.getComposite();
-					
-					g.setComposite(HighlightComposite.INSTANCE);
-					
-					if (0 < m.x && MainPanel.this.getBrushColor() != null) {
-						final int s = MainPanel.this.getBrushSize();
-						
-						g.drawOval(m.x - s / 2, m.y - s / 2, s, s);
-					}
-					
-					final Rectangle trainingBounds = MainPanel.this.getTrainingBounds();
-					
-					if (trainingBounds != null) {
-						g.draw(trainingBounds);
-						
-						final int size = 12;
-						final int x = trainingBounds.x;
-						final int y = trainingBounds.y;
-						final int w = trainingBounds.width;
-						final int halfW = w / 2;
-						final int h = trainingBounds.height;
-						final int halfH = h / 2;
-						
-						fillDisk(g, x, y, size);
-						fillDisk(g, x + halfW, y, size);
-						fillDisk(g, x + w, y, size);
-						fillDisk(g, x, y + halfH, size);
-						fillDisk(g, x + w, y + halfH, size);
-						fillDisk(g, x, y + h, size);
-						fillDisk(g, x + halfW, y + h, size);
-						fillDisk(g, x + w, y + h, size);
-					}
-					
-					g.setComposite(saved);
+//					final Point m = MainPanel.this.getMouse();
+//					final Graphics2D g = canvas.getGraphics();
+//					final Composite saved = g.getComposite();
+//					
+//					g.setComposite(HighlightComposite.INSTANCE);
+//					
+//					if (0 < m.x && MainPanel.this.getBrushColor() != null) {
+//						final int s = MainPanel.this.getBrushSize();
+//						
+//						g.drawOval(m.x - s / 2, m.y - s / 2, s, s);
+//					}
+//					
+//					final Rectangle trainingBounds = MainPanel.this.getTrainingBounds();
+//					
+//					if (trainingBounds != null) {
+//						g.draw(trainingBounds);
+//						
+//						final int size = 12;
+//						final int x = trainingBounds.x;
+//						final int y = trainingBounds.y;
+//						final int w = trainingBounds.width;
+//						final int halfW = w / 2;
+//						final int h = trainingBounds.height;
+//						final int halfH = h / 2;
+//						
+//						fillDisk(g, x, y, size);
+//						fillDisk(g, x + halfW, y, size);
+//						fillDisk(g, x + w, y, size);
+//						fillDisk(g, x, y + halfH, size);
+//						fillDisk(g, x + w, y + halfH, size);
+//						fillDisk(g, x, y + h, size);
+//						fillDisk(g, x + halfW, y + h, size);
+//						fillDisk(g, x + w, y + h, size);
+//					}
+//					
+//					g.setComposite(saved);
 				}
 				
 				private static final long serialVersionUID = -476876650788388190L;
@@ -810,8 +810,22 @@ public final class VisualAnalysis {
 					}
 					
 					final Point m = MainPanel.this.getMouse();
+					boolean useDashing = false;
 					
 					g.setComposite(HighlightComposite.INSTANCE);
+					
+					try {
+						g.drawOval(0, 0, 1, 1);
+						g.drawOval(0, 0, 1, 1);
+					} catch (final InternalError error) {
+						// XXX On Linux, "at sun.java2d.xr.XRSurfaceData.getRaster(XRSurfaceData.java:72)" called from "sun.java2d.pipe.GeneralCompositePipe.renderPathTile(GeneralCompositePipe.java:100)"
+						if ("not implemented yet".equals(error.getMessage())) {
+							g.setComposite(savedComposite);
+							g.setStroke(DASH0);
+							g.setColor(Color.BLACK);
+							useDashing = true;
+						}
+					}
 					
 //					final Rectangle trainingBounds = MainPanel.this.getTrainingBounds();
 //					
@@ -840,6 +854,12 @@ public final class VisualAnalysis {
 						final int s = MainPanel.this.getBrushSize();
 						
 						g.drawOval(m.x - s / 2, m.y - s / 2, s, s);
+						
+						if (useDashing) {
+							g.setStroke(DASH1);
+							g.setColor(Color.WHITE);
+							g.drawOval(m.x - s / 2, m.y - s / 2, s, s);
+						}
 					}
 					
 					g.setComposite(savedComposite);
@@ -891,6 +911,9 @@ public final class VisualAnalysis {
 						MainPanel.this.getMouse().x = -1;
 						MainPanel.this.getImageComponent().getLayers().get(3).getPainters().get(0).getUpdateNeeded().set(true);
 						MainPanel.this.getImageComponent().repaint();
+						
+						// XXX this mysteriously fixes a mysterious GUI defect on Linux (overlay is shifted to the left when mouse exits to the left and goes over the split pane separator)
+						SwingUtilities.invokeLater(MainPanel.this.getImageComponent()::repaint);
 					}
 				}
 				
@@ -1053,6 +1076,10 @@ public final class VisualAnalysis {
 		}
 		
 		private static final long serialVersionUID = 2173077945563031333L;
+		
+		public static final BasicStroke DASH0 = new BasicStroke(1F, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1F, new float[] { 2F, 2F }, 0F);
+		
+		public static final BasicStroke DASH1 = new BasicStroke(1F, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1F, new float[] { 2F, 2F }, 2F);
 		
 		public static final int IMAGE_SELECTOR_RESERVED_SLOTS = 2;
 		
