@@ -15,6 +15,7 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
+import imj2.tools.MultiThreadTools;
 import imj3.core.Image2D;
 import imj3.processing.Pipeline.Algorithm;
 import imj3.processing.Pipeline.ClassDescription;
@@ -60,15 +61,21 @@ import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.prefs.Preferences;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -395,7 +402,7 @@ public final class VisualAnalysis {
 			
 			this.groundTruthSelector.setFileListener(e -> context.refreshGroundTruthAndClassification());
 			newGroundTruthButton.addActionListener(e -> context.saveGroundTruth(JOptionPane.showInputDialog("Ground truth name:")));
-			saveGroundTruthButton.addActionListener(e -> context.saveGroundTruth());
+			saveGroundTruthButton.addActionListener(e -> context.saveGroundTruth(false));
 			
 			this.pipelineSelector.setFileListener(e -> context.setPipeline(MainPanel.this.getPipelineSelector().getSelectedFile()));
 			newPipelineButton.addActionListener(e -> context.savePipeline(save(PIPELINE, "New pipeline", MainPanel.this)));
@@ -423,7 +430,7 @@ public final class VisualAnalysis {
 						
 						@Override
 						protected final Void doInBackground() throws Exception {
-							context.saveGroundTruth();
+							context.saveGroundTruth(true);
 							context.savePipeline();
 							
 							pipeline.train(context.getGroundTruthName());
@@ -487,7 +494,7 @@ public final class VisualAnalysis {
 							
 							@Override
 							protected final Void doInBackground() throws Exception {
-								context.saveGroundTruth();
+								context.saveGroundTruth(true);
 								context.savePipeline();
 								
 								pipeline.classify(context.getImage(),
@@ -1332,8 +1339,86 @@ public final class VisualAnalysis {
 			return format(this.getGroundTruth());
 		}
 		
-		public final Context saveGroundTruth() {
-			return this.saveGroundTruth(this.getGroundTruthName());
+		public final Context saveGroundTruth(final boolean rasterize) {
+			final Image2D image = this.getImage();
+			
+			if (image != null) {
+				this.saveGroundTruth(this.getGroundTruthName());
+				
+				if (rasterize) {
+					final String groundTruthPath = this.getGroundTruthPath();
+					final Image2D groundTruth = Image2DComponent.read(groundTruthPath, 0);
+					final int optimalTileWidth = groundTruth.getOptimalTileWidth();
+					final int optimalTileHeight = groundTruth.getOptimalTileHeight();
+					final ExecutorService executor = MultiThreadTools.getExecutor();
+					int w = groundTruth.getWidth();
+					int h = groundTruth.getHeight();
+					final Collection<Future<?>> tasks = new ArrayList<>();
+					final Map<Integer, Area> regions = this.getMainPanel().groundTruthRegions;
+					final Map<Integer, Image2D> pyramid = Collections.synchronizedMap(new HashMap<>());
+					int level = 0;
+					
+					pyramid.put(level, groundTruth);
+					
+					while (0 < w && 0 < h) {
+						final int lod = level;
+						final Image2D lodImage = pyramid.computeIfAbsent(lod, l -> Image2DComponent.read(getGroundTruthPath(), l));
+						
+						for (int i = 0; i < h; i += optimalTileHeight) {
+							final int tileY = i;
+							final int tileHeight = lodImage.getTileHeight(tileY);
+							
+							for (int j = 0; j < w; j += optimalTileWidth) {
+								final int tileX = j;
+								final int tileWidth = lodImage.getTileWidth(tileX);
+								
+								tasks.add(executor.submit(new Runnable() {
+									
+									@Override
+									public final void run() {
+										final double scale = lodImage.getScale();
+										final BufferedImage tile = new BufferedImage(tileWidth, tileHeight, BufferedImage.TYPE_3BYTE_BGR);
+										final Graphics2D graphics = tile.createGraphics();
+										
+										graphics.setComposite(AlphaComposite.Src);
+										graphics.translate(-tileX, -tileY);
+										graphics.scale(scale, scale);
+										
+										for (final Map.Entry<Integer, Area> region : regions.entrySet()) {
+											graphics.setColor(new Color(region.getKey(), true));
+											graphics.fill(region.getValue());
+										}
+										
+										graphics.dispose();
+										
+										final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+										
+										try {
+											ImageIO.write(tile, "png", buffer);
+										} catch (final IOException exception) {
+											throw new UncheckedIOException(exception);
+										}
+										
+										synchronized (pyramid) {
+											lodImage.setTile(tileX, tileY, new AwtImage2D(lodImage.getTileKey(tileX, tileY), tile));
+										}
+										Tools.debugPrint(tileX, tileY);
+									}
+									
+								}));
+							}
+						}
+						
+						w /= 2;
+						h /= 2;
+						++level;
+					}
+					
+					MultiThreadTools.wait(tasks);
+				}
+			}
+			
+			return this;
 		}
 		
 		public final Context saveClassification() {
@@ -1361,8 +1446,15 @@ public final class VisualAnalysis {
 				
 				Tools.debugPrint("Writing", groundTruthPath);
 				
-				final Image2D groundTtruthImage = new MultifileImage2D(new MultifileSource(groundTruthPath), SVS2Multifile.newMetadata(
-						imageWidth, imageHeight, 512, "jpg", image.getMetadata().getOrDefault("micronsPerPixel", "0.25").toString()));
+				final MultifileImage2D groundTtruthImage = new MultifileImage2D(new MultifileSource(groundTruthPath), SVS2Multifile.newMetadata(
+						imageWidth, imageHeight, 512, "png", image.getMetadata().getOrDefault("micronsPerPixel", "0.25").toString()));
+				
+				try (final OutputStream output = groundTtruthImage.getSource().getOutputStream("annotations.xml")) {
+					XMLTools.write(XMLSerializable.objectToXML(this.getMainPanel().groundTruthRegions), output, 1);
+				} catch (final IOException exception) {
+					throw new UncheckedIOException(exception);
+				}
+				
 //				final File outputFile = new File(this.getGroundTruthPath(name));
 //				
 //				try {

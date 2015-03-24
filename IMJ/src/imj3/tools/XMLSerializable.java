@@ -4,7 +4,11 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+import imj3.tools.AwtGeometryTools.PathElement;
 
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Area;
+import java.awt.geom.PathIterator;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -56,6 +60,18 @@ public abstract interface XMLSerializable extends Serializable {
 	}
 	
 	public static final String ENCLOSING_INSTANCE_ID = "enclosingInstanceId";
+	
+	public static Element newElement(final String tagName, final Object object, final Document document, final Map<Object, Integer> ids) {
+		final Element result = document.createElement(tagName);
+		
+		result.appendChild(XMLSerializable.objectToXML(object, document, ids));
+		
+		return result;
+	}
+	
+	public static Element objectToXML(final Object object) {
+		return objectToXML(object, XMLTools.newDocument(), new HashMap<>());
+	}
 	
 	public static Element objectToXML(final Object object, final Document document, final Map<Object, Integer> ids) {
 		Integer id = ids.get(object);
@@ -121,6 +137,20 @@ public abstract interface XMLSerializable extends Serializable {
 			
 			if (number != null) {
 				result.setTextContent(number.toString());
+			}
+		}
+		
+		{
+			final Area area = cast(Area.class, object);
+			
+			if (area != null) {
+				final PathIterator pathIterator = area.getPathIterator(new AffineTransform());
+				
+				result.setAttribute("windingRule", "" + pathIterator.getWindingRule());
+				
+				for (final PathElement pathElement : AwtGeometryTools.iterable(pathIterator)) {
+					result.appendChild(pathElement.toXML(document, ids));
+				}
 			}
 		}
 		
@@ -274,14 +304,6 @@ public abstract interface XMLSerializable extends Serializable {
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
-	}
-	
-	public static Element newElement(final String tagName, final Object object, final Document document, final Map<Object, Integer> ids) {
-		final Element result = document.createElement(tagName);
-		
-		result.appendChild(objectToXML(object, document, ids));
-		
-		return result;
 	}
 	
 }

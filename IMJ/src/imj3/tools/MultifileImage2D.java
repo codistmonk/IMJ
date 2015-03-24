@@ -1,5 +1,6 @@
 package imj3.tools;
 
+import static imj3.tools.IMJTools.cache;
 import static java.lang.Math.log;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -182,15 +183,22 @@ public final class MultifileImage2D implements Image2D {
 	
 	@Override
 	public final Image2D setTile(final int tileX, final int tileY, final Image2D tile) {
-		if (tile.getWidth() != this.getTileWidth(tileX) || tile.getHeight() != this.getTileHeight(tileY)) {
-			throw new IllegalArgumentException();
+		final int expectedTileWidth = this.getTileWidth(tileX);
+		final int tileWidth = tile.getWidth();
+		final int expectedTileHeight = this.getTileHeight(tileY);
+		final int tileHeight = tile.getHeight();
+		
+		if (expectedTileWidth != tileWidth || expectedTileHeight != tileHeight) {
+			throw new IllegalArgumentException("(" + tileWidth + "x" + tileHeight + ") != (" + expectedTileWidth + "x" + expectedTileHeight + ")");
 		}
 		
-		try (final OutputStream output = this.getSource().getOutputStream(this.getTileKey(tileX, tileY))) {
+		try (final OutputStream output = this.getSource().getOutputStream(this.getTileName(tileX, tileY))) {
 			ImageIO.write((RenderedImage) tile.toAwt(), this.getTileFormat(), output);
 		} catch (final IOException exception) {
 			throw new UncheckedIOException(exception);
 		}
+		
+		cache(this.getTileKey(tileX, tileY), () -> this.getTile(tileX, tileY), true);
 		
 		return this;
 	}
