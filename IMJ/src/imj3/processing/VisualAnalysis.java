@@ -109,6 +109,7 @@ import javax.swing.tree.TreePath;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import de.schlichtherle.truezip.fs.FsEntryNotFoundException;
 import net.sourceforge.aprog.swing.MouseHandler;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Canvas;
@@ -535,7 +536,6 @@ public final class VisualAnalysis {
 				}
 				
 			});
-//			saveClassificationButton.addActionListener(e -> context.saveClassification());
 			showClassificationResultsButton.addActionListener(new ActionListener() {
 				
 				@Override
@@ -808,6 +808,22 @@ public final class VisualAnalysis {
 				@Override
 				public final void update(final Graphics2D g, final Rectangle region) {
 					final Composite savedComposite = g.getComposite();
+					boolean useDashing = false;
+					
+					g.setComposite(HighlightComposite.INSTANCE);
+					
+					try {
+						g.drawOval(0, 0, 1, 1);
+						g.drawOval(0, 0, 1, 1);
+					} catch (final InternalError error) {
+						// XXX On Linux, "at sun.java2d.xr.XRSurfaceData.getRaster(XRSurfaceData.java:72)" called from "sun.java2d.pipe.GeneralCompositePipe.renderPathTile(GeneralCompositePipe.java:100)"
+						if ("not implemented yet".equals(error.getMessage())) {
+							g.setComposite(savedComposite);
+							useDashing = true;
+						} else {
+							throw error;
+						}
+					}
 					
 					if (MainPanel.this.getGroundTruthVisibilitySelector().isSelected()) {
 						final AffineTransform savedTransform = g.getTransform();
@@ -820,62 +836,57 @@ public final class VisualAnalysis {
 							g.fill(entry.getValue());
 						}
 						
+						final Rectangle trainingBounds = MainPanel.this.getTrainingBounds();
+						
+						if (trainingBounds != null) {
+							if (useDashing) {
+								g.setStroke(DASH0);
+								g.setColor(Color.BLACK);
+								g.draw(trainingBounds);
+								g.setStroke(DASH1);
+								g.setColor(Color.WHITE);
+							} else {
+								g.setStroke(new BasicStroke());
+								g.setComposite(HighlightComposite.INSTANCE);
+							}
+							
+							g.draw(trainingBounds);
+							
+//							final int size = 12;
+//							final int x = trainingBounds.x;
+//							final int y = trainingBounds.y;
+//							final int w = trainingBounds.width;
+//							final int halfW = w / 2;
+//							final int h = trainingBounds.height;
+//							final int halfH = h / 2;
+//							
+//							fillDisk(g, x, y, size);
+//							fillDisk(g, x + halfW, y, size);
+//							fillDisk(g, x + w, y, size);
+//							fillDisk(g, x, y + halfH, size);
+//							fillDisk(g, x + w, y + halfH, size);
+//							fillDisk(g, x, y + h, size);
+//							fillDisk(g, x + halfW, y + h, size);
+//							fillDisk(g, x + w, y + h, size);
+						}
+						
 						g.setTransform(savedTransform);
 					}
 					
 					final Point m = MainPanel.this.getMouse();
-					boolean useDashing = false;
-					
-					g.setComposite(HighlightComposite.INSTANCE);
-					
-					try {
-						g.drawOval(0, 0, 1, 1);
-						g.drawOval(0, 0, 1, 1);
-					} catch (final InternalError error) {
-						// XXX On Linux, "at sun.java2d.xr.XRSurfaceData.getRaster(XRSurfaceData.java:72)" called from "sun.java2d.pipe.GeneralCompositePipe.renderPathTile(GeneralCompositePipe.java:100)"
-						if ("not implemented yet".equals(error.getMessage())) {
-							g.setComposite(savedComposite);
-							g.setStroke(DASH0);
-							g.setColor(Color.BLACK);
-							useDashing = true;
-						} else {
-							throw error;
-						}
-					}
-					
-//					final Rectangle trainingBounds = MainPanel.this.getTrainingBounds();
-//					
-//					if (trainingBounds != null) {
-//						g.draw(trainingBounds);
-//						
-//						final int size = 12;
-//						final int x = trainingBounds.x;
-//						final int y = trainingBounds.y;
-//						final int w = trainingBounds.width;
-//						final int halfW = w / 2;
-//						final int h = trainingBounds.height;
-//						final int halfH = h / 2;
-//						
-//						fillDisk(g, x, y, size);
-//						fillDisk(g, x + halfW, y, size);
-//						fillDisk(g, x + w, y, size);
-//						fillDisk(g, x, y + halfH, size);
-//						fillDisk(g, x + w, y + halfH, size);
-//						fillDisk(g, x, y + h, size);
-//						fillDisk(g, x + halfW, y + h, size);
-//						fillDisk(g, x + w, y + h, size);
-//					}
 					
 					if (0 < m.x && MainPanel.this.getBrushColor() != null) {
 						final int s = MainPanel.this.getBrushSize();
 						
-						g.drawOval(m.x - s / 2, m.y - s / 2, s, s);
-						
 						if (useDashing) {
+							g.setStroke(DASH0);
+							g.setColor(Color.BLACK);
+							g.drawOval(m.x - s / 2, m.y - s / 2, s, s);
 							g.setStroke(DASH1);
 							g.setColor(Color.WHITE);
-							g.drawOval(m.x - s / 2, m.y - s / 2, s, s);
 						}
+						
+						g.drawOval(m.x - s / 2, m.y - s / 2, s, s);
 					}
 					
 					g.setComposite(savedComposite);
@@ -1519,39 +1530,15 @@ public final class VisualAnalysis {
 				final Document xml = XMLTools.parse(input);
 				
 				this.getMainPanel().groundTruthRegions.putAll(XMLSerializable.objectFromXML(xml.getDocumentElement(), new HashMap<>()));
+			} catch (final UncheckedIOException exception) {
+				if (!(exception.getCause() instanceof FsEntryNotFoundException)) {
+					throw exception;
+				}
 			} catch (final IOException exception) {
 				throw new UncheckedIOException(exception);
 			}
 			
-//			this.mainPanel.groundTruthImage = new MultifileImage2D(new MultifileSource(groundTruthPath), SVS2Multifile.newMetadata(
-//					imageWidth, imageHeight, 512, "jpg", image.getMetadata().getOrDefault("micronsPerPixel", "0.25").toString()));
-			
-			
-//			this.getGroundTruth().setFormat(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
-//			this.getClassification().setFormat(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
-//			
-//			{
-//				this.getGroundTruth().getGraphics().setComposite(AlphaComposite.Src);
-//				
-//				final String groundTruthPath = this.getGroundTruthPath();
-//				
-//				if (new File(groundTruthPath).isFile()) {
-//					this.getGroundTruth().getGraphics().drawImage(awtRead(groundTruthPath), 0, 0, null);
-//				} else {
-//					this.getGroundTruth().clear(CLEAR);
-//				}
-//			}
-//			{
-//				this.getClassification().getGraphics().setComposite(AlphaComposite.Src);
-//				
-//				final String classificationPath = this.getClassificationPath();
-//				
-//				if (new File(classificationPath).isFile()) {
-//					this.getClassification().getGraphics().drawImage(awtRead(classificationPath), 0, 0, null);
-//				} else {
-//					this.getClassification().clear(CLEAR);
-//				}
-//			}
+			// TODO load classification
 		}
 		
 		public final Context setImage(final File imageFile) {
