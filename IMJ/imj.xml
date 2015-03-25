@@ -41,11 +41,10 @@
             </manifest>
             <fileset file="imj_license.txt"/>
             <fileset file="readme.txt"/>
-            <fileset dir="bin" includes="imj3/**" excludes="**draft**/">
+            <fileset dir="bin" includes="imj3/core/**,imj3/tools/**">
             	<present present="srconly" targetdir="test"/>
         	</fileset>
-            <fileset dir="src" includes="**imj3/**" excludes="**draft**/"/>
-            <fileset dir="." includes="lib/tango/**"/>
+            <fileset dir="src" includes="imj3/core/**,imj3/tools/**"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/aprog.jar"/>
         </jar>
     	<delete file="src/imj/version"/>
