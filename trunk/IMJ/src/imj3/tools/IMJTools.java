@@ -2,12 +2,12 @@ package imj3.tools;
 
 import static imj3.tools.CommonTools.classForName;
 import static imj3.tools.CommonTools.fieldValue;
-
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.invoke;
-import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import imj3.core.Image2D;
+
+import java.util.Locale;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
@@ -21,20 +21,22 @@ public final class IMJTools {
 		throw new IllegalInstantiationException();
 	}
 	
-	public static final Image2D read(final String path, final int lod) {
-		if (path.endsWith(".zip")) {
-			return new MultifileImage2D(new MultifileSource(path), lod);
+	public static Image2D read(final String path, int lod) {
+		Image2D result = null;
+		
+		if (path.toLowerCase(Locale.ENGLISH).endsWith(".zip")) {
+			result = new MultifileImage2D(new MultifileSource(path), lod);
+		} else {
+			try {
+				result = new AwtImage2D(path);
+			} catch (final Exception exception) {
+				IMJTools.toneDownBioFormatsLogger();
+				
+				result = new BioFormatsImage2D(path);
+			}
 		}
 		
-		try {
-			return new AwtImage2D(path);
-		} catch (final Exception exception) {
-			Tools.debugError(path);
-			
-			// TODO try Bio-Formats
-			
-			throw unchecked(exception);
-		}
+		return result;
 	}
 	
 	public static final void toneDownBioFormatsLogger() {
