@@ -5,6 +5,7 @@ import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+
 import imj3.core.Channels;
 import imj3.core.Image2D;
 
@@ -39,9 +40,24 @@ public final class BioFormatsImage2D implements Image2D {
 	
 	private final double[] scales;
 	
+	private final Image2D[] scaledImages;
+	
 	private final int width0;
 	
 	private final int height0;
+	
+	private BioFormatsImage2D(final String id, final Map<String, Object> metadata, final int width0, final int height0, final double[] scales, final Image2D[] scaledImages, final int series) {
+		this.id = id;
+		this.metadata = metadata;
+		this.reader = newImageReader(id);
+		this.reader.setSeries(series);
+		this.channels = predefinedChannelsFor(this.reader);
+		this.tileHolder = new TileHolder();
+		this.width0 = width0;
+		this.height0 = height0;
+		this.scales = scales;
+		this.scaledImages = scaledImages;
+	}
 	
 	public BioFormatsImage2D(final String id) {
 		this.metadata = new HashMap<>();
@@ -74,6 +90,14 @@ public final class BioFormatsImage2D implements Image2D {
 			}
 			
 			this.scales = scales.stream().mapToDouble(Double::doubleValue).toArray();
+			final int n = this.scales.length;
+			this.scaledImages = new Image2D[n];
+			this.scaledImages[0] = this;
+			
+			for (int i = 1; i < n; ++i) {
+				this.scaledImages[i] = new BioFormatsImage2D(
+						id, this.metadata, this.width0, this.height0, this.scales, this.scaledImages, i);
+			}
 			
 			this.getReader().setSeries(0);
 		}
@@ -101,23 +125,24 @@ public final class BioFormatsImage2D implements Image2D {
 	public final Image2D getScaledImage(final double scale) {
 		final int n = this.scales.length - 1;
 		final int i = Arrays.binarySearch(this.scales, scale);
+		final int series;
 		
 		if (0 <= i) {
-			this.getReader().setSeries(n - i);
+			series = n - i;
 		} else {
 			final int right = min(n, -(i + 1));
 			final int left = max(0, right - 1);
 			
 			if (abs(scale - this.scales[left]) <= abs(scale - this.scales[right])) {
-				this.getReader().setSeries(n - left);
+				series = n - left;
 			} else {
-				this.getReader().setSeries(n - right);
+				series = n - right;
 			}
 		}
 		
-		return this;
+		return this.scaledImages[series];
 	}
-
+	
 	@Override
 	public final Map<String, Object> getMetadata() {
 		return this.metadata;
