@@ -15,9 +15,7 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
-
 import de.schlichtherle.truezip.fs.FsEntryNotFoundException;
-
 import imj3.core.Image2D;
 import imj3.processing.Pipeline.Algorithm;
 import imj3.processing.Pipeline.ClassDescription;
@@ -26,6 +24,7 @@ import imj3.processing.Pipeline.SupervisedAlgorithm;
 import imj3.processing.Pipeline.TrainingField;
 import imj3.processing.Pipeline.UnsupervisedAlgorithm;
 import imj3.tools.AwtImage2D;
+import imj3.tools.IMJTools;
 import imj3.tools.Image2DComponent;
 import imj3.tools.Image2DComponent.Overlay;
 import imj3.tools.MultiThreadTools;
@@ -689,7 +688,7 @@ public final class VisualAnalysis {
 		}
 		
 		final void setImage(final String path) {
-			this.imageComponent = new Image2DComponent(Image2DComponent.read(path, 0));
+			this.imageComponent = new Image2DComponent(IMJTools.read(path, 0));
 			
 			this.getImageComponent().setOverlay(new Overlay() {
 				
@@ -1241,7 +1240,7 @@ public final class VisualAnalysis {
 				
 				if (rasterize) {
 					final String groundTruthPath = this.getGroundTruthPath();
-					final Image2D groundTruth = Image2DComponent.read(groundTruthPath, 0);
+					final Image2D groundTruth = IMJTools.read(groundTruthPath, 0);
 					final int optimalTileWidth = groundTruth.getOptimalTileWidth();
 					final int optimalTileHeight = groundTruth.getOptimalTileHeight();
 					final ExecutorService executor = MultiThreadTools.getExecutor();
@@ -1256,7 +1255,7 @@ public final class VisualAnalysis {
 					
 					while (0 < w && 0 < h) {
 						final int lod = level;
-						final Image2D lodImage = pyramid.computeIfAbsent(lod, l -> Image2DComponent.read(getGroundTruthPath(), l));
+						final Image2D lodImage = pyramid.computeIfAbsent(lod, l -> IMJTools.read(getGroundTruthPath(), l));
 						
 						for (int i = 0; i < h; i += optimalTileHeight) {
 							final int tileY = i;

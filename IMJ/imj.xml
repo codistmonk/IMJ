@@ -33,6 +33,20 @@
             	<present present="srconly" targetdir="test"/>
         	</fileset>
             <fileset dir="src"/>
+            <fileset dir="." includes="lib/tango/**"/>
+        </jar>
+        <jar destfile="imj3-aprog.jar" filesetmanifest="mergewithoutmain">
+            <manifest>
+                <attribute name="Class-Path" value="."/>
+            </manifest>
+            <fileset file="imj_license.txt"/>
+            <fileset file="readme.txt"/>
+            <fileset dir="bin" includes="imj3/**" excludes="**draft**/">
+            	<present present="srconly" targetdir="test"/>
+        	</fileset>
+            <fileset dir="src" includes="**imj3/**" excludes="**draft**/"/>
+            <fileset dir="." includes="lib/tango/**"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/aprog.jar"/>
         </jar>
     	<delete file="src/imj/version"/>
     </target>

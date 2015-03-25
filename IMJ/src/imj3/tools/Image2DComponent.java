@@ -4,8 +4,6 @@ import static imj3.core.IMJCoreTools.quantize;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
-import imj2.tools.MultiThreadTools;
-
 import imj3.core.Image2D;
 
 import java.awt.Color;
@@ -24,7 +22,7 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Locale;
+
 import javax.swing.JComponent;
 
 import net.sourceforge.aprog.swing.MouseHandler;
@@ -330,25 +328,7 @@ public final class Image2DComponent extends JComponent {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String path = arguments.get("file", "");
 		
-		SwingTools.show(new Image2DComponent(read(path, 0)), path, false);
-	}
-	
-	public static Image2D read(final String path, int lod) {
-		Image2D result = null;
-		
-		if (path.toLowerCase(Locale.ENGLISH).endsWith(".zip")) {
-			result = new MultifileImage2D(new MultifileSource(path), lod);
-		} else {
-			try {
-				result = new AwtImage2D(path);
-			} catch (final Exception exception) {
-				IMJTools.toneDownBioFormatsLogger();
-				
-				result = new BioFormatsImage2D(path);
-			}
-		}
-		
-		return result;
+		SwingTools.show(new Image2DComponent(IMJTools.read(path, 0)), path, false);
 	}
 	
 	/**
