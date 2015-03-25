@@ -215,7 +215,7 @@ public final class Image2DComponent extends JComponent {
 		
 		if (!this.isImageEnabled()) {
 			synchronized (canvasGraphics) {
-				canvasGraphics.setTransform(new AffineTransform());
+				canvasGraphics.setTransform(IDENTITY);
 				canvasGraphics.fillRect(0, 0, this.getWidth(), this.getHeight());
 				canvasGraphics.setTransform(this.view);
 			}
@@ -286,21 +286,62 @@ public final class Image2DComponent extends JComponent {
 		return this.activeTiles;
 	}
 	
+	static final AffineTransform IDENTITY = new AffineTransform();
+	
 	final void drawTile(final Image2D image, final Point tileXY,
 			final double imageScale, final Graphics2D canvasGraphics) {
 		if (!getActiveTiles().contains(tileXY)) {
 			return;
 		}
 		
+		// XXX potential synchronisation issue here
 		final BufferedImage tile = (BufferedImage) image.getTileContaining(tileXY.x, tileXY.y).toAwt();
-		
-		if (!getActiveTiles().contains(tileXY)) {
-			return;
-		}
+		final boolean clearLeft = tileXY.x == 0;
+		final boolean clearTop = tileXY.y == 0;
+		final boolean clearRight = image.getWidth() <= tileXY.x + image.getOptimalTileWidth();
+		final boolean clearBottom = image.getHeight() <= tileXY.y + image.getOptimalTileHeight();
+		final boolean clearSomething = clearLeft || clearTop || clearRight || clearBottom;
+		final Rectangle region = new Rectangle((int) (tileXY.x / imageScale), (int) (tileXY.y / imageScale),
+				(int) (tile.getWidth() / imageScale), (int) (tile.getHeight() / imageScale));
 		
 		synchronized (canvasGraphics) {
-			final Rectangle region = new Rectangle((int) (tileXY.x / imageScale), (int) (tileXY.y / imageScale),
-					(int) (tile.getWidth() / imageScale), (int) (tile.getHeight() / imageScale));
+			if (clearSomething) {
+				final AffineTransform transform = canvasGraphics.getTransform();
+				final Point topLeft = new Point();
+				final Point bottomRight = new Point(this.getWidth(), this.getHeight());
+				
+				try {
+					transform.inverseTransform(topLeft, topLeft);
+					transform.inverseTransform(bottomRight, bottomRight);
+					
+					final Rectangle canvasRegion = new Rectangle(
+							topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y);
+					
+					canvasGraphics.setColor(Color.WHITE);
+					
+					if (clearLeft) {
+						canvasGraphics.fillRect(canvasRegion.x, canvasRegion.y,
+								region.x - canvasRegion.x, canvasRegion.height);
+					}
+					
+					if (clearTop) {
+						canvasGraphics.fillRect(canvasRegion.x, canvasRegion.y,
+								canvasRegion.width, region.y - canvasRegion.y);
+					}
+					
+					if (clearRight) {
+						canvasGraphics.fillRect(region.x + region.width, canvasRegion.y,
+								canvasRegion.width, canvasRegion.height);
+					}
+					
+					if (clearBottom) {
+						canvasGraphics.fillRect(canvasRegion.x, region.y + region.height,
+								canvasRegion.width, canvasRegion.height);
+					}
+				} catch (final NoninvertibleTransformException exception) {
+					exception.printStackTrace();
+				}
+			}
 			
 			canvasGraphics.drawImage(tile, region.x, region.y, region.width, region.height, null);
 			
