@@ -1,8 +1,10 @@
 package imj3.core;
 
-import static imj3.tools.IMJTools.cache;
-import static imj3.tools.IMJTools.quantize;
+import static imj3.core.IMJCoreTools.cache;
+import static imj3.core.IMJCoreTools.quantize;
+
 import static java.lang.Math.min;
+
 import static net.sourceforge.aprog.tools.Tools.ignore;
 
 import java.io.Serializable;

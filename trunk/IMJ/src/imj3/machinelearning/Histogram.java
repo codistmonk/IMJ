@@ -2,7 +2,7 @@ package imj3.machinelearning;
 
 import static java.lang.Math.rint;
 
-import imj2.tools.BitwiseQuantizationTest.DoubleArrayComparator;
+import imj3.tools.DoubleArrayComparator;
 
 import java.io.Serializable;
 import java.util.Map;

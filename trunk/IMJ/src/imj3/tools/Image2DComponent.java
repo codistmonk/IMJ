@@ -1,6 +1,6 @@
 package imj3.tools;
 
-import static imj3.tools.IMJTools.quantize;
+import static imj3.core.IMJCoreTools.quantize;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 

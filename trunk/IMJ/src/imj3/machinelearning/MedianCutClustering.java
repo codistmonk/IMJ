@@ -3,7 +3,7 @@ package imj3.machinelearning;
 import static net.sourceforge.aprog.tools.Tools.intRange;
 import static net.sourceforge.aprog.tools.Tools.sort;
 
-import imj2.tools.VectorStatistics;
+import imj3.tools.VectorStatistics;
 
 import java.io.Serializable;
 import java.util.Arrays;

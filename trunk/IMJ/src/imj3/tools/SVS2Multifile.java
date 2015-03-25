@@ -1,13 +1,11 @@
 package imj3.tools;
 
-import static imj2.tools.IMJTools.getFieldValue;
+import static imj3.tools.CommonTools.getFieldValue;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.synchronizedList;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
-import imj2.draft.AutoCloseableImageWriter;
 
 import imj3.core.Channels;
 import imj3.tools.CommonTools.FileProcessor;

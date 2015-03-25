@@ -19,7 +19,6 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.instances;
-
 import imj2.tools.Image2DComponent.Painter;
 
 import java.awt.BorderLayout;
@@ -30,7 +29,6 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.TreeMap;
@@ -47,7 +45,6 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import jgencode.primitivelists.IntList;
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
@@ -2442,37 +2439,6 @@ public final class BitwiseQuantizationTest {
 			public abstract float[] getX10Y10Z10();
 			
 		}
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2014-04-10)
-	 */
-	public static final class DoubleArrayComparator implements Serializable, Comparator<double[]> {
-		
-		@Override
-		public final int compare(final double[] array1, final double[] array2) {
-			final int n1 = array1.length;
-			final int n2 = array2.length;
-			final int n = Math.min(n1, n2);
-			
-			for (int i = 0; i < n; ++i) {
-				final int comparison = Double.compare(array1[i], array2[i]);
-				
-				if (comparison != 0) {
-					return comparison;
-				}
-			}
-			
-			return n1 - n2;
-		}
-		
-		/**
-		 * {@value}.
-		 */
-		private static final long serialVersionUID = -88586465954519984L;
-		
-		public static final DoubleArrayComparator INSTANCE = new DoubleArrayComparator();
 		
 	}
 	
