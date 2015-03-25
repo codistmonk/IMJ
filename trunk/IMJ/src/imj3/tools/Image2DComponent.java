@@ -3,6 +3,7 @@ package imj3.tools;
 import static imj3.core.IMJCoreTools.quantize;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static net.sourceforge.aprog.tools.Tools.cast;
 
 import imj3.core.Image2D;
 
@@ -45,7 +46,7 @@ public final class Image2DComponent extends JComponent {
 	
 	private final AffineTransform view;
 	
-	private final Collection<Point> activeTiles;
+	private final Collection<TileKey> activeTiles;
 	
 	private int statusHasCode;
 	
@@ -221,7 +222,7 @@ public final class Image2DComponent extends JComponent {
 			}
 		} else if (this.statusHasCode != statusHashCode) {
 			this.statusHasCode = statusHashCode;
-			final HashSet<Point> newActiveTiles = new HashSet<>();
+			final Collection<TileKey> newActiveTiles = new HashSet<>();
 			final Image2D image = this.getImage();
 			final double imageScale = image.getScale();
 			final Point2D topLeft = new Point2D.Double();
@@ -251,16 +252,16 @@ public final class Image2DComponent extends JComponent {
 			
 			for (int tileY = firstTileY; tileY <= lastTileY; tileY += optimalTileHeight) {
 				for (int tileX = firstTileX; tileX <= lastTileX; tileX += optimalTileWidth) {
-					final Point tileXY = new Point(tileX, tileY);
+					final TileKey tileKey = new TileKey(imageScale, new Point(tileX, tileY));
 					
-					newActiveTiles.add(tileXY);
+					newActiveTiles.add(tileKey);
 					
-					if (this.getActiveTiles().add(tileXY)) {
+					if (this.getActiveTiles().add(tileKey)) {
 						MultiThreadTools.getExecutor().submit(new Runnable() {
 							
 							@Override
 							public final void run() {
-								drawTile(image, tileXY, imageScale, canvasGraphics);
+								drawTile(image, tileKey, imageScale, canvasGraphics);
 							}
 							
 						});
@@ -282,18 +283,19 @@ public final class Image2DComponent extends JComponent {
 		}
 	}
 	
-	final Collection<Point> getActiveTiles() {
+	final Collection<TileKey> getActiveTiles() {
 		return this.activeTiles;
 	}
 	
 	static final AffineTransform IDENTITY = new AffineTransform();
 	
-	final void drawTile(final Image2D image, final Point tileXY,
+	final void drawTile(final Image2D image, final TileKey tileKey,
 			final double imageScale, final Graphics2D canvasGraphics) {
-		if (!getActiveTiles().contains(tileXY)) {
+		if (!getActiveTiles().contains(tileKey)) {
 			return;
 		}
 		
+		final Point tileXY = tileKey.getTileXY();
 		// XXX potential synchronisation issue here
 		final BufferedImage tile = (BufferedImage) image.getTileContaining(tileXY.x, tileXY.y).toAwt();
 		final boolean clearLeft = tileXY.x == 0;
@@ -352,7 +354,7 @@ public final class Image2DComponent extends JComponent {
 			}
 		}
 		
-		if (getActiveTiles().remove(tileXY)) {
+		if (getActiveTiles().remove(tileKey)) {
 			repaint();
 		}
 	}
@@ -387,6 +389,44 @@ public final class Image2DComponent extends JComponent {
 	public static abstract interface Overlay extends Serializable {
 		
 		public abstract void update(Graphics2D graphics, Rectangle region);
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-03-25)
+	 */
+	static final class TileKey implements Serializable {
+		
+		private final double imageScale;
+		
+		private final Point tileXY;
+		
+		public TileKey(final double imageScale, final Point tileXY) {
+			this.imageScale = imageScale;
+			this.tileXY = tileXY;
+		}
+		
+		public final double getImageScale() {
+			return this.imageScale;
+		}
+		
+		public final Point getTileXY() {
+			return this.tileXY;
+		}
+		
+		@Override
+		public final int hashCode() {
+			return Double.hashCode(this.getImageScale()) + this.getTileXY().hashCode();
+		}
+		
+		@Override
+		public final boolean equals(final Object object) {
+			final TileKey that = cast(this.getClass(), object);
+			
+			return that != null && this.getImageScale() == that.getImageScale() && this.getTileXY().equals(that.getTileXY());
+		}
+		
+		private static final long serialVersionUID = 2790290680678157622L;
 		
 	}
 	

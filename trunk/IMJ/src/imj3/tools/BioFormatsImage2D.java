@@ -5,7 +5,6 @@ import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj3.core.Channels;
 import imj3.core.Image2D;
 
@@ -20,8 +19,6 @@ import java.util.Map;
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
-
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-03-20)
@@ -65,7 +62,7 @@ public final class BioFormatsImage2D implements Image2D {
 				this.reader.setSeries(series);
 				final double w = this.getWidth();
 				final double h = this.getHeight();
-				final double r = (double) w / h;
+				final double r = w / h;
 				final double scale = min(w / this.width0, h / this.height0);
 				
 				if (1.0E-2 < abs(ratio - r) || scales.get(0) <= scale) {
@@ -82,7 +79,12 @@ public final class BioFormatsImage2D implements Image2D {
 		}
 		
 		if (id.toLowerCase(Locale.ENGLISH).endsWith(".svs")) {
-			this.metadata.put("micronsPerPixel", Array.get(getFieldValue(((ImageReader) this.reader).getReader(), "pixelSize"), 0));
+			try {
+				this.metadata.put("micronsPerPixel", Array.get(
+						getFieldValue(((ImageReader) this.reader).getReader(), "pixelSize"), 0));
+			} catch (final Exception exception) {
+				exception.printStackTrace();
+			}
 		}
 	}
 	
@@ -152,6 +154,11 @@ public final class BioFormatsImage2D implements Image2D {
 	}
 	
 	@Override
+	public final String getTileKey(final int tileX, final int tileY) {
+		return Image2D.super.getTileKey(tileX, tileY) + "_series" + this.getReader().getSeries();
+	}
+	
+	@Override
 	public final synchronized Image2D getTile(final int tileX, final int tileY) {
 		final int tileWidth = min(this.getWidth() - tileX, this.getOptimalTileWidth());
 		final int tileHeight = min(this.getHeight() - tileY, this.getOptimalTileHeight());
@@ -170,7 +177,7 @@ public final class BioFormatsImage2D implements Image2D {
 				}
 			}
 		} catch (final Exception exception) {
-			throw Tools.unchecked(exception);
+			throw unchecked(exception);
 		}
 		
 		return result;
