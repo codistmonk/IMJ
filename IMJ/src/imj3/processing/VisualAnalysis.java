@@ -18,8 +18,6 @@ import static net.sourceforge.aprog.tools.Tools.join;
 
 import de.schlichtherle.truezip.fs.FsEntryNotFoundException;
 
-import imj2.tools.MultiThreadTools;
-
 import imj3.core.Image2D;
 import imj3.processing.Pipeline.Algorithm;
 import imj3.processing.Pipeline.ClassDescription;
@@ -30,6 +28,7 @@ import imj3.processing.Pipeline.UnsupervisedAlgorithm;
 import imj3.tools.AwtImage2D;
 import imj3.tools.Image2DComponent;
 import imj3.tools.Image2DComponent.Overlay;
+import imj3.tools.MultiThreadTools;
 import imj3.tools.MultifileImage2D;
 import imj3.tools.MultifileSource;
 import imj3.tools.SVS2Multifile;

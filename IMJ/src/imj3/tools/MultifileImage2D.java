@@ -1,6 +1,6 @@
 package imj3.tools;
 
-import static imj3.tools.IMJTools.cache;
+import static imj3.core.IMJCoreTools.cache;
 import static java.lang.Math.log;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -9,6 +9,7 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.xml.XMLTools.getNumber;
 import static net.sourceforge.aprog.xml.XMLTools.getString;
 import static net.sourceforge.aprog.xml.XMLTools.parse;
+
 import imj3.core.Channels;
 import imj3.core.Image2D;
 

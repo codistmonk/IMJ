@@ -9,8 +9,6 @@ import java.io.FileOutputStream;
 import java.util.Date;
 import javax.imageio.ImageIO;
 
-import imj2.draft.AutoCloseableImageWriter;
-
 import imj3.core.Image2D;
 
 import net.sourceforge.aprog.tools.Canvas;
