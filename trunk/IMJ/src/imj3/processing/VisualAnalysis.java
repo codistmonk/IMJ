@@ -15,9 +15,7 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
-
 import de.schlichtherle.truezip.fs.FsEntryNotFoundException;
-
 import imj3.core.Image2D;
 import imj3.processing.Pipeline.Algorithm;
 import imj3.processing.Pipeline.ClassDescription;
@@ -51,6 +49,7 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Shape;
+import java.awt.Stroke;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
@@ -649,12 +648,25 @@ public final class VisualAnalysis {
 						final Image2D image = MainPanel.this.getContext().getImage();
 						
 						if (image != null) {
+							final double imageScale = image.getScale();
+							
 							result.setImagePath(MainPanel.this.getContext().getImageFile().getPath());
-							result.getBounds().setBounds(MainPanel.this.getImageComponent().getVisibleRect());
-							result.getBounds().setBounds(
-									(int) (result.getBounds().getCenterX() - 128),
-									(int) (result.getBounds().getCenterY() - 128),
-									256, 256);
+							final Rectangle bounds = result.getBounds();
+							bounds.setBounds(MainPanel.this.getImageComponent().getVisibleRect());
+							
+							final Point2D p = new Point2D.Double(bounds.getCenterX(), bounds.getCenterY());
+							final AffineTransform view = getImageComponent().getView();
+							
+							try {
+								view.inverseTransform(p, p);
+							} catch (final NoninvertibleTransformException exception) {
+								exception.printStackTrace();
+							}
+							
+							bounds.setBounds(
+									(int) (p.getX() - 128.0 / imageScale),
+									(int) (p.getY() - 128.0 / imageScale),
+									(int) (256 / imageScale), (int) (256 / imageScale));
 						}
 						
 						return (T) result;
@@ -714,7 +726,13 @@ public final class VisualAnalysis {
 						}
 					}
 					
+					final Image2D image = MainPanel.this.getImageComponent().getImage();
+					final float dashSize = 4F;
+					
 					if (MainPanel.this.getGroundTruthVisibilitySelector().isSelected()) {
+						final float imageScale = (float) image.getScale();
+						final Stroke dash0 = newDash0(dashSize / imageScale);
+						final Stroke dash1 = newDash1(dashSize / imageScale);
 						final AffineTransform savedTransform = g.getTransform();
 						
 						g.setTransform(MainPanel.this.getImageComponent().getView());
@@ -729,10 +747,10 @@ public final class VisualAnalysis {
 						
 						if (trainingBounds != null) {
 							if (useDashing) {
-								g.setStroke(DASH0);
+								g.setStroke(dash0);
 								g.setColor(Color.BLACK);
 								g.draw(trainingBounds);
-								g.setStroke(DASH1);
+								g.setStroke(dash1);
 								g.setColor(Color.WHITE);
 							} else {
 								g.setStroke(new BasicStroke());
@@ -765,13 +783,15 @@ public final class VisualAnalysis {
 					final Point m = MainPanel.this.getMouse();
 					
 					if (0 < m.x && MainPanel.this.getBrushColor() != null) {
+						final Stroke dash0 = newDash0(dashSize);
+						final Stroke dash1 = newDash1(dashSize);
 						final int s = MainPanel.this.getBrushSize();
 						
 						if (useDashing) {
-							g.setStroke(DASH0);
+							g.setStroke(dash0);
 							g.setColor(Color.BLACK);
 							g.drawOval(m.x - s / 2, m.y - s / 2, s, s);
-							g.setStroke(DASH1);
+							g.setStroke(dash1);
 							g.setColor(Color.WHITE);
 						} else {
 							g.setStroke(new BasicStroke());
@@ -858,9 +878,10 @@ public final class VisualAnalysis {
 							final int x = event.getX();
 							final int y = event.getY();
 							final int rgb = brushColor.getRGB();
-							final int brushSize = MainPanel.this.getBrushSize();
+							final double imageScale = image.getScale();
+							final int brushSize = (int) (MainPanel.this.getBrushSize() / imageScale);
 							final double r = brushSize / 2.0;
-							final double strokeLength = m.distance(x, y);
+							final double strokeLength = m.distance(x, y) / imageScale;
 							final Point2D p1 = new Point2D.Double(m.x, m.y);
 							final Point2D p2 = new Point2D.Double(x, y);
 							
@@ -984,9 +1005,17 @@ public final class VisualAnalysis {
 		
 		private static final long serialVersionUID = 2173077945563031333L;
 		
-		public static final BasicStroke DASH0 = new BasicStroke(1F, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1F, new float[] { 2F, 2F }, 0F);
+//		public static final BasicStroke DASH0 = new BasicStroke(2F, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1F, new float[] { 2F, 2F }, 0F);
+//		
+//		public static final BasicStroke DASH1 = new BasicStroke(2F, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1F, new float[] { 2F, 2F }, 2F);
 		
-		public static final BasicStroke DASH1 = new BasicStroke(1F, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1F, new float[] { 2F, 2F }, 2F);
+		public static final BasicStroke newDash0(final float width) {
+			return new BasicStroke(width, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1F, new float[] { width, width }, 0F);
+		}
+		
+		public static final BasicStroke newDash1(final float width) {
+			return new BasicStroke(width, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1F, new float[] { width, width }, width);
+		}
 		
 		public static final int IMAGE_SELECTOR_RESERVED_SLOTS = 2;
 		
