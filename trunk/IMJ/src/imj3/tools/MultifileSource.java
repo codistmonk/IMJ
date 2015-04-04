@@ -21,6 +21,12 @@ public final class MultifileSource implements Serializable, Closeable {
 	
 	public MultifileSource(final String path) {
 		this.file = new TFile(path);
+		
+		try {
+			this.file.setWritable(true);
+		} catch (final Exception exception) {
+			exception.printStackTrace();
+		}
 	}
 	
 	public final InputStream getInputStream(final String key) {

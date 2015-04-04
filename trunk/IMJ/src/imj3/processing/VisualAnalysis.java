@@ -1408,6 +1408,7 @@ public final class VisualAnalysis {
 				
 				try (final OutputStream output = groundTtruthImage.getSource().getOutputStream("annotations.xml")) {
 					XMLTools.write(XMLSerializable.objectToXML(this.getMainPanel().groundTruthRegions), output, 1);
+					XMLTools.write(XMLSerializable.objectToXML(this.getMainPanel().groundTruthRegions), System.out, 1);
 				} catch (final IOException exception) {
 					throw new UncheckedIOException(exception);
 				}
@@ -1459,6 +1460,8 @@ public final class VisualAnalysis {
 			
 			Tools.debugPrint(groundTruthPath);
 			
+			this.getMainPanel().groundTruthRegions.clear();
+			
 			try (final InputStream input = new MultifileSource(groundTruthPath).getInputStream("annotations.xml")) {
 				final Document xml = XMLTools.parse(input);
 				
@@ -1472,6 +1475,8 @@ public final class VisualAnalysis {
 			}
 			
 			// TODO load classification
+			
+			this.getMainPanel().getImageComponent().repaint();
 		}
 		
 		public final Context setImage(final File imageFile) {
