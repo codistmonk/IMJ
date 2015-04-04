@@ -9,7 +9,6 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.last;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-
 import imj3.core.Image2D;
 import imj3.machinelearning.BufferedDataSource;
 import imj3.machinelearning.Classifier;
@@ -1129,6 +1128,11 @@ public final class Pipeline implements XMLSerializable {
 		@PropertySetter("label")
 		public final Pipeline.ClassDescription setLabel(final String labelAsString) {
 			return this.setLabel((int) Long.parseLong(labelAsString.substring(1), 16));
+		}
+		
+		@Override
+		public final String toString() {
+			return this.getName() + this.getLabelAsString();
 		}
 		
 		private static final long serialVersionUID = 4974707407567297906L;

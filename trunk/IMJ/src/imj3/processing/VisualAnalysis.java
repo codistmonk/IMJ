@@ -1408,7 +1408,6 @@ public final class VisualAnalysis {
 				
 				try (final OutputStream output = groundTtruthImage.getSource().getOutputStream("annotations.xml")) {
 					XMLTools.write(XMLSerializable.objectToXML(this.getMainPanel().groundTruthRegions), output, 1);
-					XMLTools.write(XMLSerializable.objectToXML(this.getMainPanel().groundTruthRegions), System.out, 1);
 				} catch (final IOException exception) {
 					throw new UncheckedIOException(exception);
 				}
