@@ -43,6 +43,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Composite;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -73,6 +74,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -323,6 +325,8 @@ public final class VisualAnalysis {
 		
 		private final JSplitPane mainSplitPane;
 		
+		private final StatusPanel statusPanel;
+		
 		private Image2DComponent imageComponent;
 		
 		private final Map<Integer, Area> groundTruthRegions;
@@ -393,6 +397,9 @@ public final class VisualAnalysis {
 			
 			this.mainSplitPane.setResizeWeight(0.25);
 			this.add(this.mainSplitPane, BorderLayout.CENTER);
+			
+			this.statusPanel = new StatusPanel();
+			this.add(this.statusPanel, BorderLayout.SOUTH);
 			
 			openImageButton.addActionListener(e -> {
 				final File file = open(IMAGE_PATH, "Open image", MainPanel.this);
@@ -615,6 +622,10 @@ public final class VisualAnalysis {
 			context.setMainPanel(this);
 		}
 		
+		public final StatusPanel getStatusPanel() {
+			return this.statusPanel;
+		}
+		
 		public final int getBrushSize() {
 			return this.brushSize;
 		}
@@ -701,7 +712,7 @@ public final class VisualAnalysis {
 			return this.imageComponent;
 		}
 		
-		final void setImage(final String path) {
+		public final void setImage(final String path) {
 			this.imageComponent = new Image2DComponent(IMJTools.read(path, 0));
 			
 			this.getImageComponent().setOverlay(new Overlay() {
@@ -829,17 +840,35 @@ public final class VisualAnalysis {
 								MainPanel.this.getImageComponent().getVisibleRect());
 						MainPanel.this.getImageComponent().repaint();
 					}
+					this.updateStatus(event);
 				}
 				
 				@Override
 				public final void mouseReleased(final MouseEvent event) {
 					this.dragging = false;
+					this.updateStatus(event);
 				}
 				
 				@Override
 				public final void mouseMoved(final MouseEvent event) {
 					MainPanel.this.getMouse().setLocation(event.getX(), event.getY());
 					MainPanel.this.getImageComponent().repaint();
+					this.updateStatus(event);
+				}
+				
+				private final void updateStatus(final MouseEvent event) {
+					final AffineTransform view = MainPanel.this.getImageComponent().getView();
+					
+					MainPanel.this.getStatusPanel().setMessage("scale:", String.format("%.2f", view.getScaleX()));
+					
+					try {
+						final Point p = event.getPoint();
+						view.inverseTransform(p, p);
+						MainPanel.this.getStatusPanel().setMessage("(x y):", String.format("(%d %d)", p.x, p.y));
+					} catch (final NoninvertibleTransformException exception) {
+						exception.printStackTrace();
+					}
+					
 				}
 				
 				@Override
@@ -851,6 +880,7 @@ public final class VisualAnalysis {
 						// XXX this mysteriously fixes a mysterious GUI defect on Linux (overlay is shifted to the left when mouse exits to the left and goes over the split pane separator)
 						SwingUtilities.invokeLater(MainPanel.this.getImageComponent()::repaint);
 					}
+					this.updateStatus(event);
 				}
 				
 				@Override
@@ -862,6 +892,7 @@ public final class VisualAnalysis {
 					}
 					
 					MainPanel.this.getImageComponent().repaint();
+					this.updateStatus(event);
 				}
 				
 				@Override
@@ -1379,15 +1410,6 @@ public final class VisualAnalysis {
 					throw new UncheckedIOException(exception);
 				}
 				
-//				final File outputFile = new File(this.getGroundTruthPath(name));
-//				
-//				try {
-//					Tools.debugPrint("Writing", outputFile);
-//					ImageIO.write(this.formatGroundTruth().getGroundTruth().getImage(), "png", outputFile);
-//				} catch (final IOException exception) {
-//					throw new UncheckedIOException(exception);
-//				}
-//				
 				this.setGroundTruth(name);
 			}
 			
@@ -1566,6 +1588,75 @@ public final class VisualAnalysis {
 		private static final long serialVersionUID = -2487965125442868238L;
 		
 		public static final Color CLEAR = new Color(0, true);
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-04-04)
+	 */
+	public static final class StatusPanel extends JPanel {
+		
+		private final Box permanentMessagesBox;
+		
+		private final LinkedHashMap<String, JLabel> permanentMessages;
+		
+		public StatusPanel() {
+			super(new BorderLayout());
+			this.permanentMessagesBox = Box.createHorizontalBox();
+			this.permanentMessages = new LinkedHashMap<>();
+			this.add(this.permanentMessagesBox, BorderLayout.CENTER);
+		}
+		
+		public final void addSeparator() {
+			this.permanentMessagesBox.add(Box.createHorizontalStrut(4));
+		}
+		
+		public final void setMessage(final String key, final String text) {
+			if (text == null) {
+				final JLabel label = this.permanentMessages.get(key);
+				
+				if (label != null) {
+					final Container parent = label.getParent();
+					final int index = indexOf(label, parent.getComponents());
+					
+					parent.remove(index);
+					parent.remove(index - 1);
+				}
+			} else {
+				this.permanentMessages.computeIfAbsent(key, k -> {
+					StatusPanel.this.getPermanentMessagesBox().add(new JLabel(key));
+					
+					final JLabel result = new JLabel();
+					
+					StatusPanel.this.getPermanentMessagesBox().add(result);
+					StatusPanel.this.getPermanentMessagesBox().add(Box.createHorizontalStrut(4));
+					
+					return result;
+				}).setText(text);
+			}
+		}
+		
+		public final void setMessage(final String text) {
+			this.add(new JLabel(text), BorderLayout.EAST);
+		}
+		
+		final Box getPermanentMessagesBox() {
+			return this.permanentMessagesBox;
+		}
+		
+		private static final long serialVersionUID = 7159742213422027495L;
+		
+		public static final int indexOf(final Object needle, final Object[] haystack) {
+			final int n = haystack.length;
+			
+			for (int i = 0; i < n; ++i) {
+				if (needle == haystack[i]) {
+					return i;
+				}
+			}
+			
+			return -1;
+		}
 		
 	}
 	
