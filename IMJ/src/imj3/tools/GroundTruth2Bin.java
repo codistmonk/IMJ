@@ -4,7 +4,6 @@ import static java.lang.Math.*;
 import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.swing.SwingTools.*;
 import static net.sourceforge.aprog.tools.Tools.*;
-
 import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.processing.Pipeline;
@@ -15,6 +14,8 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDropEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.image.BufferedImage;
@@ -225,14 +226,25 @@ public final class GroundTruth2Bin {
 						}
 					}
 					
-					this.label.repaint();
-					
 					return this.label;
 				}
 				
 			});
 			
 			this.table.setRowHeight(itemHeight + 2);
+			
+			this.table.setDropTarget(new DropTarget() {
+				
+				@Override
+				public final synchronized void drop(final DropTargetDropEvent event) {
+					for (final File file : getFiles(event)) {
+						main(file.getPath());
+					}
+				}
+				
+				private static final long serialVersionUID = -8699426509985335278L;
+				
+			});
 		}
 		
 		private static final byte[] DUMMY = new byte[0];
