@@ -861,12 +861,12 @@ public final class VisualAnalysis {
 				private final void updateStatus(final MouseEvent event) {
 					final AffineTransform view = MainPanel.this.getImageComponent().getView();
 					
-					MainPanel.this.getStatusPanel().setMessage("scale:", String.format("%.3f", view.getScaleX()));
+					MainPanel.this.getStatusPanel().setMessage("scale: ", String.format("%.3f", view.getScaleX()));
 					
 					try {
 						final Point p = event.getPoint();
 						view.inverseTransform(p, p);
-						MainPanel.this.getStatusPanel().setMessage("(x y):", String.format("(%d %d)", p.x, p.y));
+						MainPanel.this.getStatusPanel().setMessage("(x y): ", String.format("(%d %d)", p.x, p.y));
 					} catch (final NoninvertibleTransformException exception) {
 						exception.printStackTrace();
 					}
