@@ -15,7 +15,9 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
+
 import de.schlichtherle.truezip.fs.FsEntryNotFoundException;
+
 import imj3.core.Image2D;
 import imj3.processing.Pipeline.Algorithm;
 import imj3.processing.Pipeline.ClassDescription;
@@ -859,7 +861,7 @@ public final class VisualAnalysis {
 				private final void updateStatus(final MouseEvent event) {
 					final AffineTransform view = MainPanel.this.getImageComponent().getView();
 					
-					MainPanel.this.getStatusPanel().setMessage("scale:", String.format("%.2f", view.getScaleX()));
+					MainPanel.this.getStatusPanel().setMessage("scale:", String.format("%.3f", view.getScaleX()));
 					
 					try {
 						final Point p = event.getPoint();

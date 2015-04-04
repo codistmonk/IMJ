@@ -1,8 +1,12 @@
 package imj3.tools;
 
 import static imj3.core.IMJCoreTools.quantize;
+import static java.lang.Math.log;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.lang.Math.pow;
+import static java.lang.Math.round;
+import static java.lang.Math.signum;
 import static net.sourceforge.aprog.tools.Tools.cast;
 
 import imj3.core.Image2D;
@@ -111,26 +115,33 @@ public final class Image2DComponent extends JComponent {
 					exception.printStackTrace();
 				}
 				
-				if (event.getWheelRotation() < 0) {
-					view.scale(0.8, 0.8);
-				} else {
-					view.scale(1.2, 1.2);
+//				update_scale:
+				{
+					final double n = 8.0;
+					final double scale = view.getScaleX();
+					final double logScale = round(n * log(scale) / log(2.0)) / n;
+					final double newScale = pow(2.0, logScale + signum(event.getWheelRotation()) / n);
+					
+					view.setTransform(newScale, view.getShearY(), view.getShearX(), newScale, view.getTranslateX(), view.getTranslateY());
 				}
 				
-				try {
-					view.inverseTransform(newCenter, newCenter);
-				} catch (final NoninvertibleTransformException exception) {
-					exception.printStackTrace();
-				}
-				
-				view.translate(-(center.getX() - newCenter.getX()), -(center.getY() - newCenter.getY()));
-				
-				newCenter.setLocation(getWidth() / 2.0, getHeight() / 2.0);
-				
-				try {
-					view.inverseTransform(newCenter, newCenter);
-				} catch (final NoninvertibleTransformException exception) {
-					exception.printStackTrace();
+//				center_view:
+				{
+					try {
+						view.inverseTransform(newCenter, newCenter);
+					} catch (final NoninvertibleTransformException exception) {
+						exception.printStackTrace();
+					}
+					
+					view.translate(-(center.getX() - newCenter.getX()), -(center.getY() - newCenter.getY()));
+					
+					newCenter.setLocation(getWidth() / 2.0, getHeight() / 2.0);
+					
+					try {
+						view.inverseTransform(newCenter, newCenter);
+					} catch (final NoninvertibleTransformException exception) {
+						exception.printStackTrace();
+					}
 				}
 				
 				Image2DComponent.this.repaint();
