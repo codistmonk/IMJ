@@ -3,8 +3,6 @@ package imj3.machinelearning;
 import static net.sourceforge.aprog.tools.Tools.intRange;
 import static net.sourceforge.aprog.tools.Tools.sort;
 
-import imj3.tools.VectorStatistics;
-
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -13,6 +11,7 @@ import java.util.PriorityQueue;
 import java.util.Queue;
 
 import net.sourceforge.aprog.tools.IntComparator;
+import net.sourceforge.aprog.tools.MathTools.VectorStatistics;
 
 /**
  * Differences with "original" median-cut:<ul>
