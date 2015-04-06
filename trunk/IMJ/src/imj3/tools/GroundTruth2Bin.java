@@ -27,9 +27,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
@@ -64,9 +68,11 @@ public final class GroundTruth2Bin {
 		final String pipelinePath = arguments.get("pipeline", "");
 		// TODO later, retrieve training set from pipeline instead
 		final String groundTruthPath = arguments.get("zip", "");
-		final String outputPath = baseName(groundTruthPath) + ".bin";
+		final String trainOutputPath = baseName(groundTruthPath) + "_train.bin";
+		final String testOutputPath = baseName(groundTruthPath) + "_test.bin";
+		final boolean show = arguments.get("show", 0)[0] != 0;
 		
-		if (!new File(outputPath).exists()) {
+		if (!new File(trainOutputPath).exists()) {
 			final int lod = arguments.get("lod", 4)[0];
 			final Pipeline pipeline = XMLSerializable.objectFromXML(new File(pipelinePath));
 			final Map<Integer, Area> regions;
@@ -85,6 +91,7 @@ public final class GroundTruth2Bin {
 			final int patchSize = 32;
 			final int planeSize = patchSize * patchSize;
 			final byte[] buffer = new byte[1 + planeSize * channelCount];
+			final List<byte[]> data = new ArrayList<>();
 			final Map<String, Long> counts = new LinkedHashMap<>();
 			final int imageWidth = image.getWidth();
 			final int imageHeight = image.getHeight();
@@ -92,67 +99,84 @@ public final class GroundTruth2Bin {
 			
 			debugPrint(imageWidth, imageHeight, channels);
 			
-			try (final OutputStream output = new FileOutputStream(outputPath)) {
-				for (final ClassDescription classDescription : pipeline.getClassDescriptions()) {
-					final Area region = regions.get(classDescription.getLabel());
+			for (final ClassDescription classDescription : pipeline.getClassDescriptions()) {
+				final Area region = regions.get(classDescription.getLabel());
+				
+				region.transform(AffineTransform.getScaleInstance(scale, scale));
+				
+				final Rectangle regionBounds = region.getBounds();
+				final int regionWidth = regionBounds.width;
+				final int regionHeight = regionBounds.height;
+				final BufferedImage mask = new BufferedImage(regionWidth, regionHeight, BufferedImage.TYPE_BYTE_BINARY);
+				
+				debugPrint(classDescription, regionBounds);
+				
+				{
+					final Graphics2D graphics = mask.createGraphics();
 					
-					region.transform(AffineTransform.getScaleInstance(scale, scale));
+					graphics.setColor(Color.WHITE);
+					graphics.translate(-regionBounds.x, -regionBounds.y);
+					graphics.fill(region);
+					graphics.dispose();
+				}
+				
+				buffer[0] = (byte) pipeline.getClassDescriptions().indexOf(classDescription);
+				long count = 0L;
+				
+				for (int y = 0; y < regionHeight; ++y) {
+					final int top = regionBounds.y + y - patchSize / 2;
+					final int bottom = min(top + patchSize, imageHeight);
 					
-					final Rectangle regionBounds = region.getBounds();
-					final int regionWidth = regionBounds.width;
-					final int regionHeight = regionBounds.height;
-					final BufferedImage mask = new BufferedImage(regionWidth, regionHeight, BufferedImage.TYPE_BYTE_BINARY);
-					
-					debugPrint(classDescription, regionBounds);
-					
-					{
-						final Graphics2D graphics = mask.createGraphics();
-						
-						graphics.setColor(Color.WHITE);
-						graphics.translate(-regionBounds.x, -regionBounds.y);
-						graphics.fill(region);
-						graphics.dispose();
-					}
-					
-					buffer[0] = (byte) pipeline.getClassDescriptions().indexOf(classDescription);
-					long count = 0L;
-					
-					for (int y = 0; y < regionHeight; ++y) {
-						final int top = regionBounds.y + y - patchSize / 2;
-						final int bottom = min(top + patchSize, imageHeight);
-						
-						for (int x = 0; x < regionWidth; ++x) {
-							if ((mask.getRGB(x, y) & 0x00FFFFFF) != 0) {
-								final int left = regionBounds.x + x - patchSize / 2;
-								final int right = min(left + patchSize, imageWidth);
-								
-								fill(buffer, 1, buffer.length, (byte) 0);
-								
-								for (int yy = max(0, top); yy < bottom; ++yy) {
-									for (int xx = max(0, left); xx < right; ++xx) {
-										final long pixelValue = image.getPixelValue(xx, yy);
-										
-										for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex) {
-											buffer[1 + planeSize * channelIndex + (yy - top) * patchSize + (xx - left)] = (byte) channels.getChannelValue(pixelValue, channelIndex);
-										}
+					for (int x = 0; x < regionWidth; ++x) {
+						if ((mask.getRGB(x, y) & 0x00FFFFFF) != 0) {
+							final int left = regionBounds.x + x - patchSize / 2;
+							final int right = min(left + patchSize, imageWidth);
+							
+							fill(buffer, 1, buffer.length, (byte) 0);
+							
+							for (int yy = max(0, top); yy < bottom; ++yy) {
+								for (int xx = max(0, left); xx < right; ++xx) {
+									final long pixelValue = image.getPixelValue(xx, yy);
+									
+									for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex) {
+										buffer[1 + planeSize * channelIndex + (yy - top) * patchSize + (xx - left)] = (byte) channels.getChannelValue(pixelValue, channelIndex);
 									}
 								}
-								
-								output.write(buffer);
-								
-								++count;
 							}
+							
+							data.add(buffer.clone());
+							
+							++count;
 						}
 					}
-					
-					counts.put(classDescription.toString(), count);
+				}
+				
+				counts.put(classDescription.toString(), count);
+			}
+			
+			Collections.shuffle(data, new Random(0L));
+			
+			final int n = data.size();
+			final int trainSize = n * 5 / 6;
+			
+			try (final OutputStream output = new FileOutputStream(trainOutputPath)) {
+				for (int i = 0; i < trainSize; ++i) {
+					output.write(data.get(i));
+				}
+			}
+			try (final OutputStream output = new FileOutputStream(testOutputPath)) {
+				for (int i = trainSize; i < n; ++i) {
+					output.write(data.get(i));
 				}
 			}
 			
 			debugPrint(counts);
 		}
 		
-		BinView.main(outputPath);
+		if (show) {
+			BinView.main(trainOutputPath);
+			BinView.main(testOutputPath);
+		}
 	}
 	
 	public static final byte[] read(final String path) {
