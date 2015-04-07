@@ -15,9 +15,10 @@ import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.baseName;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.join;
-
+import de.schlichtherle.truezip.file.TVFS;
 import de.schlichtherle.truezip.fs.FsEntryNotFoundException;
-
+import de.schlichtherle.truezip.fs.FsSyncException;
+import de.schlichtherle.truezip.fs.FsSyncOption;
 import imj3.core.Image2D;
 import imj3.processing.Pipeline.Algorithm;
 import imj3.processing.Pipeline.ClassDescription;
@@ -1372,10 +1373,20 @@ public final class VisualAnalysis {
 					}
 					
 					MultiThreadTools.wait(tasks);
+					
+					sync();
 				}
 			}
 			
 			return this;
+		}
+		
+		public static final void sync() {
+			try {
+				TVFS.sync(FsSyncOption.FORCE_CLOSE_INPUT, FsSyncOption.FORCE_CLOSE_OUTPUT);
+			} catch (final IOException exception) {
+				exception.printStackTrace();
+			}
 		}
 		
 		public final Context saveClassification() {
@@ -1408,8 +1419,9 @@ public final class VisualAnalysis {
 				
 				try (final OutputStream output = groundTtruthImage.getSource().getOutputStream("annotations.xml")) {
 					XMLTools.write(XMLSerializable.objectToXML(this.getMainPanel().groundTruthRegions), output, 1);
+					sync();
 				} catch (final IOException exception) {
-					throw new UncheckedIOException(exception);
+					exception.printStackTrace();
 				}
 				
 				this.setGroundTruth(name);
