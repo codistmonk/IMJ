@@ -126,7 +126,6 @@ public final class CaffeinatedAnalysis {
 				for (int y = 0; y < imageHeight; y += patchStride) {
 					final int top = y - patchSize / 2;
 					final int bottom = top + patchSize;
-					
 					for (int x = 0; x < imageWidth; x += patchStride) {
 						final int left = x - patchSize / 2;
 						final int right = left + patchSize;
@@ -151,6 +150,7 @@ public final class CaffeinatedAnalysis {
 						output.write(buffer);
 						++n;
 					}
+					System.out.println();
 				}
 				
 				output.close();
