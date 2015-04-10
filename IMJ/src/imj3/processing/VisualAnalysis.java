@@ -10,15 +10,12 @@ import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
 import static net.sourceforge.aprog.tools.MathTools.square;
-import static net.sourceforge.aprog.tools.Tools.append;
-import static net.sourceforge.aprog.tools.Tools.array;
-import static net.sourceforge.aprog.tools.Tools.baseName;
-import static net.sourceforge.aprog.tools.Tools.cast;
-import static net.sourceforge.aprog.tools.Tools.join;
+import static net.sourceforge.aprog.tools.Tools.*;
+
 import de.schlichtherle.truezip.file.TVFS;
 import de.schlichtherle.truezip.fs.FsEntryNotFoundException;
-import de.schlichtherle.truezip.fs.FsSyncException;
 import de.schlichtherle.truezip.fs.FsSyncOption;
+
 import imj3.core.Image2D;
 import imj3.processing.Pipeline.Algorithm;
 import imj3.processing.Pipeline.ClassDescription;
@@ -117,7 +114,6 @@ import net.sourceforge.aprog.swing.ScriptingPanel;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
 
 import org.w3c.dom.Document;
@@ -197,7 +193,7 @@ public final class VisualAnalysis {
 	}
 	
 	public static final ImageIcon buttonIcon(final String type) {
-		return new ImageIcon(Tools.getResourceURL("lib/tango/" + type + ".png"));
+		return new ImageIcon(getResourceURL("lib/tango/" + type + ".png"));
 	}
 	
 	/**
@@ -457,7 +453,7 @@ public final class VisualAnalysis {
 						
 						@Override
 						protected final void done() {
-							Tools.debugPrint();
+							debugPrint();
 							
 							pipeline.setComputationStatus(ComputationStatus.IDLE);
 							runTrainingButton.setIcon(buttonIcon("process"));
@@ -468,7 +464,7 @@ public final class VisualAnalysis {
 							MainPanel.this.getTrainingSummaryView().setText(format(Locale.ENGLISH,
 									"seconds=%.3f, F1=%.3f", trainingSeconds, f1));
 							
-							Tools.debugPrint();
+							debugPrint();
 						}
 						
 					}.execute();
@@ -524,7 +520,7 @@ public final class VisualAnalysis {
 							
 							@Override
 							protected final void done() {
-								Tools.debugPrint();
+								debugPrint();
 								
 								pipeline.setComputationStatus(ComputationStatus.IDLE);
 								runClassificationButton.setIcon(buttonIcon("process"));
@@ -537,7 +533,7 @@ public final class VisualAnalysis {
 								
 								MainPanel.this.getImageComponent().repaint();
 								
-								Tools.debugPrint();
+								debugPrint();
 							}
 							
 						}.execute();
@@ -1362,7 +1358,8 @@ public final class VisualAnalysis {
 										synchronized (pyramid) {
 											lodImage.setTile(tileX, tileY, new AwtImage2D(lodImage.getTileKey(tileX, tileY), tile));
 										}
-										Tools.debugPrint(tileX, tileY);
+										
+										debugPrint(tileX, tileY);
 									}
 									
 								}));
@@ -1396,7 +1393,7 @@ public final class VisualAnalysis {
 				final File outputFile = new File(this.getClassificationPath());
 				
 				try {
-					Tools.debugPrint("Writing", outputFile);
+					debugPrint("Writing", outputFile);
 					ImageIO.write(this.getClassification().getImage(), "png", outputFile);
 				} catch (final IOException exception) {
 					throw new UncheckedIOException(exception);
@@ -1414,7 +1411,7 @@ public final class VisualAnalysis {
 				final int imageWidth = image.getWidth();
 				final int imageHeight = image.getHeight();
 				
-				Tools.debugPrint("Writing", groundTruthPath);
+				debugPrint("Writing", groundTruthPath);
 				
 				final MultifileImage2D groundTtruthImage = new MultifileImage2D(new MultifileSource(groundTruthPath), SVS2Multifile.newMetadata(
 						imageWidth, imageHeight, 512, "png", image.getMetadata().getOrDefault("micronsPerPixel", "0.25").toString()));
@@ -1471,7 +1468,7 @@ public final class VisualAnalysis {
 			
 			final String groundTruthPath = this.getGroundTruthPath();
 			
-			Tools.debugPrint(groundTruthPath);
+			debugPrint(groundTruthPath);
 			
 			this.getMainPanel().groundTruthRegions.clear();
 			
@@ -1493,7 +1490,7 @@ public final class VisualAnalysis {
 		}
 		
 		public final Context setImage(final File imageFile) {
-			System.out.println(Tools.debug(Tools.DEBUG_STACK_OFFSET + 1, imageFile));
+			System.out.println(debug(DEBUG_STACK_OFFSET + 1, imageFile));
 			
 			final File oldImageFile = this.getImageFile();
 			
@@ -1534,11 +1531,11 @@ public final class VisualAnalysis {
 				final String path = pipelineFile.getPath();
 				
 				if (path.endsWith(".jo")) {
-					this.getMainPanel().setPipeline((Pipeline) Tools.readObject(path));
+					this.getMainPanel().setPipeline((Pipeline) readObject(path));
 				} else if (path.endsWith(".xml")) {
 					this.getMainPanel().setPipeline(XMLSerializable.objectFromXML(pipelineFile));
 				} else {
-					Tools.debugError("Invalid file name:", pipelineFile.getName());
+					debugError("Invalid file name:", pipelineFile.getName());
 				}
 				
 				this.getMainPanel().getPipelineSelector().setFile(pipelineFile);
@@ -1560,11 +1557,11 @@ public final class VisualAnalysis {
 				final String path = pipelineFile.getPath();
 				
 				if (path.endsWith(".jo")) {
-					Tools.writeObject(pipeline, path);
+					writeObject(pipeline, path);
 				} else if (path.endsWith(".xml")) {
 					XMLTools.write(pipeline.toXML(), pipelineFile, 0);
 				} else {
-					Tools.debugError("Invalid file name:", pipelineFile.getName());
+					debugError("Invalid file name:", pipelineFile.getName());
 				}
 				
 				this.setPipeline(pipelineFile);
@@ -1580,11 +1577,11 @@ public final class VisualAnalysis {
 				final String path = pipelineFile.getPath();
 				
 				if (path.endsWith(".jo")) {
-					Tools.writeObject(this.getMainPanel().getPipeline(), path);
+					writeObject(this.getMainPanel().getPipeline(), path);
 				} else if (path.endsWith(".xml")) {
 					XMLTools.write(this.getMainPanel().getPipeline().toXML(), pipelineFile, 0);
 				} else {
-					Tools.debugError("Invalid file name:", pipelineFile.getName());
+					debugError("Invalid file name:", pipelineFile.getName());
 				}
 			}
 			
