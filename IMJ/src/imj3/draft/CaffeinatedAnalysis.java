@@ -4,11 +4,13 @@ import static imj3.tools.IMJTools.read;
 import static net.sourceforge.aprog.swing.SwingTools.getFiles;
 import static net.sourceforge.aprog.tools.Tools.*;
 
+import imj3.core.Channels;
+import imj3.core.Image2D;
+import imj3.tools.AwtImage2D;
+import imj3.tools.Image2DComponent;
+
 import java.awt.BorderLayout;
 import java.awt.Frame;
-import java.awt.Graphics2D;
-import java.awt.Point;
-import java.awt.Rectangle;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.KeyAdapter;
@@ -25,12 +27,6 @@ import java.util.prefs.Preferences;
 
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
-
-import imj3.core.Channels;
-import imj3.core.Image2D;
-import imj3.tools.AwtImage2D;
-import imj3.tools.Image2DComponent;
-import imj3.tools.Image2DComponent.TileOverlay;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
@@ -71,7 +67,7 @@ public final class CaffeinatedAnalysis {
 			@Override
 			public final synchronized void drop(final DropTargetDropEvent event) {
 				final String imagePath = getFiles(event).get(0).getPath();
-				final Image2DComponent newComponent = setup(new Image2DComponent(read(imagePath, 0)));
+				final Image2DComponent newComponent = new Image2DComponent(read(imagePath, 0));
 				
 				mainPanel.remove(0);
 				mainPanel.add(newComponent, BorderLayout.CENTER);
@@ -86,7 +82,7 @@ public final class CaffeinatedAnalysis {
 			
 		});
 		
-		mainPanel.add(setup(new Image2DComponent(image)), BorderLayout.CENTER);
+		mainPanel.add(new Image2DComponent(image), BorderLayout.CENTER);
 		mainPanel.setFocusable(true);
 		mainPanel.addKeyListener(new KeyAdapter() {
 			
@@ -108,21 +104,6 @@ public final class CaffeinatedAnalysis {
 		SwingTools.show(mainPanel, imagePath.isEmpty() ? "Drop an image file to open it" : imagePath, false);
 		
 		mainPanel.requestFocusInWindow();
-	}
-	
-	public static final Image2DComponent setup(final Image2DComponent result) {
-		result.setTileOverlay(new TileOverlay() {
-			
-			@Override
-			public final void update(final Graphics2D graphics, final Point tileXY, final Rectangle region) {
-				// TODO
-			}
-			
-			private static final long serialVersionUID = 3871496008545210506L;
-			
-		});
-		
-		return result;
 	}
 	
 	public static final void process(final Image2D image) {
