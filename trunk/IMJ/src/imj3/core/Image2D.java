@@ -41,7 +41,7 @@ public abstract interface Image2D extends Image {
 		final Image2D tile = this.getTileContaining(x, y);
 		
 		return tile == this ? this.getPixelValue(this.getPixel(x, y))
-				: tile.getPixelValue(x % tile.getWidth(), y % tile.getHeight());
+				: tile.getPixelValue(x % this.getOptimalTileWidth(), y % this.getOptimalTileHeight());
 	}
 	
 	public default long getPixelChannelValue(final int x, final int y, final int channelIndex) {
@@ -49,7 +49,7 @@ public abstract interface Image2D extends Image {
 		
 		return tile == this ? this.getPixelChannelValue(this.getPixel(x, y), channelIndex)
 				: tile.getPixelChannelValue(
-						x % tile.getOptimalTileWidth(), y % tile.getOptimalTileHeight(), channelIndex);
+						x % this.getOptimalTileWidth(), y % this.getOptimalTileHeight(), channelIndex);
 	}
 	
 	public default Image2D setPixelValue(final int x, final int y, final long value) {
@@ -58,7 +58,7 @@ public abstract interface Image2D extends Image {
 		if (tile == this) {
 			this.setPixelValue(this.getPixel(x, y), value);
 		} else {
-			tile.setPixelValue(x % tile.getOptimalTileWidth(), y % tile.getOptimalTileHeight(), value);
+			tile.setPixelValue(x % this.getOptimalTileWidth(), y % this.getOptimalTileHeight(), value);
 		}
 		
 		return this;
