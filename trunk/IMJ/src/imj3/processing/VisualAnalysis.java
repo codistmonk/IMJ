@@ -113,6 +113,7 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 
 import net.sourceforge.aprog.swing.MouseHandler;
+import net.sourceforge.aprog.swing.ScriptingPanel;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -144,6 +145,7 @@ public final class VisualAnalysis {
 	 */
 	public static final void main(final String[] commandLineArguments) {
 		SwingTools.useSystemLookAndFeel();
+		ScriptingPanel.openScriptingPanelOnCtrlF2();
 		
 		final Context context = new Context();
 		
