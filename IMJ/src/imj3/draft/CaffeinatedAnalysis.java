@@ -32,11 +32,13 @@ import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.prefs.Preferences;
 
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
+import net.sourceforge.aprog.swing.ScriptingPanel;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -53,11 +55,17 @@ public final class CaffeinatedAnalysis {
 	
 	static final Preferences preferences = Preferences.userNodeForPackage(CaffeinatedAnalysis.class);
 	
+	public static final AtomicInteger patchSize = new AtomicInteger(32);
+	
+	public static final AtomicInteger patchStride = new AtomicInteger(8);
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
 	 */
 	public static final void main(final String[] commandLineArguments) {
+		ScriptingPanel.openScriptingPanelOnCtrlF2();
+		
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String imagePath = arguments.get("file", preferences.get("image.path", ""));
 		debugPrint(imagePath);
@@ -196,8 +204,8 @@ public final class CaffeinatedAnalysis {
 		final Channels channels = image.getChannels();
 		final int imageWidth = image.getWidth();
 		final int imageHeight = image.getHeight();
-		final int patchSize = 32;
-		final int patchStride = 8;
+		final int patchSize = CaffeinatedAnalysis.patchSize.get();
+		final int patchStride = CaffeinatedAnalysis.patchStride.get();
 		final int planeSize = patchSize * patchSize;
 		long n = 0;
 		
