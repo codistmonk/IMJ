@@ -34,6 +34,7 @@ import net.sourceforge.aprog.swing.MouseHandler;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-03-20)
@@ -221,7 +222,8 @@ public final class Image2DComponent extends JComponent {
 		
 		synchronized (canvasGraphics) {
 			// XXX not perfect but works for now
-			statusHashCode = this.view.hashCode() + canvasGraphics.hashCode() + this.getImage().hashCode() + this.getSize().hashCode();
+			statusHashCode = this.view.hashCode() + canvasGraphics.hashCode() + this.getImage().hashCode() + this.getSize().hashCode()
+					+ Tools.hashCode(this.getOverlay()) + Tools.hashCode(this.getTileOverlay());
 			canvasGraphics.setTransform(this.view);
 		}
 		
