@@ -3,6 +3,7 @@ package imj3.draft;
 import static imj3.tools.IMJTools.read;
 import static net.sourceforge.aprog.swing.SwingTools.getFiles;
 import static net.sourceforge.aprog.tools.Tools.*;
+
 import imj3.core.Channels;
 import imj3.core.IMJCoreTools;
 import imj3.core.Image2D;
@@ -37,6 +38,7 @@ import java.util.prefs.Preferences;
 
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 
 import net.sourceforge.aprog.swing.ScriptingPanel;
 import net.sourceforge.aprog.swing.SwingTools;
@@ -119,7 +121,7 @@ public final class CaffeinatedAnalysis {
 		mainPanel.setFocusable(true);
 		mainPanel.addKeyListener(new KeyAdapter() {
 			
-			private Collection<String> cacheKeys;
+			private Collection<String> cacheKeys = new HashSet<>();
 			
 			@Override
 			public final void keyPressed(final KeyEvent event) {
@@ -131,13 +133,7 @@ public final class CaffeinatedAnalysis {
 				}
 				
 				if (event.getKeyCode() == KeyEvent.VK_ENTER) {
-					if (this.cacheKeys != null) {
-						this.cacheKeys.forEach(IMJCoreTools::uncache);
-						
-						this.cacheKeys = null;
-					}
-					
-					this.cacheKeys = process(imageView);
+					process(imageView, this.cacheKeys);
 				}
 			}
 			
@@ -148,51 +144,66 @@ public final class CaffeinatedAnalysis {
 		mainPanel.requestFocusInWindow();
 	}
 	
-	public static final Collection<String> process(final Image2DComponent view) {
-		final Collection<String> cacheKeys = new HashSet<>();
-		final BufferedImage mask = process(view.getImage());
-		final int maskWidth = mask.getWidth();
-		final int maskHeight = mask.getHeight();
-		
-		view.setTileOverlay(new TileOverlay() {
+	public static final void process(final Image2DComponent view, final Collection<String> cacheKeys) {
+		new SwingWorker<Void, Void>() {
+			
+			private BufferedImage mask = null;
 			
 			@Override
-			public final void update(final Graphics2D graphics, final Point tileXY, final Rectangle region) {
-				final Image2D image = view.getImage();
-				final int imageWidth = image.getWidth();
-				final int imageHeight = image.getHeight();
-				final String key = image.getTileKey(tileXY.x, tileXY.y) + "_overlay";
-				final BufferedImage overlayTile = IMJCoreTools.cache(key, () -> {
-					final Image2D tile = image.getTile(tileXY.x, tileXY.y);
-					final int tileWidth = tile.getWidth();
-					final int tileHeight = tile.getHeight();
-					final BufferedImage result = new BufferedImage(tileWidth, tileHeight, BufferedImage.TYPE_3BYTE_BGR);
-					final Graphics2D overlayGraphics = result.createGraphics();
-					
-					overlayGraphics.drawImage(mask, 0, 0, tileWidth, tileHeight,
-							tileXY.x * maskWidth / imageWidth, tileXY.y * maskHeight / imageHeight,
-							(tileXY.x + tileWidth) * maskWidth / imageWidth, (tileXY.y + tileHeight) * maskHeight / imageHeight, null);
-					overlayGraphics.dispose();
-					
-					return result;
-				});
+			protected final Void doInBackground() throws Exception {
+				this.mask = CaffeinatedAnalysis.process(view.getImage());
 				
-				cacheKeys.add(key);
-				
-				final Composite composite = graphics.getComposite();
-				
-				graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3F));
-				graphics.drawImage(overlayTile, region.x, region.y, region.width, region.height, null);
-				graphics.setComposite(composite);
+				return null;
 			}
 			
-			private static final long serialVersionUID = 8011571177140912595L;
+			@Override
+			protected final void done() {
+				cacheKeys.forEach(IMJCoreTools::uncache);
+				
+				final BufferedImage mask = this.mask;
+				final int maskWidth = mask.getWidth();
+				final int maskHeight = mask.getHeight();
+				
+				view.setTileOverlay(new TileOverlay() {
+					
+					@Override
+					public final void update(final Graphics2D graphics, final Point tileXY, final Rectangle region) {
+						final Image2D image = view.getImage();
+						final int imageWidth = image.getWidth();
+						final int imageHeight = image.getHeight();
+						final String key = image.getTileKey(tileXY.x, tileXY.y) + "_overlay";
+						final BufferedImage overlayTile = IMJCoreTools.cache(key, () -> {
+							final Image2D tile = image.getTile(tileXY.x, tileXY.y);
+							final int tileWidth = tile.getWidth();
+							final int tileHeight = tile.getHeight();
+							final BufferedImage result = new BufferedImage(tileWidth, tileHeight, BufferedImage.TYPE_3BYTE_BGR);
+							final Graphics2D overlayGraphics = result.createGraphics();
+							
+							overlayGraphics.drawImage(mask, 0, 0, tileWidth, tileHeight,
+									tileXY.x * maskWidth / imageWidth, tileXY.y * maskHeight / imageHeight,
+									(tileXY.x + tileWidth) * maskWidth / imageWidth, (tileXY.y + tileHeight) * maskHeight / imageHeight, null);
+							overlayGraphics.dispose();
+							
+							return result;
+						});
+						
+						cacheKeys.add(key);
+						
+						final Composite composite = graphics.getComposite();
+						
+						graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3F));
+						graphics.drawImage(overlayTile, region.x, region.y, region.width, region.height, null);
+						graphics.setComposite(composite);
+					}
+					
+					private static final long serialVersionUID = 8011571177140912595L;
+					
+				});
+				
+				view.repaint();
+			}
 			
-		});
-		
-		view.repaint();
-		
-		return cacheKeys;
+		}.execute();
 	}
 	
 	public static final BufferedImage process(final Image2D image) {
@@ -212,6 +223,7 @@ public final class CaffeinatedAnalysis {
 		try {
 			try (final OutputStream output = new FileOutputStream(dataFile)) {
 				debugPrint("Writing", dataFile);
+				
 				for (int y = patchSize / 2; y < imageHeight; y += patchStride) {
 					final int top = y - patchSize / 2;
 					final int bottom = top + patchSize;
@@ -239,7 +251,6 @@ public final class CaffeinatedAnalysis {
 						output.write(buffer);
 						++n;
 					}
-					System.out.println();
 				}
 				
 				output.close();
