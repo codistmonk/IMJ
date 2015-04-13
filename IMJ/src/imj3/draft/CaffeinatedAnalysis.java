@@ -5,12 +5,19 @@ import static net.sourceforge.aprog.swing.SwingTools.getFiles;
 import static net.sourceforge.aprog.tools.Tools.*;
 
 import imj3.core.Channels;
+import imj3.core.IMJCoreTools;
 import imj3.core.Image2D;
 import imj3.tools.AwtImage2D;
 import imj3.tools.Image2DComponent;
+import imj3.tools.Image2DComponent.TileOverlay;
 
+import java.awt.AlphaComposite;
 import java.awt.BorderLayout;
+import java.awt.Composite;
 import java.awt.Frame;
+import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.KeyAdapter;
@@ -23,6 +30,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.prefs.Preferences;
 
 import javax.swing.JPanel;
@@ -86,6 +95,8 @@ public final class CaffeinatedAnalysis {
 		mainPanel.setFocusable(true);
 		mainPanel.addKeyListener(new KeyAdapter() {
 			
+			private Collection<String> cacheKeys;
+			
 			@Override
 			public final void keyPressed(final KeyEvent event) {
 				final Image2DComponent component = (Image2DComponent) mainPanel.getComponent(0);
@@ -95,7 +106,13 @@ public final class CaffeinatedAnalysis {
 				}
 				
 				if (event.getKeyCode() == KeyEvent.VK_ENTER) {
-					process(component.getImage());
+					if (this.cacheKeys != null) {
+						this.cacheKeys.forEach(IMJCoreTools::uncache);
+						
+						this.cacheKeys = null;
+					}
+					
+					this.cacheKeys = process(component);
 				}
 			}
 			
@@ -106,7 +123,54 @@ public final class CaffeinatedAnalysis {
 		mainPanel.requestFocusInWindow();
 	}
 	
-	public static final void process(final Image2D image) {
+	public static final Collection<String> process(final Image2DComponent view) {
+		final Collection<String> cacheKeys = new HashSet<>();
+		final BufferedImage mask = process(view.getImage());
+		final int maskWidth = mask.getWidth();
+		final int maskHeight = mask.getHeight();
+		
+		view.setTileOverlay(new TileOverlay() {
+			
+			@Override
+			public final void update(final Graphics2D graphics, final Point tileXY, final Rectangle region) {
+				final Image2D image = view.getImage();
+				final int imageWidth = image.getWidth();
+				final int imageHeight = image.getHeight();
+				final String key = image.getTileKey(tileXY.x, tileXY.y) + "_overlay";
+				final BufferedImage overlayTile = IMJCoreTools.cache(key, () -> {
+					final Image2D tile = image.getTile(tileXY.x, tileXY.y);
+					final int tileWidth = tile.getWidth();
+					final int tileHeight = tile.getHeight();
+					final BufferedImage result = new BufferedImage(tileWidth, tileHeight, BufferedImage.TYPE_3BYTE_BGR);
+					final Graphics2D overlayGraphics = result.createGraphics();
+					
+					overlayGraphics.drawImage(mask, 0, 0, tileWidth, tileHeight,
+							tileXY.x * maskWidth / imageWidth, tileXY.y * maskHeight / imageHeight,
+							(tileXY.x + tileWidth) * maskWidth / imageWidth, (tileXY.y + tileHeight) * maskHeight / imageHeight, null);
+					overlayGraphics.dispose();
+					
+					return result;
+				});
+				
+				cacheKeys.add(key);
+				
+				final Composite composite = graphics.getComposite();
+				
+				graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3F));
+				graphics.drawImage(overlayTile, region.x, region.y, region.width, region.height, null);
+				graphics.setComposite(composite);
+			}
+			
+			private static final long serialVersionUID = 8011571177140912595L;
+			
+		});
+		
+		view.repaint();
+		
+		return cacheKeys;
+	}
+	
+	public static final BufferedImage process(final Image2D image) {
 		final String userHome = System.getProperty("user.home");
 		final String caffe = userHome + "/workspace/caffe-master";
 		final byte[] buffer = new byte[3073];
@@ -160,39 +224,37 @@ public final class CaffeinatedAnalysis {
 			
 //			GroundTruth2Bin.BinView.main(dataFile.getPath());
 			
-			if (true) {
-				final Process process = Runtime.getRuntime().exec(
-						array("Debug/RunCaffe", "test.prototxt", "test.caffemodel", dataFile.getPath(), labelsFile.getPath()),
-						array("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:" + caffe + "/lib:" + caffe + "/build/lib", "GLOG_logtostderr=1"),
-						new File("../RunCaffe"));
+			final Process process = Runtime.getRuntime().exec(
+					array("Debug/RunCaffe", "test.prototxt", "test.caffemodel", dataFile.getPath(), labelsFile.getPath()),
+					array("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:" + caffe + "/lib:" + caffe + "/build/lib", "GLOG_logtostderr=1"),
+					new File("../RunCaffe"));
+			
+			try (final OutputStream processControl = process.getOutputStream()) {
+				Launcher.redirectOutputsToConsole(process);
 				
-				try (final OutputStream processControl = process.getOutputStream()) {
-					Launcher.redirectOutputsToConsole(process);
-					
-					processControl.close();
-					
-					debugPrint(process.waitFor());
-				}
+				processControl.close();
 				
-				final BufferedImage result = new BufferedImage(
-						(imageWidth + patchStride - 1) / patchStride,
-						(imageHeight + patchStride - 1) / patchStride, BufferedImage.TYPE_BYTE_BINARY);
-				final byte[] labelsBuffer = new byte[result.getWidth() * result.getHeight()];
-				
-				debugPrint(labelsBuffer.length);
-				
-				try (final InputStream input = new FileInputStream(labelsFile)) {
-					input.read(labelsBuffer);
-				}
-				
-				for (int y = 0, p = 0; y < result.getHeight(); ++y) {
-					for (int x = 0; x < result.getWidth(); ++x, ++p) {
-						result.setRGB(x, y, labelsBuffer[p] != 0 ? ~0 : 0);
-					}
-				}
-				
-				SwingTools.show(result, "result", false);
+				debugPrint(process.waitFor());
 			}
+			
+			final BufferedImage result = new BufferedImage(
+					(imageWidth + patchStride - 1) / patchStride,
+					(imageHeight + patchStride - 1) / patchStride, BufferedImage.TYPE_BYTE_BINARY);
+			final byte[] labelsBuffer = new byte[result.getWidth() * result.getHeight()];
+			
+			debugPrint(labelsBuffer.length);
+			
+			try (final InputStream input = new FileInputStream(labelsFile)) {
+				input.read(labelsBuffer);
+			}
+			
+			for (int y = 0, p = 0; y < result.getHeight(); ++y) {
+				for (int x = 0; x < result.getWidth(); ++x, ++p) {
+					result.setRGB(x, y, labelsBuffer[p] != 0 ? ~0 : 0);
+				}
+			}
+			
+			return result;
 		} catch (final IOException exception) {
 			throw new UncheckedIOException(exception);
 		} catch (final Exception exception) {
