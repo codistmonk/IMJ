@@ -88,6 +88,17 @@ public final class CaffeinatedAnalysis {
 				final String imagePath = getFiles(event).get(0).getPath();
 				final Image2DComponent newComponent = new Image2DComponent(read(imagePath, 0));
 				
+				newComponent.setOverlay(new Overlay() {
+					
+					@Override
+					public final void update(final Graphics2D graphics, final Rectangle region) {
+						graphics.drawString(Double.toString(newComponent.getImage().getScale()), 0, region.height);
+					}
+					
+					private static final long serialVersionUID = -3450896552565525297L;
+					
+				});
+				
 				mainPanel.remove(0);
 				mainPanel.add(newComponent, BorderLayout.CENTER);
 				mainPanel.validate();
