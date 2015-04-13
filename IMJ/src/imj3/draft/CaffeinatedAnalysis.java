@@ -91,20 +91,23 @@ public final class CaffeinatedAnalysis {
 			
 		});
 		
-		final Image2DComponent imageView = new Image2DComponent(image);
+		{
+			final Image2DComponent imageView = new Image2DComponent(image);
+			
+			imageView.setOverlay(new Overlay() {
+				
+				@Override
+				public final void update(final Graphics2D graphics, final Rectangle region) {
+					graphics.drawString(Double.toString(imageView.getImage().getScale()), 0, region.height);
+				}
+				
+				private static final long serialVersionUID = -3450896552565525297L;
+				
+			});
+			
+			mainPanel.add(imageView, BorderLayout.CENTER);
+		}
 		
-		imageView.setOverlay(new Overlay() {
-			
-			@Override
-			public final void update(final Graphics2D graphics, final Rectangle region) {
-				graphics.drawString(Double.toString(imageView.getImage().getScale()), 0, region.height);
-			}
-			
-			private static final long serialVersionUID = -3450896552565525297L;
-			
-		});
-		
-		mainPanel.add(imageView, BorderLayout.CENTER);
 		mainPanel.setFocusable(true);
 		mainPanel.addKeyListener(new KeyAdapter() {
 			
@@ -112,6 +115,8 @@ public final class CaffeinatedAnalysis {
 			
 			@Override
 			public final void keyPressed(final KeyEvent event) {
+				final Image2DComponent imageView = (Image2DComponent) mainPanel.getComponent(0);
+				
 				if (event.getKeyCode() == KeyEvent.VK_SPACE) {
 					final Image2D image = imageView.getImage();
 					debugPrint(image.getScale(), image.getPixelCount());
@@ -199,10 +204,10 @@ public final class CaffeinatedAnalysis {
 		try {
 			try (final OutputStream output = new FileOutputStream(dataFile)) {
 				debugPrint("Writing", dataFile);
-				for (int y = patchSize / 2; y < imageHeight; y += patchStride) {
+				for (int y = 0; y < imageHeight; y += patchStride) {
 					final int top = y - patchSize / 2;
 					final int bottom = top + patchSize;
-					for (int x = patchSize / 2; x < imageWidth; x += patchStride) {
+					for (int x = 0; x < imageWidth; x += patchStride) {
 						final int left = x - patchSize / 2;
 						final int right = left + patchSize;
 						
