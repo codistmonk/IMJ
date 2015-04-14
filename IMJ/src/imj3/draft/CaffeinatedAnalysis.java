@@ -3,7 +3,6 @@ package imj3.draft;
 import static imj3.tools.IMJTools.read;
 import static net.sourceforge.aprog.swing.SwingTools.getFiles;
 import static net.sourceforge.aprog.tools.Tools.*;
-
 import imj3.core.Channels;
 import imj3.core.IMJCoreTools;
 import imj3.core.Image2D;
@@ -36,6 +35,7 @@ import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.prefs.Preferences;
 
+import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
@@ -70,13 +70,31 @@ public final class CaffeinatedAnalysis {
 		
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String imagePath = arguments.get("file", preferences.get("image.path", ""));
-		debugPrint(imagePath);
+		final int lod = arguments.get("lod", 0)[0];
+		patchSize.set(arguments.get("patchSize", patchSize.get())[0]);
+		patchStride.set(arguments.get("patchStride", patchStride.get())[0]);
 		final Image2D image;
+		
+		debugPrint(imagePath);
 		
 		if (imagePath.isEmpty()) {
 			image = new AwtImage2D("", new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB));
 		} else {
-			image = read(imagePath, 0);
+			image = read(imagePath, lod);
+		}
+		
+		if (0 == arguments.get("gui", 1)[0]) {
+			debugPrint(lod, image.getScale(), patchSize, patchStride);
+			final File resultFile = new File(baseName(imagePath) + "_classification.png");
+			debugPrint(resultFile);
+			
+			try {
+				ImageIO.write(process(image), "png", resultFile);
+			} catch (final IOException exception) {
+				throw new UncheckedIOException(exception);
+			}
+			
+			return;
 		}
 		
 		final JPanel mainPanel = new JPanel(new BorderLayout());
