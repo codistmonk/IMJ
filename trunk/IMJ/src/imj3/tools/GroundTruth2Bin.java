@@ -4,6 +4,7 @@ import static java.lang.Math.*;
 import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.swing.SwingTools.*;
 import static net.sourceforge.aprog.tools.Tools.*;
+
 import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.processing.Pipeline;
@@ -71,8 +72,9 @@ public final class GroundTruth2Bin {
 		final String trainOutputPath = baseName(groundTruthPath) + "_train.bin";
 		final String testOutputPath = baseName(groundTruthPath) + "_test.bin";
 		final boolean show = arguments.get("show", 0)[0] != 0;
+		final boolean force = arguments.get("force", 0)[0] != 0;
 		
-		if (!new File(trainOutputPath).exists()) {
+		if (!new File(trainOutputPath).exists() || force) {
 			final int lod = arguments.get("lod", 4)[0];
 			final Pipeline pipeline = XMLSerializable.objectFromXML(new File(pipelinePath));
 			final Map<Integer, Area> regions;
