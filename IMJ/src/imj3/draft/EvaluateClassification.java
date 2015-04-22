@@ -33,6 +33,9 @@ public final class EvaluateClassification {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final File groundtruthFile = new File(arguments.get("groundtruth", ""));
 		final File classificationFile = new File(arguments.get("classification", ""));
+		
+		debugPrint("groundtruth:", groundtruthFile, "classification:", classificationFile);
+		
 		final BufferedImage groundtruth = ImageIO.read(groundtruthFile);
 		final BufferedImage classification = ImageIO.read(classificationFile);
 		final int groundtruthWidth = groundtruth.getWidth();
@@ -52,9 +55,9 @@ public final class EvaluateClassification {
 			
 		}
 		
-		debugPrint(confusionMatrix.getCounts());
-		debugPrint(confusionMatrix.computeF1s());
-		debugPrint(confusionMatrix.computeMacroF1());
+		debugPrint("counts:", confusionMatrix.getCounts());
+		debugPrint("F1s:", confusionMatrix.computeF1s());
+		debugPrint("macroF1:", confusionMatrix.computeMacroF1());
 	}
 	
 	/**
