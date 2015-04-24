@@ -42,7 +42,7 @@ public final class PackedImage2D implements Image2D {
 		}
 		
 		this.valuesPerLong = Long.SIZE / valueBitCount;
-		this.data = new long[(int) ((long) width * height / this.valuesPerLong)];
+		this.data = new long[(int) ((long) (width * height + this.valuesPerLong - 1) / this.valuesPerLong)];
 	}
 	
 	public final long[] getData() {

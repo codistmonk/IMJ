@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -136,11 +137,12 @@ public final class IMJCoreTools {
 		
 		private T object;
 		
-		private long accessCount;
+		private final AtomicLong accessCount;
 		
 		public Reference(final String key, final Supplier<T> supplier) {
 			this.key = key;
 			this.supplier = supplier;
+			this.accessCount = new AtomicLong();
 		}
 		
 		public final String getKey() {
@@ -148,7 +150,7 @@ public final class IMJCoreTools {
 		}
 		
 		public final synchronized T getObject() {
-			++this.accessCount;
+			this.accessCount.incrementAndGet();
 			
 			if (this.object == null) {
 				this.object = this.supplier.get();
@@ -158,8 +160,8 @@ public final class IMJCoreTools {
 		}
 		
 		@Override
-		public final synchronized int compareTo(final Reference<?> other) {
-			return Long.compare(this.accessCount, other.accessCount);
+		public final int compareTo(final Reference<?> other) {
+			return Long.compare(this.accessCount.get(), other.accessCount.get());
 		}
 		
 		/**
