@@ -71,9 +71,12 @@ public final class Image2DComponent extends JComponent {
 		this.wheelZoomEnabled = true;
 		
 		this.setOpaque(true);
-		this.setPreferredSize(new Dimension(800, 600));
+		final int w = min(image.getWidth(), 800);
+		final int h = min(image.getHeight(), 600);
+		this.setPreferredSize(new Dimension(w, h));
 		
-		this.view.translate(-image.getWidth() / 2.0 + 400.0, -image.getHeight() / 2.0 + 300.0);
+		this.view.scale(image.getScale(), image.getScale());
+		this.view.translate(-image.getWidth() / 2.0 + w / 2, -image.getHeight() / 2.0 + h / 2);
 		
 		new MouseHandler() {
 			
