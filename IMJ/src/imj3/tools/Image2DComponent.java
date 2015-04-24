@@ -312,7 +312,7 @@ public final class Image2DComponent extends JComponent {
 		}
 		
 		final Point tileXY = tileKey.getTileXY();
-		// XXX potential synchronisation issue here
+		// XXX potential synchronization issue here
 		final BufferedImage tile = (BufferedImage) image.getTileContaining(tileXY.x, tileXY.y).toAwt();
 		final boolean clearLeft = tileXY.x == 0;
 		final boolean clearTop = tileXY.y == 0;
