@@ -7,7 +7,7 @@ import static java.lang.Math.min;
 import static java.lang.Math.pow;
 import static java.lang.Math.round;
 import static java.lang.Math.signum;
-import static net.sourceforge.aprog.tools.Tools.cast;
+import static net.sourceforge.aprog.tools.Tools.*;
 
 import imj3.core.Image2D;
 
@@ -209,10 +209,11 @@ public final class Image2DComponent extends JComponent {
 		super.paintComponent(g);
 		
 		final Graphics2D canvasGraphics = this.canvas.setFormat(this.getWidth(), this.getHeight()).getGraphics();
-		final double canvasScale = max(canvasGraphics.getTransform().getScaleX(), canvasGraphics.getTransform().getScaleY());
+		
 		{
+			final double scale = max(this.view.getScaleX(), this.view.getScaleY());
 			final Image2D image = this.getImage();
-			this.image = image.getScaledImage(canvasScale);
+			this.image = image.getScaledImage(scale);
 			
 			if (image != this.getImage()) {
 				synchronized (canvasGraphics) {
