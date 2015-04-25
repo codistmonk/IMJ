@@ -103,7 +103,19 @@ public final class CaffeinatedAnalysis {
 			
 			@Override
 			public final synchronized void drop(final DropTargetDropEvent event) {
-				final String imagePath = getFiles(event).get(0).getPath();
+				String imagePath = null;
+				
+				try {
+					imagePath = getFiles(event).get(0).getPath();
+				} catch (final IllegalArgumentException exception) {
+					debugError(exception);
+					
+					if ("Comparison method violates its general contract!".equals(exception.getMessage())) {
+						System.setProperty("java.util.Arrays.useLegacyMergeSort", "true");
+						imagePath = getFiles(event).get(0).getPath();
+					}
+				}
+				
 				final Image2DComponent newComponent = new Image2DComponent(read(imagePath, 0));
 				
 				newComponent.setOverlay(new Overlay() {
