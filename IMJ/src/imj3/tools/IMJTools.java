@@ -21,7 +21,11 @@ public final class IMJTools {
 		throw new IllegalInstantiationException();
 	}
 	
-	public static Image2D read(final String path, int lod) {
+	public static Image2D read(final String path) {
+		return read(path, 0);
+	}
+	
+	public static Image2D read(final String path, final int lod) {
 		Image2D result = null;
 		
 		if (path.toLowerCase(Locale.ENGLISH).endsWith(".zip")) {
