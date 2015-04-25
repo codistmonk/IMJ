@@ -9,9 +9,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-03-25)
@@ -103,6 +105,14 @@ public final class IMJCoreTools {
 		@Override
 		protected final void finalize() throws Throwable {
 			try {
+				final Runtime runtime = Runtime.getRuntime();
+				
+				if (runtime.totalMemory() < runtime.maxMemory() * memoryThreshold.get()) {
+					return;
+				}
+				
+				Tools.debugPrint(runtime.totalMemory(), runtime.maxMemory());
+				
 				synchronized (this.cache) {
 					this.holder[0] = null;
 					final int n = (this.references.size() + 1) / 2;
@@ -127,6 +137,8 @@ public final class IMJCoreTools {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = 8864723936263680017L;
+		
+		public static final AtomicReference<Double> memoryThreshold = new AtomicReference<>(0.75);
 		
 	}
 	
