@@ -33,15 +33,14 @@ public final class IMJCoreTools {
 		return cache(key, supplier, false);
 	}
 	
-	@SuppressWarnings("unchecked")
 	public static final <T> T cache(final String key, final Supplier<T> supplier, final boolean refresh) {
 		Reference<T> reference;
 		
 		synchronized (cache) {
-			reference = (Reference<T>) cache.get(key);
+			reference = getCached(key);
 			
 			if (reference == null) {
-				reference = new Reference<T>(key, supplier);
+				reference = new Reference<>(key, supplier);
 				cache.put(key, reference);
 				references.add(reference);
 				
@@ -49,12 +48,19 @@ public final class IMJCoreTools {
 					new Sentinel(cache, references, sentinel);
 				}
 			} else if (refresh) {
-				reference = new Reference<T>(key, supplier);
+				reference = new Reference<>(key, supplier);
 				cache.put(key, reference);
 			}
 		}
 		
 		return reference.getObject();
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final <T> Reference<T> getCached(final String key) {
+		synchronized (cache) {
+			return (Reference<T>) cache.get(key);
+		}
 	}
 	
 	public static final void uncache(final String key) {
@@ -149,10 +155,14 @@ public final class IMJCoreTools {
 			return this.key;
 		}
 		
+		public final synchronized boolean hasObject() {
+			return this.object != null;
+		}
+		
 		public final synchronized T getObject() {
 			this.accessCount.incrementAndGet();
 			
-			if (this.object == null) {
+			if (!this.hasObject()) {
 				this.object = this.supplier.get();
 			}
 			

@@ -53,7 +53,7 @@ public final class Image2DComponent extends JComponent {
 	
 	private final Collection<TileKey> activeTiles;
 	
-	private int statusHasCode;
+	private int statusHashCode;
 	
 	private boolean imageEnabled;
 	
@@ -237,8 +237,8 @@ public final class Image2DComponent extends JComponent {
 				canvasGraphics.fillRect(0, 0, this.getWidth(), this.getHeight());
 				canvasGraphics.setTransform(this.view);
 			}
-		} else if (this.statusHasCode != statusHashCode) {
-			this.statusHasCode = statusHashCode;
+		} else if (this.statusHashCode != statusHashCode) {
+			this.statusHashCode = statusHashCode;
 			final Collection<TileKey> newActiveTiles = new HashSet<>();
 			final Image2D image = this.getImage();
 			final double imageScale = image.getScale();
