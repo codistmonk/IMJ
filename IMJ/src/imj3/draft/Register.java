@@ -174,26 +174,21 @@ public final class Register {
 			if (result == null) {
 				return this.new WarpedImage2D(source, targetWidth, targetHeight);
 			}
-			return this.new WarpedImage2D(source, targetWidth, targetHeight);
 			
-//			final Image2D actualResult = result != null ? result : new PackedImage2D(
-//					baseName(source.getId()) + "_warped_lod" + (int) (-log(target.getScale()) / log(2.0)),
-//					targetWidth, targetHeight, source.getChannels());
-//			
-//			target.forEachPixel(new Pixel2DProcessor() {
-//				
-//				@Override
-//				public final boolean pixel(final int x, final int y) {
-//					actualResult.setPixelValue(x, y, WarpField.this.warp(source, targetWidth, targetHeight, x, y));
-//					
-//					return true;
-//				}
-//				
-//				private static final long serialVersionUID = 4284446331825700908L;
-//				
-//			});
-//			
-//			return actualResult;
+			target.forEachPixel(new Pixel2DProcessor() {
+				
+				@Override
+				public final boolean pixel(final int x, final int y) {
+					result.setPixelValue(x, y, WarpField.this.warp(source, targetWidth, targetHeight, x, y));
+					
+					return true;
+				}
+				
+				private static final long serialVersionUID = 4284446331825700908L;
+				
+			});
+			
+			return result;
 		}
 		
 		private static final long serialVersionUID = -9073706319287807440L;
