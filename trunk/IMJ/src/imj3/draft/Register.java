@@ -3,7 +3,6 @@ package imj3.draft;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.MathTools.square;
 import static net.sourceforge.aprog.tools.Tools.*;
-
 import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.core.Image2D.Pixel2DProcessor;
@@ -13,6 +12,8 @@ import imj3.tools.PackedImage2D;
 
 import java.awt.geom.Point2D;
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -28,6 +29,8 @@ public final class Register {
 	private Register() {
 		throw new IllegalInstantiationException();
 	}
+	
+	static final Point2D ZERO = new Point2D.Double();
 	
 	/**
 	 * @param commandLineArguments
@@ -46,13 +49,85 @@ public final class Register {
 		debugPrint("targetId:", target.getId());
 		debugPrint("targetWidth:", target.getWidth(), "targetHeight:", target.getHeight(), "targetChannels:", target.getChannels());
 		
-		final WarpField warpField = new WarpField(100, 100);
+		final WarpField warpField = new WarpField(4, 4);
 		
 		debugPrint("score:", warpField.score(source, target));
 		
-		show(new Image2DComponent(source), "source", false);
+		update(warpField, source, target, 5);
+		
+		debugPrint("score:", warpField.score(source, target));
+		
+//		show(new Image2DComponent(source), "source", false);
 //		show(new Image2DComponent(target), "target", false);
 		show(new Image2DComponent(warpField.warp(source, target, null)), "warped", false);
+	}
+	
+	public static final void update(final WarpField warpField, final Image2D source, final Image2D target, final int patchSize) {
+		final int fieldWidth = warpField.getWidth();
+		final int fieldHeight = warpField.getHeight();
+		final int sourceWidth = source.getWidth();
+		final int sourceHeight = source.getHeight();
+		final int targetWidth = target.getWidth();
+		final int targetHeight = target.getHeight();
+		final Channels sourceChannels = source.getChannels();
+		final Channels targetChannels = target.getChannels();
+		final Point2D[] patchOffsets = newPatchOffsets(patchSize);
+		final Point2D warped = new Point2D.Double();
+		
+		for (int i = 0; i < fieldHeight; ++i) {
+			final int targetY = i * targetHeight / fieldHeight;
+			
+			for (int j = 0; j < fieldWidth; ++j) {
+				final int targetX = j * targetWidth / fieldWidth;
+				final long targetValue = target.getPixelValue(targetX, targetY);
+				
+				WarpField.warp(sourceWidth, sourceHeight, targetWidth, targetHeight, targetX, targetY, warpField.get(j, i), warped);
+				
+				debugPrint(targetX, targetY, warped);
+				
+				double bestScore = Double.POSITIVE_INFINITY;
+				Point2D bestPatchOffset = null;
+				
+				for (final Point2D patchOffset : patchOffsets) {
+					final int sourceX = (int) (warped.getX() + patchOffset.getX());
+					final int sourceY = (int) (warped.getY() + patchOffset.getY());
+					final long sourceValue = getPixelValue(source, sourceX, sourceY);
+					final double score = WarpField.score(sourceValue, sourceChannels, targetValue, targetChannels);
+					
+					if (score < bestScore) {
+						bestScore = score;
+						bestPatchOffset = patchOffset;
+					}
+				}
+				
+				// TODO
+			}
+		}
+	}
+	
+	public static final long getPixelValue(final Image2D image, final int x, final int y) {
+		return x < 0 || image.getWidth() <= x || y < 0 || image.getHeight() <= y ? 0L : image.getPixelValue(x, y);
+	}
+	
+	public static final Point2D[] newPatchOffsets(final int patchSize) {
+		final Point2D[] result = new Point2D[patchSize * patchSize];
+		
+		for (int y = 0, i = 0; y < patchSize; ++y) {
+			for (int x = 0; x < patchSize; ++x, ++i) {
+				result[i] = new Point2D.Float(x - patchSize / 2, y - patchSize / 2);
+			}
+		}
+		
+		Arrays.sort(result, new Comparator<Point2D>() {
+			
+			@Override
+			public final int compare(final Point2D o1, final Point2D o2) {
+				return Double.compare(o1.distance(ZERO), o2.distance(ZERO));
+			}
+			
+		});
+		
+		return result;
 	}
 	
 	/**
@@ -123,21 +198,22 @@ public final class Register {
 		public final long warp(final Image2D source, final int targetWidth, final int targetHeight, final int targetX, final int targetY) {
 			final int sourceWidth = source.getWidth();
 			final int sourceHeight = source.getHeight();
-			final double x = (double) targetX * this.getWidth() / targetWidth;
-			final double y = (double) targetY * this.getHeight() / targetHeight;
-			final Point2D delta = this.get(x, y);
+			final Point2D delta = this.getNormalizedDelta(targetWidth, targetHeight, targetX, targetY);
 			final int sourceX = (int) ((double) targetX * sourceWidth / targetWidth + delta.getX() * sourceWidth);
 			final int sourceY = (int) ((double) targetY * sourceHeight / targetHeight + delta.getY() * sourceHeight);
 			
 			return source.getPixelValue(sourceX, sourceY);
 		}
 		
+		public final Point2D getNormalizedDelta(final int targetWidth, final int targetHeight, final int targetX, final int targetY) {
+			return this.get((double) targetX * this.getWidth() / targetWidth, (double) targetY * this.getHeight() / targetHeight);
+		}
+		
 		public final double score(final Image2D source, final Image2D target) {
 			final Channels sourceChannels = source.getChannels();
 			final Channels targetChannels = target.getChannels();
-			final int channelCount = sourceChannels.getChannelCount();
 			
-			if (channelCount != targetChannels.getChannelCount()) {
+			if (sourceChannels.getChannelCount() != targetChannels.getChannelCount()) {
 				return Double.NaN;
 			}
 			
@@ -152,10 +228,7 @@ public final class Register {
 					final long targetValue = target.getPixelValue(x, y);
 					final long sourceValue = WarpField.this.warp(source, targetWidth, targetHeight, x, y);
 					
-					for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex) {
-						result[0] += square(sourceChannels.getChannelValue(sourceValue, channelIndex)
-								- targetChannels.getChannelValue(targetValue, channelIndex));
-					}
+					result[0] += score(sourceValue, sourceChannels, targetValue, targetChannels);
 					
 					return true;
 				}
@@ -190,8 +263,34 @@ public final class Register {
 			
 			return result;
 		}
-		
+
 		private static final long serialVersionUID = -9073706319287807440L;
+		
+		public static final double score(final long sourceValue, final Channels sourceChannels,
+				final long targetValue, final Channels targetChannels) {
+			final int channelCount = sourceChannels.getChannelCount();
+			
+			if (channelCount != targetChannels.getChannelCount()) {
+				return Double.NaN;
+			}
+			
+			double result = 0.0;
+			
+			for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex) {
+				result += square(sourceChannels.getChannelValue(sourceValue, channelIndex)
+						- targetChannels.getChannelValue(targetValue, channelIndex));
+			}
+			
+			return result;
+		}
+		
+		public static final Point2D warp(final int sourceWidth, final int sourceHeight, final int targetWidth, final int targetHeight,
+				final int targetX, final int targetY, final Point2D normalizedDelta, final Point2D result) {
+			result.setLocation((double) targetX * sourceWidth / targetWidth + normalizedDelta.getX() * sourceWidth,
+					(double) targetY * sourceHeight / targetHeight + normalizedDelta.getY() * sourceHeight);
+			
+			return result;
+		}
 		
 		/**
 		 * @author codistmonk (creation 2015-04-24)
