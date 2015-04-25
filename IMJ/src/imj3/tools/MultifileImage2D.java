@@ -28,6 +28,7 @@ import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 import javax.imageio.ImageIO;
 import javax.swing.JComponent;
@@ -63,7 +64,7 @@ public final class MultifileImage2D implements Image2D {
 	
 	private final Channels channels;
 	
-	private final TileHolder tileHolder;
+	private final Map<Thread, TileHolder> tileHolders;
 	
 	public MultifileImage2D(final MultifileSource source, final Document metadata) {
 		this(source, metadata, 0);
@@ -92,7 +93,7 @@ public final class MultifileImage2D implements Image2D {
 		this.optimalTileHeight = getNumber(metadata, imageXPath + "@tileHeight").intValue();
 		this.tileFormat = getString(metadata, imageXPath + "@tileFormat");
 		this.channels = this.getTile(0, 0).getChannels();
-		this.tileHolder = new TileHolder();
+		this.tileHolders = new WeakHashMap<>();
 		
 		if (lod == 0) {
 			this.metadata.put("micronsPerPixel", getNumber(metadata, imageXPath + "@micronsPerPixel"));
@@ -206,7 +207,7 @@ public final class MultifileImage2D implements Image2D {
 	
 	@Override
 	public final TileHolder getTileHolder() {
-		return this.tileHolder;
+		return this.tileHolders.computeIfAbsent(Thread.currentThread(), t -> new TileHolder());
 	}
 	
 	@Override
