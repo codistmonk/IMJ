@@ -304,8 +304,6 @@ public final class Image2DComponent extends JComponent {
 		return this.activeTiles;
 	}
 	
-	static final AffineTransform IDENTITY = new AffineTransform();
-	
 	final void drawTile(final Image2D image, final TileKey tileKey,
 			final double imageScale, final Graphics2D canvasGraphics) {
 		if (!getActiveTiles().contains(tileKey)) {
@@ -313,8 +311,7 @@ public final class Image2DComponent extends JComponent {
 		}
 		
 		final Point tileXY = tileKey.getTileXY();
-		// XXX potential synchronization issue here
-		final BufferedImage tile = (BufferedImage) image.getTileContaining(tileXY.x, tileXY.y).toAwt();
+		final BufferedImage tile = getTile(image, tileXY.x, tileXY.y);
 		final boolean clearLeft = tileXY.x == 0;
 		final boolean clearTop = tileXY.y == 0;
 		final boolean clearRight = image.getWidth() <= tileXY.x + image.getOptimalTileWidth();
@@ -375,10 +372,12 @@ public final class Image2DComponent extends JComponent {
 			repaint();
 		}
 	}
-
+	
 	private static final long serialVersionUID = -1359039061498719576L;
 	
 	public static final Color CLEAR = new Color(0, true);
+	
+	static final AffineTransform IDENTITY = new AffineTransform();
 	
 	/**
 	 * @param commandLineArguments
@@ -389,6 +388,16 @@ public final class Image2DComponent extends JComponent {
 		final String path = arguments.get("file", "");
 		
 		SwingTools.show(new Image2DComponent(IMJTools.read(path, 0)), path, false);
+	}
+	
+	public static final BufferedImage getTile(final Image2D image, final int tileX, final int tileY) {
+		try {
+			// XXX potential synchronization issue here
+			return (BufferedImage) image.getTileContaining(tileX, tileY).toAwt();
+		} catch (final Exception exception) {
+			exception.printStackTrace();
+			return new BufferedImage(image.getTileWidth(tileX), image.getTileWidth(tileY), BufferedImage.TYPE_BYTE_BINARY);
+		}
 	}
 	
 	/**

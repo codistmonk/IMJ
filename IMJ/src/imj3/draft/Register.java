@@ -126,8 +126,8 @@ public final class Register {
 			final double x = (double) targetX * this.getWidth() / targetWidth;
 			final double y = (double) targetY * this.getHeight() / targetHeight;
 			final Point2D delta = this.get(x, y);
-			final int sourceX = (int) (targetX * sourceWidth / targetWidth + delta.getX() * sourceWidth);
-			final int sourceY = (int) (targetY * sourceHeight / targetHeight + delta.getY() * sourceHeight);
+			final int sourceX = (int) ((double) targetX * sourceWidth / targetWidth + delta.getX() * sourceWidth);
+			final int sourceY = (int) ((double) targetY * sourceHeight / targetHeight + delta.getY() * sourceHeight);
 			
 			return source.getPixelValue(sourceX, sourceY);
 		}
