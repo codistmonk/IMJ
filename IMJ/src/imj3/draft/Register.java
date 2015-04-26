@@ -49,16 +49,17 @@ public final class Register {
 		debugPrint("targetId:", target.getId());
 		debugPrint("targetWidth:", target.getWidth(), "targetHeight:", target.getHeight(), "targetChannels:", target.getChannels());
 		
-		final WarpField warpField = new WarpField(4, 4);
+		final WarpField warpField = new WarpField(target.getWidth() / 4, target.getHeight() / 4);
 		
 		debugPrint("score:", warpField.score(source, target));
 		
-		update(warpField, source, target, 5);
+		for (int i = 0; i < 10; ++i) {
+			update(warpField, source, target, 5);
+			debugPrint("score:", warpField.score(source, target));
+		}
 		
-		debugPrint("score:", warpField.score(source, target));
-		
-//		show(new Image2DComponent(source), "source", false);
-//		show(new Image2DComponent(target), "target", false);
+		show(new Image2DComponent(source), "source", false);
+		show(new Image2DComponent(target), "target", false);
 		show(new Image2DComponent(warpField.warp(source, target, null)), "warped", false);
 	}
 	
@@ -80,10 +81,9 @@ public final class Register {
 			for (int j = 0; j < fieldWidth; ++j) {
 				final int targetX = j * targetWidth / fieldWidth;
 				final long targetValue = target.getPixelValue(targetX, targetY);
+				final Point2D normalizedDelta = warpField.get(j, i);
 				
-				WarpField.warp(sourceWidth, sourceHeight, targetWidth, targetHeight, targetX, targetY, warpField.get(j, i), warped);
-				
-				debugPrint(targetX, targetY, warped);
+				WarpField.warp(sourceWidth, sourceHeight, targetWidth, targetHeight, targetX, targetY, normalizedDelta, warped);
 				
 				double bestScore = Double.POSITIVE_INFINITY;
 				Point2D bestPatchOffset = null;
@@ -100,7 +100,8 @@ public final class Register {
 					}
 				}
 				
-				// TODO
+				normalizedDelta.setLocation(normalizedDelta.getX() + bestPatchOffset.getX() / sourceWidth,
+						normalizedDelta.getY() + bestPatchOffset.getY() / sourceHeight);
 			}
 		}
 	}
