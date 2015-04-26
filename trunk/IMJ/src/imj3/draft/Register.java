@@ -49,14 +49,17 @@ public final class Register {
 		debugPrint("targetId:", target.getId());
 		debugPrint("targetWidth:", target.getWidth(), "targetHeight:", target.getHeight(), "targetChannels:", target.getChannels());
 		
-		final WarpField warpField = new WarpField(target.getWidth() / 4, target.getHeight() / 4);
+		final WarpField warpField = new WarpField(target.getWidth() / 8, target.getHeight() / 8);
 		
 		debugPrint("score:", warpField.score(source, target));
 		
-		for (int i = 0; i < 1000; ++i) {
-			update(warpField, source, target, 5);
-			debugPrint("score:", warpField.score(source, target));
-			regularize(warpField);
+		for (int i = 0; i < 100; ++i) {
+			move(warpField, source, target, 31);
+			
+			for (int j = 0; j < 16; ++j) {
+				regularize(warpField);
+			}
+			
 			debugPrint("score:", warpField.score(source, target));
 		}
 		
@@ -87,6 +90,32 @@ public final class Register {
 					n += 2;
 				}
 				
+				if (i == 0) {
+					if (j == 0) {
+						add(warpField.get(j + 1, i), sum);
+						add(warpField.get(j, i + 1), sum);
+						add(-1.0, warpField.get(j + 1, i + 1), sum);
+						n += 1;
+					} else if (j + 1 == fieldWidth) {
+						add(warpField.get(j - 1, i), sum);
+						add(warpField.get(j, i + 1), sum);
+						add(-1.0, warpField.get(j - 1, i + 1), sum);
+						n += 1;
+					}
+				} else if (i + 1 == fieldHeight) {
+					if (j == 0) {
+						add(warpField.get(j, i - 1), sum);
+						add(warpField.get(j + 1, i), sum);
+						add(-1.0, warpField.get(j + 1, i - 1), sum);
+						n += 1;
+					} else if (j + 1 == fieldWidth) {
+						add(warpField.get(j, i - 1), sum);
+						add(warpField.get(j - 1, i), sum);
+						add(-1.0, warpField.get(j - 1, i - 1), sum);
+						n += 1;
+					}
+				}
+				
 				if (0 < n) {
 					normalizedDelta.setLocation(middle(normalizedDelta.getX(), sum.getX() / n),
 							middle(normalizedDelta.getY(), sum.getY() / n));
@@ -100,10 +129,14 @@ public final class Register {
 	}
 	
 	public static final void add(final Point2D source, final Point2D destination) {
-		destination.setLocation(destination.getX() + source.getX(), destination.getY() + source.getY());
+		add(1.0, source, destination);
 	}
 	
-	public static final void update(final WarpField warpField, final Image2D source, final Image2D target, final int patchSize) {
+	public static final void add(final double scale, final Point2D source, final Point2D destination) {
+		destination.setLocation(destination.getX() + scale * source.getX(), destination.getY() + scale * source.getY());
+	}
+	
+	public static final void move(final WarpField warpField, final Image2D source, final Image2D target, final int patchSize) {
 		final int fieldWidth = warpField.getWidth();
 		final int fieldHeight = warpField.getHeight();
 		final int sourceWidth = source.getWidth();
@@ -140,8 +173,8 @@ public final class Register {
 					}
 				}
 				
-				normalizedDelta.setLocation(normalizedDelta.getX() + bestPatchOffset.getX() / sourceWidth,
-						normalizedDelta.getY() + bestPatchOffset.getY() / sourceHeight);
+				normalizedDelta.setLocation(normalizedDelta.getX() + bestPatchOffset.getX() / sourceWidth / 2.0,
+						normalizedDelta.getY() + bestPatchOffset.getY() / sourceHeight / 2.0);
 			}
 		}
 	}
