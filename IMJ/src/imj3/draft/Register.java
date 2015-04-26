@@ -49,14 +49,14 @@ public final class Register {
 		debugPrint("targetId:", target.getId());
 		debugPrint("targetWidth:", target.getWidth(), "targetHeight:", target.getHeight(), "targetChannels:", target.getChannels());
 		
-		final WarpField warpField = new WarpField(target.getWidth() / 8, target.getHeight() / 8);
+		final WarpField warpField = new WarpField(target.getWidth() / 8, target.getHeight() / 6);
 		
 		debugPrint("score:", warpField.score(source, target));
 		
-		for (int i = 0; i < 100; ++i) {
-			move(warpField, source, target, 31);
+		for (int i = 0; i < 200; ++i) {
+			move(warpField, source, target, 25);
 			
-			for (int j = 0; j < 16; ++j) {
+			for (int j = 0; j < 4; ++j) {
 				regularize(warpField);
 			}
 			
@@ -94,25 +94,25 @@ public final class Register {
 					if (j == 0) {
 						add(warpField.get(j + 1, i), sum);
 						add(warpField.get(j, i + 1), sum);
-						add(-1.0, warpField.get(j + 1, i + 1), sum);
-						n += 1;
+//						add(-1.0, warpField.get(j + 1, i + 1), sum);
+						n += 2;
 					} else if (j + 1 == fieldWidth) {
 						add(warpField.get(j - 1, i), sum);
 						add(warpField.get(j, i + 1), sum);
-						add(-1.0, warpField.get(j - 1, i + 1), sum);
-						n += 1;
+//						add(-1.0, warpField.get(j - 1, i + 1), sum);
+						n += 2;
 					}
 				} else if (i + 1 == fieldHeight) {
 					if (j == 0) {
 						add(warpField.get(j, i - 1), sum);
 						add(warpField.get(j + 1, i), sum);
-						add(-1.0, warpField.get(j + 1, i - 1), sum);
-						n += 1;
+//						add(-1.0, warpField.get(j + 1, i - 1), sum);
+						n += 2;
 					} else if (j + 1 == fieldWidth) {
 						add(warpField.get(j, i - 1), sum);
 						add(warpField.get(j - 1, i), sum);
-						add(-1.0, warpField.get(j - 1, i - 1), sum);
-						n += 1;
+//						add(-1.0, warpField.get(j - 1, i - 1), sum);
+						n += 2;
 					}
 				}
 				
