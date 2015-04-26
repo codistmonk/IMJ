@@ -44,13 +44,13 @@ public final class EvaluateClassification {
 		final int classificationHeight = classification.getHeight();
 		final ConfusionMatrix confusionMatrix = new ConfusionMatrix();
 		
-		for (int y = 0; y < classificationHeight; ++y) {
-			final int groundtruthY = y * groundtruthHeight / classificationHeight;
+		for (int y = 0; y < groundtruthHeight; ++y) {
+			final int classificationY = y * classificationHeight / groundtruthHeight;
 			
-			for (int x = 0; x < classificationWidth; ++x) {
-				final int groundtruthX = x * groundtruthWidth / classificationWidth;
+			for (int x = 0; x < groundtruthWidth; ++x) {
+				final int classificationX = x * classificationWidth / groundtruthWidth;
 				
-				confusionMatrix.count(toHexString(classification.getRGB(x, y)), toHexString(groundtruth.getRGB(groundtruthX, groundtruthY)));
+				confusionMatrix.count(toHexString(classification.getRGB(classificationX, classificationY)), toHexString(groundtruth.getRGB(x, y)));
 			}
 			
 		}
