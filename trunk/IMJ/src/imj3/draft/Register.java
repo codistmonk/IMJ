@@ -53,14 +53,54 @@ public final class Register {
 		
 		debugPrint("score:", warpField.score(source, target));
 		
-		for (int i = 0; i < 10; ++i) {
+		for (int i = 0; i < 1000; ++i) {
 			update(warpField, source, target, 5);
+			debugPrint("score:", warpField.score(source, target));
+			regularize(warpField);
 			debugPrint("score:", warpField.score(source, target));
 		}
 		
 		show(new Image2DComponent(source), "source", false);
 		show(new Image2DComponent(target), "target", false);
 		show(new Image2DComponent(warpField.warp(source, target, null)), "warped", false);
+	}
+	
+	public static final void regularize(final WarpField warpField) {
+		final int fieldWidth = warpField.getWidth();
+		final int fieldHeight = warpField.getHeight();
+		
+		for (int i = 0; i < fieldHeight; ++i) {
+			for (int j = 0; j < fieldWidth; ++j) {
+				final Point2D normalizedDelta = warpField.get(j, i);
+				final Point2D sum = new Point2D.Double();
+				int n = 0;
+				
+				if (0 < j && j + 1 < fieldWidth) {
+					add(warpField.get(j - 1, i), sum);
+					add(warpField.get(j + 1, i), sum);
+					n += 2;
+				}
+				
+				if (0 < i && i + 1 < fieldHeight) {
+					add(warpField.get(j, i - 1), sum);
+					add(warpField.get(j, i + 1), sum);
+					n += 2;
+				}
+				
+				if (0 < n) {
+					normalizedDelta.setLocation(middle(normalizedDelta.getX(), sum.getX() / n),
+							middle(normalizedDelta.getY(), sum.getY() / n));
+				}
+			}
+		}
+	}
+	
+	public static final double middle(final double a, final double b) {
+		return (a + b) / 2.0;
+	}
+	
+	public static final void add(final Point2D source, final Point2D destination) {
+		destination.setLocation(destination.getX() + source.getX(), destination.getY() + source.getY());
 	}
 	
 	public static final void update(final WarpField warpField, final Image2D source, final Image2D target, final int patchSize) {
@@ -202,6 +242,10 @@ public final class Register {
 			final Point2D delta = this.getNormalizedDelta(targetWidth, targetHeight, targetX, targetY);
 			final int sourceX = (int) ((double) targetX * sourceWidth / targetWidth + delta.getX() * sourceWidth);
 			final int sourceY = (int) ((double) targetY * sourceHeight / targetHeight + delta.getY() * sourceHeight);
+			
+			if (sourceX < 0 || sourceWidth <= sourceX || sourceY < 0 || sourceHeight <= sourceY) {
+				return 0L;
+			}
 			
 			return source.getPixelValue(sourceX, sourceY);
 		}
