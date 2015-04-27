@@ -1,6 +1,7 @@
 package imj3.draft;
 
 import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.MathTools.square;
@@ -9,6 +10,7 @@ import static net.sourceforge.aprog.tools.Tools.*;
 import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.core.Image2D.Pixel2DProcessor;
+import imj3.tools.DoubleImage2D;
 import imj3.tools.IMJTools;
 import imj3.tools.Image2DComponent;
 import imj3.tools.Image2DComponent.TileOverlay;
@@ -18,16 +20,20 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.geom.Point2D;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.MathTools.VectorStatistics;
 
 /**
  * @author codistmonk (creation 2015-04-24)
@@ -53,6 +59,14 @@ public final class Register {
 		final int regularization = arguments.get("regularization", 20)[0];
 		final String outputPrefix = arguments.get("outputPrefix", baseName(source.getId()));
 		final boolean show = arguments.get("show", 0)[0] != 0;
+		
+		if (true) {
+			final DoubleImage2D scalarized = scalarize(source);
+			
+			show(new Image2DComponent(scalarized), "scalarized", false);
+			
+			return;
+		}
 		
 		debugPrint("sourceId:", source.getId());
 		debugPrint("sourceWidth:", source.getWidth(), "sourceHeight:", source.getHeight(), "sourceChannels:", source.getChannels());
@@ -83,11 +97,16 @@ public final class Register {
 		if (show) {
 			{
 				final Image2DComponent component = new Image2DComponent(source);
+				final AtomicBoolean showField = new AtomicBoolean(false);
 				
 				component.setTileOverlay(new TileOverlay() {
 					
 					@Override
 					public final void update(final Graphics2D graphics, final Point tileXY, final Rectangle region) {
+						if (!showField.get()) {
+							return;
+						}
+						
 						final int targetWidth = target.getWidth();
 						final int targetHeight = target.getHeight();
 						final int tileX = tileXY.x;
@@ -129,11 +148,71 @@ public final class Register {
 					
 				});
 				
+				component.addKeyListener(new KeyAdapter() {
+					
+					@Override
+					public final void keyPressed(final KeyEvent event) {
+						if (event.getKeyCode() == KeyEvent.VK_F) {
+							showField.set(!showField.get());
+							component.repaint();
+						}
+					}
+					
+				});
+				
+				component.setFocusable(true);
+				
 				show(component, "source", false);
+				
+				component.requestFocusInWindow();
 			}
 			show(new Image2DComponent(target), "target", false);
 			show(new Image2DComponent(warpField.warp(source, target, null)), "warped", false);
 		}
+	}
+	
+	public static final DoubleImage2D scalarize(final Image2D image) {
+		final DoubleImage2D result = new DoubleImage2D(image.getId() + "_scalarized", image.getWidth(), image.getHeight(), 1);
+		final int n = image.getChannels().getChannelCount();
+		final int patchSize = 5;
+		
+		result.forEachPixel(new Pixel2DProcessor() {
+			
+			private final VectorStatistics statistics = new VectorStatistics(n);
+			
+			private final double[] inputValue = new double[n];
+			
+			private final double[] outputValue = new double[1];
+			
+			@Override
+			public final boolean pixel(final int x, final int y) {
+				this.statistics.reset();
+				
+				final int imageWidth = image.getWidth();
+				final int imageHeight = image.getHeight();
+				final int left = max(0, x - patchSize / 2);
+				final int right = min(left + patchSize, imageWidth);
+				final int top = max(0, y - patchSize / 2);
+				final int bottom = min(top + patchSize, imageHeight);
+				
+				for (int yy = top; yy < bottom; ++yy) {
+					for (int xx = left; xx < right; ++xx) {
+						this.statistics.addValues(image.getPixelValue(xx, yy, this.inputValue));
+					}
+				}
+				
+				this.outputValue[0] = Arrays.stream(this.statistics.getMeans()).average().getAsDouble();
+				
+				result.setPixelValue(x, y, this.outputValue);
+				
+				return true;
+			}
+			
+			private static final long serialVersionUID = 3324647706518224181L;
+			
+		});
+		
+		return result;
 	}
 	
 	public static final double scalarize(final long pixelValue, final Channels channels) {
