@@ -3,14 +3,11 @@ package imj3.draft;
 import static imj3.draft.Register.add;
 import static imj3.draft.Register.lerp;
 import static imj3.draft.Register.newPatchOffsets;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
-import static java.lang.Math.sqrt;
+import static java.lang.Math.*;
 import static java.util.Arrays.stream;
 import static net.sourceforge.aprog.swing.SwingTools.show;
-import static net.sourceforge.aprog.tools.Tools.baseName;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import static net.sourceforge.aprog.tools.Tools.instances;
+import static net.sourceforge.aprog.tools.Tools.*;
+
 import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.core.Image2D.Pixel2DProcessor;
@@ -35,7 +32,6 @@ import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
-import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.MathTools.VectorStatistics;
 
 /**
@@ -72,7 +68,7 @@ public final class Register2 {
 		debugPrint("targetWidth:", target.getWidth(), "targetHeight:", target.getHeight(), "targetChannels:", target.getChannels());
 		
 		final WarpField warpField = new WarpField(target.getWidth() / 2, target.getHeight() / 2);
-		final Warping warping = new Warping(16, 16);
+		final Warping warping = new Warping(24, 24);
 		
 		debugPrint("score:", warpField.score(source, target));
 		
@@ -80,14 +76,14 @@ public final class Register2 {
 			final Image2DComponent sourceComponent = new Image2DComponent(scalarize(source));
 			final Image2DComponent targetComponent = new Image2DComponent(scalarize(target));
 			
-			focusAndRegularize(warping.getSourceGrid(), source, 100, 16, 5, 1);
-//			focusAndRegularize(warping.getTargetGrid(), target, 16, 16, 5, 4);
+			focus(warping.getSourceGrid(), source, 200, 16, 5);
+			focus(warping.getTargetGrid(), target, 200, 16, 5);
 			
 			overlay(warping.getSourceGrid(), sourceComponent);
 			overlay(warping.getTargetGrid(), targetComponent);
 			
 			show(sourceComponent, "scalarized source", false);
-//			show(targetComponent, "scalarized target", false);
+			show(targetComponent, "scalarized target", false);
 			
 			return;
 		}
@@ -99,11 +95,23 @@ public final class Register2 {
 		for (int i = 0; i < iterations; ++i) {
 			monitor.ping(i + "/" + iterations + "\r");
 			
-			focus(grid, image, windowSize - i * 4 / iterations, patchSize);
+			focus(grid, image, windowSize - i * (windowSize - 1) / iterations, patchSize);
 			
 			for (int j = 0; j < regularization; ++j) {
 				regularize(grid);
 			}
+		}
+		
+		monitor.pause();
+	}
+	
+	public static final void focus(final ParticleGrid grid, final Image2D image, final int iterations, final int windowSize, final int patchSize) {
+		final ConsoleMonitor monitor = new ConsoleMonitor(10_000L);
+		
+		for (int i = 0; i < iterations; ++i) {
+			monitor.ping(i + "/" + iterations + "\r");
+			
+			focus(grid, image, windowSize - i * (windowSize - 1) / iterations, patchSize);
 		}
 		
 		monitor.pause();
@@ -241,6 +249,19 @@ public final class Register2 {
 		
 		grid.forEach((x, y) -> {
 			final Point2D normalizedPixel = grid.get(x, y);
+			double closestNeighborDistance = Double.POSITIVE_INFINITY;
+			{
+				for (int i = 0; i <= 3; ++i) {
+					final int dx = (i & 1) * 2 - 1;
+					final int dy = (i & 2) - 1;
+					final double d = normalizedPixel.distance(grid.get(x + dx, y + dy));
+					
+					if (0.0 < d && d < closestNeighborDistance) {
+						closestNeighborDistance = d;
+					}
+				}
+			}
+			
 			double bestSaliency = 0.0;
 			Point2D bestOffset = null;
 			
@@ -256,9 +277,15 @@ public final class Register2 {
 			}
 			
 			if (bestOffset != null) {
-				normalizedPixel.setLocation(
-						normalizedPixel.getX() + bestOffset.getX() / imageWidth / 2.0,
-						normalizedPixel.getY() + bestOffset.getY() / imageHeight / 2.0);
+				final double d = bestOffset.distance(ZERO);
+				
+				if (0.0 < d) {
+					final double k = min(d, closestNeighborDistance) / d / 2.0;
+					
+					normalizedPixel.setLocation(
+							normalizedPixel.getX() + k * bestOffset.getX() / imageWidth,
+							normalizedPixel.getY() + k * bestOffset.getY() / imageHeight);
+				}
 			}
 			
 			return true;
@@ -373,11 +400,7 @@ public final class Register2 {
 		}
 		
 		public final Point2D get(final int x, final int y) {
-			if (x < 0 || this.getWidth() <= x || y < 0 || this.getHeight() <= y) {
-				return new Point2D.Double();
-			}
-			
-			return this.grid[y * this.getWidth() + x];
+			return this.grid[max(0, min(y, this.getHeight() - 1)) * this.getWidth() + max(0, min(x, this.getWidth() - 1))];
 		}
 		
 		public final Point2D get(final double x, final double y) {
