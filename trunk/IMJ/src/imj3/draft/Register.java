@@ -5,6 +5,7 @@ import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.MathTools.square;
 import static net.sourceforge.aprog.tools.Tools.*;
+
 import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.core.Image2D.Pixel2DProcessor;
@@ -47,6 +48,11 @@ public final class Register {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final int lod = arguments.get("lod", 5)[0];
 		final Image2D source = IMJTools.read(arguments.get("source", ""), lod);
+		final int iterations = arguments.get("iterations", 200)[0];
+		final int patchSize0 = arguments.get("patchSize", 25)[0];
+		final int regularization = arguments.get("regularization", 20)[0];
+		final String outputPrefix = arguments.get("outputPrefix", baseName(source.getId()));
+		final boolean show = arguments.get("show", 0)[0] != 0;
 		
 		debugPrint("sourceId:", source.getId());
 		debugPrint("sourceWidth:", source.getWidth(), "sourceHeight:", source.getHeight(), "sourceChannels:", source.getChannels());
@@ -56,83 +62,108 @@ public final class Register {
 		debugPrint("targetId:", target.getId());
 		debugPrint("targetWidth:", target.getWidth(), "targetHeight:", target.getHeight(), "targetChannels:", target.getChannels());
 		
-		final WarpField warpField = new WarpField(target.getWidth() / 12, target.getHeight() / 8);
+		final WarpField warpField = new WarpField(target.getWidth() / 2, target.getHeight() / 2);
 		
 		debugPrint("score:", warpField.score(source, target));
 		
-		for (int i = 0; i < 200; ++i) {
-			move(warpField, source, target, max(1, 25 - i / 10));
+		for (int i = 0; i < iterations; ++i) {
+			final int patchSize = max(1, patchSize0 - i * (patchSize0 - 2) / iterations);
 			
-			for (int j = 0; j < 20; ++j) {
+			move(warpField, source, target, patchSize);
+			
+			for (int j = 0; j < regularization; ++j) {
 				regularize(warpField, source);
 			}
 			
-			debugPrint("i:", i, "score:", warpField.score(source, target));
+			debugPrint("iteration:", i, "score:", warpField.score(source, target));
 		}
 		
-		{
-			final Image2DComponent component = new Image2DComponent(source);
-			
-			component.setTileOverlay(new TileOverlay() {
+		writeObject(warpField, outputPrefix + "_warp.jo");
+		
+		if (show) {
+			{
+				final Image2DComponent component = new Image2DComponent(source);
 				
-				@Override
-				public final void update(final Graphics2D graphics, final Point tileXY, final Rectangle region) {
-					final int targetWidth = target.getWidth();
-					final int targetHeight = target.getHeight();
-					final int tileX = tileXY.x;
-					final int tileY = tileXY.y;
-					final Image2D source = component.getImage();
-					final int tileWidth = source.getTileWidth(tileX);
-					final int tileHeight = source.getTileHeight(tileY);
-					final int w = warpField.getWidth();
-					final int h = warpField.getHeight();
-					final int r = 400;
-					final Point2D tmp = new Point2D.Double();
-					final int sourceWidth = source.getWidth();
-					final int sourceHeight = source.getHeight();
+				component.setTileOverlay(new TileOverlay() {
 					
-					graphics.setColor(Color.RED);
-					
-					for (int i = 0; i < h; ++i) {
-						final int targetY = i * targetHeight / h;
+					@Override
+					public final void update(final Graphics2D graphics, final Point tileXY, final Rectangle region) {
+						final int targetWidth = target.getWidth();
+						final int targetHeight = target.getHeight();
+						final int tileX = tileXY.x;
+						final int tileY = tileXY.y;
+						final Image2D source = component.getImage();
+						final int tileWidth = source.getTileWidth(tileX);
+						final int tileHeight = source.getTileHeight(tileY);
+						final int w = warpField.getWidth();
+						final int h = warpField.getHeight();
+						final int r = 400;
+						final Point2D tmp = new Point2D.Double();
+						final int sourceWidth = source.getWidth();
+						final int sourceHeight = source.getHeight();
 						
-						for (int j = 0; j < w; ++j) {
-							final int targetX = j * targetWidth / w;
+						graphics.setColor(Color.RED);
+						
+						for (int i = 0; i < h; ++i) {
+							final int targetY = i * targetHeight / h;
 							
-							WarpField.warp(sourceWidth, sourceHeight, targetWidth, targetHeight, targetX, targetY, warpField.get(j, i), tmp);
-							
-							final int x0 = (int) tmp.getX();
-							final int y0 = (int) tmp.getY();
-							
-							if (tileX <= x0 && x0 < tileX + tileWidth && tileY <= y0 && y0 < tileY + tileHeight) {
-								final int x = (int) lerp(region.x, region.x + region.width, (double) (x0 - tileX) / tileWidth);
-								final int y = (int) lerp(region.y, region.y + region.height, (double) (y0 - tileY) / tileHeight);
+							for (int j = 0; j < w; ++j) {
+								final int targetX = j * targetWidth / w;
 								
-								graphics.drawOval(x - r, y - r, 2 * r, 2 * r);
+								WarpField.warp(sourceWidth, sourceHeight, targetWidth, targetHeight, targetX, targetY, warpField.get(j, i), tmp);
+								
+								final int x0 = (int) tmp.getX();
+								final int y0 = (int) tmp.getY();
+								
+								if (tileX <= x0 && x0 < tileX + tileWidth && tileY <= y0 && y0 < tileY + tileHeight) {
+									final int x = (int) lerp(region.x, region.x + region.width, (double) (x0 - tileX) / tileWidth);
+									final int y = (int) lerp(region.y, region.y + region.height, (double) (y0 - tileY) / tileHeight);
+									
+									graphics.drawOval(x - r, y - r, 2 * r, 2 * r);
+								}
 							}
 						}
 					}
-				}
+					
+					private static final long serialVersionUID = -993700290668202661L;
+					
+				});
 				
-				private static final long serialVersionUID = -993700290668202661L;
-				
-			});
-			
-			show(component, "source", false);
+				show(component, "source", false);
+			}
+			show(new Image2DComponent(target), "target", false);
+			show(new Image2DComponent(warpField.warp(source, target, null)), "warped", false);
 		}
-		show(new Image2DComponent(target), "target", false);
-		show(new Image2DComponent(warpField.warp(source, target, null)), "warped", false);
 	}
 	
-	public static final double mean(final long pixelValue, final Channels channels) {
+	public static final double scalarize(final long pixelValue, final Channels channels) {
 		final int n = channels.getChannelCount();
-		double sum = 0.0;
+		final int operation = 0;
 		
-		for (int channelIndex = 0; channelIndex < n; ++channelIndex) {
-			sum += channels.getChannelValue(pixelValue, channelIndex);
+		switch (operation) {
+		case 0:
+		{
+			double sum = 0.0;
+			
+			for (int channelIndex = 0; channelIndex < n; ++channelIndex) {
+				sum += channels.getChannelValue(pixelValue, channelIndex);
+			}
+			
+			return sum / n;
+		}
+		case 1:
+		{
+			double result = 0.0;
+			
+			for (int channelIndex = 0; channelIndex < n; ++channelIndex) {
+				result = max(result, channels.getChannelValue(pixelValue, channelIndex));
+			}
+			
+			return result;
+		}
 		}
 		
-		return sum / n;
+		return 0.0;
 	}
 	
 	public static final void regularize(final WarpField warpField, final Image2D source) {
@@ -144,7 +175,7 @@ public final class Register {
 		for (int i = 0; i < fieldHeight; ++i) {
 			for (int j = 0; j < fieldWidth; ++j) {
 				final Point2D normalizedDelta = warpField.get(j, i);
-				final double pixelValue = mean(warpField.warp(source, warpField.getWidth(), warpField.getHeight(), j, i), channels) / 255.0;
+				final double pixelValue = scalarize(warpField.warp(source, warpField.getWidth(), warpField.getHeight(), j, i), channels) / 255.0;
 				final Point2D sum = new Point2D.Double();
 				int n = 0;
 				
