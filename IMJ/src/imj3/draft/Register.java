@@ -60,14 +60,6 @@ public final class Register {
 		final String outputPrefix = arguments.get("outputPrefix", baseName(source.getId()));
 		final boolean show = arguments.get("show", 0)[0] != 0;
 		
-		if (true) {
-			final DoubleImage2D scalarized = scalarize(source);
-			
-			show(new Image2DComponent(scalarized), "scalarized", false);
-			
-			return;
-		}
-		
 		debugPrint("sourceId:", source.getId());
 		debugPrint("sourceWidth:", source.getWidth(), "sourceHeight:", source.getHeight(), "sourceChannels:", source.getChannels());
 		
@@ -169,50 +161,6 @@ public final class Register {
 			show(new Image2DComponent(target), "target", false);
 			show(new Image2DComponent(warpField.warp(source, target, null)), "warped", false);
 		}
-	}
-	
-	public static final DoubleImage2D scalarize(final Image2D image) {
-		final DoubleImage2D result = new DoubleImage2D(image.getId() + "_scalarized", image.getWidth(), image.getHeight(), 1);
-		final int n = image.getChannels().getChannelCount();
-		final int patchSize = 5;
-		
-		result.forEachPixel(new Pixel2DProcessor() {
-			
-			private final VectorStatistics statistics = new VectorStatistics(n);
-			
-			private final double[] inputValue = new double[n];
-			
-			private final double[] outputValue = new double[1];
-			
-			@Override
-			public final boolean pixel(final int x, final int y) {
-				this.statistics.reset();
-				
-				final int imageWidth = image.getWidth();
-				final int imageHeight = image.getHeight();
-				final int left = max(0, x - patchSize / 2);
-				final int right = min(left + patchSize, imageWidth);
-				final int top = max(0, y - patchSize / 2);
-				final int bottom = min(top + patchSize, imageHeight);
-				
-				for (int yy = top; yy < bottom; ++yy) {
-					for (int xx = left; xx < right; ++xx) {
-						this.statistics.addValues(image.getPixelValue(xx, yy, this.inputValue));
-					}
-				}
-				
-				this.outputValue[0] = Arrays.stream(this.statistics.getMeans()).average().getAsDouble();
-				
-				result.setPixelValue(x, y, this.outputValue);
-				
-				return true;
-			}
-			
-			private static final long serialVersionUID = 3324647706518224181L;
-			
-		});
-		
-		return result;
 	}
 	
 	public static final double scalarize(final long pixelValue, final Channels channels) {
