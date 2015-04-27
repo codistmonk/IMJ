@@ -1,6 +1,7 @@
 package imj3.tools;
 
 import static java.util.Arrays.stream;
+import static net.sourceforge.aprog.tools.Tools.*;
 
 import imj3.core.Channels;
 import imj3.core.Image;
@@ -12,7 +13,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import net.sourceforge.aprog.tools.MathTools.VectorStatistics;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-03-01)
@@ -77,9 +77,9 @@ public final class DoubleImage2D implements Image2D {
 		try {
 			System.arraycopy(value, 0, this.data, (int) (pixel * n), n);
 		} catch (final Exception exception) {
-			Tools.debugError(pixel, n, value.length, this.data.length);
+			debugError(pixel, n, value.length, this.data.length);
 			
-			throw Tools.unchecked(exception);
+			throw unchecked(exception);
 		}
 		
 		return this;
@@ -124,8 +124,6 @@ public final class DoubleImage2D implements Image2D {
 		final double minimum = Arrays.stream(statistics.getMinima()).min().getAsDouble();
 		final double maximum = Arrays.stream(statistics.getMaxima()).max().getAsDouble();
 		final boolean normalize = minimum < 0.0 || 256.0 <= minimum || maximum <= 0.0 || 256.0 <= maximum;
-		
-		Tools.debugPrint(normalize, channelCount, displayedChannels);
 		
 		this.forEachPixel((x, y) -> {
 			this.getPixelValue(x, y, pixelValue);
