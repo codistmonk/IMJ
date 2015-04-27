@@ -33,6 +33,10 @@ public abstract interface Image2D extends Image {
 		return this.setPixelValue(this.getX(pixel), this.getY(pixel), value);
 	}
 	
+	public default Image2D setPixelValue(final int x, final int y, double[] value) {
+		return (Image2D) this.setPixelValue(this.getPixel(x, y), value);
+	}
+	
 	public default double[] getPixelValue(final int x, final int y, double[] result) {
 		return this.getPixelValue(this.getPixel(x, y), result);
 	}
