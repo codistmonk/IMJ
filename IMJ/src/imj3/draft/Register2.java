@@ -7,7 +7,6 @@ import static java.lang.Math.*;
 import static java.util.Arrays.stream;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.*;
-
 import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.core.Image2D.Pixel2DProcessor;
@@ -20,6 +19,7 @@ import imj3.tools.Image2DComponent.TileOverlay;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -33,6 +33,7 @@ import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.MathTools.VectorStatistics;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-04-27)
@@ -68,7 +69,7 @@ public final class Register2 {
 		debugPrint("targetWidth:", target.getWidth(), "targetHeight:", target.getHeight(), "targetChannels:", target.getChannels());
 		
 		final WarpField warpField = new WarpField(target.getWidth() / 2, target.getHeight() / 2);
-		final Warping warping = new Warping(24, 24);
+		final Warping warping = new Warping(16, 16);
 		
 		debugPrint("score:", warpField.score(source, target));
 		
@@ -76,8 +77,9 @@ public final class Register2 {
 			final Image2DComponent sourceComponent = new Image2DComponent(scalarize(source));
 			final Image2DComponent targetComponent = new Image2DComponent(scalarize(target));
 			
-			focus(warping.getSourceGrid(), source, 200, 16, 5);
 			focus(warping.getTargetGrid(), target, 200, 16, 5);
+			copyTo(warping.getSourceGrid(), warping.getTargetGrid());
+			focus(warping.getSourceGrid(), source, 400, 16, 5);
 			
 			overlay(warping.getSourceGrid(), sourceComponent);
 			overlay(warping.getTargetGrid(), targetComponent);
@@ -87,6 +89,21 @@ public final class Register2 {
 			
 			return;
 		}
+	}
+	
+	public static final void copyTo(final ParticleGrid destination, final ParticleGrid source) {
+		final int w = destination.getWidth();
+		final int h = destination.getHeight();
+		
+		if (w != source.getWidth() || h != source.getHeight()) {
+			throw new IllegalArgumentException();
+		}
+		
+		destination.forEach((x, y) -> {
+			destination.get(x, y).setLocation(source.get(x, y));
+			
+			return true;
+		});
 	}
 	
 	public static final void focusAndRegularize(final ParticleGrid grid, final Image2D image, final int iterations, final int windowSize, final int patchSize, final int regularization) {
@@ -109,6 +126,7 @@ public final class Register2 {
 		final ConsoleMonitor monitor = new ConsoleMonitor(10_000L);
 		
 		for (int i = 0; i < iterations; ++i) {
+			debugPrint(i);
 			monitor.ping(i + "/" + iterations + "\r");
 			
 			focus(grid, image, windowSize - i * (windowSize - 1) / iterations, patchSize);
@@ -249,19 +267,6 @@ public final class Register2 {
 		
 		grid.forEach((x, y) -> {
 			final Point2D normalizedPixel = grid.get(x, y);
-			double closestNeighborDistance = Double.POSITIVE_INFINITY;
-			{
-				for (int i = 0; i <= 3; ++i) {
-					final int dx = (i & 1) * 2 - 1;
-					final int dy = (i & 2) - 1;
-					final double d = normalizedPixel.distance(grid.get(x + dx, y + dy));
-					
-					if (0.0 < d && d < closestNeighborDistance) {
-						closestNeighborDistance = d;
-					}
-				}
-			}
-			
 			double bestSaliency = 0.0;
 			Point2D bestOffset = null;
 			
@@ -276,21 +281,106 @@ public final class Register2 {
 				}
 			}
 			
-			if (bestOffset != null) {
-				final double d = bestOffset.distance(ZERO);
-				
-				if (0.0 < d) {
-					final double k = min(d, closestNeighborDistance) / d / 2.0;
+			if (0 < x && x + 1 < grid.getWidth() && 0 < y && y + 1 < grid.getHeight()) {
+				for (int i = 0; i <= 3; ++i) {
+					final int i0 = i & 1;
+					final int i1 = (i >> 1) & 1;
+					final int dx = i1 - i0;
+					final int dy = i0 + i1 - 1;
 					
-					normalizedPixel.setLocation(
-							normalizedPixel.getX() + k * bestOffset.getX() / imageWidth,
-							normalizedPixel.getY() + k * bestOffset.getY() / imageHeight);
+					move(grid, x + dx, y + dy, bestOffset, imageWidth, imageHeight);
 				}
+			}
+			
+			if (0 < x && x + 1 < grid.getWidth() && 0 < y && y + 1 < grid.getHeight()) {
+				checkInducedTopology(grid, x, y, imageWidth, imageHeight);
+			}
+				
+			move(grid, x, y, bestOffset, imageWidth, imageHeight);
+			
+			if (0 < x && x + 1 < grid.getWidth() && 0 < y && y + 1 < grid.getHeight()) {
+				checkInducedTopology(grid, x, y, imageWidth, imageHeight);
 			}
 			
 			return true;
 		});
 	}
+	
+	public static final void move(final ParticleGrid grid, final int x, final int y,
+			final Point2D offset, final int imageWidth, final int imageHeight) {
+		if (offset != null) {
+			final double d = offset.distance(ZERO);
+			
+			if (0.0 < d) {
+				final double nx = offset.getX() / d;
+				final double ny = offset.getY() / d;
+				final Point2D normalizedPixel = grid.get(x, y);
+				double closestNeighborDistance = Double.POSITIVE_INFINITY;
+				
+				{
+					for (int i = 0; i <= 3; ++i) {
+						final int i0 = i & 1;
+						final int i1 = (i >> 1) & 1;
+						final int dx = i1 - i0;
+						final int dy = i0 + i1 - 1;
+						final Point2D neighbor = grid.get(x + dx, y + dy);
+//						final double neighborDistance = normalizedPixel.distance(neighbor);
+						final double neighborDistance = neighbor.getX() * nx + neighbor.getY() * ny;
+						
+						if (0.0 < neighborDistance && neighborDistance < closestNeighborDistance) {
+							closestNeighborDistance = neighborDistance;
+						}
+					}
+				}
+				
+				final double k = min(d, closestNeighborDistance) / d / 8.0;
+				
+				if (1.0 < k) {
+					debugError(k, d, closestNeighborDistance);
+				}
+				
+				normalizedPixel.setLocation(
+						normalizedPixel.getX() + k * offset.getX() / imageWidth,
+						normalizedPixel.getY() + k * offset.getY() / imageHeight);
+			}
+		}
+	}
+	
+	public static void checkInducedTopology(final ParticleGrid grid, final int x, final int y,
+			final int imageWidth, final int imageHeight) {
+		final Point2D normalizedPixel = grid.get(x, y);
+		
+		for (int i = 0; i <= 3; ++i) {
+			final int i0 = i & 1;
+			final int i1 = (i >> 1) & 1;
+			final int dx = i1 - i0;
+			final int dy = i0 + i1 - 1;
+			final Point2D neighbor = grid.get(x + dx, y + dy);
+			
+			xs[i] = (int) (neighbor.getX() * imageWidth);
+			ys[i] = (int) (neighbor.getY() * imageHeight);
+		}
+		
+		swap(xs, 2, 3);
+		swap(ys, 2, 3);
+		final Polygon polygon = new Polygon(xs, ys, xs.length);
+		
+		if (!polygon.contains(normalizedPixel.getX() * imageWidth, normalizedPixel.getY() * imageHeight)) {
+			debugError(Arrays.toString(xs));
+			debugError(Arrays.toString(ys));
+			debugError(normalizedPixel, (int) (normalizedPixel.getX() * imageWidth), (int) (normalizedPixel.getY() * imageHeight));
+			debugError();
+			debugError(grid.get(x, y - 1));
+			debugError(grid.get(x - 1, y));
+			debugError(grid.get(x, y + 1));
+			debugError(grid.get(x + 1, y));
+			throw new IllegalStateException();
+		}
+	}
+	
+	static final int[] xs = new int[4];
+	
+	static final int[] ys = new int[4];
 	
 	public static final double saliency(final Image2D image, final int x, final int y, final int patchSize) {
 		final Channels channels = image.getChannels();
