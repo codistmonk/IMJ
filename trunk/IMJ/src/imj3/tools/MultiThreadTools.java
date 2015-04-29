@@ -24,7 +24,7 @@ public final class MultiThreadTools {
 	
 	public static final int WORKER_COUNT = SystemProperties.getAvailableProcessorCount();
 	
-	private static final Map<Thread, Integer> workerIds = new HashMap<Thread, Integer>();
+	private static final Map<Thread, Integer> workerIds = new HashMap<>();
 	
 	private static ExecutorService executor;
 	

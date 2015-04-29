@@ -19,6 +19,8 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
@@ -387,7 +389,17 @@ public final class Image2DComponent extends JComponent {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String path = arguments.get("file", "");
 		
-		SwingTools.show(new Image2DComponent(IMJTools.read(path, 0)), path, false);
+		SwingTools.show(new Image2DComponent(IMJTools.read(path, 0)), path, false).addWindowListener(new WindowAdapter() {
+			
+			// XXX sftp handler prevents application from closing normally
+			
+			@Override
+			public final void windowClosed(final WindowEvent event) {
+				imj3.protocol.sftp.Handler.closeAll();
+				System.exit(0);
+			}
+			
+		});
 	}
 	
 	public static final BufferedImage getTile(final Image2D image, final int tileX, final int tileY) {
