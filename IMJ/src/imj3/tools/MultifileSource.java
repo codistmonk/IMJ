@@ -1,46 +1,49 @@
 package imj3.tools;
 
 import java.io.Closeable;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
-
-import de.schlichtherle.truezip.file.TFile;
-import de.schlichtherle.truezip.file.TFileInputStream;
-import de.schlichtherle.truezip.file.TFileOutputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 
 /**
  * @author codistmonk (creation 2015-03-23)
  */
 public final class MultifileSource implements Serializable, Closeable {
 	
-	private final TFile file;
+	private final String path;
 	
 	public MultifileSource(final String path) {
-		this.file = new TFile(path);
+		String tmp = path.replaceFirst("^file:", "local:");
 		
 		try {
-			this.file.setWritable(true);
-		} catch (final Exception exception) {
-			exception.printStackTrace();
+			new URL(path);
+		} catch (final MalformedURLException exception) {
+			if (exception.getMessage().startsWith("no protocol")) {
+				tmp = "local://" + path;
+			} else {
+				exception.printStackTrace();
+			}
 		}
+		
+		this.path = tmp;
 	}
 	
 	public final InputStream getInputStream(final String key) {
 		try {
-			return new TFileInputStream(this.getPath(key));
-		} catch (final FileNotFoundException exception) {
+			return new URL(this.getPath(key)).openStream();
+		} catch (final IOException exception) {
 			throw new UncheckedIOException(exception);
 		}
 	}
 	
 	public final OutputStream getOutputStream(final String key) {
 		try {
-			return new TFileOutputStream(this.getPath(key));
-		} catch (final FileNotFoundException exception) {
+			return new URL(this.getPath(key)).openConnection().getOutputStream();
+		} catch (final IOException exception) {
 			throw new UncheckedIOException(exception);
 		}
 	}
@@ -50,7 +53,7 @@ public final class MultifileSource implements Serializable, Closeable {
 	}
 	
 	public final String getId() {
-		return this.file.getPath();
+		return this.path;
 	}
 	
 	@Override
@@ -59,5 +62,13 @@ public final class MultifileSource implements Serializable, Closeable {
 	}
 	
 	private static final long serialVersionUID = -537686043074775519L;
+	
+	public static final String JAVA_PROTOCOL_HANDLER_PKGS = "java.protocol.handler.pkgs";
+	
+	static {
+		final String oldPackages = System.getProperty(JAVA_PROTOCOL_HANDLER_PKGS);
+		
+		System.setProperty(JAVA_PROTOCOL_HANDLER_PKGS, (oldPackages == null ? "" : (oldPackages + "|")) + "imj3.protocol");
+	}
 	
 }
