@@ -8,6 +8,7 @@ import static java.lang.Math.*;
 import static java.util.Arrays.stream;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.*;
+
 import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.core.Image2D.Pixel2DProcessor;
@@ -16,12 +17,6 @@ import imj3.tools.DoubleImage2D;
 import imj3.tools.IMJTools;
 import imj3.tools.Image2DComponent;
 import imj3.tools.Image2DComponent.TileOverlay;
-
-
-
-
-
-
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -38,18 +33,11 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-
-
-
-
-
-
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.MathTools.VectorStatistics;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-04-27)
@@ -84,10 +72,7 @@ public final class Register2 {
 		debugPrint("targetId:", target.getId());
 		debugPrint("targetWidth:", target.getWidth(), "targetHeight:", target.getHeight(), "targetChannels:", target.getChannels());
 		
-		final WarpField warpField = new WarpField(target.getWidth() / 2, target.getHeight() / 2);
 		final Warping warping = new Warping(16, 16);
-		
-		debugPrint("score:", warpField.score(source, target));
 		
 		if (true) {
 			final Image2DComponent sourceComponent = new Image2DComponent(scalarize(source));
@@ -346,6 +331,13 @@ public final class Register2 {
 				updateSurroundingPolygon8(grid, x, y, imageWidth, imageHeight, polygon);
 				final Shape shape = new Path2D.Double(polygon);
 				
+				for (final int s : new int[] { 4, 8, 16, 32, -32, -4 }) {
+					if (shape.contains(normalizedPixel.getX() * imageWidth + bestOffset.getX() / s / 2.0, normalizedPixel.getY() * imageHeight + bestOffset.getY() / s / 2.0)) {
+						normalizedPixel.setLocation(normalizedPixel.getX() + bestOffset.getX() / s / 2.0 / imageWidth, normalizedPixel.getY() + bestOffset.getY() / s / 2.0 / imageHeight);
+						break;
+					}
+				}
+				
 				if (!shape.contains(normalizedPixel.getX() * imageWidth, normalizedPixel.getY() * imageHeight)) {
 					debugError(x, y);
 					debugError(Arrays.toString(polygon.xpoints));
@@ -353,13 +345,6 @@ public final class Register2 {
 					debugError((int) (normalizedPixel.getX() * imageWidth), (int) (normalizedPixel.getY() * imageHeight));
 					
 					throw new RuntimeException(x + "," + y);
-				}
-				
-				for (final int s : new int[] { 4, 8, 16, 32, -32 }) {
-					if (shape.contains(normalizedPixel.getX() * imageWidth + bestOffset.getX() / s / 2.0, normalizedPixel.getY() * imageHeight + bestOffset.getY() / s / 2.0)) {
-						normalizedPixel.setLocation(normalizedPixel.getX() + bestOffset.getX() / s / 2.0 / imageWidth, normalizedPixel.getY() + bestOffset.getY() / s / 2.0 / imageHeight);
-						break;
-					}
 				}
 			}
 			
