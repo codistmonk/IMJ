@@ -119,7 +119,7 @@ public final class MultifileImage2D implements Image2D {
 	}
 	
 	@Override
-	public String getId() {
+	public final String getId() {
 		return this.source.getId();
 	}
 	
@@ -154,7 +154,7 @@ public final class MultifileImage2D implements Image2D {
 			return this;
 		}
 		
-		return new MultifileImage2D(this.getSource(), newLod);
+		return cache(this.getId() + "_lod" + newLod, () -> new MultifileImage2D(this.getSource(), newLod));
 	}
 	
 	@Override
@@ -223,11 +223,13 @@ public final class MultifileImage2D implements Image2D {
 	private static final long serialVersionUID = -4265650676493772608L;
 	
 	public static final Document getMetadataFrom(final MultifileSource source) {
-		try (final InputStream metadataInput = source.getInputStream("metadata.xml")) {
-			return parse(metadataInput);
-		} catch (final IOException exception) {
-			throw new UncheckedIOException(exception);
-		}
+		return cache(source.getPath("metadata.xml"), () -> {
+			try (final InputStream metadataInput = source.getInputStream("metadata.xml")) {
+				return parse(metadataInput);
+			} catch (final IOException exception) {
+				throw new UncheckedIOException(exception);
+			}
+		});
 	}
 	
 	/**

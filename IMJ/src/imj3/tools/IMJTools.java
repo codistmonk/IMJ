@@ -2,9 +2,11 @@ package imj3.tools;
 
 import static imj3.tools.CommonTools.classForName;
 import static imj3.tools.CommonTools.fieldValue;
+import static java.lang.Math.pow;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.invoke;
 
+import imj3.core.IMJCoreTools;
 import imj3.core.Image2D;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -24,17 +26,19 @@ public final class IMJTools {
 	}
 	
 	public static Image2D read(final String path, final int lod) {
-		try {
-			return new MultifileImage2D(new MultifileSource(path), lod);
-		} catch (final Exception exception1) {
+		return IMJCoreTools.cache(path, () -> {
 			try {
-				return new AwtImage2D(path);
-			} catch (final Exception exception2) {
-				IMJTools.toneDownBioFormatsLogger();
-				
-				return new BioFormatsImage2D(path);
+				return new MultifileImage2D(new MultifileSource(path), 0);
+			} catch (final Exception exception1) {
+				try {
+					return new AwtImage2D(path);
+				} catch (final Exception exception2) {
+					IMJTools.toneDownBioFormatsLogger();
+					
+					return new BioFormatsImage2D(path);
+				}
 			}
-		}
+		}).getScaledImage(pow(2.0, -lod));
 	}
 	
 	public static final void toneDownBioFormatsLogger() {
