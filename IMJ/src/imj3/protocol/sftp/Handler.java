@@ -5,6 +5,8 @@ import static java.util.Collections.synchronizedMap;
 import static net.sourceforge.aprog.swing.SwingTools.*;
 import static net.sourceforge.aprog.tools.Tools.*;
 
+import java.awt.GraphicsEnvironment;
+import java.io.Console;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -210,28 +212,62 @@ public final class Handler extends URLStreamHandler implements Serializable {
 			this.loginPassword = authorizations.get(host);
 			
 			if (this.loginPassword == null) {
-				SwingTools.setCheckAWT(false);
 				final Preferences preferences = Preferences.userNodeForPackage(getCallerClass());
 				final String userNameKey = "login for " + host;
 				final String userName = preferences.get(userNameKey, System.getProperty("user.name"));
-				final JTextField loginField = new JTextField(userName);
-				final JPasswordField passwordField = new JPasswordField();
-				final JComponent credentialsComponent = verticalBox(
-						horizontalBox(new JLabel("Login:"), loginField),
-						horizontalBox(new JLabel("Password:"), passwordField)
-				);
-				passwordField.requestFocusInWindow();
-				final int option = JOptionPane.showOptionDialog(null, credentialsComponent, host,
-						JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE, null, null, null);
 				
-				SwingTools.setCheckAWT(true);
-				
-				if (option == JOptionPane.OK_OPTION) {
-					this.loginPassword = new Pair<>(loginField.getText(), getPassword(passwordField));
-					preferences.put(userNameKey, this.loginPassword.getFirst());
-					authorizations.put(host, this.loginPassword);
+				if (GraphicsEnvironment.isHeadless()) {
+					final Console console = System.console();
+					
+					if (console == null) {
+						return;
+					}
+					
+					String login = console.readLine("login(%s): ", userName);
+					
+					if (login == null) {
+						return;
+					}
+					
+					if (login.isEmpty()) {
+						login = userName;
+					}
+					
+					final char[] password = console.readPassword("password: ");
+					
+					if (password == null) {
+						return;
+					}
+					
+					this.set(login, password, preferences, userNameKey);
+				} else {
+					SwingTools.setCheckAWT(false);
+					
+					final JTextField loginField = new JTextField(userName);
+					final JPasswordField passwordField = new JPasswordField();
+					final JComponent credentialsComponent = verticalBox(
+							horizontalBox(new JLabel("Login:"), loginField),
+							horizontalBox(new JLabel("Password:"), passwordField)
+					);
+					
+					SwingTools.setCheckAWT(true);
+					
+					passwordField.requestFocusInWindow();
+					
+					final int option = JOptionPane.showOptionDialog(null, credentialsComponent, host,
+							JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE, null, null, null);
+					
+					if (option == JOptionPane.OK_OPTION) {
+						this.set(loginField.getText(), passwordField.getPassword(), preferences, userNameKey);
+					}
 				}
 			}
+		}
+		
+		private final void set(final String login, final char[] password, final Preferences preferences, final String userNameKey) {
+			this.loginPassword = new Pair<>(login, getPassword(password));
+			preferences.put(userNameKey, this.loginPassword.getFirst());
+			authorizations.put(this.host, this.loginPassword);
 		}
 		
 		public final void invalidate() {
@@ -248,8 +284,7 @@ public final class Handler extends URLStreamHandler implements Serializable {
 		
 		private static final Map<String, Pair<String, byte[]>> authorizations = synchronizedMap(new HashMap<String, Pair<String, byte[]>>());
 		
-		public static final byte[] getPassword(final JPasswordField passwordField) {
-			final char[] passwordChars = passwordField.getPassword();
+		public static final byte[] getPassword(final char[] passwordChars) {
 			final byte[] result = new String(passwordChars).getBytes();
 			
 			fill(passwordChars, (char) 0);
