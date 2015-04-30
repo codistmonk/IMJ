@@ -218,7 +218,7 @@ public final class Handler extends URLStreamHandler implements Serializable {
 			final String userNameKey = "login for " + host;
 			final String privateKeyKey = "private key for " + host;
 			final String userName = preferences.get(userNameKey, System.getProperty("user.name"));
-			final String privateKey = preferences.get(privateKeyKey, ".ssh/id_rsa");
+			final String privateKey = preferences.get(privateKeyKey, "~/.ssh/id_rsa");
 			
 			if (GraphicsEnvironment.isHeadless()) {
 				final Console console = System.console();
@@ -243,10 +243,10 @@ public final class Handler extends URLStreamHandler implements Serializable {
 					return;
 				}
 				
-				final String newPrivateKey;
+				String newPrivateKey = new File(privateKey).isFile() ? privateKey : "";
 				
 				if (password.length == 0) {
-					newPrivateKey = console.readLine("privateKey(%s): ", new File(privateKey).isFile() ? privateKey : "");
+					newPrivateKey = console.readLine("privateKey(%s): ", newPrivateKey);
 					
 					if (!newPrivateKey.isEmpty()) {
 						password = null;
