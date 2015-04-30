@@ -243,19 +243,31 @@ public final class Handler extends URLStreamHandler implements Serializable {
 					return;
 				}
 				
-				String newPrivateKey = isFile(privateKey) ? privateKey : "";
+				String newPrivateKey;
 				
 				if (password.length == 0) {
-					newPrivateKey = console.readLine("privateKey(%s): ", newPrivateKey);
+					newPrivateKey = console.readLine("privateKey(%s): ", privateKey);
 					
-					if (newPrivateKey != null && !newPrivateKey.isEmpty()) {
+					if (newPrivateKey == null) {
+						return;
+					}
+					
+					if (newPrivateKey.isEmpty()) {
+						newPrivateKey = privateKey;
+					}
+					
+					if (!isFile(newPrivateKey)) {
+						newPrivateKey = "";
+					}
+					
+					if (!newPrivateKey.isEmpty()) {
 						password = null;
 					}
 				} else {
 					newPrivateKey = null;
 				}
 				
-				this.set(login, password, newPrivateKey, preferences, userNameKey);
+				this.set(login, password, newPrivateKey, preferences, userNameKey, privateKeyKey);
 			} else {
 				SwingTools.setCheckAWT(false);
 				
@@ -276,16 +288,26 @@ public final class Handler extends URLStreamHandler implements Serializable {
 						JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE, null, null, null);
 				
 				if (option == JOptionPane.OK_OPTION) {
-					this.set(loginField.getText(), passwordField.getPassword(), privateKeyField.getText(), preferences, userNameKey);
+					final String newPrivateKey = privateKeyField.getText();
+					final char[] password = passwordField.getPassword();
+					
+					this.set(loginField.getText(), newPrivateKey.isEmpty() || 0 < password.length ? password : null, newPrivateKey,
+							preferences, userNameKey, privateKeyKey);
 				}
 			}
 		}
 		
-		private final void set(final String login, final char[] password, final String privateKey, final Preferences preferences, final String userNameKey) {
+		private final void set(final String login, final char[] password, final String privateKey,
+				final Preferences preferences, final String userNameKey, final String privateKeyKey) {
 			this.login = login;
 			this.password = getPassword(password);
 			this.privateKey = privateKey == null || privateKey.isEmpty() ? null : privateKey;
+			
 			preferences.put(userNameKey, login);
+			
+			if (privateKey != null && !privateKey.isEmpty()) {
+				preferences.put(privateKeyKey, privateKey);
+			}
 		}
 		
 		public final void invalidate() {
