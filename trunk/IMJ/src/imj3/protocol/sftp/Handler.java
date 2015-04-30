@@ -145,13 +145,13 @@ public final class Handler extends URLStreamHandler implements Serializable {
 	public static final ChannelSftp getChannel(final URL url) throws JSchException, IOException {
 		final String host = url.getHost();
 		final Pair<Thread, String> key = new Pair<>(Thread.currentThread(), host);
-		final Handler.Credentials credentials = new Credentials(host);
-		final Pair<String, byte[]> loginPassword = credentials.getLoginPassword();
-		final ChannelSftp result;
+		final Handler.Credentials credentials = Credentials.forHost(host);
 		
-		if (loginPassword == null) {
+		if (credentials == null) {
 			return null;
 		}
+		
+		final ChannelSftp result;
 		
 		synchronized (channels) {
 			final ChannelSftp cachedChannel = channels.get(key);
@@ -165,10 +165,10 @@ public final class Handler extends URLStreamHandler implements Serializable {
 				if (cachedSession != null && cachedSession.isConnected()) {
 					session = cachedSession;
 				} else {
-					session = new JSch().getSession(loginPassword.getFirst(), host);
+					session = new JSch().getSession(credentials.getLogin(), host);
 					
 					session.setConfig("StrictHostKeyChecking", "no");
-					session.setPassword(loginPassword.getSecond());
+					session.setPassword(credentials.getPassword());
 					try {
 						session.connect();
 					} catch (final JSchException exception) {
@@ -205,84 +205,93 @@ public final class Handler extends URLStreamHandler implements Serializable {
 		
 		private final String host;
 		
-		private transient Pair<String, byte[]> loginPassword;
+		private transient String login;
+		
+		private transient byte[] password;
+		
+		private transient String privateKey;
 		
 		public Credentials(final String host) {
 			this.host = host;
-			this.loginPassword = authorizations.get(host);
 			
-			if (this.loginPassword == null) {
-				final Preferences preferences = Preferences.userNodeForPackage(getCallerClass());
-				final String userNameKey = "login for " + host;
-				final String userName = preferences.get(userNameKey, System.getProperty("user.name"));
+			final Preferences preferences = Preferences.userNodeForPackage(getCallerClass());
+			final String userNameKey = "login for " + host;
+			final String userName = preferences.get(userNameKey, System.getProperty("user.name"));
+			
+			if (GraphicsEnvironment.isHeadless()) {
+				final Console console = System.console();
 				
-				if (GraphicsEnvironment.isHeadless()) {
-					final Console console = System.console();
-					
-					if (console == null) {
-						return;
-					}
-					
-					String login = console.readLine("login(%s): ", userName);
-					
-					if (login == null) {
-						return;
-					}
-					
-					if (login.isEmpty()) {
-						login = userName;
-					}
-					
-					final char[] password = console.readPassword("password: ");
-					
-					if (password == null) {
-						return;
-					}
-					
-					this.set(login, password, preferences, userNameKey);
-				} else {
-					SwingTools.setCheckAWT(false);
-					
-					final JTextField loginField = new JTextField(userName);
-					final JPasswordField passwordField = new JPasswordField();
-					final JComponent credentialsComponent = verticalBox(
-							horizontalBox(new JLabel("Login:"), loginField),
-							horizontalBox(new JLabel("Password:"), passwordField)
-					);
-					
-					SwingTools.setCheckAWT(true);
-					
-					passwordField.requestFocusInWindow();
-					
-					final int option = JOptionPane.showOptionDialog(null, credentialsComponent, host,
-							JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE, null, null, null);
-					
-					if (option == JOptionPane.OK_OPTION) {
-						this.set(loginField.getText(), passwordField.getPassword(), preferences, userNameKey);
-					}
+				if (console == null) {
+					return;
+				}
+				
+				String login = console.readLine("login(%s): ", userName);
+				
+				if (login == null) {
+					return;
+				}
+				
+				if (login.isEmpty()) {
+					login = userName;
+				}
+				
+				final char[] password = console.readPassword("password: ");
+				
+				if (password == null) {
+					return;
+				}
+				
+				this.set(login, password, preferences, userNameKey);
+			} else {
+				SwingTools.setCheckAWT(false);
+				
+				final JTextField loginField = new JTextField(userName);
+				final JPasswordField passwordField = new JPasswordField();
+				final JComponent credentialsComponent = verticalBox(
+						horizontalBox(new JLabel("Login:"), loginField),
+						horizontalBox(new JLabel("Password:"), passwordField)
+				);
+				
+				SwingTools.setCheckAWT(true);
+				
+				passwordField.requestFocusInWindow();
+				
+				final int option = JOptionPane.showOptionDialog(null, credentialsComponent, host,
+						JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE, null, null, null);
+				
+				if (option == JOptionPane.OK_OPTION) {
+					this.set(loginField.getText(), passwordField.getPassword(), preferences, userNameKey);
 				}
 			}
 		}
 		
 		private final void set(final String login, final char[] password, final Preferences preferences, final String userNameKey) {
-			this.loginPassword = new Pair<>(login, getPassword(password));
-			preferences.put(userNameKey, this.loginPassword.getFirst());
-			authorizations.put(this.host, this.loginPassword);
+			this.login = login;
+			this.password = getPassword(password);
+			preferences.put(userNameKey, login);
 		}
 		
 		public final void invalidate() {
-			authorizations.remove(this.host);
+			credentials.remove(this.host);
 		}
 		
-		public final Pair<String, byte[]> getLoginPassword() {
-			try {
-				return this.loginPassword;
-			} finally {
-				this.loginPassword = null;
-			}
+		public final String getLogin() {
+			return this.login;
 		}
 		
-		private static final Map<String, Pair<String, byte[]>> authorizations = synchronizedMap(new HashMap<String, Pair<String, byte[]>>());
+		public final byte[] getPassword() {
+			return this.password;
+		}
+		
+		private static final Map<String, Credentials> credentials = synchronizedMap(new HashMap<>());
+		
+		public static final Credentials forHost(final String host) {
+			return credentials.computeIfAbsent(host, h -> {
+				final Credentials candidate = new Credentials(host);
+				
+				return candidate.getLogin() != null ? candidate : null;
+			});
+		}
 		
 		public static final byte[] getPassword(final char[] passwordChars) {
 			final byte[] result = new String(passwordChars).getBytes();
