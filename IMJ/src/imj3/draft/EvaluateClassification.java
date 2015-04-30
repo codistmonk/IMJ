@@ -29,20 +29,34 @@ public final class EvaluateClassification {
 		throw new IllegalInstantiationException();
 	}
 	
+	/**
+	 * @param commandLineArguments
+	 * <br>Must not be null
+	 * @throws IOException
+	 */
 	public static final void main(final String[] commandLineArguments) throws IOException {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final File groundtruthFile = new File(arguments.get("groundtruth", ""));
 		final File classificationFile = new File(arguments.get("classification", ""));
 		
-		debugPrint("groundtruth:", groundtruthFile, "classification:", classificationFile);
+		debugPrint("groundtruth:", groundtruthFile);
+		debugPrint("classification:", classificationFile);
 		
 		final BufferedImage groundtruth = ImageIO.read(groundtruthFile);
 		final BufferedImage classification = ImageIO.read(classificationFile);
+		final ConfusionMatrix confusionMatrix = evaluate(classification, groundtruth);
+		
+		debugPrint("counts:", confusionMatrix.getCounts());
+		debugPrint("F1s:", confusionMatrix.computeF1s());
+		debugPrint("macroF1:", confusionMatrix.computeMacroF1());
+	}
+	
+	public static final ConfusionMatrix evaluate(final BufferedImage classification, final BufferedImage groundtruth) {
 		final int groundtruthWidth = groundtruth.getWidth();
 		final int groundtruthHeight = groundtruth.getHeight();
 		final int classificationWidth = classification.getWidth();
 		final int classificationHeight = classification.getHeight();
-		final ConfusionMatrix confusionMatrix = new ConfusionMatrix();
+		final ConfusionMatrix result = new ConfusionMatrix();
 		
 		for (int y = 0; y < groundtruthHeight; ++y) {
 			final int classificationY = y * classificationHeight / groundtruthHeight;
@@ -50,14 +64,12 @@ public final class EvaluateClassification {
 			for (int x = 0; x < groundtruthWidth; ++x) {
 				final int classificationX = x * classificationWidth / groundtruthWidth;
 				
-				confusionMatrix.count(toHexString(classification.getRGB(classificationX, classificationY)), toHexString(groundtruth.getRGB(x, y)));
+				result.count(toHexString(classification.getRGB(classificationX, classificationY)), toHexString(groundtruth.getRGB(x, y)));
 			}
 			
 		}
 		
-		debugPrint("counts:", confusionMatrix.getCounts());
-		debugPrint("F1s:", confusionMatrix.computeF1s());
-		debugPrint("macroF1:", confusionMatrix.computeMacroF1());
+		return result;
 	}
 	
 	/**
