@@ -308,7 +308,10 @@ public final class Handler extends URLStreamHandler implements Serializable {
 		public final Session newSession() throws JSchException {
 			final JSch jsch = new JSch();
 			
+			debugPrint(this.login, this.host);
+			
 			if (this.privateKey != null) {
+				debugPrint(this.privateKey);
 				jsch.addIdentity(this.privateKey);
 			}
 			
