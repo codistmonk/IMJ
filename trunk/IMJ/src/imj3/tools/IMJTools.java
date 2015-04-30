@@ -30,9 +30,13 @@ public final class IMJTools {
 			try {
 				return new MultifileImage2D(new MultifileSource(path), 0);
 			} catch (final Exception exception1) {
+				Tools.debugError(exception1);
+				
 				try {
 					return new AwtImage2D(path);
 				} catch (final Exception exception2) {
+					Tools.debugError(exception2);
+					
 					IMJTools.toneDownBioFormatsLogger();
 					
 					return new BioFormatsImage2D(path);
