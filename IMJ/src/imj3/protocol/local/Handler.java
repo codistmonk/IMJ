@@ -21,7 +21,7 @@ public final class Handler extends URLStreamHandler implements Serializable {
 	
 	@Override
 	public final URLConnection openConnection(final URL u) throws IOException {
-		final TFile file = new TFile(u.toString());
+		final TFile file = new TFile(removePrefix(u.toString(), "local://"));
 		
 		try {
 			file.setWritable(true);
@@ -39,7 +39,7 @@ public final class Handler extends URLStreamHandler implements Serializable {
 			@Override
 			public final InputStream getInputStream() throws IOException {
 				try {
-					return new TFileInputStream(u.getFile());
+					return new TFileInputStream(file);
 				} catch (final FileNotFoundException exception) {
 					throw new UncheckedIOException(exception);
 				}
@@ -48,7 +48,7 @@ public final class Handler extends URLStreamHandler implements Serializable {
 			@Override
 			public final OutputStream getOutputStream() throws IOException {
 				try {
-					return new TFileOutputStream(u.getFile());
+					return new TFileOutputStream(file);
 				} catch (final FileNotFoundException exception) {
 					throw new UncheckedIOException(exception);
 				}
@@ -58,5 +58,9 @@ public final class Handler extends URLStreamHandler implements Serializable {
 	}
 	
 	private static final long serialVersionUID = 7306015033326912617L;
+	
+	public static final String removePrefix(final String string, final String prefix) {
+		return string.startsWith(prefix) ? string.substring(prefix.length()) : string;
+	}
 	
 }
