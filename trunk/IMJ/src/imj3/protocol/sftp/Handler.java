@@ -243,12 +243,12 @@ public final class Handler extends URLStreamHandler implements Serializable {
 					return;
 				}
 				
-				String newPrivateKey = new File(privateKey).isFile() ? privateKey : "";
+				String newPrivateKey = isFile(privateKey) ? privateKey : "";
 				
 				if (password.length == 0) {
 					newPrivateKey = console.readLine("privateKey(%s): ", newPrivateKey);
 					
-					if (!newPrivateKey.isEmpty()) {
+					if (newPrivateKey != null && !newPrivateKey.isEmpty()) {
 						password = null;
 					}
 				} else {
@@ -261,7 +261,7 @@ public final class Handler extends URLStreamHandler implements Serializable {
 				
 				final JTextField loginField = new JTextField(userName);
 				final JPasswordField passwordField = new JPasswordField();
-				final JTextField privateKeyField = new JTextField(new File(privateKey).isFile() ? privateKey : "");
+				final JTextField privateKeyField = new JTextField(isFile(privateKey) ? privateKey : "");
 				final JComponent credentialsComponent = verticalBox(
 						horizontalBox(new JLabel("Login:"), loginField),
 						horizontalBox(new JLabel("Password:"), passwordField),
@@ -308,10 +308,7 @@ public final class Handler extends URLStreamHandler implements Serializable {
 		public final Session newSession() throws JSchException {
 			final JSch jsch = new JSch();
 			
-			debugPrint(this.login, this.host);
-			
 			if (this.privateKey != null) {
-				debugPrint(this.privateKey);
 				jsch.addIdentity(this.privateKey);
 			}
 			
@@ -336,7 +333,15 @@ public final class Handler extends URLStreamHandler implements Serializable {
 			});
 		}
 		
+		public static final boolean isFile(final String path) {
+			return new File(path.replaceAll("^~", System.getProperty("user.home"))).isFile();
+		}
+		
 		public static final byte[] getPassword(final char[] passwordChars) {
+			if (passwordChars == null) {
+				return null;
+			}
+			
 			final byte[] result = new String(passwordChars).getBytes();
 			
 			fill(passwordChars, (char) 0);
