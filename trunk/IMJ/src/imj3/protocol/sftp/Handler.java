@@ -7,6 +7,7 @@ import static net.sourceforge.aprog.tools.Tools.*;
 
 import java.awt.GraphicsEnvironment;
 import java.io.Console;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -15,6 +16,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -165,10 +167,8 @@ public final class Handler extends URLStreamHandler implements Serializable {
 				if (cachedSession != null && cachedSession.isConnected()) {
 					session = cachedSession;
 				} else {
-					session = new JSch().getSession(credentials.getLogin(), host);
+					session = credentials.newSession();
 					
-					session.setConfig("StrictHostKeyChecking", "no");
-					session.setPassword(credentials.getPassword());
 					try {
 						session.connect();
 					} catch (final JSchException exception) {
@@ -216,7 +216,9 @@ public final class Handler extends URLStreamHandler implements Serializable {
 			
 			final Preferences preferences = Preferences.userNodeForPackage(getCallerClass());
 			final String userNameKey = "login for " + host;
+			final String privateKeyKey = "private key for " + host;
 			final String userName = preferences.get(userNameKey, System.getProperty("user.name"));
+			final String privateKey = preferences.get(privateKeyKey, ".ssh/id_rsa");
 			
 			if (GraphicsEnvironment.isHeadless()) {
 				final Console console = System.console();
@@ -235,21 +237,35 @@ public final class Handler extends URLStreamHandler implements Serializable {
 					login = userName;
 				}
 				
-				final char[] password = console.readPassword("password: ");
+				char[] password = console.readPassword("password: ");
 				
 				if (password == null) {
 					return;
 				}
 				
-				this.set(login, password, preferences, userNameKey);
+				final String newPrivateKey;
+				
+				if (password.length == 0) {
+					newPrivateKey = console.readLine("privateKey(%s): ", new File(privateKey).isFile() ? privateKey : "");
+					
+					if (!newPrivateKey.isEmpty()) {
+						password = null;
+					}
+				} else {
+					newPrivateKey = null;
+				}
+				
+				this.set(login, password, newPrivateKey, preferences, userNameKey);
 			} else {
 				SwingTools.setCheckAWT(false);
 				
 				final JTextField loginField = new JTextField(userName);
 				final JPasswordField passwordField = new JPasswordField();
+				final JTextField privateKeyField = new JTextField(new File(privateKey).isFile() ? privateKey : "");
 				final JComponent credentialsComponent = verticalBox(
 						horizontalBox(new JLabel("Login:"), loginField),
-						horizontalBox(new JLabel("Password:"), passwordField)
+						horizontalBox(new JLabel("Password:"), passwordField),
+						horizontalBox(new JLabel("Private key:"), privateKeyField)
 				);
 				
 				SwingTools.setCheckAWT(true);
@@ -260,18 +276,24 @@ public final class Handler extends URLStreamHandler implements Serializable {
 						JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE, null, null, null);
 				
 				if (option == JOptionPane.OK_OPTION) {
-					this.set(loginField.getText(), passwordField.getPassword(), preferences, userNameKey);
+					this.set(loginField.getText(), passwordField.getPassword(), privateKeyField.getText(), preferences, userNameKey);
 				}
 			}
 		}
 		
-		private final void set(final String login, final char[] password, final Preferences preferences, final String userNameKey) {
+		private final void set(final String login, final char[] password, final String privateKey, final Preferences preferences, final String userNameKey) {
 			this.login = login;
 			this.password = getPassword(password);
+			this.privateKey = privateKey == null || privateKey.isEmpty() ? null : privateKey;
 			preferences.put(userNameKey, login);
 		}
 		
 		public final void invalidate() {
+			if (this.password != null) {
+				Arrays.fill(this.password, (byte) 0);
+				this.password = null;
+			}
+			
 			credentials.remove(this.host);
 		}
 		
@@ -283,11 +305,29 @@ public final class Handler extends URLStreamHandler implements Serializable {
 			return this.password;
 		}
 		
+		public final Session newSession() throws JSchException {
+			final JSch jsch = new JSch();
+			
+			if (this.privateKey != null) {
+				jsch.addIdentity(this.privateKey);
+			}
+			
+			final Session result = jsch.getSession(this.login, this.host);
+			
+			result.setConfig("StrictHostKeyChecking", "no");
+			
+			if (this.password != null) {
+				result.setPassword(this.password);
+			}
+			
+			return result;
+		}
+		
 		private static final Map<String, Credentials> credentials = synchronizedMap(new HashMap<>());
 		
-		public static final Credentials forHost(final String host) {
-			return credentials.computeIfAbsent(host, h -> {
-				final Credentials candidate = new Credentials(host);
+		static final Credentials forHost(final String host) {
+			return credentials.compute(host, (h, c) -> {
+				final Credentials candidate = c == null || c.getLogin() == null ? new Credentials(host) : c;
 				
 				return candidate.getLogin() != null ? candidate : null;
 			});
