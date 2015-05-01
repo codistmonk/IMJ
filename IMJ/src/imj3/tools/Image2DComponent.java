@@ -77,8 +77,9 @@ public final class Image2DComponent extends JComponent {
 		final int h = min(image.getHeight(), 600);
 		this.setPreferredSize(new Dimension(w, h));
 		
-		this.view.scale(image.getScale(), image.getScale());
-		this.view.translate(-image.getWidth() / 2.0 + w / 2, -image.getHeight() / 2.0 + h / 2);
+		final double scale = image.getScale();
+		this.view.scale(scale, scale);
+		this.view.translate((-image.getWidth() / 2.0 + w / 2) / scale, (-image.getHeight() / 2.0 + h / 2) / scale);
 		
 		new MouseHandler() {
 			
@@ -213,7 +214,7 @@ public final class Image2DComponent extends JComponent {
 		final Graphics2D canvasGraphics = this.canvas.setFormat(this.getWidth(), this.getHeight()).getGraphics();
 		
 		{
-			final double scale = max(this.view.getScaleX(), this.view.getScaleY());
+			final double scale = max(this.getView().getScaleX(), this.getView().getScaleY());
 			final Image2D image = this.getImage();
 			this.image = image.getScaledImage(scale);
 			
@@ -228,16 +229,16 @@ public final class Image2DComponent extends JComponent {
 		
 		synchronized (canvasGraphics) {
 			// XXX not perfect but works for now
-			statusHashCode = this.view.hashCode() + canvasGraphics.hashCode() + this.getImage().hashCode() + this.getSize().hashCode()
+			statusHashCode = this.getView().hashCode() + canvasGraphics.hashCode() + this.getImage().hashCode() + this.getSize().hashCode()
 					+ Tools.hashCode(this.getOverlay()) + Tools.hashCode(this.getTileOverlay());
-			canvasGraphics.setTransform(this.view);
+			canvasGraphics.setTransform(this.getView());
 		}
 		
 		if (!this.isImageEnabled()) {
 			synchronized (canvasGraphics) {
 				canvasGraphics.setTransform(IDENTITY);
 				canvasGraphics.fillRect(0, 0, this.getWidth(), this.getHeight());
-				canvasGraphics.setTransform(this.view);
+				canvasGraphics.setTransform(this.getView());
 			}
 		} else if (this.statusHashCode != statusHashCode) {
 			this.statusHashCode = statusHashCode;
@@ -250,10 +251,10 @@ public final class Image2DComponent extends JComponent {
 			final Point2D bottomLeft = new Point2D.Double(0, this.getHeight() - 1.0);
 			
 			try {
-				this.view.inverseTransform(topLeft, topLeft);
-				this.view.inverseTransform(topRight, topRight);
-				this.view.inverseTransform(bottomRight, bottomRight);
-				this.view.inverseTransform(bottomLeft, bottomLeft);
+				this.getView().inverseTransform(topLeft, topLeft);
+				this.getView().inverseTransform(topRight, topRight);
+				this.getView().inverseTransform(bottomRight, bottomRight);
+				this.getView().inverseTransform(bottomLeft, bottomLeft);
 			} catch (final NoninvertibleTransformException exception) {
 				exception.printStackTrace();
 			}
@@ -389,7 +390,7 @@ public final class Image2DComponent extends JComponent {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String path = arguments.get("file", "");
 		
-		SwingTools.show(new Image2DComponent(IMJTools.read(path, 0)), path, false).addWindowListener(new WindowAdapter() {
+		SwingTools.show(new Image2DComponent(IMJTools.read(path)), path, false).addWindowListener(new WindowAdapter() {
 			
 			// XXX sftp handler prevents application from closing normally
 			
