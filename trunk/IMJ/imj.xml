@@ -47,6 +47,19 @@
             <fileset dir="src" includes="imj3/core/**,imj3/tools/**,imj3/protocol/**"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/aprog.jar"/>
         </jar>
+        <jar destfile="evaluateclassification.jar" filesetmanifest="mergewithoutmain">
+            <manifest>
+                <attribute name="Main-Class" value="imj3.draft.EvaluateClassification"/>
+                <attribute name="Class-Path" value="."/>
+            </manifest>
+            <fileset file="imj_license.txt"/>
+            <fileset file="readme.txt"/>
+            <fileset dir="bin" includes="imj3/draft/EvaluateClassification*">
+            	<present present="srconly" targetdir="test"/>
+        	</fileset>
+            <fileset dir="src" includes="imj3/draft/EvaluateClassification*"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/aprog.jar"/>
+        </jar>
     	<delete file="src/imj/version"/>
     </target>
 </project>
