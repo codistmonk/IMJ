@@ -21,7 +21,7 @@ public final class Handler extends URLStreamHandler implements Serializable {
 	
 	@Override
 	public final URLConnection openConnection(final URL u) throws IOException {
-		final TFile file = new TFile(removePrefix(u.toString(), "local://"));
+		final TFile file = new TFile(removePrefix(u.toString(), "local:"));
 		
 		try {
 			file.setWritable(true);
