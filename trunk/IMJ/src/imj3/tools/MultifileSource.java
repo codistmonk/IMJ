@@ -24,7 +24,7 @@ public final class MultifileSource implements Serializable, Closeable {
 			new URL(tmp);
 		} catch (final MalformedURLException exception) {
 			if (exception.getMessage().contains("protocol")) {
-				tmp = "local://" + tmp;
+				tmp = "local:" + tmp;
 			} else {
 				exception.printStackTrace();
 			}
