@@ -30,7 +30,9 @@ public final class IMJTools {
 			try {
 				return new MultifileImage2D(new MultifileSource(path), 0);
 			} catch (final Exception exception1) {
-				Tools.debugError(exception1);
+				if (!exception1.getMessage().endsWith("metadata.xml")) {
+					Tools.debugError(exception1);
+				}
 				
 				try {
 					return new AwtImage2D(path);
