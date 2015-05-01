@@ -3,11 +3,11 @@ package imj3.tools;
 import static imj3.core.IMJCoreTools.quantize;
 import static java.lang.Math.*;
 import static net.sourceforge.aprog.tools.Tools.*;
-
 import imj3.core.Image2D;
 
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
@@ -30,7 +30,9 @@ import java.util.HashSet;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
 
+import net.sourceforge.aprog.events.EventManager;
 import net.sourceforge.aprog.events.EventManager.AbstractEvent;
+import net.sourceforge.aprog.events.EventManager.Event.Listener;
 import net.sourceforge.aprog.swing.MouseHandler;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Canvas;
@@ -60,8 +62,6 @@ public final class Image2DComponent extends JComponent {
 	
 	private boolean dragEnabled;
 	
-	private boolean dropEnabled;
-	
 	private boolean wheelZoomEnabled;
 	
 	public Image2DComponent(final Image2D image) {
@@ -71,7 +71,6 @@ public final class Image2DComponent extends JComponent {
 		this.activeTiles = Collections.synchronizedSet(new HashSet<>());
 		this.imageEnabled = true;
 		this.dragEnabled = true;
-		this.dropEnabled = true;
 		this.wheelZoomEnabled = true;
 		
 		this.setOpaque(true);
@@ -159,29 +158,6 @@ public final class Image2DComponent extends JComponent {
 			private static final long serialVersionUID = -8787564920294626502L;
 			
 		}.addTo(this);
-		
-		this.setDropTarget(new DropTarget() {
-			
-			@Override
-			public final synchronized void drop(final DropTargetDropEvent event) {
-				if (isDropEnabled()) {
-					final Image2D newImage = IMJTools.read(SwingTools.getFiles(event).get(0).getPath());
-					
-					SwingUtilities.invokeLater(() -> setImage(newImage));
-				}
-			}
-			
-			private static final long serialVersionUID = 4728142083998773248L;
-			
-		});
-	}
-	
-	public final boolean isDropEnabled() {
-		return this.dropEnabled;
-	}
-	
-	public final void setDropEnabled(final boolean dropEnabled) {
-		this.dropEnabled = dropEnabled;
 	}
 	
 	public final void setImage(final Image2D image) {
@@ -200,28 +176,46 @@ public final class Image2DComponent extends JComponent {
 		}
 	}
 	
+	public final Image2DComponent setDropImageEnabled(final boolean dropImageEnabled) {
+		if (this.isDropImageEnabled() != dropImageEnabled) {
+			this.setDropTarget(dropImageEnabled ? new DropImage(this) : null);
+		}
+		
+		return this;
+	}
+	
+	public final boolean isDropImageEnabled() {
+		return this.getDropTarget() instanceof DropImage;
+	}
+	
 	public final boolean isImageEnabled() {
 		return this.imageEnabled;
 	}
 	
-	public final void setImageEnabled(final boolean imageEnabled) {
+	public final Image2DComponent setImageEnabled(final boolean imageEnabled) {
 		this.imageEnabled = imageEnabled;
+		
+		return this;
 	}
 	
 	public final boolean isDragEnabled() {
 		return this.dragEnabled;
 	}
 	
-	public final void setDragEnabled(final boolean dragEnabled) {
+	public final Image2DComponent setDragEnabled(final boolean dragEnabled) {
 		this.dragEnabled = dragEnabled;
+		
+		return this;
 	}
 	
 	public final boolean isWheelZoomEnabled() {
 		return this.wheelZoomEnabled;
 	}
 	
-	public final void setWheelZoomEnabled(final boolean wheelZoomEnabled) {
+	public final Image2DComponent setWheelZoomEnabled(final boolean wheelZoomEnabled) {
 		this.wheelZoomEnabled = wheelZoomEnabled;
+		
+		return this;
 	}
 	
 	public final TileOverlay getTileOverlay() {
@@ -450,8 +444,18 @@ public final class Image2DComponent extends JComponent {
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String path = arguments.get("file", "");
+		final Image2DComponent component = new Image2DComponent(IMJTools.read(path)).setDropImageEnabled(true);
 		
-		SwingTools.show(new Image2DComponent(IMJTools.read(path)), path, false).addWindowListener(new WindowAdapter() {
+		EventManager.getInstance().addWeakListener(component, ImageChangedEvent.class, new Object() {
+			
+			@Listener
+			public final void imageChanged(final ImageChangedEvent event) {
+				((Frame) SwingUtilities.getWindowAncestor(component)).setTitle(component.getImage().getId());
+			}
+			
+		});
+		
+		SwingTools.show(component, path, false).addWindowListener(new WindowAdapter() {
 			
 			// XXX sftp handler prevents application from closing normally
 			
@@ -527,6 +531,28 @@ public final class Image2DComponent extends JComponent {
 		}
 		
 		private static final long serialVersionUID = 2790290680678157622L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-05-01)
+	 */
+	public static final class DropImage extends DropTarget {
+		
+		private final Image2DComponent component;
+		
+		public DropImage(final Image2DComponent component) {
+			this.component = component;
+		}
+		
+		@Override
+		public final synchronized void drop(final DropTargetDropEvent event) {
+			final Image2D newImage = IMJTools.read(SwingTools.getFiles(event).get(0).getPath());
+			
+			SwingUtilities.invokeLater(() -> this.component.setImage(newImage));
+		}
+		
+		private static final long serialVersionUID = 4728142083998773248L;
 		
 	}
 	
