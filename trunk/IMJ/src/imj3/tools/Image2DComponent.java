@@ -1,12 +1,7 @@
 package imj3.tools;
 
 import static imj3.core.IMJCoreTools.quantize;
-import static java.lang.Math.log;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
-import static java.lang.Math.pow;
-import static java.lang.Math.round;
-import static java.lang.Math.signum;
+import static java.lang.Math.*;
 import static net.sourceforge.aprog.tools.Tools.*;
 
 import imj3.core.Image2D;
@@ -17,6 +12,8 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.WindowAdapter;
@@ -31,7 +28,9 @@ import java.util.Collections;
 import java.util.HashSet;
 
 import javax.swing.JComponent;
+import javax.swing.SwingUtilities;
 
+import net.sourceforge.aprog.events.EventManager.AbstractEvent;
 import net.sourceforge.aprog.swing.MouseHandler;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Canvas;
@@ -61,6 +60,8 @@ public final class Image2DComponent extends JComponent {
 	
 	private boolean dragEnabled;
 	
+	private boolean dropEnabled;
+	
 	private boolean wheelZoomEnabled;
 	
 	public Image2DComponent(final Image2D image) {
@@ -70,6 +71,7 @@ public final class Image2DComponent extends JComponent {
 		this.activeTiles = Collections.synchronizedSet(new HashSet<>());
 		this.imageEnabled = true;
 		this.dragEnabled = true;
+		this.dropEnabled = true;
 		this.wheelZoomEnabled = true;
 		
 		this.setOpaque(true);
@@ -157,6 +159,45 @@ public final class Image2DComponent extends JComponent {
 			private static final long serialVersionUID = -8787564920294626502L;
 			
 		}.addTo(this);
+		
+		this.setDropTarget(new DropTarget() {
+			
+			@Override
+			public final synchronized void drop(final DropTargetDropEvent event) {
+				if (isDropEnabled()) {
+					final Image2D newImage = IMJTools.read(SwingTools.getFiles(event).get(0).getPath());
+					
+					SwingUtilities.invokeLater(() -> setImage(newImage));
+				}
+			}
+			
+			private static final long serialVersionUID = 4728142083998773248L;
+			
+		});
+	}
+	
+	public final boolean isDropEnabled() {
+		return this.dropEnabled;
+	}
+	
+	public final void setDropEnabled(final boolean dropEnabled) {
+		this.dropEnabled = dropEnabled;
+	}
+	
+	public final void setImage(final Image2D image) {
+		final Image2D oldImage = this.getImage();
+		
+		if (oldImage != image) {
+			final AffineTransform view = this.getView();
+			this.image = image.getScaledImage(view.getScaleX());
+			final double newScale = image.getScale();
+			this.view.setToScale(newScale, newScale);
+			this.view.translate((-image.getWidth() / 2.0 + this.getWidth() / 2) / newScale,
+					(-image.getHeight() / 2.0 + this.getHeight() / 2) / newScale);
+			this.repaint();
+			
+			this.new ImageChangedEvent(oldImage).fire();
+		}
 	}
 	
 	public final boolean isImageEnabled() {
@@ -374,6 +415,26 @@ public final class Image2DComponent extends JComponent {
 		if (getActiveTiles().remove(tileKey)) {
 			repaint();
 		}
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-05-01)
+	 */
+	public final class ImageChangedEvent extends AbstractEvent<Image2DComponent> {
+		
+		private final Image2D oldImage;
+		
+		protected ImageChangedEvent(final Image2D oldImage) {
+			super(Image2DComponent.this);
+			this.oldImage = oldImage;
+		}
+		
+		public final Image2D getOldImage() {
+			return this.oldImage;
+		}
+		
+		private static final long serialVersionUID = -5641162710525216776L;
+		
 	}
 	
 	private static final long serialVersionUID = -1359039061498719576L;
