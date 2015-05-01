@@ -1,6 +1,7 @@
 package imj3.tools;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -17,13 +18,13 @@ public final class MultifileSource implements Serializable, Closeable {
 	private final String path;
 	
 	public MultifileSource(final String path) {
-		String tmp = path.replaceFirst("^file:", "local:");
+		String tmp = path.replaceFirst("^file:", "local:").replace(File.separatorChar, '/');
 		
 		try {
-			new URL(path);
+			new URL(tmp);
 		} catch (final MalformedURLException exception) {
-			if (exception.getMessage().startsWith("no protocol")) {
-				tmp = "local://" + path;
+			if (exception.getMessage().contains("protocol")) {
+				tmp = "local://" + tmp;
 			} else {
 				exception.printStackTrace();
 			}
