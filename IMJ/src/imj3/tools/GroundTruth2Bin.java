@@ -23,6 +23,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -89,7 +90,9 @@ public final class GroundTruth2Bin {
 			} catch (final Exception exception) {
 				debugError(exception);
 				
-				processBitmap(image, groundTruthPath, lod, trainOutputPath, testOutputPath);
+				final int maximumExamples = arguments.get("maximumExamples", Integer.MAX_VALUE)[0];
+				
+				processBitmap(image, groundTruthPath, lod, maximumExamples, trainOutputPath, testOutputPath);
 			}
 		}
 		
@@ -99,15 +102,10 @@ public final class GroundTruth2Bin {
 		}
 	}
 	
-	public static final void processBitmap(final Image2D image, final String groundTruthPath, final int lod, final String trainOutputPath, final String testOutputPath) throws IOException {
+	public static final void processBitmap(final Image2D image, final String groundTruthPath, final int lod,
+			final int maximumExamples, final String trainOutputPath, final String testOutputPath) throws IOException {
 		final Image2D groundtruth = IMJTools.read(groundTruthPath);
-		final Channels channels = image.getChannels();
-		final int channelCount = channels.getChannelCount();
 		final int patchSize = 32;
-		final int planeSize = patchSize * patchSize;
-		final byte[] buffer = new byte[1 + planeSize * channelCount];
-		final int groundtruthWidth = groundtruth.getWidth();
-		final int groundtruthHeight = groundtruth.getHeight();
 		final int imageWidth = image.getWidth();
 		final int imageHeight = image.getHeight();
 		final Map<Integer, AtomicLong> counts = new HashMap<>();
@@ -120,8 +118,10 @@ public final class GroundTruth2Bin {
 		
 		debugPrint(counts);
 		
-		final long n = counts.values().stream().mapToLong(AtomicLong::get).min().getAsLong();
+		final long n = min(counts.values().stream().mapToLong(AtomicLong::get).min().getAsLong(), maximumExamples / counts.size());
 		final Map<Integer, BigBitSet> selections = new HashMap<>();
+		
+		debugPrint(n);
 		
 		counts.forEach((k, v) -> {
 			final long m = v.get();
@@ -145,7 +145,9 @@ public final class GroundTruth2Bin {
 			selections.put(k, selection);
 		});
 		
+		final List<byte[]> data = new ArrayList<>((int) n * counts.size());
 		final Map<Integer, AtomicLong> indices = new HashMap<>();
+		final int keyMask = ~((~0) << groundtruth.getChannels().getValueBitCount());
 		
 		groundtruth.forEachPixel((x, y) -> {
 			final int key = (int) groundtruth.getPixelValue(x, y) & 0x00FFFFFF;
@@ -153,13 +155,20 @@ public final class GroundTruth2Bin {
 			final long i = indices.computeIfAbsent(key, k -> new AtomicLong(-1L)).incrementAndGet();
 			
 			if (selection.get(i)) {
-				// TODO add entry to bin
+				final int top = y - patchSize / 2;
+				final int bottom = min(top + patchSize, imageHeight);
+				final int left = x - patchSize / 2;
+				final int right = min(left + patchSize, imageWidth);
+				
+				data.add(newItem(image, patchSize, top, bottom, left, right, (byte) (key & keyMask)));
 			}
 			
 			return true;
 		});
 		
 		debugPrint(indices);
+		
+		writeBins(data, trainOutputPath, testOutputPath);
 	}
 	
 	public static final int checkInt(final long value) {
@@ -216,7 +225,8 @@ public final class GroundTruth2Bin {
 				graphics.dispose();
 			}
 			
-			buffer[0] = (byte) pipeline.getClassDescriptions().indexOf(classDescription);
+			final byte classIndex = (byte) pipeline.getClassDescriptions().indexOf(classDescription);
+			buffer[0] = classIndex;
 			long count = 0L;
 			
 			for (int y = 0; y < regionHeight; ++y) {
@@ -228,19 +238,7 @@ public final class GroundTruth2Bin {
 						final int left = regionBounds.x + x - patchSize / 2;
 						final int right = min(left + patchSize, imageWidth);
 						
-						fill(buffer, 1, buffer.length, (byte) 0);
-						
-						for (int yy = max(0, top); yy < bottom; ++yy) {
-							for (int xx = max(0, left); xx < right; ++xx) {
-								final long pixelValue = image.getPixelValue(xx, yy);
-								
-								for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex) {
-									buffer[1 + planeSize * channelIndex + (yy - top) * patchSize + (xx - left)] = (byte) channels.getChannelValue(pixelValue, channelIndex);
-								}
-							}
-						}
-						
-						data.add(buffer.clone());
+						data.add(newItem(image, patchSize, top, bottom, left, right, classIndex));
 						
 						++count;
 					}
@@ -250,7 +248,14 @@ public final class GroundTruth2Bin {
 			counts.put(classDescription.toString(), count);
 		}
 		
-		Collections.shuffle(data, new Random(0L));
+		writeBins(data, trainOutputPath, testOutputPath);
+		
+		debugPrint(counts);
+	}
+	
+	public static final void writeBins(final List<byte[]> data, final String trainOutputPath, final String testOutputPath)
+			throws IOException {
+		Collections.shuffle(data, random);
 		
 		final int n = data.size();
 		final int trainSize = n * 5 / 6;
@@ -260,13 +265,34 @@ public final class GroundTruth2Bin {
 				output.write(data.get(i));
 			}
 		}
+		
 		try (final OutputStream output = new FileOutputStream(testOutputPath)) {
 			for (int i = trainSize; i < n; ++i) {
 				output.write(data.get(i));
 			}
 		}
+	}
+	
+	public static final byte[] newItem(final Image2D image, final int patchSize,
+			final int top, final int bottom, final int left, final int right, final byte classIndex) {
+		final Channels channels = image.getChannels();
+		final int channelCount = channels.getChannelCount();
+		final int planeSize = patchSize * patchSize;
+		final byte[] result = new byte[1 + channelCount * planeSize];
 		
-		debugPrint(counts);
+		result[0] = classIndex;
+		
+		for (int yy = max(0, top); yy < bottom; ++yy) {
+			for (int xx = max(0, left); xx < right; ++xx) {
+				final long pixelValue = image.getPixelValue(xx, yy);
+				
+				for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex) {
+					result[1 + planeSize * channelIndex + (yy - top) * patchSize + (xx - left)] = (byte) channels.getChannelValue(pixelValue, channelIndex);
+				}
+			}
+		}
+		
+		return result;
 	}
 	
 	public static final byte[] read(final String path) {
