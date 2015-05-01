@@ -1,10 +1,11 @@
 package imj3.tools;
 
 import static java.lang.Math.*;
-import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.swing.SwingTools.*;
 import static net.sourceforge.aprog.tools.Tools.*;
+
 import imj2.tools.BigBitSet;
+
 import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.processing.Pipeline;
@@ -23,14 +24,12 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
-import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -49,7 +48,6 @@ import javax.swing.table.TableCellRenderer;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
 
 import org.w3c.dom.Document;
@@ -362,7 +360,7 @@ public final class GroundTruth2Bin {
 								rgb = (rgb << 8) | (data[row * rowSize + 1 + itemWidth * itemHeight * i + y * itemWidth + x] & 0xFF);
 							}
 							
-							image.setRGB(x, y, rgb);
+							this.image.setRGB(x, y, rgb);
 						}
 					}
 					
@@ -387,7 +385,7 @@ public final class GroundTruth2Bin {
 			});
 		}
 		
-		private static final byte[] DUMMY = new byte[0];
+		static final byte[] DUMMY = new byte[0];
 		
 		/**
 		 * @param commandLineArguments
