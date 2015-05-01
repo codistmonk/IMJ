@@ -132,7 +132,7 @@ public final class GroundTruth2Bin {
 			if (m != n) {
 //				shuffle:
 				for (long i = 0; i < m; ++i) {
-					final long j = abs(random.nextLong()) % n;
+					final long j = abs(random.nextLong()) % m;
 					final boolean tmp = selection.get(i);
 					
 					selection.set(i, selection.get(j));
@@ -351,13 +351,14 @@ public final class GroundTruth2Bin {
 				@Override
 				public final Component getTableCellRendererComponent(final JTable table, final Object value,
 						final boolean isSelected, final boolean hasFocus, final int row, final int column) {
+					final int itemIndex = (int) table.getValueAt(row, 0);
 					
 					for (int y = 0; y < itemHeight; ++y) {
 						for (int x = 0; x < itemWidth; ++x) {
 							int rgb = ~0;
 							
 							for (int i = 0; i < itemChannelCount; ++i) {
-								rgb = (rgb << 8) | (data[row * rowSize + 1 + itemWidth * itemHeight * i + y * itemWidth + x] & 0xFF);
+								rgb = (rgb << 8) | (data[itemIndex * rowSize + 1 + itemWidth * itemHeight * i + y * itemWidth + x] & 0xFF);
 							}
 							
 							this.image.setRGB(x, y, rgb);
@@ -370,6 +371,7 @@ public final class GroundTruth2Bin {
 			});
 			
 			this.table.setRowHeight(itemHeight + 2);
+			this.table.setAutoCreateRowSorter(true);
 			
 			this.table.setDropTarget(new DropTarget() {
 				
