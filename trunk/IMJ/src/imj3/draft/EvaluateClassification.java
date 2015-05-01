@@ -1,7 +1,6 @@
 package imj3.draft;
 
 import static java.lang.Integer.toHexString;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -39,16 +38,16 @@ public final class EvaluateClassification {
 		final File groundtruthFile = new File(arguments.get("groundtruth", ""));
 		final File classificationFile = new File(arguments.get("classification", ""));
 		
-		debugPrint("groundtruth:", groundtruthFile);
-		debugPrint("classification:", classificationFile);
+		System.out.println("groundtruth: " + groundtruthFile);
+		System.out.println("classification: " + classificationFile);
 		
 		final BufferedImage groundtruth = ImageIO.read(groundtruthFile);
 		final BufferedImage classification = ImageIO.read(classificationFile);
 		final ConfusionMatrix confusionMatrix = evaluate(classification, groundtruth);
 		
-		debugPrint("counts:", confusionMatrix.getCounts());
-		debugPrint("F1s:", confusionMatrix.computeF1s());
-		debugPrint("macroF1:", confusionMatrix.computeMacroF1());
+		System.out.println("counts: " + confusionMatrix.getCounts());
+		System.out.println("F1s: " +  confusionMatrix.computeF1s());
+		System.out.println("macroF1: " + confusionMatrix.computeMacroF1());
 	}
 	
 	public static final ConfusionMatrix evaluate(final BufferedImage classification, final BufferedImage groundtruth) {
@@ -64,9 +63,9 @@ public final class EvaluateClassification {
 			for (int x = 0; x < groundtruthWidth; ++x) {
 				final int classificationX = x * classificationWidth / groundtruthWidth;
 				
-				result.count(toHexString(classification.getRGB(classificationX, classificationY)), toHexString(groundtruth.getRGB(x, y)));
+				result.count(toHexString(classification.getRGB(classificationX, classificationY)),
+						toHexString(groundtruth.getRGB(x, y)));
 			}
-			
 		}
 		
 		return result;
@@ -84,7 +83,8 @@ public final class EvaluateClassification {
 		}
 		
 		public final <C extends Comparable<C>> void count(final C predicted, final C expected) {
-			this.getCounts().computeIfAbsent(predicted, p -> new TreeMap<>()).computeIfAbsent(expected, e -> new AtomicLong()).incrementAndGet();
+			this.getCounts().computeIfAbsent(predicted, p -> new TreeMap<>()).computeIfAbsent(
+					expected, e -> new AtomicLong()).incrementAndGet();
 		}
 		
 		public final Map<Comparable<?>, Double> computeF1s() {
@@ -103,10 +103,10 @@ public final class EvaluateClassification {
 					final long delta = subentry.getValue().get();
 					
 					if (predicted.equals(expected)) {
-						tps.computeIfAbsent(predicted, e -> new AtomicLong()).addAndGet(delta);
+						increment(tps, predicted, delta);
 					} else {
-						fps.computeIfAbsent(predicted, e -> new AtomicLong()).addAndGet(delta);
-						fns.computeIfAbsent(expected, e -> new AtomicLong()).addAndGet(delta);
+						increment(fps, predicted, delta);
+						increment(fns, expected, delta);
 					}
 				}
 			}
@@ -134,6 +134,10 @@ public final class EvaluateClassification {
 		private static final long serialVersionUID = -3078169987830724986L;
 		
 		private static final AtomicLong ZERO = new AtomicLong();
+		
+		public static void increment(final Map<Object, AtomicLong> counts, final Object key, final long delta) {
+			counts.computeIfAbsent(key, e -> new AtomicLong()).addAndGet(delta);
+		}
 		
 		public static final double computeMacroF1(final Map<?, Double> f1s) {
 			return f1s.values().stream().mapToDouble(Double::doubleValue).average().getAsDouble();
