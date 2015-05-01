@@ -3,6 +3,7 @@ package imj3.tools;
 import static imj3.core.IMJCoreTools.quantize;
 import static java.lang.Math.*;
 import static net.sourceforge.aprog.tools.Tools.*;
+
 import imj3.core.Image2D;
 
 import java.awt.Color;

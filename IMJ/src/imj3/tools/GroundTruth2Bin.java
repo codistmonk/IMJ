@@ -4,6 +4,7 @@ import static java.lang.Math.*;
 import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.swing.SwingTools.*;
 import static net.sourceforge.aprog.tools.Tools.*;
+import imj2.tools.BigBitSet;
 import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.processing.Pipeline;
@@ -22,13 +23,13 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -47,6 +48,7 @@ import javax.swing.table.TableCellRenderer;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
 
 import org.w3c.dom.Document;
@@ -59,6 +61,8 @@ public final class GroundTruth2Bin {
 	private GroundTruth2Bin() {
 		throw new IllegalInstantiationException();
 	}
+	
+	static final Random random = new Random(0L);
 	
 	/**
 	 * @param commandLineArguments
@@ -115,8 +119,57 @@ public final class GroundTruth2Bin {
 		});
 		
 		debugPrint(counts);
-	}
+		
+		final long n = counts.values().stream().mapToLong(AtomicLong::get).min().getAsLong();
+		final Map<Integer, BigBitSet> selections = new HashMap<>();
+		
+		counts.forEach((k, v) -> {
+			final long m = v.get();
+			final BigBitSet selection = new BigBitSet(m);
 			
+			for (long i = 0; i < n; ++i) {
+				selection.set(i, true);
+			}
+			
+			if (m != n) {
+//				shuffle:
+				for (long i = 0; i < m; ++i) {
+					final long j = abs(random.nextLong()) % n;
+					final boolean tmp = selection.get(i);
+					
+					selection.set(i, selection.get(j));
+					selection.set(j, tmp);
+				}
+			}
+			
+			selections.put(k, selection);
+		});
+		
+		final Map<Integer, AtomicLong> indices = new HashMap<>();
+		
+		groundtruth.forEachPixel((x, y) -> {
+			final int key = (int) groundtruth.getPixelValue(x, y) & 0x00FFFFFF;
+			final BigBitSet selection = selections.get(key);
+			final long i = indices.computeIfAbsent(key, k -> new AtomicLong(-1L)).incrementAndGet();
+			
+			if (selection.get(i)) {
+				// TODO add entry to bin
+			}
+			
+			return true;
+		});
+		
+		debugPrint(indices);
+	}
+	
+	public static final int checkInt(final long value) {
+		if (value < Integer.MIN_VALUE || Integer.MAX_VALUE < value) {
+			throw new IllegalArgumentException();
+		}
+		
+		return (int) value;
+	}
+	
 	public static final void processVector(final String pipelinePath, final Image2D image, final String groundTruthPath, final int lod,
 			final String trainOutputPath, final String testOutputPath) throws IOException {
 		final Pipeline pipeline = XMLSerializable.objectFromXML(new File(pipelinePath));
