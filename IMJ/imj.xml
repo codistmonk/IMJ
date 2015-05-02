@@ -14,6 +14,7 @@
         	</fileset>
             <fileset dir="src"/>
             <fileset dir="." includes="lib/tango/**"/>
+            <fileset dir="." includes="lib/openseadragon/**"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/aprog.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/jgencode.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/bioformats_package.jar"/>
@@ -34,6 +35,7 @@
         	</fileset>
             <fileset dir="src"/>
             <fileset dir="." includes="lib/tango/**"/>
+            <fileset dir="." includes="lib/openseadragon/**"/>
         </jar>
         <jar destfile="imj3-aprog.jar" filesetmanifest="mergewithoutmain">
             <manifest>
@@ -46,6 +48,7 @@
         	</fileset>
             <fileset dir="src" includes="imj3/core/**,imj3/tools/**,imj3/protocol/**"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/aprog.jar"/>
+            <fileset dir="." includes="lib/openseadragon/**"/>
         </jar>
         <jar destfile="evaluateclassification.jar" filesetmanifest="mergewithoutmain">
             <manifest>
