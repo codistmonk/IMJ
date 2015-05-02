@@ -202,7 +202,7 @@ public final class SVS2Multifile {
 				
 				while (0 < w[0] && 0 < h[0]) {
 					element("image", () -> {
-						attribute("tilePattern", TILE_PATTERN);
+						attribute("tilePrefix", TILE_PREFIX);
 						attribute("type", "lod" + level[0]);
 						attribute("width", w[0]);
 						attribute("height", h[0]);
@@ -325,7 +325,7 @@ public final class SVS2Multifile {
 								}
 							}
 							
-							final String tileName = String.format(TILE_PATTERN, "lod0", tileY, tileX0, tileFormat);
+							final String tileName = TILE_PREFIX + "lod0" + "_y" + tileY + "_x" + tileX0 + "." + tileFormat;
 							final ByteArrayOutputStream tmp = new ByteArrayOutputStream();
 							
 							try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(tileFormat)
@@ -447,7 +447,7 @@ public final class SVS2Multifile {
 								}
 							}
 							
-							final String tileName = String.format(TILE_PATTERN, "lod" + n, tileY, tileX0, tileFormat);
+							final String tileName = TILE_PREFIX + "lod" + n + "_y" + tileY + "_x" + tileX0 + "." + tileFormat;
 							final ByteArrayOutputStream tmp = new ByteArrayOutputStream();
 							
 							try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(tileFormat)
