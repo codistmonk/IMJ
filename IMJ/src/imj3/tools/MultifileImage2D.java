@@ -42,7 +42,7 @@ public final class MultifileImage2D implements Image2D {
 	
 	private final Map<String, Object> metadata;
 	
-	private final String tilePattern;
+	private final String tilePrefix;
 	
 	private final MultifileSource source;
 	
@@ -83,7 +83,7 @@ public final class MultifileImage2D implements Image2D {
 		
 		final String imageXPath = "group/image[" + (lod + 1) + "]/";
 		
-		this.tilePattern = getOrDefault(metadata, imageXPath + "@tilePattern", OLD_TILE_PATTERN);
+		this.tilePrefix = getOrDefault(metadata, imageXPath + "@tilePrefix", OLD_TILE_PREFIX);
 		this.width = getNumber(metadata, imageXPath + "@width").intValue();
 		this.height = getNumber(metadata, imageXPath + "@height").intValue();
 		this.optimalTileWidth = getNumber(metadata, imageXPath + "@tileWidth").intValue();
@@ -104,12 +104,16 @@ public final class MultifileImage2D implements Image2D {
 	}
 	
 	public final String getTileName(final int tileX, final int tileY) {
-		return String.format(this.tilePattern, "lod" + this.getLod(), tileY, tileX, this.getTileFormat());
+		return this.getTilePrefix() + "lod" + this.getLod() + "_y" + tileY + "_x" + tileX + "." + this.getTileFormat();
 	}
 	
 	@Override
 	public final String getTileKey(final int tileX, final int tileY) {
 		return this.getId() + "@" + this.getTileName(tileX, tileY);
+	}
+	
+	public final String getTilePrefix() {
+		return this.tilePrefix;
 	}
 	
 	public final String getTileFormat() {
@@ -227,10 +231,8 @@ public final class MultifileImage2D implements Image2D {
 	
 	static final String TILE_PREFIX = "tiles/tile_";
 	
-	static final String TILE_PATTERN = TILE_PREFIX + "%s_y%d_x%d.%s";
-	
 	@Deprecated
-	private static final String OLD_TILE_PATTERN = "tile_%s_y%d_x%d.%s";
+	private static final String OLD_TILE_PREFIX = "tile_";
 	
 	public static final Document getMetadataFrom(final MultifileSource source) {
 		return cache(source.getPath("metadata.xml"), () -> {
