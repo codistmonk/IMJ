@@ -123,7 +123,7 @@ public final class SVS2Multifile {
 					
 					{
 						final String mpp = Array.get(getFieldValue(((ImageReader) reader).getReader(), "pixelSize"), 0).toString();
-						final Document xml = newMetadata(imageWidth, imageHeight, tileSize, tileFormat, mpp, level);
+						final Document xml = newMetadata(imageWidth, imageHeight, tileSize, tileSize, tileFormat, mpp, level);
 						
 						output.putNextEntry(new ZipEntry("metadata.xml"));
 						XMLTools.write(xml, output, 0);
@@ -190,11 +190,11 @@ public final class SVS2Multifile {
 	
 	public static final Document newMetadata(final int imageWidth, final int imageHeight,
 			final int tileSize, final String tileFormat, final String micronsPerPixel) {
-		return newMetadata(imageWidth, imageHeight, tileSize, tileFormat, micronsPerPixel, new int[1]);
+		return newMetadata(imageWidth, imageHeight, tileSize, tileSize, tileFormat, micronsPerPixel, new int[1]);
 	}
 	
 	public static final Document newMetadata(final int imageWidth, final int imageHeight,
-			final int tileSize, final String tileFormat, final String micronsPerPixel, final int[] level) {
+			final int optimalTileWidth, final int optimalTileHeight, final String tileFormat, final String micronsPerPixel, final int[] level) {
 		final Document result = document(() ->
 			element("group", () -> {
 				final int[] w = { imageWidth };
@@ -207,8 +207,8 @@ public final class SVS2Multifile {
 						attribute("width", w[0]);
 						attribute("height", h[0]);
 						attribute("tileFormat", tileFormat);
-						attribute("tileWidth", tileSize);
-						attribute("tileHeight", tileSize);
+						attribute("tileWidth", optimalTileWidth);
+						attribute("tileHeight", optimalTileHeight);
 						
 						if (0 == level[0]) {
 							attribute("micronsPerPixel", micronsPerPixel);
