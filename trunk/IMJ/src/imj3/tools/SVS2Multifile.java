@@ -2,10 +2,11 @@ package imj3.tools;
 
 import static imj3.tools.BioFormatsImage2D.*;
 import static imj3.tools.CommonTools.getFieldValue;
+import static imj3.tools.MultifileImage2D.*;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.synchronizedList;
-import static net.sourceforge.aprog.tools.Tools.baseName;
+import static net.sourceforge.aprog.tools.Tools.*;
 
 import imj3.tools.CommonTools.FileProcessor;
 
@@ -14,6 +15,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -25,14 +28,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+
+import loci.formats.IFormatReader;
+import loci.formats.ImageReader;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
-import loci.formats.IFormatReader;
-import loci.formats.ImageReader;
 import net.sourceforge.aprog.tools.Canvas;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.ConsoleMonitor;
@@ -73,8 +78,9 @@ public final class SVS2Multifile {
 		final String[] paths = pathsAsString.split(":");
 		final File inRoot = new File(arguments.get("in", ""));
 		final RegexFilter filter = new RegexFilter(arguments.get("filter", ".*\\.svs"));
-		final File outRoot = new File(arguments.get("out", ""));
+		final File outRoot = new File(arguments.get("out", "."));
 		final int threads = max(1, arguments.get("threads", SystemProperties.getAvailableProcessorCount() / 2)[0]);
+		final boolean includeHTMLViewer = arguments.get("includeHTMLViewer", 1)[0] != 0;
 		
 		compressionQuality = Float.parseFloat(arguments.get("compressionQuality", "0.9"));
 		levelCPULoad = 1.0 / threads;
@@ -83,47 +89,52 @@ public final class SVS2Multifile {
 		
 		final TaskManager tasks = new TaskManager((double) threads / SystemProperties.getAvailableProcessorCount());
 		
-		Tools.debugPrint(tasks.getWorkerCount());
+		debugPrint(tasks.getWorkerCount());
 		
 		if (!pathsAsString.isEmpty()) {
-			Arrays.stream(paths).forEach(p -> tasks.submit(() -> process(new File(p), null, outRoot)));
+			Arrays.stream(paths).forEach(p -> tasks.submit(() -> process(new File(p), null, outRoot, includeHTMLViewer)));
 		} else {
-			FileProcessor.deepForEachFileIn(inRoot, f -> tasks.submit(() -> process(f, filter, outRoot)));
+			FileProcessor.deepForEachFileIn(inRoot, f -> tasks.submit(() -> process(f, filter, outRoot, includeHTMLViewer)));
 		}
 		
 		tasks.join();
 	}
 	
-	public static final void process(final File file, final FilenameFilter filter, final File outRoot) {
+	public static final void process(final File file, final FilenameFilter filter, final File outRoot, final boolean includeHTMLViewer) {
 		final String fileName = file.getName();
 		
 		if (!fileName.isEmpty() && (filter == null || filter.accept(file.getParentFile(), fileName))) {
 			final File outputFile = new File(outRoot, baseName(fileName) + ".zip");
 			
 			if (file.getPath().contains("/old/") || outputFile.isFile()) {
-				Tools.debugError("Ignoring", file);
+				debugError("Ignoring", file);
 			} else {
 				final String tileFormat = "jpg";
 				final TicToc timer = new TicToc();
 				
-				Tools.debugPrint("Processing", file, new Date(timer.tic()));
+				debugPrint("Processing", file, new Date(timer.tic()));
 				
 				try (final ZipOutputStream output = new ZipOutputStream(new FileOutputStream(outputFile))) {
 					final IFormatReader reader = newImageReader(file.getPath());
 					final int imageWidth = reader.getSizeX();
 					final int imageHeight = reader.getSizeY();
 					final int tileSize = 512;
+					final int[] level = { 0 };
 					
 					{
 						final String mpp = Array.get(getFieldValue(((ImageReader) reader).getReader(), "pixelSize"), 0).toString();
-						final Document xml = newMetadata(imageWidth, imageHeight, tileSize, tileFormat, mpp);
+						final Document xml = newMetadata(imageWidth, imageHeight, tileSize, tileFormat, mpp, level);
 						
 						output.putNextEntry(new ZipEntry("metadata.xml"));
 						XMLTools.write(xml, output, 0);
 						output.closeEntry();
 					}
 					
-					Tools.debugPrint(fileName, imageWidth, imageHeight, predefinedChannelsFor(reader));
+					if (includeHTMLViewer) {
+						includeHTMLViewer(output, imageWidth, imageHeight, tileSize, level[0] - 1, tileFormat);
+					}
+					
+					debugPrint(fileName, imageWidth, imageHeight, predefinedChannelsFor(reader));
 					
 					final Collection<Exception> problems = synchronizedList(new ArrayList<>());
 					final ConsoleMonitor monitor = new ConsoleMonitor(30_000L);
@@ -133,12 +144,12 @@ public final class SVS2Multifile {
 						if (monitor.ping()) {
 							final int tileY = level0.getTileY();
 							
-							Tools.debugPrint(fileName, "tileY:", tileY, "time(s):", timer.toc() / 1_000L,
+							debugPrint(fileName, "tileY:", tileY, "time(s):", timer.toc() / 1_000L,
 									"rate(px/s):", 1_000L * tileY * imageWidth / max(1L, timer.toc()));
 						}
 					}
 					
-					Tools.debugPrint(fileName, "done in", timer.getTotalTime(), "ms");
+					debugPrint(fileName, "done in", timer.getTotalTime(), "ms");
 					
 					for (final Exception problem : problems) {
 						problem.printStackTrace();
@@ -150,16 +161,48 @@ public final class SVS2Multifile {
 		}
 	}
 	
+	public static final void includeHTMLViewer(final ZipOutputStream output,
+			final int imageWidth, final int imageHeight, final int tileSize,
+			final int lastLOD, final String tileFormat) throws IOException {
+		try (final ZipInputStream template = new ZipInputStream(getResourceAsStream("lib/openseadragon/template.zip"))) {
+			for (ZipEntry entry = template.getNextEntry(); entry != null; entry = template.getNextEntry()) {
+				output.putNextEntry(new ZipEntry(entry.getName()));
+				Tools.write(template, output);
+				output.closeEntry();
+			}
+		}
+		
+		{
+			output.putNextEntry(new ZipEntry("index_files/imj_metadata.js"));
+			
+			final PrintStream out = new PrintStream(output);
+			
+			out.println("var tilePrefix = \"" + TILE_PREFIX +"\";");
+			out.println("var imageWidth = " + imageWidth +";");
+			out.println("var imageHeight = " + imageHeight +";");
+			out.println("var tileSize = " + tileSize +";");
+			out.println("var lastLOD = " + lastLOD +";");
+			out.println("var tileFormat = \"" + tileFormat +"\";");
+			
+			output.closeEntry();
+		}
+	}
+	
 	public static final Document newMetadata(final int imageWidth, final int imageHeight,
 			final int tileSize, final String tileFormat, final String micronsPerPixel) {
-		final Document xml = document(() ->
+		return newMetadata(imageWidth, imageHeight, tileSize, tileFormat, micronsPerPixel, new int[1]);
+	}
+	
+	public static final Document newMetadata(final int imageWidth, final int imageHeight,
+			final int tileSize, final String tileFormat, final String micronsPerPixel, final int[] level) {
+		final Document result = document(() ->
 			element("group", () -> {
-				final int[] level = { 0 };
 				final int[] w = { imageWidth };
 				final int[] h = { imageHeight };
 				
 				while (0 < w[0] && 0 < h[0]) {
 					element("image", () -> {
+						attribute("tilePattern", TILE_PATTERN);
 						attribute("type", "lod" + level[0]);
 						attribute("width", w[0]);
 						attribute("height", h[0]);
@@ -178,7 +221,8 @@ public final class SVS2Multifile {
 				}
 			})
 		);
-		return xml;
+		
+		return result;
 	}
 	
 	/**
@@ -281,7 +325,7 @@ public final class SVS2Multifile {
 								}
 							}
 							
-							final String tileName = "tile_lod0_y" + tileY + "_x" + tileX0 + "." + tileFormat;
+							final String tileName = String.format(TILE_PATTERN, "lod0", tileY, tileX0, tileFormat);
 							final ByteArrayOutputStream tmp = new ByteArrayOutputStream();
 							
 							try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(tileFormat)
@@ -403,7 +447,7 @@ public final class SVS2Multifile {
 								}
 							}
 							
-							final String tileName = "tile_lod" + n + "_y" + tileY + "_x" + tileX0 + "." + tileFormat;
+							final String tileName = String.format(TILE_PATTERN, "lod" + n, tileY, tileX0, tileFormat);
 							final ByteArrayOutputStream tmp = new ByteArrayOutputStream();
 							
 							try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(tileFormat)

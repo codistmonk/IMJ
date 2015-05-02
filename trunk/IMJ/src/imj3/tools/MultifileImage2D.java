@@ -1,14 +1,9 @@
 package imj3.tools;
 
 import static imj3.core.IMJCoreTools.cache;
-import static java.lang.Math.log;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
-import static java.lang.Math.round;
-import static net.sourceforge.aprog.tools.Tools.unchecked;
-import static net.sourceforge.aprog.xml.XMLTools.getNumber;
-import static net.sourceforge.aprog.xml.XMLTools.getString;
-import static net.sourceforge.aprog.xml.XMLTools.parse;
+import static java.lang.Math.*;
+import static net.sourceforge.aprog.tools.Tools.*;
+import static net.sourceforge.aprog.xml.XMLTools.*;
 
 import imj3.core.Channels;
 import imj3.core.Image2D;
@@ -38,7 +33,6 @@ import org.w3c.dom.Document;
 import net.sourceforge.aprog.swing.MouseHandler;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
-import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.xml.XMLTools;
 
 /**
@@ -47,6 +41,8 @@ import net.sourceforge.aprog.xml.XMLTools;
 public final class MultifileImage2D implements Image2D {
 	
 	private final Map<String, Object> metadata;
+	
+	private final String tilePattern;
 	
 	private final MultifileSource source;
 	
@@ -87,6 +83,7 @@ public final class MultifileImage2D implements Image2D {
 		
 		final String imageXPath = "group/image[" + (lod + 1) + "]/";
 		
+		this.tilePattern = getOrDefault(metadata, imageXPath + "@tilePattern", OLD_TILE_PATTERN);
 		this.width = getNumber(metadata, imageXPath + "@width").intValue();
 		this.height = getNumber(metadata, imageXPath + "@height").intValue();
 		this.optimalTileWidth = getNumber(metadata, imageXPath + "@tileWidth").intValue();
@@ -100,8 +97,14 @@ public final class MultifileImage2D implements Image2D {
 		}
 	}
 	
+	public static final String getOrDefault(final Object context, final String xPath, final String defaultValue) {
+		final String candidate = getString(context, xPath);
+		
+		return candidate == null || candidate.isEmpty() ? defaultValue : candidate;
+	}
+	
 	public final String getTileName(final int tileX, final int tileY) {
-		return "tile_lod" + this.getLod() + "_y"+ tileY + "_x" + tileX + "." + this.getTileFormat();
+		return String.format(this.tilePattern, "lod" + this.getLod(), tileY, tileX, this.getTileFormat());
 	}
 	
 	@Override
@@ -222,6 +225,13 @@ public final class MultifileImage2D implements Image2D {
 	
 	private static final long serialVersionUID = -4265650676493772608L;
 	
+	static final String TILE_PREFIX = "tiles/tile_";
+	
+	static final String TILE_PATTERN = TILE_PREFIX + "%s_y%d_x%d.%s";
+	
+	@Deprecated
+	private static final String OLD_TILE_PATTERN = "tile_%s_y%d_x%d.%s";
+	
 	public static final Document getMetadataFrom(final MultifileSource source) {
 		return cache(source.getPath("metadata.xml"), () -> {
 			try (final InputStream metadataInput = source.getInputStream("metadata.xml")) {
@@ -242,8 +252,8 @@ public final class MultifileImage2D implements Image2D {
 		final View view = new View(new MultifileSource(path));
 		final MultifileImage2D image = view.getImage();
 		
-		Tools.debugPrint(image.getWidth(), image.getHeight());
-		Tools.debugPrint(image.getPixelValue(image.getWidth() / 2, image.getHeight() / 2));
+		debugPrint(image.getWidth(), image.getHeight());
+		debugPrint(image.getPixelValue(image.getWidth() / 2, image.getHeight() / 2));
 		
 		SwingTools.show(view, path, false);
 	}
