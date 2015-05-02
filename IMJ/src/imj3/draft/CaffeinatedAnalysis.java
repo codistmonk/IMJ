@@ -66,7 +66,11 @@ public final class CaffeinatedAnalysis {
 	 * <br>Must not be null
 	 */
 	public static final void main(final String[] commandLineArguments) {
-		ScriptingPanel.openScriptingPanelOnCtrlF2();
+		try {
+			ScriptingPanel.openScriptingPanelOnCtrlF2();
+		} catch (final Exception exception) {
+			exception.printStackTrace();
+		}
 		
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String imagePath = arguments.get("file", preferences.get("image.path", ""));
