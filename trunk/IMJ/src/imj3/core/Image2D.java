@@ -186,6 +186,10 @@ public abstract interface Image2D extends Image {
 		
 		public abstract boolean pixel(int x, int y);
 		
+		public default void endOfPatch() {
+			// NOP
+		}
+		
 	}
 	
 	/**
