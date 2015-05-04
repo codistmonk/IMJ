@@ -68,8 +68,8 @@ public final class CaffeinatedAnalysis {
 	public static final void main(final String[] commandLineArguments) {
 		try {
 			ScriptingPanel.openScriptingPanelOnCtrlF2();
-		} catch (final Exception exception) {
-			exception.printStackTrace();
+		} catch (final Throwable exception) {
+			debugError(exception);
 		}
 		
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
