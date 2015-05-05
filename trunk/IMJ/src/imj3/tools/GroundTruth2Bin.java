@@ -3,9 +3,7 @@ package imj3.tools;
 import static java.lang.Math.*;
 import static net.sourceforge.aprog.swing.SwingTools.*;
 import static net.sourceforge.aprog.tools.Tools.*;
-
 import imj2.tools.BigBitSet;
-
 import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.processing.Pipeline;
@@ -73,7 +71,12 @@ public final class GroundTruth2Bin {
 		final String pipelinePath = arguments.get("pipeline", "");
 		// TODO later, retrieve training set from pipeline instead
 		final String groundTruthPath = arguments.get("groundtruth", "");
-		final String imagePath = arguments.get("image", groundTruthPath.substring(0, groundTruthPath.indexOf("_groundtruth_")) + ".zip");
+		final String defaultImagePath;
+		{
+			final int i = groundTruthPath.indexOf("_groundtruth_");
+			defaultImagePath = 0 <= i ? groundTruthPath.substring(0, i) + ".zip" : "";
+		}
+		final String imagePath = arguments.get("image", defaultImagePath);
 		final int lod = arguments.get("lod", 4)[0];
 		debugPrint(imagePath);
 		final Image2D image = IMJTools.read(imagePath, lod);
@@ -102,7 +105,7 @@ public final class GroundTruth2Bin {
 	
 	public static final void processBitmap(final Image2D image, final String groundTruthPath, final int lod,
 			final int maximumExamples, final String trainOutputPath, final String testOutputPath) throws IOException {
-		final Image2D groundtruth = IMJTools.read(groundTruthPath);
+		final Image2D groundtruth = IMJTools.read(groundTruthPath, lod);
 		final int patchSize = 32;
 		final int imageWidth = image.getWidth();
 		final int imageHeight = image.getHeight();
