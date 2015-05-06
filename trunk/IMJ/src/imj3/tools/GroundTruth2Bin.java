@@ -84,6 +84,7 @@ public final class GroundTruth2Bin {
 		final String testOutputPath = baseName(groundTruthPath) + "_test.bin";
 		final boolean show = arguments.get("show", 0)[0] != 0;
 		final boolean force = arguments.get("force", 0)[0] != 0;
+		final boolean binarize = arguments.get("binarize", 0)[0] != 0;
 		
 		if (!new File(trainOutputPath).exists() || force) {
 			try {
@@ -93,7 +94,7 @@ public final class GroundTruth2Bin {
 				
 				final int maximumExamples = arguments.get("maximumExamples", Integer.MAX_VALUE)[0];
 				
-				processBitmap(image, groundTruthPath, lod, maximumExamples, trainOutputPath, testOutputPath);
+				processBitmap(image, groundTruthPath, binarize, lod, maximumExamples, trainOutputPath, testOutputPath);
 			}
 		}
 		
@@ -103,7 +104,7 @@ public final class GroundTruth2Bin {
 		}
 	}
 	
-	public static final void processBitmap(final Image2D image, final String groundTruthPath, final int lod,
+	public static final void processBitmap(final Image2D image, final String groundTruthPath, final boolean binarize, final int lod,
 			final int maximumExamples, final String trainOutputPath, final String testOutputPath) throws IOException {
 		final Image2D groundtruth = IMJTools.read(groundTruthPath, lod);
 		final int patchSize = 32;
@@ -112,7 +113,7 @@ public final class GroundTruth2Bin {
 		final Map<Integer, AtomicLong> counts = new HashMap<>();
 		
 		groundtruth.forEachPixel((x, y) -> {
-			counts.computeIfAbsent((int) groundtruth.getPixelValue(x, y) & 0x00FFFFFF, v -> new AtomicLong()).incrementAndGet();
+			counts.computeIfAbsent(getKey(groundtruth, x, y, binarize), v -> new AtomicLong()).incrementAndGet();
 			
 			return true;
 		});
@@ -148,10 +149,10 @@ public final class GroundTruth2Bin {
 		
 		final List<byte[]> data = new ArrayList<>((int) n * counts.size());
 		final Map<Integer, AtomicLong> indices = new HashMap<>();
-		final int keyMask = ~((~0) << groundtruth.getChannels().getValueBitCount());
+		final int keyMask = ~((~0) << (binarize ? 1 : groundtruth.getChannels().getValueBitCount()));
 		
 		groundtruth.forEachPixel((x, y) -> {
-			final int key = (int) groundtruth.getPixelValue(x, y) & 0x00FFFFFF;
+			final int key = getKey(groundtruth, x, y, binarize);
 			final BigBitSet selection = selections.get(key);
 			final long i = indices.computeIfAbsent(key, k -> new AtomicLong(-1L)).incrementAndGet();
 			
@@ -170,6 +171,16 @@ public final class GroundTruth2Bin {
 		debugPrint(indices);
 		
 		writeBins(data, trainOutputPath, testOutputPath);
+	}
+	
+	public static final int getKey(final Image2D groundtruth, final int x, final int y, final boolean binarize) {
+		final int key = (int) groundtruth.getPixelValue(x, y) & 0x00FFFFFF;
+		
+		if (binarize) {
+			return key == 0 ? 0 : 0x00FFFFFF;
+		}
+		
+		return key;
 	}
 	
 	public static final int checkInt(final long value) {
