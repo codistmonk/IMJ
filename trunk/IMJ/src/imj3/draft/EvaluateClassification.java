@@ -43,14 +43,15 @@ public final class EvaluateClassification {
 		
 		final BufferedImage groundtruth = ImageIO.read(groundtruthFile);
 		final BufferedImage classification = ImageIO.read(classificationFile);
-		final ConfusionMatrix confusionMatrix = evaluate(classification, groundtruth);
+		final boolean binarize = arguments.get("binarize", 0)[0] != 0;
+		final ConfusionMatrix confusionMatrix = evaluate(classification, groundtruth, binarize);
 		
 		System.out.println("counts: " + confusionMatrix.getCounts());
 		System.out.println("F1s: " +  confusionMatrix.computeF1s());
 		System.out.println("macroF1: " + confusionMatrix.computeMacroF1());
 	}
 	
-	public static final ConfusionMatrix evaluate(final BufferedImage classification, final BufferedImage groundtruth) {
+	public static final ConfusionMatrix evaluate(final BufferedImage classification, final BufferedImage groundtruth, final boolean binarize) {
 		final int groundtruthWidth = groundtruth.getWidth();
 		final int groundtruthHeight = groundtruth.getHeight();
 		final int classificationWidth = classification.getWidth();
@@ -62,13 +63,26 @@ public final class EvaluateClassification {
 			
 			for (int x = 0; x < groundtruthWidth; ++x) {
 				final int classificationX = x * classificationWidth / groundtruthWidth;
+				final int predicted = maybeBinarize(classification.getRGB(classificationX, classificationY), binarize);
+				final int expected = maybeBinarize(groundtruth.getRGB(x, y), binarize);
 				
-				result.count(toHexString(classification.getRGB(classificationX, classificationY)),
-						toHexString(groundtruth.getRGB(x, y)));
+				result.count(toHexString(predicted), toHexString(expected));
 			}
 		}
 		
 		return result;
+	}
+	
+	public static final int maybeBinarize(final int label, final boolean binarize) {
+		if (!binarize) {
+			return label;
+		}
+		
+		if ((label & 0x00FFFFFF) != 0) {
+			return ~0;
+		}
+		
+		return 0xFF000000;
 	}
 	
 	/**
