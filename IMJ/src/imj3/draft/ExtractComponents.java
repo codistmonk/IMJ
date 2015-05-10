@@ -54,29 +54,26 @@ public final class ExtractComponents {
 		
 		Arrays.sort(excludedLabels);
 		
-		forEachPixelInEachComponent4(labels, new Pixel2DProcessor() {
-			
-			private final LongList pixels = new LongList();
+		forEachPixelInEachComponent4(labels, new ComponentPixelsProcessor() {
 			
 			private final Rectangle bounds = new Rectangle();
 			
 			private long label;
 			
 			@Override
-			public final boolean pixel(final int x, final int y) {
+			protected final boolean protectedPixel(final int x, final int y) {
 				this.label = labels.getPixelValue(x, y);
 				this.bounds.add(x, y);
-				this.pixels.add(labels.getPixel(x, y));
 				
 				return true;
 			}
 			
 			@Override
-			public final void endOfPatch() {
+			protected final void protectedEndOfPatch() {
 				if (Arrays.binarySearch(excludedLabels, (int) (this.label & labelMask)) < 0 && 128 <= this.bounds.width * this.bounds.height) {
 					debugPrint(this.bounds);
 					
-					final long[] pixels = this.pixels.toArray();
+					final long[] pixels = this.getPixels().toArray();
 					
 					Arrays.sort(pixels);
 					
@@ -97,7 +94,7 @@ public final class ExtractComponents {
 							final int labelY = yIn * labelsHeight / imageHeight;
 							int rgb = 0;
 							
-							if (0 <= Arrays.binarySearch(pixels, labels.getPixel(labelX, labelY))) {
+							if (0 <= Arrays.binarySearch(pixels, getPixel(labelX, labelY))) {
 								final long pixelValue = image.getPixelValue(xIn, yIn);
 								
 								for (int i = n - 1; 0 <= i; --i) {
@@ -116,7 +113,6 @@ public final class ExtractComponents {
 					}
 				}
 				
-				this.pixels.clear();
 				this.bounds.setSize(-1, -1);
 			}
 			
@@ -173,6 +169,59 @@ public final class ExtractComponents {
 		if (!done.get(pixel) && value == image.getPixelValue(pixel)) {
 			schedule(pixel, todo, done);
 		}
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-05-10)
+	 */
+	public static abstract class ComponentPixelsProcessor implements Pixel2DProcessor {
+		
+		private final LongList pixels = new LongList();
+		
+		public final LongList getPixels() {
+			return this.pixels;
+		}
+		
+		@Override
+		public final boolean pixel(final int x, final int y) {
+			this.pixels.add(getPixel(x, y));
+			
+			return this.protectedPixel(x, y);
+		}
+		
+		@Override
+		public final void endOfPatch() {
+			this.protectedEndOfPatch();
+			this.getPixels().clear();
+		}
+		
+		protected boolean protectedPixel(final int x, final int y) {
+			ignore(x);
+			ignore(y);
+			
+			return true;
+		}
+		
+		protected void protectedEndOfPatch() {
+			// NOP
+		}
+		
+		private static final long serialVersionUID = -7576924788386611226L;
+		
+		public static final long INT_MASK = (1L << Integer.SIZE) - 1;
+		
+		public static final long getPixel(final int x, final int y) {
+			return ((long) x << Integer.SIZE) | (y & INT_MASK);
+		}
+		
+		public static final int getX(final long pixel) {
+			return (int) ((pixel >> Integer.SIZE) & INT_MASK);
+		}
+		
+		public static final int getY(final long pixel) {
+			return (int) (pixel & INT_MASK);
+		}
+		
 	}
 	
 }
