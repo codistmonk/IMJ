@@ -8,6 +8,8 @@ import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.Map;
 
+import net.sourceforge.aprog.tools.Tools;
+
 /**
  * @author codistmonk (creation 2015-03-01)
  */
@@ -105,12 +107,25 @@ public final class PackedImage2D implements Image2D {
 		if (result == null) {
 			final int width = this.getWidth();
 			final int height = this.getHeight();
+			int awtType = BufferedImage.TYPE_INT_BGR;
 			
-			result = new BufferedImage(width, height, this.getChannels().getChannelCount() == 4 ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_BGR);
+			if (this.getChannels().getChannelCount() == 4) {
+				awtType = BufferedImage.TYPE_INT_ARGB;
+			} else if (this.getChannels().getValueBitCount() == 1) {
+				awtType = BufferedImage.TYPE_BYTE_BINARY;
+			}
+			
+			result = new BufferedImage(width, height, awtType);
 			
 			for (int y = 0; y < height; ++y) {
 				for (int x = 0; x < width; ++x) {
-					result.setRGB(x, y, (int) this.getPixelValue(x, y));
+					int rgb = (int) this.getPixelValue(x, y);
+					
+					if (awtType == BufferedImage.TYPE_BYTE_BINARY && rgb != 0) {
+						rgb = ~0;
+					}
+					
+					result.setRGB(x, y, rgb);
 				}
 			}
 			
