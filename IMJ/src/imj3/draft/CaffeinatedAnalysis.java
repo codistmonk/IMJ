@@ -269,10 +269,10 @@ public final class CaffeinatedAnalysis {
 			try (final OutputStream output = new FileOutputStream(dataFile)) {
 				debugPrint("Writing", dataFile);
 				
-				for (int y = patchSize / 2; y < imageHeight; y += patchStride) {
+				for (int y = patchStride / 2; y < imageHeight; y += patchStride) {
 					final int top = y - patchSize / 2;
 					final int bottom = top + patchSize;
-					for (int x = patchSize / 2; x < imageWidth; x += patchStride) {
+					for (int x = patchStride / 2; x < imageWidth; x += patchStride) {
 						final int left = x - patchSize / 2;
 						final int right = left + patchSize;
 						
@@ -319,8 +319,8 @@ public final class CaffeinatedAnalysis {
 			}
 			
 			final BufferedImage result = new BufferedImage(
-					(imageWidth - patchSize / 2 + patchStride - 1) / patchStride,
-					(imageHeight - patchSize / 2 + patchStride - 1) / patchStride, BufferedImage.TYPE_BYTE_BINARY);
+					(imageWidth - patchStride / 2 + patchStride - 1) / patchStride,
+					(imageHeight - patchStride / 2 + patchStride - 1) / patchStride, BufferedImage.TYPE_BYTE_BINARY);
 			final byte[] labelsBuffer = new byte[result.getWidth() * result.getHeight()];
 			
 			debugPrint(labelsBuffer.length);
