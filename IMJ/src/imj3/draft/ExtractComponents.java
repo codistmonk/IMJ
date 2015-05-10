@@ -61,7 +61,7 @@ public final class ExtractComponents {
 			private long label;
 			
 			@Override
-			protected final boolean protectedPixel(final int x, final int y) {
+			protected final boolean accept(final int x, final int y) {
 				this.label = labels.getPixelValue(x, y);
 				this.bounds.add(x, y);
 				
@@ -132,13 +132,17 @@ public final class ExtractComponents {
 			if (!done.get(pixel)) {
 				schedule(pixel, todo, done);
 				
+				boolean processing = true;
+				
 				while (!todo.isEmpty()) {
 					final long p = todo.remove(0);
 					final long value = image.getPixelValue(p);
 					final int x = (int) (p % width);
 					final int y = (int) (p / width);
 					
-					process.pixel(x, y);
+					if (processing && !process.pixel(x, y)) {
+						processing = false;
+					}
 					
 					if (0 < y) {
 						maybeSchedule(image, p - width, value, todo, done);
@@ -154,7 +158,9 @@ public final class ExtractComponents {
 					}
 				}
 				
-				process.endOfPatch();
+				if (processing) {
+					process.endOfPatch();
+				}
 			}
 		}
 	}
@@ -184,9 +190,15 @@ public final class ExtractComponents {
 		
 		@Override
 		public final boolean pixel(final int x, final int y) {
-			this.pixels.add(getPixel(x, y));
+			if (this.accept(x, y)) {
+				this.pixels.add(getPixel(x, y));
+				
+				return true;
+			}
 			
-			return this.protectedPixel(x, y);
+			this.getPixels().clear();
+			
+			return false;
 		}
 		
 		@Override
@@ -195,7 +207,7 @@ public final class ExtractComponents {
 			this.getPixels().clear();
 		}
 		
-		protected boolean protectedPixel(final int x, final int y) {
+		protected boolean accept(final int x, final int y) {
 			ignore(x);
 			ignore(y);
 			
