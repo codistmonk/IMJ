@@ -3,23 +3,20 @@ package imj3.draft;
 import static java.lang.Math.pow;
 import static net.sourceforge.aprog.tools.Tools.*;
 
-import java.awt.Rectangle;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.Arrays;
-
-import javax.imageio.ImageIO;
-
-import jgencode.primitivelists.LongList;
-
 import imj2.tools.BigBitSet;
 
 import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.core.Image2D.Pixel2DProcessor;
+import imj3.tools.AutoCloseableImageWriter;
 import imj3.tools.IMJTools;
+
+import java.awt.Rectangle;
+import java.awt.image.BufferedImage;
+import java.io.FileOutputStream;
+import java.util.Arrays;
+
+import jgencode.primitivelists.LongList;
 
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -43,6 +40,7 @@ public final class ExtractComponents {
 		final String labelsPath = arguments.get("labels", baseName(imagePath) + "_classification.png");
 		final int[] excludedLabels = arguments.get("exclude", 0);
 		final int lod = arguments.get("lod", 4)[0];
+		final int outline = Long.decode(arguments.get("outline", "0")).intValue();
 		final double scale = pow(2.0, -lod);
 		final Image2D image = IMJTools.read(imagePath).getScaledImage(scale);
 		final Image2D labels = IMJTools.read(labelsPath).getScaledImage(scale);
@@ -51,6 +49,8 @@ public final class ExtractComponents {
 		final int imageHeight = image.getHeight();
 		final int labelsWidth = labels.getWidth();
 		final int labelsHeight = labels.getHeight();
+		
+		debugPrint(imageWidth, imageHeight, labelsWidth, labelsHeight);
 		
 		Arrays.sort(excludedLabels);
 		
@@ -79,8 +79,8 @@ public final class ExtractComponents {
 					
 					final int left = this.bounds.x * imageWidth / labelsWidth;
 					final int top = this.bounds.y * imageHeight / labelsHeight;
-					final int w = this.bounds.width * imageWidth / labelsWidth;
-					final int h = this.bounds.height * imageHeight / labelsHeight;
+					final int w = (this.bounds.width + 1) * imageWidth / labelsWidth;
+					final int h = (this.bounds.height + 1) * imageHeight / labelsHeight;
 					final String extractPath = baseName(imagePath) + "_lod" + lod + "_label" + Long.toHexString(this.label & labelMask)
 							+ "_x" + left + "_y" + top
 							+ "_w" + w + "_h" + h + ".jpg";
@@ -93,23 +93,41 @@ public final class ExtractComponents {
 							final int labelX = xIn * labelsWidth / imageWidth;
 							final int labelY = yIn * labelsHeight / imageHeight;
 							int rgb = 0;
+							final boolean pixelInSegment = 0 <= Arrays.binarySearch(pixels, getPixel(labelX, labelY));
 							
-							if (0 <= Arrays.binarySearch(pixels, getPixel(labelX, labelY))) {
+							{
 								final long pixelValue = image.getPixelValue(xIn, yIn);
 								
 								for (int i = n - 1; 0 <= i; --i) {
 									rgb = (rgb << Byte.SIZE) | ((int) channels.getChannelValue(pixelValue, i) & 0xFF);
 								}
+							}
+							
+							if (outline != 0) {
+								final boolean northInSegment = 0 <= Arrays.binarySearch(pixels, getPixel(labelX, labelY - 1));
+								final boolean westInSegment = 0 <= Arrays.binarySearch(pixels, getPixel(labelX - 1, labelY));
+								final boolean eastInSegment = 0 <= Arrays.binarySearch(pixels, getPixel(labelX + 1, labelY));
+								final boolean southInSegment = 0 <= Arrays.binarySearch(pixels, getPixel(labelX, labelY + 1));
 								
+								if (pixelInSegment) {
+									if (northInSegment && eastInSegment && westInSegment && southInSegment) {
+										extract.setRGB(xOut, yOut, rgb);
+									} else {
+										extract.setRGB(xOut, yOut, outline);
+									}
+								} else {
+									extract.setRGB(xOut, yOut, rgb);
+								}
+							} else if (pixelInSegment) {
 								extract.setRGB(xOut, yOut, rgb);
 							}
 						}
 					}
 					
-					try {
-						ImageIO.write(extract, "jpg", new File(extractPath));
-					} catch (final IOException exception) {
-						throw new UncheckedIOException(exception);
+					try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter("jpg")) {
+						imageWriter.setCompressionQuality(0.9F).setOutput(new FileOutputStream(extractPath)).write(extract);
+					} catch (final Exception exception) {
+						throw unchecked(exception);
 					}
 				}
 				
