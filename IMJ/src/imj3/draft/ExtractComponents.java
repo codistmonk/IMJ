@@ -62,6 +62,8 @@ public final class ExtractComponents {
 			
 			private long label;
 			
+			private int id;
+			
 			@Override
 			protected final boolean accept(final int x, final int y) {
 				this.label = labels.getPixelValue(x, y);
@@ -72,6 +74,8 @@ public final class ExtractComponents {
 			
 			@Override
 			protected final void protectedEndOfPatch() {
+				++this.id;
+				
 				if (Arrays.binarySearch(excludedLabels, (int) (this.label & labelMask)) < 0 && 128 <= this.bounds.width * this.bounds.height) {
 					debugPrint(this.bounds);
 					
@@ -83,7 +87,7 @@ public final class ExtractComponents {
 					final int top = this.bounds.y * imageHeight / labelsHeight;
 					final int w = (this.bounds.width + 1) * imageWidth / labelsWidth;
 					final int h = (this.bounds.height + 1) * imageHeight / labelsHeight;
-					final String extractPath = baseName(imagePath) + "_lod" + lod + "_label" + Long.toHexString(this.label & labelMask)
+					final String extractPath = baseName(imagePath) + "_lod" + lod + "_id" + this.id + "_label" + Long.toHexString(this.label & labelMask)
 							+ "_x" + left + "_y" + top
 							+ "_w" + w + "_h" + h + ".jpg";
 					final BufferedImage extract = new BufferedImage(w, h, BufferedImage.TYPE_INT_BGR);
