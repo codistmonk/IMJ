@@ -37,10 +37,12 @@ public final class ExtractComponents {
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String imagePath = arguments.get("file", "");
-		final String labelsPath = arguments.get("labels", baseName(imagePath) + "_classification.png");
+		final String labelsSuffix = arguments.get("labelsSuffix", "_mask.png");
+		final String labelsPath = arguments.get("labels", baseName(imagePath) + labelsSuffix);
 		final int[] excludedLabels = arguments.get("exclude", 0);
 		final int lod = arguments.get("lod", 4)[0];
 		final int outline = Long.decode(arguments.get("outline", "0")).intValue();
+		final boolean thinOutline = arguments.get("thinOutline", 0)[0] != 0;
 		final double scale = pow(2.0, -lod);
 		final Image2D image = IMJTools.read(imagePath).getScaledImage(scale);
 		final Image2D labels = IMJTools.read(labelsPath).getScaledImage(scale);
@@ -104,10 +106,14 @@ public final class ExtractComponents {
 							}
 							
 							if (outline != 0) {
-								final boolean northInSegment = 0 <= Arrays.binarySearch(pixels, getPixel(labelX, labelY - 1));
-								final boolean westInSegment = 0 <= Arrays.binarySearch(pixels, getPixel(labelX - 1, labelY));
-								final boolean eastInSegment = 0 <= Arrays.binarySearch(pixels, getPixel(labelX + 1, labelY));
-								final boolean southInSegment = 0 <= Arrays.binarySearch(pixels, getPixel(labelX, labelY + 1));
+								final int northY = thinOutline ? (yIn - 1) * labelsHeight / imageHeight : labelY - 1;
+								final int westX = thinOutline ? (xIn - 1) * labelsWidth / imageWidth : labelX - 1;
+								final int eastX = thinOutline ? (xIn + 1) * labelsWidth / imageWidth : labelX + 1;
+								final int southY = thinOutline ? (yIn + 1) * labelsHeight / imageHeight : labelY + 1;
+								final boolean northInSegment = 0 <= Arrays.binarySearch(pixels, getPixel(labelX, northY));
+								final boolean westInSegment = 0 <= Arrays.binarySearch(pixels, getPixel(westX, labelY));
+								final boolean eastInSegment = 0 <= Arrays.binarySearch(pixels, getPixel(eastX, labelY));
+								final boolean southInSegment = 0 <= Arrays.binarySearch(pixels, getPixel(labelX, southY));
 								
 								if (pixelInSegment) {
 									if (northInSegment && eastInSegment && westInSegment && southInSegment) {
@@ -116,7 +122,11 @@ public final class ExtractComponents {
 										extract.setRGB(xOut, yOut, outline);
 									}
 								} else {
-									extract.setRGB(xOut, yOut, rgb);
+									if (thinOutline && (northInSegment || eastInSegment || westInSegment || southInSegment)) {
+										extract.setRGB(xOut, yOut, 0);
+									} else {
+										extract.setRGB(xOut, yOut, rgb);
+									}
 								}
 							} else if (pixelInSegment) {
 								extract.setRGB(xOut, yOut, rgb);
