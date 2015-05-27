@@ -110,11 +110,11 @@ public final class NearestNeighbor2DVisualization {
 				public final void mouseWheelMoved(final MouseWheelEvent event) {
 					this.mouseMoved(event);
 					
-					final int n = availableColors.size();
+					final int n = NNCanvas.this.availableColors.size();
 					
 					if (vertexUnderMouse[0] != null && 0 < n) {
 						this.colorIndex %= n;
-						vertexUnderMouse[0].setColor(availableColors.get(this.colorIndex));
+						vertexUnderMouse[0].setColor(NNCanvas.this.availableColors.get(this.colorIndex));
 						this.colorIndex = (this.colorIndex + n + (event.getWheelRotation() < 0 ? -1 : 1)) % n;
 						repaint();
 					}
@@ -143,12 +143,12 @@ public final class NearestNeighbor2DVisualization {
 		}
 		
 		final void updateAvailableColors(final Color newColor) {
-			if (newColor != null && !availableColors.contains(newColor)) {
-				availableColors.add(newColor);
+			if (newColor != null && !this.availableColors.contains(newColor)) {
+				this.availableColors.add(newColor);
 			}
 			
 			remove_unused_colors:
-			for (final Iterator<Color> i = availableColors.iterator(); i.hasNext();) {
+			for (final Iterator<Color> i = this.availableColors.iterator(); i.hasNext();) {
 				final Color c = i.next();
 				
 				for (final Vertex vertex : getVertices()) {
