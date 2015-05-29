@@ -1,7 +1,17 @@
-package imj3.machinelearning;
+package imj3.draft;
 
 import static imj3.machinelearning.Datum.Default.datum;
-
+import imj3.machinelearning.Classifier;
+import imj3.machinelearning.DataSource;
+import imj3.machinelearning.Datum;
+import imj3.machinelearning.GaussianMixturePrototypeSource;
+import imj3.machinelearning.GreedyAssociativeStreamingClustering;
+import imj3.machinelearning.KMeansClustering;
+import imj3.machinelearning.Measure;
+import imj3.machinelearning.MedianCutClustering;
+import imj3.machinelearning.ShuffledDataSource;
+import imj3.machinelearning.StreamingClustering;
+import imj3.machinelearning.Measure.Predefined;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
@@ -22,7 +32,7 @@ public final class ClusteringExperiment {
 	public static final void main(final String[] commandLineArguments) {
 		final int s = 16;
 		final int d = s * s * 3;
-		final int n = 1_000;
+		final int n = 10_000;
 		final int k = 128;
 		
 		Tools.debugPrint("dimension:", d);
@@ -33,11 +43,10 @@ public final class ClusteringExperiment {
 //		final DataSource<?> inputs = new BufferedDataSource<>(new GaussianMixturePrototypeSource(k, d, n, 0L));
 		final DataSource inputs = new ShuffledDataSource(new GaussianMixturePrototypeSource(k, d, n, 0L), 0, 0L);
 		
-//		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L1, n).cluster(inputs), inputs));
-		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L1, k).cluster(inputs), inputs));
-//		Tools.debugPrint(evaluate(new StreamingClustering(Measure.Predefined.L1, n).cluster(inputs), inputs));
-		Tools.debugPrint(evaluate(new StreamingClustering(Measure.Predefined.L1, k).cluster(inputs), inputs));
-		Tools.debugPrint(evaluate(new GreedyAssociativeStreamingClustering(Measure.Predefined.L1, k).cluster(inputs), inputs));
+		Tools.debugPrint(evaluate(new KMeansClustering(Measure.Predefined.L2, k).cluster(inputs), inputs));
+		Tools.debugPrint(evaluate(new MedianCutClustering(Measure.Predefined.L2, k).cluster(inputs), inputs));
+		Tools.debugPrint(evaluate(new StreamingClustering(Measure.Predefined.L2, k).cluster(inputs), inputs));
+		Tools.debugPrint(evaluate(new GreedyAssociativeStreamingClustering(Measure.Predefined.L2, k).cluster(inputs), inputs));
 	}
 	
 	// XXX rename this method to evaluateReconstructionError?
