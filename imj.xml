@@ -15,7 +15,7 @@
             <fileset dir="src"/>
             <fileset dir="." includes="lib/tango/**"/>
             <fileset dir="." includes="lib/openseadragon/**"/>
-            <zipfileset excludes="META-INF/*.SF" src="lib/aprog.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/multij-1.8.201506040903.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/jgencode.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/bioformats_package.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/commons-compress-1.8.1.jar"/>
@@ -47,7 +47,7 @@
             	<present present="srconly" targetdir="test"/>
         	</fileset>
             <fileset dir="src" includes="imj3/core/**,imj3/tools/**,imj3/protocol/**"/>
-            <zipfileset excludes="META-INF/*.SF" src="lib/aprog.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/multij-1.8.201506040903.jar"/>
             <fileset dir="." includes="lib/openseadragon/**"/>
         </jar>
         <jar destfile="evaluateclassification.jar" filesetmanifest="mergewithoutmain">
@@ -61,7 +61,7 @@
             	<present present="srconly" targetdir="test"/>
         	</fileset>
             <fileset dir="src" includes="imj3/draft/EvaluateClassification*"/>
-            <zipfileset excludes="META-INF/*.SF" src="lib/aprog.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/multij-1.8.201506040903.jar"/>
         </jar>
     	<delete file="src/imj/version"/>
     </target>
