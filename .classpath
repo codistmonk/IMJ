@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="/Libraries/jocl/JOCL-0.1.9.jar"/>
+	<classpathentry kind="lib" path="/Libraries/ojalgo/ojalgo-37.1.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/MultiJ"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
