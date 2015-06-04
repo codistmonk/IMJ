@@ -62,13 +62,12 @@ import javax.swing.JPopupMenu;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 
-import jgencode.primitivelists.IntList;
-
 import multij.af.AFConstants;
 import multij.af.AFMainFrame;
 import multij.af.AbstractAFAction;
 import multij.context.Context;
 import multij.i18n.Translator;
+import multij.primitivelists.IntList;
 import multij.tools.CommandLineArgumentsParser;
 import multij.tools.IllegalInstantiationException;
 

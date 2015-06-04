@@ -5,7 +5,8 @@ import static java.lang.Math.ceil;
 import static java.lang.Math.max;
 import static java.lang.Math.sqrt;
 import static multij.tools.MathTools.square;
-import jgencode.primitivelists.IntList;
+
+import multij.primitivelists.IntList;
 import multij.tools.IllegalInstantiationException;
 
 /**

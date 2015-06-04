@@ -12,8 +12,10 @@ import static multij.tools.Tools.cast;
 import static multij.tools.Tools.getResourceAsStream;
 import static multij.tools.Tools.instances;
 import static multij.tools.Tools.join;
+
 import imj2.draft.PaletteBasedHistograms;
 import imj2.tools.MultiThreadTools;
+
 import imj3.draft.KMeans;
 import imj3.draft.segmentation.ImageComponent.Painter;
 import imj3.draft.segmentation.ClassifierNode;
@@ -73,7 +75,7 @@ import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 
-import jgencode.primitivelists.IntList;
+import multij.primitivelists.IntList;
 import multij.swing.MouseHandler;
 import multij.swing.SwingTools;
 import multij.tools.Canvas;

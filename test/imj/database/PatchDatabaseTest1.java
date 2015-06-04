@@ -20,7 +20,7 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.Map;
 
-import jgencode.primitivelists.ByteList;
+import multij.primitivelists.ByteList;
 import multij.tools.TicToc;
 
 import org.junit.Test;

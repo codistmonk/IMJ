@@ -13,7 +13,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Map;
 
-import jgencode.primitivelists.ByteList;
+import multij.primitivelists.ByteList;
 
 /**
  * @author codistmonk (creation 2013-04-25)

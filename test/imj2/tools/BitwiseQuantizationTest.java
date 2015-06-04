@@ -19,6 +19,7 @@ import static multij.tools.Tools.array;
 import static multij.tools.Tools.debug;
 import static multij.tools.Tools.debugPrint;
 import static multij.tools.Tools.instances;
+
 import imj2.tools.Image2DComponent.Painter;
 
 import java.awt.BorderLayout;
@@ -44,7 +45,7 @@ import javax.swing.SpinnerNumberModel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
-import jgencode.primitivelists.IntList;
+import multij.primitivelists.IntList;
 import multij.swing.SwingTools;
 import multij.tools.Canvas;
 import multij.tools.Factory.DefaultFactory;

@@ -18,6 +18,7 @@ import static multij.tools.Tools.gc;
 import static multij.tools.Tools.readObject;
 import static multij.tools.Tools.unchecked;
 import static multij.tools.Tools.writeObject;
+
 import imj.Image;
 import imj.apps.GenerateClassificationData.ExtendedConfusionTable;
 import imj.apps.GenerateSampleDatabase.Configuration;
@@ -47,7 +48,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
-import jgencode.primitivelists.IntList;
+import multij.primitivelists.IntList;
 import multij.tools.CommandLineArgumentsParser;
 import multij.tools.IllegalInstantiationException;
 import multij.tools.MathTools.Statistics;

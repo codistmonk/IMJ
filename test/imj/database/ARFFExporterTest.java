@@ -26,7 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeSet;
 
-import jgencode.primitivelists.ByteList;
+import multij.primitivelists.ByteList;
 
 import org.junit.Test;
 

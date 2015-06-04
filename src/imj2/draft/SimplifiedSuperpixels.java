@@ -43,8 +43,8 @@ import java.util.zip.ZipOutputStream;
 
 import javax.imageio.ImageIO;
 
-import jgencode.primitivelists.IntList;
-import jgencode.primitivelists.IntList.Processor;
+import multij.primitivelists.IntList;
+import multij.primitivelists.IntList.Processor;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;

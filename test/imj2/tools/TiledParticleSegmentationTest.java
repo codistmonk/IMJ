@@ -27,7 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import jgencode.primitivelists.IntList;
+import multij.primitivelists.IntList;
 
 import multij.tools.Canvas;
 import multij.tools.TicToc;

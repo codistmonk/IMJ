@@ -1,7 +1,7 @@
 package imj.apps.modules;
 
-import jgencode.primitivelists.IntList;
-import jgencode.primitivelists.IntList.Processor;
+import multij.primitivelists.IntList;
+import multij.primitivelists.IntList.Processor;
 import multij.tools.IllegalInstantiationException;
 
 /**

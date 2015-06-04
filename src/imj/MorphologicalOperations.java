@@ -5,9 +5,11 @@ import static imj.MathOperations.compute;
 import static imj.MathOperations.BinaryOperator.Predefined.MINUS;
 import static imj.MathOperations.BinaryOperator.Predefined.PLUS;
 import static java.lang.Math.ceil;
+
 import imj.IMJTools.StatisticsSelector;
 import imj.Labeling.NeighborhoodShape.Distance;
-import jgencode.primitivelists.IntList;
+
+import multij.primitivelists.IntList;
 import multij.tools.IllegalInstantiationException;
 
 /**

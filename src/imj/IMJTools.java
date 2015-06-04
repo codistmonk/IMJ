@@ -9,6 +9,7 @@ import static multij.tools.Tools.debugPrint;
 import static multij.tools.Tools.gc;
 import static multij.tools.Tools.unchecked;
 import static multij.tools.Tools.usedMemory;
+
 import imj.ImageOfBufferedImage.Feature;
 import imj.apps.modules.FilteredImage;
 import imj.apps.modules.RegionOfInterest;
@@ -24,7 +25,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import jgencode.primitivelists.IntList;
+import multij.primitivelists.IntList;
 import multij.tools.ConsoleMonitor;
 import multij.tools.IllegalInstantiationException;
 import multij.tools.MathTools.Statistics;

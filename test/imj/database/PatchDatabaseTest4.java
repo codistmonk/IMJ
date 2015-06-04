@@ -47,7 +47,7 @@ import java.util.concurrent.Future;
 
 import javax.imageio.ImageIO;
 
-import jgencode.primitivelists.IntList;
+import multij.primitivelists.IntList;
 
 import multij.tools.MathTools.Statistics;
 import multij.tools.SystemProperties;

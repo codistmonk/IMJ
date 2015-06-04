@@ -22,7 +22,7 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.Iterator;
 
-import jgencode.primitivelists.LongList;
+import multij.primitivelists.LongList;
 
 import multij.tools.IllegalInstantiationException;
 import multij.tools.Tools;

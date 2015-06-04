@@ -8,7 +8,7 @@ import java.util.BitSet;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-import jgencode.primitivelists.IntList;
+import multij.primitivelists.IntList;
 import multij.tools.Factory.DefaultFactory;
 
 /**

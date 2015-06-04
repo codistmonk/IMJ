@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 
-import jgencode.primitivelists.LongList;
+import multij.primitivelists.LongList;
 import multij.swing.SwingTools;
 import multij.tools.CommandLineArgumentsParser;
 import multij.tools.IllegalInstantiationException;

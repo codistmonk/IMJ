@@ -3,13 +3,14 @@ package imj.apps.modules;
 import static imj.IMJTools.argb;
 import static imj.Image.Abstract.index;
 import static java.util.Arrays.fill;
+
 import imj.Image;
 import imj.ImageOfInts;
 import imj.apps.modules.ViewFilter.Channel;
 
 import java.awt.Point;
 
-import jgencode.primitivelists.IntList;
+import multij.primitivelists.IntList;
 import multij.tools.IllegalInstantiationException;
 
 /**

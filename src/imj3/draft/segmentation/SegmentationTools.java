@@ -11,7 +11,7 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.Iterator;
 
-import jgencode.primitivelists.IntList;
+import multij.primitivelists.IntList;
 
 import multij.tools.IllegalInstantiationException;
 

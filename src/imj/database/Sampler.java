@@ -3,7 +3,8 @@ package imj.database;
 import imj.IMJTools.PixelProcessor;
 import imj.Image;
 import imj.apps.modules.ViewFilter.Channel;
-import jgencode.primitivelists.ByteList;
+
+import multij.primitivelists.ByteList;
 
 /**
  * @author codistmonk (creation 2013-04-22)

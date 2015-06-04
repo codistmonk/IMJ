@@ -76,8 +76,8 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeModel;
 
-import jgencode.primitivelists.DoubleList;
-import jgencode.primitivelists.IntList;
+import multij.primitivelists.DoubleList;
+import multij.primitivelists.IntList;
 
 import multij.events.EventManager;
 import multij.events.EventManager.Event.Listener;

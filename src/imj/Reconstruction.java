@@ -1,6 +1,6 @@
 package imj;
 
-import jgencode.primitivelists.IntList;
+import multij.primitivelists.IntList;
 
 /**
  * @author codistmonk (creation 2013-01-28)

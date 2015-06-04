@@ -5,9 +5,11 @@ import static java.lang.Long.bitCount;
 import static java.lang.Long.toBinaryString;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+
 import imj.IMJTools.PixelProcessor;
 import imj.apps.modules.RegionOfInterest;
-import jgencode.primitivelists.IntList;
+
+import multij.primitivelists.IntList;
 
 import org.junit.Test;
 

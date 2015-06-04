@@ -5,7 +5,7 @@ import static multij.tools.Tools.debugPrint;
 import java.io.Serializable;
 import java.util.BitSet;
 
-import jgencode.primitivelists.IntList;
+import multij.primitivelists.IntList;
 
 /**
  * @author codistmonk (creation 2013-04-06)

@@ -16,7 +16,7 @@ import java.awt.image.BufferedImage;
 import java.io.FileOutputStream;
 import java.util.Arrays;
 
-import jgencode.primitivelists.LongList;
+import multij.primitivelists.LongList;
 
 import multij.tools.CommandLineArgumentsParser;
 import multij.tools.IllegalInstantiationException;
