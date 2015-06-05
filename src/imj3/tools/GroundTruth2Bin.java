@@ -61,6 +61,8 @@ public final class GroundTruth2Bin {
 	
 	static final Random random = new Random(0L);
 	
+	public static final double TRAIN_RATIO = 5.0 / 6.0;
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
@@ -170,7 +172,7 @@ public final class GroundTruth2Bin {
 		
 		debugPrint(indices);
 		
-		writeBins(data, trainOutputPath, testOutputPath);
+		writeBins(data, TRAIN_RATIO, trainOutputPath, testOutputPath);
 	}
 	
 	public static final int getKey(final Image2D groundtruth, final int x, final int y, final boolean binarize) {
@@ -260,17 +262,17 @@ public final class GroundTruth2Bin {
 			counts.put(classDescription.toString(), count);
 		}
 		
-		writeBins(data, trainOutputPath, testOutputPath);
+		writeBins(data, TRAIN_RATIO, trainOutputPath, testOutputPath);
 		
 		debugPrint(counts);
 	}
 	
-	public static final void writeBins(final List<byte[]> data, final String trainOutputPath, final String testOutputPath)
+	public static final void writeBins(final List<byte[]> data, final double trainRatio, final String trainOutputPath, final String testOutputPath)
 			throws IOException {
 		Collections.shuffle(data, random);
 		
 		final int n = data.size();
-		final int trainSize = n * 5 / 6;
+		final int trainSize = (int) (n * trainRatio);
 		
 		try (final OutputStream output = new FileOutputStream(trainOutputPath)) {
 			for (int i = 0; i < trainSize; ++i) {
