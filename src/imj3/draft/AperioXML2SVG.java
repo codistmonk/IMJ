@@ -9,14 +9,23 @@ import static multij.xml.XMLTools.getNodes;
 import static multij.xml.XMLTools.parse;
 import static multij.xml.XMLTools.write;
 
+import java.awt.Color;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Area;
+import java.awt.geom.Path2D;
+import java.awt.geom.PathIterator;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import multij.tools.CommandLineArgumentsParser;
@@ -54,15 +63,17 @@ public final class AperioXML2SVG {
 			debugPrint(aperioXMLFile);
 			
 			final Document aperioXML = parse(getResourceAsStream(aperioXMLFile.getPath()));
-			final Document svg = parse("<svg xmlns=\"http://www.w3.org/2000/svg\"/>");
+			final Document svg = parse("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:imj=\"IMJ\"/>");
 			final Element svgRoot  = svg.getDocumentElement();
 			double lastX = 0.0;
 			double lastY = 0.0;
+			final List<Region> regions = new ArrayList<>();
 			
+			// collect_all_regions:
 			for (final Node aperioAnnotation : getNodes(aperioXML, "*//Annotation")) {
 				final String className = ((Element) aperioAnnotation).getAttribute("Name");
 				final String classDescription = ((Element) getNode(aperioAnnotation, "*//Attribute[@Id=0]")).getAttribute("Name");
-				final String color = "#" + String.format("%06X", Long.decode(((Element) aperioAnnotation).getAttribute("LineColor")));
+				final String color = formatColor(Long.decode(((Element) aperioAnnotation).getAttribute("LineColor")));
 				final String classId = classIds.computeIfAbsent(classDescription, d -> {
 					final String result = Integer.toString(classIds.size() + 1);
 					final Element classElement = (Element) classesRoot.appendChild(classesXML.createElement("class"));
@@ -75,12 +86,15 @@ public final class AperioXML2SVG {
 					return result;
 				});
 				
+				// collect_class_regions:
 				for (final Node aperioRegion : getNodes(aperioAnnotation, "*//Region")) {
-					final Element svgRegion = (Element) svgRoot.appendChild(svg.createElement("polygon"));
 					final StringBuilder points = new StringBuilder();
 					boolean prependSpace = false;
+					final Path2D region = new Path2D.Double();
+					boolean regionIsEmpty = true;
+					final double size = Double.parseDouble(((Element) aperioRegion).getAttribute("Area"));
 					
-					svgRegion.setAttribute("classId", classId);
+					region.setWindingRule(Path2D.WIND_EVEN_ODD);
 					
 					for (final Node aperioVertex : getNodes(aperioRegion, "*//Vertex")) {
 						if (prependSpace) {
@@ -93,13 +107,82 @@ public final class AperioXML2SVG {
 						final String yAsString = ((Element) aperioVertex).getAttribute("Y");
 						
 						points.append(xAsString).append(',').append(yAsString);
-						lastX = max(lastX, Double.parseDouble(xAsString));
-						lastY = max(lastY, Double.parseDouble(yAsString));
+						final double x = Double.parseDouble(xAsString);
+						final double y = Double.parseDouble(yAsString);
+						lastX = max(lastX, x);
+						lastY = max(lastY, y);
+						
+						if (regionIsEmpty) {
+							region.moveTo(x, y);
+							regionIsEmpty = false;
+						} else {
+							region.lineTo(x, y);
+						}
 					}
 					
-					svgRegion.setAttribute("points", points.toString());
-					svgRegion.setAttribute("style", "fill:" + color);
+					region.closePath();
+					regions.add(new Region(classId, new Area(region), size, new Color(Long.decode(color).intValue())));
 				}
+			}
+			
+			// remove_small_regions_from_large_regions:
+			{
+				regions.sort(new Comparator<Region>() {
+					
+					@Override
+					public final int compare(final Region r1, final Region r2) {
+						return Double.compare(r2.getSize(), r1.getSize());
+					}
+					
+				});
+				
+				for (int i = 0; i < regions.size(); ++i) {
+					final Region regionI = regions.get(i);
+					for (int j = i + 1; j < regions.size(); ++j) {
+						final Region regionJ = regions.get(j);
+						final Area tmp = new Area(regionJ.getArea());
+						
+						tmp.subtract(regionI.getArea());
+						regionI.getArea().subtract(regionJ.getArea());
+						
+						if (tmp.isEmpty() && regionI.getClassId().equals(regionJ.getClassId())) {
+							debugPrint();
+							regions.remove(j--);
+						}
+					}
+				}
+			}
+			
+			// create_SVG_paths_from_regions:
+			for (final Region region : regions) {
+				final PathIterator pathIterator = region.getArea().getPathIterator(new AffineTransform());
+				int segmentType;
+				final double[] segment = new double[6];
+				final StringBuilder pathData = new StringBuilder();
+				
+				while (!pathIterator.isDone()) {
+					switch (segmentType = pathIterator.currentSegment(segment)) {
+					case PathIterator.SEG_MOVETO:
+						pathData.append('M').append(segment[0]).append(',').append(segment[1]);
+						break;
+					case PathIterator.SEG_LINETO:
+						pathData.append('L').append(segment[0]).append(',').append(segment[1]);
+						break;
+					case PathIterator.SEG_CLOSE:
+						pathData.append('Z');
+						break;
+					default:
+						throw new UnsupportedOperationException("segmentType: " + segmentType);
+					}
+					
+					pathIterator.next();
+				}
+				
+				final Element svgRegion = (Element) svgRoot.appendChild(svg.createElement("path"));
+				
+				svgRegion.setAttribute("d", pathData.toString());
+				svgRegion.setAttribute("style", "fill:" + formatColor(region.getColor().getRGB()));
+				svgRegion.setAttribute("imj:classId", region.getClassId());
 			}
 			
 			svgRoot.setAttribute("width", Integer.toString((int) lastX + 1));
@@ -132,6 +215,50 @@ public final class AperioXML2SVG {
 		} catch (final IOException exception) {
 			exception.printStackTrace();
 		}
+	}
+	
+	public static final String formatColor(final long color) {
+		return "#" + String.format("%06X", color & 0x00FFFFFF);
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-06-05)
+	 */
+	public static final class Region implements Serializable {
+		
+		private final String classId;
+		
+		private final Area area;
+		
+		private final double size;
+		
+		private final Color color;
+		
+		public Region(final String classId, final Area area, final double size, final Color color) {
+			this.classId = classId;
+			this.area = area;
+			this.size = size;
+			this.color = color;
+		}
+		
+		public final String getClassId() {
+			return this.classId;
+		}
+		
+		public final Area getArea() {
+			return this.area;
+		}
+		
+		public final double getSize() {
+			return this.size;
+		}
+		
+		public final Color getColor() {
+			return this.color;
+		}
+		
+		private static final long serialVersionUID = -8706782430625804921L;
+		
 	}
 	
 }
