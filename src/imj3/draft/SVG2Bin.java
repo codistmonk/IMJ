@@ -156,7 +156,7 @@ public final class SVG2Bin {
 			debugPrint(items.size());
 			
 			final String trainOutputPath = baseName(svgPath) + "_train.bin";
-			final String testOutputPath = baseName(svgPath) + "test.bin";
+			final String testOutputPath = baseName(svgPath) + "_test.bin";
 			
 			writeBins(items, GroundTruth2Bin.TRAIN_RATIO, trainOutputPath, testOutputPath);
 			
