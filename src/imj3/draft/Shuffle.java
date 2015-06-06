@@ -46,7 +46,7 @@ public final class Shuffle {
 			final byte[] a = new byte[chunkSize], b = a.clone();
 			
 			for (long i = 0; i < n; ++i) {
-				final long j = random.nextLong() % n;
+				final long j = (random.nextLong() & (~0L >>> 1)) % n;
 				final long offsetI = i * chunkSize;
 				final long offsetJ = j * chunkSize;
 				
