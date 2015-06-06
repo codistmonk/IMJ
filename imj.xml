@@ -2,7 +2,6 @@
 <project default="create_imj_jar" name="Create Jar for Project IMJ">
     <!--ANT 1.7 is required                                        -->
     <target name="create_imj_jar">
-    	<exec executable="svnversion" output="src/imj/version" logError="true"/>
         <jar destfile="imj-all.jar" filesetmanifest="mergewithoutmain">
             <manifest>
                 <attribute name="Class-Path" value="."/>
@@ -62,6 +61,5 @@
             <fileset dir="src" includes="imj3/draft/EvaluateClassification*"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/multij-1.8.201506041044.jar"/>
         </jar>
-    	<delete file="src/imj/version"/>
     </target>
 </project>
