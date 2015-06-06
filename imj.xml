@@ -1,6 +1,26 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <project default="create_imj_jar" name="Create Jar for Project IMJ">
-    <!--ANT 1.7 is required                                        -->
+    <!--ANT 1.7 is required-->
+	
+	<condition property="isUnix">
+		<os family="unix"/>
+	</condition>
+	
+	<target name="jar2script_bash" if="isUnix">
+		<echo message="#!/bin/bash${line.separator}" file="imj" append="false"/>
+		<echo message="if [ $# -eq 0 ]${line.separator}" file="imj" append="true"/>
+		<echo message="then${line.separator}" file="imj" append="true"/>
+		<echo message="java -cp $0 multij.tools.Scripting${line.separator}" file="imj" append="true"/>
+		<echo message="else${line.separator}" file="imj" append="true"/>
+		<echo message="java -cp $0 $@${line.separator}" file="imj" append="true"/>
+		<echo message="fi${line.separator}" file="imj" append="true"/>
+		<echo message="exit${line.separator}" file="imj" append="true"/>
+		<concat destfile="imj" append="true" binary="true">
+			<filelist files="imj-all.jar"/>
+		</concat>
+		<chmod perm="+x" file="imj"/>
+	</target>
+	
     <target name="create_imj_jar">
         <jar destfile="imj-all.jar" filesetmanifest="mergewithoutmain">
             <manifest>
@@ -17,7 +37,6 @@
             <zipfileset excludes="META-INF/*.SF" src="lib/multij-1.8.201506041044.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/bioformats_package.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/commons-compress-1.8.1.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="lib/xstream-1.4.7.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/ojalgo-33.0.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/jsch-0.1.50.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/truezip-7.7.8.jar"/>
@@ -61,5 +80,6 @@
             <fileset dir="src" includes="imj3/draft/EvaluateClassification*"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/multij-1.8.201506041044.jar"/>
         </jar>
+    	<antcall target="jar2script_bash"/>
     </target>
 </project>
