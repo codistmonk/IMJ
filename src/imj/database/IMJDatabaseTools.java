@@ -21,9 +21,6 @@ import static multij.tools.Tools.gc;
 import static multij.tools.Tools.ignore;
 import static multij.tools.Tools.list;
 import static multij.tools.Tools.unchecked;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 import imj.Image;
 import imj.apps.modules.Annotations;
 import imj.apps.modules.Annotations.Annotation;
@@ -64,6 +61,7 @@ import javax.imageio.ImageIO;
 
 import multij.tools.IllegalInstantiationException;
 import multij.tools.TicToc;
+import multij.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-04-29)
@@ -377,11 +375,10 @@ public final class IMJDatabaseTools {
 	}
 	
 	public static final DBInfo checkDatabase(final PatchDatabase<?> database) {
-		boolean junitAvailable = false;
+		Class<?> junitAssert = null;
 		
 		try {
-			Class.forName("org.junit.Assert");
-			junitAvailable = true;
+			junitAssert = Class.forName("org.junit.Assert");
 		} catch (final Exception exception) {
 			ignore(exception);
 		}
@@ -396,8 +393,8 @@ public final class IMJDatabaseTools {
 				System.out.print(result.getDatabaseEntryCount() + "/" + database.getEntryCount() + "\r");
 			}
 			
-			if (junitAvailable) {
-				assertNotNull(entry.getValue());
+			if (junitAssert != null) {
+				Tools.invoke(junitAssert, "assertNotNull", entry.getValue());
 			}
 			
 			result.incrementDatabaseEntryCount(1);
@@ -423,8 +420,8 @@ public final class IMJDatabaseTools {
 			debugPrint("group:", entry);
 		}
 		
-		if (junitAvailable) {
-			assertEquals(database.getEntryCount(), result.getDatabaseEntryCount());
+		if (junitAssert != null) {
+			Tools.invoke(junitAssert, "assertEquals", database.getEntryCount(), result.getDatabaseEntryCount());
 		}
 		
 		return result;
