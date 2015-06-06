@@ -5,7 +5,6 @@ import static java.lang.Math.min;
 import static java.lang.Math.pow;
 import static multij.tools.Tools.*;
 import static multij.xml.XMLTools.*;
-
 import imj2.tools.BigBitSet;
 import imj3.core.Channels;
 import imj3.core.Image2D;
@@ -28,6 +27,7 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -77,8 +77,8 @@ public final class SVG2Bin {
 		final Random random = seed == -1L ? new Random() : new Random(seed);
 		final List<Region> regions = new ArrayList<>();
 		
-		debugPrint(lod, image.getWidth(), image.getHeight(), image.getChannels());
-		debugPrint(classIds);
+		debugPrint("LOD:", lod, "imageWidth:", image.getWidth(), "imageWidth:", image.getHeight(), "imageChannels:", image.getChannels());
+		debugPrint("classIds", Arrays.toString(classIds));
 		
 		for (final Node regionNode : getNodes(svg, "//path")) {
 			final Element regionElement = (Element) regionNode;
@@ -104,7 +104,7 @@ public final class SVG2Bin {
 			regions.add(new Region(label, bounds, canvas.getImage()));
 		}
 		
-		debugPrint(regions.size());
+		debugPrint("regionCount:", regions.size());
 		
 		final Map<Integer, Long> sizes = new HashMap<>();
 		
@@ -114,8 +114,8 @@ public final class SVG2Bin {
 		final long classLimit = min(limit, balance ? sizes.values().stream().min(Long::compare).get() : Long.MAX_VALUE);
 		final long selectionSize = sizes.values().stream().map(s -> min(s, classLimit)).reduce((x, y) -> x + y).get();
 		
-		debugPrint(sizes);
-		debugPrint(selectionSize, totalSize, classLimit);
+		debugPrint("classSizes:", sizes);
+		debugPrint("totalSize:", totalSize, "selectionSize:", selectionSize, "classLimit:", classLimit);
 		
 		final BigBitSet selection = new BigBitSet(totalSize);
 		
@@ -152,8 +152,6 @@ public final class SVG2Bin {
 			}
 			
 			Collections.shuffle(items, random);
-			
-			debugPrint(items.size());
 			
 			final String trainOutputPath = baseName(svgPath) + "_train.bin";
 			final String testOutputPath = baseName(svgPath) + "_test.bin";
