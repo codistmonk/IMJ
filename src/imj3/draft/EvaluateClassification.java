@@ -7,11 +7,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.imageio.ImageIO;
@@ -27,6 +29,8 @@ public final class EvaluateClassification {
 	private EvaluateClassification() {
 		throw new IllegalInstantiationException();
 	}
+	
+	private static final AtomicLong ZERO = new AtomicLong();
 	
 	/**
 	 * @param commandLineArguments
@@ -49,6 +53,35 @@ public final class EvaluateClassification {
 		System.out.println("counts: " + confusionMatrix.getCounts());
 		System.out.println("F1s: " +  confusionMatrix.computeF1s());
 		System.out.println("macroF1: " + confusionMatrix.computeMacroF1());
+		
+		final Collection<Comparable<?>> keys = collectKeys(confusionMatrix.getCounts());
+		
+		System.out.println("BEGIN COUNTS TABLE");
+		for (final Comparable<?> key : keys) {
+			final Map<Comparable<?>, AtomicLong> row = confusionMatrix.getCounts().getOrDefault(key, Collections.emptyMap());
+			boolean printSeparator = false;
+			
+			for (final Comparable<?> subkey : keys) {
+				if (printSeparator) {
+					System.out.print("\t");
+				} else {
+					printSeparator = true;
+				}
+				
+				System.out.print(row.getOrDefault(subkey, ZERO));
+			}
+			
+			System.out.println();
+		}
+		System.out.println("END COUNTS TABLE");
+	}
+	
+	public static final <V> Collection<Comparable<?>> collectKeys(final Map<Comparable<?>, Map<Comparable<?>, V>> map) {
+		final Collection<Comparable<?>> result = new TreeSet<>(map.keySet());
+		
+		map.values().stream().forEach(m -> result.addAll(m.keySet()));
+		
+		return result;
 	}
 	
 	public static final ConfusionMatrix evaluate(final BufferedImage classification, final BufferedImage groundtruth, final boolean binarize) {
