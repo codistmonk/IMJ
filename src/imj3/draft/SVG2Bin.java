@@ -83,6 +83,11 @@ public final class SVG2Bin {
 		for (final Node regionNode : getNodes(svg, "//path")) {
 			final Element regionElement = (Element) regionNode;
 			final int label = indexOf(regionElement.getAttribute("imj:classId"), classIds);
+			
+			if (label < 0) {
+				continue;
+			}
+			
 			final Area region = newRegion(regionElement);
 			final double scale = pow(2.0, -lod);
 			
@@ -145,7 +150,7 @@ public final class SVG2Bin {
 				for (int y = 0; y < height; ++y) {
 					for (int x = 0; x < width; ++x) {
 						if ((mask.getRGB(x, y) & 1) != 0 && selection.get(++i)) {
-							items.add(newItem(image, bounds.x + x, bounds.y + y, patchSize, label));
+							items.add(getItem(image, bounds.x + x, bounds.y + y, patchSize, label, null));
 						}
 					}
 				}
@@ -186,30 +191,30 @@ public final class SVG2Bin {
 		}
 	}
 	
-	public static final byte[] newItem(final Image2D image, final int x, final int y, final int patchSize,
-			final byte classIndex) {
+	public static final byte[] getItem(final Image2D image, final int x, final int y, final int patchSize,
+			final byte classIndex, final byte[] result) {
 		final Channels channels = image.getChannels();
 		final int channelCount = channels.getChannelCount();
 		final int planeSize = patchSize * patchSize;
-		final byte[] result = new byte[1 + channelCount * planeSize];
+		final byte[] actualResult = result != null ? result : new byte[1 + channelCount * planeSize];
 		final int top = y - patchSize / 2;
 		final int bottom = min(top + patchSize, image.getHeight());
 		final int left = x - patchSize / 2;
 		final int right = min(left + patchSize, image.getWidth());
 		
-		result[0] = classIndex;
+		actualResult[0] = classIndex;
 		
 		for (int yy = max(0, top); yy < bottom; ++yy) {
 			for (int xx = max(0, left); xx < right; ++xx) {
 				final long pixelValue = image.getPixelValue(xx, yy);
 				
 				for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex) {
-					result[1 + planeSize * channelIndex + (yy - top) * patchSize + (xx - left)] = (byte) channels.getChannelValue(pixelValue, channelIndex);
+					actualResult[1 + planeSize * channelIndex + (yy - top) * patchSize + (xx - left)] = (byte) channels.getChannelValue(pixelValue, channelIndex);
 				}
 			}
 		}
 		
-		return result;
+		return actualResult;
 	}
 	
 	public static final Area newRegion(final Element svgPath) {
