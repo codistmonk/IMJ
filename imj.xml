@@ -16,7 +16,7 @@
 		<echo message="fi${line.separator}" file="imj" append="true"/>
 		<echo message="exit${line.separator}" file="imj" append="true"/>
 		<concat destfile="imj" append="true" binary="true">
-			<filelist files="imj-all.jar"/>
+			<filelist dir="." files="imj-all.jar"/>
 		</concat>
 		<chmod perm="+x" file="imj"/>
 	</target>
