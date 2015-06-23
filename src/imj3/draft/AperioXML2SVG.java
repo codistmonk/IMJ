@@ -15,10 +15,14 @@ import java.awt.geom.Area;
 import java.awt.geom.Path2D;
 import java.awt.geom.PathIterator;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.text.SimpleDateFormat;
@@ -55,7 +59,8 @@ public final class AperioXML2SVG {
 		final String suffix = arguments.get("suffix", ".xml");
 		final File[] aperioXMLFiles = root.listFiles(RegexFilter.newSuffixFilter(suffix));
 		final String author = arguments.get("author", "unknown");
-		final Document classesXML = parse("<classes/>");
+		final String sourceClassesPath = arguments.get("classes", "");
+		final Document classesXML = sourceClassesPath.isEmpty() ? parse("<classes/>") : readXML(sourceClassesPath);
 		final Element classesRoot = classesXML.getDocumentElement();
 		final Map<String, String> classIds = new HashMap<>();
 		
@@ -214,6 +219,14 @@ public final class AperioXML2SVG {
 			write(classesXML, output, 1);
 		} catch (final IOException exception) {
 			exception.printStackTrace();
+		}
+	}
+	
+	public static final Document readXML(final String path) {
+		try (final InputStream input = new FileInputStream(path)) {
+			return parse(input);
+		} catch (final IOException exception) {
+			throw new UncheckedIOException(exception);
 		}
 	}
 	
