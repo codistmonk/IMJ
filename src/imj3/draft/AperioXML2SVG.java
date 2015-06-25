@@ -60,9 +60,16 @@ public final class AperioXML2SVG {
 		final File[] aperioXMLFiles = root.listFiles(RegexFilter.newSuffixFilter(suffix));
 		final String author = arguments.get("author", "unknown");
 		final String sourceClassesPath = arguments.get("classes", "");
-		final Document classesXML = sourceClassesPath.isEmpty() ? parse("<classes/>") : readXML(sourceClassesPath);
+		final Document classesXML = sourceClassesPath.isEmpty() ? parse("<classes nextId=\"1\"/>") : readXML(sourceClassesPath);
 		final Element classesRoot = classesXML.getDocumentElement();
 		final Map<String, String> classIds = new HashMap<>();
+		final int[] nextId = { Integer.decode(classesRoot.getAttribute("nextId")) };
+		
+		for (final Node node : getNodes(classesXML, "//class")) {
+			final Element element = (Element) node;
+			
+			classIds.put(element.getAttribute("description"), element.getAttribute("id"));
+		}
 		
 		for (final File aperioXMLFile : aperioXMLFiles) {
 			debugPrint(aperioXMLFile);
@@ -77,11 +84,11 @@ public final class AperioXML2SVG {
 			// collect_all_regions:
 			for (final Node aperioAnnotation : getNodes(aperioXML, "*//Annotation")) {
 				final String className = ((Element) aperioAnnotation).getAttribute("Name");
-				final String classDescription = ((Element) getNode(aperioAnnotation, "*//Attribute[@Id=0]")).getAttribute("Name");
+				final String classDescription = ((Element) getNode(aperioAnnotation, "*//Attribute")).getAttribute("Name");
 				final String color = formatColor(Long.decode(((Element) aperioAnnotation).getAttribute("LineColor")));
 				final String classId = classIds.computeIfAbsent(classDescription, d -> {
-					final String result = Integer.toString(classIds.size() + 1);
 					final Element classElement = (Element) classesRoot.appendChild(classesXML.createElement("class"));
+					final String result = Integer.toString(nextId[0]++);
 					
 					classElement.setAttribute("id", result);
 					classElement.setAttribute("name", className);
