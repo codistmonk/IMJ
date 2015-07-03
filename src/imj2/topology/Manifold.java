@@ -63,6 +63,16 @@ public final class Manifold implements Serializable {
 		return result;
 	}
 	
+	public final void initializeNext(final int dart, final int next) {
+		final int existingNext = this.getNext(dart);
+		
+		if (existingNext != -1) {
+			throw new IllegalStateException(dart + " -> " + existingNext);
+		}
+		
+		this.setNext(dart, next);
+	}
+	
 	public final void setNext(final int dart, final int next) {
 		this.nexts.set(dart, next);
 	}
@@ -155,6 +165,22 @@ public final class Manifold implements Serializable {
 		}
 		
 		return true;
+	}
+	
+	public final void initializeCycle(final int... darts) {
+		final int n = darts.length;
+		
+		for (int i = 0; i < n; ++i) {
+			this.initializeNext(darts[i], darts[(i + 1) % n]);
+		}
+	}
+	
+	public final void setCycle(final int... darts) {
+		final int n = darts.length;
+		
+		for (int i = 0; i < n; ++i) {
+			this.setNext(darts[i], darts[(i + 1) % n]);
+		}
 	}
 	
 	@Override
