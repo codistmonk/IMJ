@@ -1,9 +1,7 @@
 package imj3.draft;
 
 import static multij.tools.Tools.*;
-
 import de.schlichtherle.truezip.file.TFile;
-
 import imj3.tools.MultifileImage2D;
 import imj3.tools.MultifileSource;
 import imj3.tools.SVS2Multifile;
@@ -40,12 +38,16 @@ public final class UpdateMultifile {
 	public static final void main(final String[] commandLineArguments) throws Exception {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String path = arguments.get("file", "");
+		final String tilesPath = path + "/tiles/";
 		final boolean includeHTMLViewer = arguments.get("includeHTMLViewer", 1)[0] != 0;
 		final MultifileImage2D image = new MultifileImage2D(new MultifileSource(path), 0);
 		
+		new TFile(tilesPath).mkdir();
+		
 		for (final TFile file : new TFile(path).listFiles()) {
 			final String oldName = file.getName();
-			final String newName = path + "/tiles/" + oldName;
+			
+			final String newName = tilesPath + oldName;
 			
 			if (oldName.startsWith("tile_")) {
 				debugPrint(oldName + " -> " + newName);
@@ -90,6 +92,8 @@ public final class UpdateMultifile {
 					Tools.write(template, buffer);
 					
 					final TFile file = new TFile(path + "/" + entry.getName());
+					
+					file.getParentFile().mkdirs();
 					file.createNewFile();
 					file.input(new ByteArrayInputStream(buffer.toByteArray()));
 				}
