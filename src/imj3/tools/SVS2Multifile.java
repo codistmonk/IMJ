@@ -109,7 +109,7 @@ public final class SVS2Multifile {
 			if (file.getPath().contains("/old/") || outputFile.isFile()) {
 				debugError("Ignoring", file);
 			} else {
-				final String tileFormat = "jpg";
+				final String tileFormat = MultifileImage2D.TILE_FORMAT;
 				final TicToc timer = new TicToc();
 				
 				debugPrint("Processing", file, new Date(timer.tic()));

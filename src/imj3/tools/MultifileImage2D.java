@@ -88,7 +88,7 @@ public final class MultifileImage2D implements Image2D {
 		this.height = getNumber(metadata, imageXPath + "@height").intValue();
 		this.optimalTileWidth = getNumber(metadata, imageXPath + "@tileWidth").intValue();
 		this.optimalTileHeight = getNumber(metadata, imageXPath + "@tileHeight").intValue();
-		this.tileFormat = getString(metadata, imageXPath + "@tileFormat");
+		this.tileFormat = getOrDefault(metadata, imageXPath + "@tileFormat", TILE_FORMAT);
 		this.channels = this.getTile(0, 0).getChannels();
 		this.tileHolders = new WeakHashMap<>();
 		
@@ -230,6 +230,8 @@ public final class MultifileImage2D implements Image2D {
 	private static final long serialVersionUID = -4265650676493772608L;
 	
 	static final String TILE_PREFIX = "tiles/tile_";
+	
+	static final String TILE_FORMAT = "jpg";
 	
 	@Deprecated
 	private static final String OLD_TILE_PREFIX = "tile_";
