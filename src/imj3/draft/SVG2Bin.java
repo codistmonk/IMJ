@@ -10,6 +10,7 @@ import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.tools.GroundTruth2Bin;
 import imj3.tools.IMJTools;
+import imj3.tools.Image2DComponent;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -40,6 +41,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
+import multij.swing.SwingTools;
 import multij.tools.Canvas;
 import multij.tools.CommandLineArgumentsParser;
 import multij.tools.IllegalInstantiationException;
@@ -68,14 +70,20 @@ public final class SVG2Bin {
 		final File classesFile = new File(arguments.get("classes", new File(svgFile.getParentFile(), "classes.xml").getPath()));
 		final Document svg = readXML(svgFile);
 		final Document classes = readXML(classesFile);
-		final String[] classIds = arguments.get("classIds", join(",",
+		final boolean forceNegativeRegion = arguments.get("forceNegativeRegion", 0)[0] != 0;
+		final String[] userClassIds =  arguments.get("classIds", join(",",
 				getNodes(classes, "//class").stream().map(node -> ((Element) node).getAttribute("id")).toArray())).split(",");
+		final boolean useNegativeRegion = userClassIds.length == 1 || forceNegativeRegion;
+		final String[] classIds = append(useNegativeRegion ? array("") : array(), userClassIds);
 		final Image2D image = IMJTools.read(imagePath, lod);
 		final long seed = Long.decode(arguments.get("seed", "0"));
 		final boolean balance = arguments.get("balance", 1)[0] != 0;
 		final long limit = Long.decode(arguments.get("limit", Long.toString(Long.MAX_VALUE)));
 		final Random random = seed == -1L ? new Random() : new Random(seed);
 		final List<Region> regions = new ArrayList<>();
+		final double scale = pow(2.0, -lod);
+		final AffineTransform scaling = AffineTransform.getScaleInstance(scale, scale);
+		final Area negativeRegion = useNegativeRegion ? new Area(new Rectangle(image.getWidth(), image.getHeight())) : null;
 		
 		debugPrint("LOD:", lod, "imageWidth:", image.getWidth(), "imageWidth:", image.getHeight(), "imageChannels:", image.getChannels());
 		debugPrint("classIds", Arrays.toString(classIds));
@@ -89,24 +97,18 @@ public final class SVG2Bin {
 			}
 			
 			final Area region = newRegion(regionElement);
-			final double scale = pow(2.0, -lod);
 			
-			region.transform(AffineTransform.getScaleInstance(scale, scale));
+			region.transform(scaling);
 			
-			final Rectangle bounds = region.getBounds();
-			final Canvas canvas = new Canvas().setFormat(bounds.width, bounds.height, BufferedImage.TYPE_BYTE_BINARY);
-			
-			{
-				final Graphics2D graphics = canvas.getGraphics();
-				final AffineTransform savedTransform = graphics.getTransform();
-				
-				graphics.translate(-bounds.x, -bounds.y);
-				graphics.setColor(Color.WHITE);
-				graphics.fill(region);
-				graphics.setTransform(savedTransform);
+			if (negativeRegion != null) {
+				negativeRegion.subtract(region);
 			}
 			
-			regions.add(new Region(label, bounds, canvas.getImage()));
+			addTo(regions, region, label);
+		}
+		
+		if (negativeRegion != null) {
+			addTo(regions, negativeRegion, 0);
 		}
 		
 		debugPrint("regionCount:", regions.size());
@@ -122,23 +124,32 @@ public final class SVG2Bin {
 		debugPrint("classSizes:", sizes);
 		debugPrint("totalSize:", totalSize, "selectionSize:", selectionSize, "classLimit:", classLimit);
 		
-		final BigBitSet selection = new BigBitSet(totalSize);
+		final BigBitSet[] selections = new BigBitSet[classIds.length];
 		
-		for (long i = 0; i < selectionSize; ++i) {
-			selection.set(i, true);
-		}
-		
-		for (long i = 0; i < totalSize; ++i) {
-			final long j = (random.nextLong() & (~0L >>> 1)) % totalSize;
-			final boolean tmp = selection.get(i);
+		for (int label = 0; label < classIds.length; ++label) {
+			final long labelSize = sizes.get(label);
+			final long n = min(labelSize, classLimit);
+			final BigBitSet selection = new BigBitSet(labelSize);
+			selections[label] = selection;
 			
-			selection.set(i, selection.get(j));
-			selection.set(j, tmp);
+			for (long i = 0L; i < n; ++i) {
+				selection.set(i, true);
+			}
+			
+			if (n < labelSize) {
+				for (long i = 0; i < labelSize; ++i) {
+					final long j = (random.nextLong() & (~0L >>> 1)) % labelSize;
+					final boolean tmp = selection.get(i);
+					
+					selection.set(i, selection.get(j));
+					selection.set(j, tmp);
+				}
+			}
 		}
 		
 		{
 			final List<byte[]> items = new ArrayList<>((int) selectionSize);
-			long i = -1L;
+			final int[] selectionIndices = new int[classIds.length];
 			
 			for (final Region region : regions) {
 				final byte label = (byte) region.getLabel();
@@ -149,7 +160,7 @@ public final class SVG2Bin {
 				
 				for (int y = 0; y < height; ++y) {
 					for (int x = 0; x < width; ++x) {
-						if ((mask.getRGB(x, y) & 1) != 0 && selection.get(++i)) {
+						if ((mask.getRGB(x, y) & 1) != 0 && selections[label].get(++selectionIndices[label])) {
 							items.add(getItem(image, bounds.x + x, bounds.y + y, patchSize, label, null));
 						}
 					}
@@ -166,8 +177,27 @@ public final class SVG2Bin {
 			if (arguments.get("show", 0)[0] != 0) {
 				GroundTruth2Bin.BinView.main(trainOutputPath);
 				GroundTruth2Bin.BinView.main(testOutputPath);
+				
+				SwingTools.show(new Image2DComponent(image), "Image", false);
 			}
 		}
+	}
+	
+	public static final void addTo(final List<Region> regions, final Area region, final int label) {
+		final Rectangle bounds = region.getBounds();
+		final Canvas canvas = new Canvas().setFormat(max(1, bounds.width), max(1, bounds.height), BufferedImage.TYPE_BYTE_BINARY);
+		
+		{
+			final Graphics2D graphics = canvas.getGraphics();
+			final AffineTransform savedTransform = graphics.getTransform();
+			
+			graphics.translate(-bounds.x, -bounds.y);
+			graphics.setColor(Color.WHITE);
+			graphics.fill(region);
+			graphics.setTransform(savedTransform);
+		}
+		
+		regions.add(new Region(label, bounds, canvas.getImage()));
 	}
 	
 	public static final void writeBins(final List<byte[]> data, final double trainRatio, final String trainOutputPath, final String testOutputPath) {
@@ -209,7 +239,7 @@ public final class SVG2Bin {
 				final long pixelValue = image.getPixelValue(xx, yy);
 				
 				for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex) {
-					actualResult[1 + planeSize * channelIndex + (yy - top) * patchSize + (xx - left)] = (byte) channels.getChannelValue(pixelValue, channelIndex);
+					actualResult[1 + planeSize * (channelCount - 1 - channelIndex) + (yy - top) * patchSize + (xx - left)] = (byte) channels.getChannelValue(pixelValue, channelIndex);
 				}
 			}
 		}
@@ -224,7 +254,7 @@ public final class SVG2Bin {
 		
 		if (true) {
 			String pathElement = "m";
-			final double[] buffer = new double[4];
+			final double[] buffer = new double[8];
 			int i = 2;
 			SVGPathDataParserState state = SVGPathDataParserState.READ_COMMAND;
 			
@@ -235,12 +265,16 @@ public final class SVG2Bin {
 					switch (state) {
 					case READ_COMMAND:
 						scanner.useDelimiter("");
-						final String command = scanner.next("[MmLlZz ]");
+						final String command = scanner.next("[MmLlQqCcZz ]");
 						switch (command) {
 						case "M":
 						case "m":
 						case "L":
 						case "l":
+						case "Q":
+						case "q":
+						case "C":
+						case "c":
 							pathElement = command;
 						case " ":
 							state = SVGPathDataParserState.READ_NUMBER;
@@ -254,7 +288,8 @@ public final class SVG2Bin {
 						scanner.useDelimiter("[^0-9.]");
 						buffer[i] = scanner.nextDouble();
 						
-						if (++i == 4) {
+						switch (++i) {
+						case 4:
 							switch (pathElement) {
 							case "m":
 								buffer[2] += buffer[0];
@@ -268,6 +303,13 @@ public final class SVG2Bin {
 							case "L":
 								path.lineTo(buffer[2], buffer[3]);
 								break;
+							case "q":
+							case "c":
+								buffer[2] += buffer[0];
+								buffer[3] += buffer[1];
+							case "Q":
+							case "C":
+								break;
 							default:
 								throw new UnsupportedOperationException(pathElement);
 							}
@@ -275,6 +317,44 @@ public final class SVG2Bin {
 							System.arraycopy(buffer, 2, buffer, 0, 2);
 							i = 2;
 							state = SVGPathDataParserState.READ_COMMAND;
+							break;
+						case 6:
+							switch (pathElement) {
+							case "q":
+								buffer[4] += buffer[0];
+								buffer[5] += buffer[1];
+							case "Q":
+								path.quadTo(buffer[2], buffer[3], buffer[4], buffer[5]);
+								break;
+							case "c":
+								buffer[4] += buffer[0];
+								buffer[5] += buffer[1];
+							case "C":
+								break;
+							default:
+								throw new UnsupportedOperationException(pathElement);
+							}
+							
+							System.arraycopy(buffer, 4, buffer, 0, 2);
+							i = 2;
+							state = SVGPathDataParserState.READ_COMMAND;
+							break;
+						case 8:
+							switch (pathElement) {
+							case "c":
+								buffer[6] += buffer[0];
+								buffer[7] += buffer[1];
+							case "C":
+								path.curveTo(buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7]);
+								break;
+							default:
+								throw new UnsupportedOperationException(pathElement);
+							}
+							
+							System.arraycopy(buffer, 6, buffer, 0, 2);
+							i = 2;
+							state = SVGPathDataParserState.READ_COMMAND;
+							break;
 						}
 					}
 				}
