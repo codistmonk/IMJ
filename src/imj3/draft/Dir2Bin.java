@@ -48,6 +48,8 @@ public final class Dir2Bin {
 		final boolean shuffle = arguments.get("shuffle", 1)[0] != 0;
 		final boolean show = arguments.get("show", 0)[0] != 0;
 		
+		debugPrint(root);
+		
 		for (final File classDir : root.listFiles()) {
 			final int label = classIds.indexOf(classDir.getName());
 			
