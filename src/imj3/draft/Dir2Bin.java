@@ -40,7 +40,7 @@ public final class Dir2Bin {
 		final File root = new File(arguments.get("in", ""));
 		final List<String> classIds = new ArrayList<>(Arrays.asList(split(arguments.get("classIds", ""), ",")));
 		final int forcedWidth = arguments.get("width", 32)[0];
-		final int forcedHeight = arguments.get("height", 32)[0];
+		final int forcedHeight = arguments.get("height", forcedWidth)[0];
 		final int channelCount = 3;
 		final List<byte[]> items = new ArrayList<>();
 		final Canvas itemCanvas = new Canvas().setFormat(forcedWidth, forcedHeight);
@@ -48,7 +48,7 @@ public final class Dir2Bin {
 		final boolean shuffle = arguments.get("shuffle", 1)[0] != 0;
 		final boolean show = arguments.get("show", 0)[0] != 0;
 		
-		debugPrint(root);
+		debugPrint("root:", root);
 		
 		for (final File classDir : root.listFiles()) {
 			final int label = classIds.indexOf(classDir.getName());
@@ -70,16 +70,18 @@ public final class Dir2Bin {
 									item[1 + channelIndex * (forcedWidth * forcedHeight) + y * forcedWidth + x] =
 											(byte) (rgb >> (Byte.SIZE * (channelCount - 1 - channelIndex)));
 								}
-								
-								items.add(item);
 							}
 						}
+						
+						items.add(item);
 					} catch (final IOException exception) {
 						debugError(imageFile, exception);
 					}
 				}
 			}
 		}
+		
+		debugPrint("itemCount:", items.size());
 		
 		if (shuffle) {
 			Collections.shuffle(items);
