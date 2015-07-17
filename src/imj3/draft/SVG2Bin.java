@@ -84,8 +84,11 @@ public final class SVG2Bin {
 		final double scale = pow(2.0, -lod);
 		final AffineTransform scaling = AffineTransform.getScaleInstance(scale, scale);
 		final Area negativeRegion = useNegativeRegion ? new Area(new Rectangle(image.getWidth(), image.getHeight())) : null;
+		final double trainRatio = Double.parseDouble(arguments.get("trainRatio", Double.toString(GroundTruth2Bin.TRAIN_RATIO)));
 		
+		debugPrint("iamgePath:", imagePath);
 		debugPrint("LOD:", lod, "imageWidth:", image.getWidth(), "imageWidth:", image.getHeight(), "imageChannels:", image.getChannels());
+		debugPrint("svgPath:", svgPath);
 		debugPrint("classIds", Arrays.toString(classIds));
 		
 		for (final Node regionNode : getNodes(svg, "//path")) {
@@ -169,10 +172,10 @@ public final class SVG2Bin {
 			
 			Collections.shuffle(items, random);
 			
-			final String trainOutputPath = baseName(svgPath) + "_train.bin";
+			final String trainOutputPath = baseName(svgPath) + (trainRatio == 1.0 ? ".bin" : "_train.bin");
 			final String testOutputPath = baseName(svgPath) + "_test.bin";
 			
-			writeBins(items, GroundTruth2Bin.TRAIN_RATIO, trainOutputPath, testOutputPath);
+			writeBins(items, trainRatio, trainOutputPath, testOutputPath);
 			
 			if (arguments.get("show", 0)[0] != 0) {
 				GroundTruth2Bin.BinView.main(trainOutputPath);
@@ -204,6 +207,8 @@ public final class SVG2Bin {
 		final int n = data.size();
 		final int trainSize = (int) (n * trainRatio);
 		
+		debugPrint("Writing", trainOutputPath);
+		
 		try (final OutputStream output = new FileOutputStream(trainOutputPath)) {
 			for (int i = 0; i < trainSize; ++i) {
 				output.write(data.get(i));
@@ -212,12 +217,16 @@ public final class SVG2Bin {
 			exception.printStackTrace();
 		}
 		
-		try (final OutputStream output = new FileOutputStream(testOutputPath)) {
-			for (int i = trainSize; i < n; ++i) {
-				output.write(data.get(i));
+		if (1.0 != trainRatio) {
+			debugPrint("Writing", testOutputPath);
+			
+			try (final OutputStream output = new FileOutputStream(testOutputPath)) {
+				for (int i = trainSize; i < n; ++i) {
+					output.write(data.get(i));
+				}
+			} catch (final IOException exception) {
+				exception.printStackTrace();
 			}
-		} catch (final IOException exception) {
-			exception.printStackTrace();
 		}
 	}
 	
