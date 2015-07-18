@@ -4,6 +4,7 @@ import static imj3.tools.CommonSwingTools.center;
 import static java.lang.Math.log;
 import static java.lang.Math.max;
 import static multij.swing.SwingTools.*;
+
 import imj3.core.Image2D;
 import imj3.tools.IMJTools;
 import imj3.tools.Image2DComponent;
@@ -40,7 +41,6 @@ import javax.swing.event.ListDataListener;
 
 import multij.swing.MouseHandler;
 import multij.swing.SwingTools;
-import multij.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-07-18)
@@ -238,8 +238,6 @@ public final class VisualPatchExtractor extends JPanel {
 			
 			@Override
 			public final void mouseClicked(final MouseEvent event) {
-				Tools.debugPrint(component.getImage().getScale());
-				
 				if (!event.isPopupTrigger() && event.getClickCount() == 2) {
 					addPatchToList();
 				}
