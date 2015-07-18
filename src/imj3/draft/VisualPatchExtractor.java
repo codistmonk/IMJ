@@ -1,5 +1,7 @@
 package imj3.draft;
 
+import static imj3.tools.CommonSwingTools.center;
+import static java.lang.Math.log;
 import static java.lang.Math.max;
 import static multij.swing.SwingTools.*;
 
@@ -11,8 +13,8 @@ import imj3.tools.Image2DComponent.Overlay;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Frame;
 import java.awt.Graphics2D;
-import java.awt.GridBagLayout;
 import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -33,6 +35,7 @@ import javax.swing.JSpinner;
 import javax.swing.ListCellRenderer;
 import javax.swing.ListModel;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingUtilities;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
 
@@ -71,39 +74,109 @@ public final class VisualPatchExtractor extends JPanel {
 		SwingTools.setCheckAWT(false);
 		
 		final JComponent controlBox = verticalBox(
-				horizontalBox(new JLabel("patchSize"), Box.createHorizontalGlue(), this.patchSizeSpinner),
-				horizontalBox(new JLabel("patchStride"), Box.createHorizontalGlue(), this.patchStrideSpinner),
-				scrollable(centered(this.patchView)),
-				scrollable(this.patchList));
+				horizontalBox(new JLabel("patchSize"), Box.createHorizontalGlue(), this.getPatchSizeSpinner()),
+				horizontalBox(new JLabel("patchStride"), Box.createHorizontalGlue(), this.getPatchStrideSpinner()),
+				scrollable(center(this.getPatchView())),
+				scrollable(this.getPatchList()));
 		
 		this.add(horizontalSplit(controlBox, view), BorderLayout.CENTER);
 		
 		SwingTools.setCheckAWT(true);
 	}
 	
-	public static final JComponent centered(final Component component) {
-		final JPanel result = new JPanel(new GridBagLayout());
+	public final JSpinner getPatchSizeSpinner() {
+		return this.patchSizeSpinner;
+	}
+	
+	public final JSpinner getPatchStrideSpinner() {
+		return this.patchStrideSpinner;
+	}
+	
+	public final JLabel getPatchView() {
+		return this.patchView;
+	}
+	
+	public final JList<Image> getPatchList() {
+		return this.patchList;
+	}
+	
+	public final int getPatchSize() {
+		return ((SpinnerNumberModel) this.getPatchSizeSpinner().getModel()).getNumber().intValue();
+	}
+	
+	public final VisualPatchExtractor setPatchSize(final int patchSize) {
+		this.getPatchSizeSpinner().setValue(patchSize);
 		
-		result.add(component);
+		return this;
+	}
+	
+	public final int getPatchStride() {
+		return ((SpinnerNumberModel) this.getPatchStrideSpinner().getModel()).getNumber().intValue();
+	}
+	
+	public final VisualPatchExtractor setPatchStride(final int patchStride) {
+		this.getPatchStrideSpinner().setValue(patchStride);
 		
-		return result;
+		return this;
+	}
+	
+	public final Image2DComponent getView() {
+		return this.view;
+	}
+	
+	public final BufferedImage getPatchAsBufferedImage() {
+		return (BufferedImage) ((ImageIcon) this.getPatchView().getIcon()).getImage();
+	}
+	
+	public final void updateFrameTitle() {
+		final Frame frame = (Frame) SwingUtilities.getAncestorOfClass(Frame.class, this);
+		
+		if (frame != null) {
+			final Image2D image = this.getView().getImage();
+			final double lod = -log(image.getScale()) / log(2.0);
+			frame.setTitle(image.getId() + " LOD " + (int) lod);
+		}
+	}
+	
+	final void updatePatchListCellHeight() {
+		final ListModel<Image> model = this.getPatchList().getModel();
+		final int n = model.getSize();
+		int h = 1;
+		
+		for (int i = 0; i < n; ++i) {
+			h = max(h, 2 + model.getElementAt(i).getHeight(null));
+		}
+		
+		this.getPatchList().setFixedCellHeight(h);
+	}
+	
+	final void addPatchToList() {
+		((DefaultListModel<Image>) this.getPatchList().getModel()).insertElementAt(this.getPatchAsBufferedImage(), 0);
+	}
+	
+	final Point getMouseLocation() {
+		return this.mouseLocation;
+	}
+	
+	final void setPatchViewImage(final BufferedImage image) {
+		this.getPatchView().setIcon(new ImageIcon(image));
 	}
 	
 	private final void setupControls() {
-		this.patchSizeSpinner.addChangeListener(e -> {
+		this.getPatchSizeSpinner().addChangeListener(e -> {
 			this.updatePatchListCellHeight();
 			this.getView().repaint();
 		});
-		this.patchSizeSpinner.setMaximumSize(this.patchSizeSpinner.getPreferredSize());
+		this.getPatchSizeSpinner().setMaximumSize(this.getPatchSizeSpinner().getPreferredSize());
 		
-		this.patchStrideSpinner.addChangeListener(e -> this.getView().repaint());
-		this.patchStrideSpinner.setMaximumSize(this.patchStrideSpinner.getPreferredSize());
+		this.getPatchStrideSpinner().addChangeListener(e -> this.getView().repaint());
+		this.getPatchStrideSpinner().setMaximumSize(this.getPatchStrideSpinner().getPreferredSize());
 		
-		this.patchList.setCellRenderer(new ListCellRenderer<Image>() {
+		this.getPatchList().setCellRenderer(new ListCellRenderer<Image>() {
 			
 			private final JLabel patchRenderer = new JLabel();
 			
-			private final JComponent renderer = centered(this.patchRenderer);
+			private final JComponent renderer = center(this.patchRenderer);
 			
 			@Override
 			public final Component getListCellRendererComponent(
@@ -115,7 +188,7 @@ public final class VisualPatchExtractor extends JPanel {
 			}
 			
 		});
-		this.patchList.getModel().addListDataListener(new ListDataListener() {
+		this.getPatchList().getModel().addListDataListener(new ListDataListener() {
 			
 			@Override
 			public final void intervalRemoved(final ListDataEvent event) {
@@ -133,18 +206,6 @@ public final class VisualPatchExtractor extends JPanel {
 			}
 			
 		});
-	}
-	
-	final void updatePatchListCellHeight() {
-		final ListModel<Image> model = this.patchList.getModel();
-		final int n = model.getSize();
-		int h = 1;
-		
-		for (int i = 0; i < n; ++i) {
-			h = max(h, 2 + model.getElementAt(i).getHeight(null));
-		}
-		
-		this.patchList.setFixedCellHeight(h);
 	}
 	
 	private final void setupView() {
@@ -172,6 +233,7 @@ public final class VisualPatchExtractor extends JPanel {
 			@Override
 			public final void mouseWheelMoved(final MouseWheelEvent event) {
 				this.mouseMoved(event);
+				updateFrameTitle();
 			}
 			
 			@Override
@@ -225,46 +287,6 @@ public final class VisualPatchExtractor extends JPanel {
 			private static final long serialVersionUID = -6646527468467687096L;
 			
 		});
-	}
-	
-	public final int getPatchSize() {
-		return ((SpinnerNumberModel) this.patchSizeSpinner.getModel()).getNumber().intValue();
-	}
-	
-	public final VisualPatchExtractor setPatchSize(final int patchSize) {
-		this.patchSizeSpinner.setValue(patchSize);
-		
-		return this;
-	}
-	
-	public final int getPatchStride() {
-		return ((SpinnerNumberModel) this.patchStrideSpinner.getModel()).getNumber().intValue();
-	}
-	
-	public final VisualPatchExtractor setPatchStride(final int patchStride) {
-		this.patchStrideSpinner.setValue(patchStride);
-		
-		return this;
-	}
-	
-	public final Image2DComponent getView() {
-		return this.view;
-	}
-	
-	public final BufferedImage getPatchAsBufferedImage() {
-		return (BufferedImage) ((ImageIcon) this.patchView.getIcon()).getImage();
-	}
-	
-	final void addPatchToList() {
-		((DefaultListModel<Image>) this.patchList.getModel()).insertElementAt(this.getPatchAsBufferedImage(), 0);
-	}
-	
-	final Point getMouseLocation() {
-		return this.mouseLocation;
-	}
-	
-	final void setPatchViewImage(final BufferedImage image) {
-		this.patchView.setIcon(new ImageIcon(image));
 	}
 	
 	private static final long serialVersionUID = 2400491502237733629L;
