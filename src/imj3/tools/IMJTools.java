@@ -2,6 +2,7 @@ package imj3.tools;
 
 import static imj3.tools.CommonTools.classForName;
 import static imj3.tools.CommonTools.fieldValue;
+import static java.lang.Math.min;
 import static java.lang.Math.pow;
 import static multij.tools.Tools.array;
 import static multij.tools.Tools.invoke;
@@ -72,6 +73,60 @@ public final class IMJTools {
 		} catch (final Exception exception) {
 			exception.printStackTrace();
 		}
+	}
+	
+	public static final void forEachTileIn(final Image2D image, final Image2D.Pixel2DProcessor tileProcessor) {
+		forEachTile(image.getWidth(), image.getHeight(), image.getOptimalTileWidth(), image.getOptimalTileHeight(), tileProcessor);
+	}
+	
+	public static final void forEachTile(final int imageWidth, final int imageHeight,
+			final int tileWidth, final int tileHeight, final Image2D.Pixel2DProcessor tileProcessor) {
+		for (int tileY = 0; tileY < imageHeight; tileY += tileHeight) {
+			for (int tileX = 0; tileX < imageWidth; tileX += tileWidth) {
+				if (!tileProcessor.pixel(tileX, tileY)) {
+					return;
+				}
+				
+				tileProcessor.endOfPatch();
+			}
+		}
+	}
+	
+	public static final void forEachPixelInEachTileIn(final Image2D image, final Image2D.Pixel2DProcessor process) {
+		forEachPixelInEachTile(image.getWidth(), image.getHeight(), image.getOptimalTileWidth(), image.getOptimalTileHeight(), process);
+	}
+	
+	public static final void forEachPixelInEachTile(final int imageWidth, final int imageHeight,
+			final int tileWidth, final int tileHeight, final Image2D.Pixel2DProcessor process) {
+		forEachTile(imageWidth, imageHeight, tileWidth, tileHeight, new Image2D.Pixel2DProcessor() {
+			
+			@Override
+			public final boolean pixel(final int tileX, final int tileY) {
+				final int w = min(tileWidth, imageWidth - tileX);
+				final int h = min(tileHeight, imageHeight - tileY);
+				
+				for (int y = 0; y < h; ++y) {
+					for (int x = 0; x < w; ++x) {
+						if (!process.pixel(tileX + x, tileY + y)) {
+							return false;
+						}
+					}
+				}
+				
+				return true;
+			}
+			
+			@Override
+			public final void endOfPatch() {
+				process.endOfPatch();
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 3431410834328760116L;
+			
+		});
 	}
 	
 }
