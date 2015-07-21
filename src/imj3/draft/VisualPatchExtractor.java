@@ -5,6 +5,7 @@ import static java.lang.Math.log;
 import static java.lang.Math.max;
 import static multij.swing.SwingTools.*;
 import static multij.tools.Tools.*;
+
 import imj3.core.Image2D;
 import imj3.tools.IMJTools;
 import imj3.tools.Image2DComponent;
@@ -27,6 +28,7 @@ import java.awt.geom.Area;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,7 +77,7 @@ public final class VisualPatchExtractor extends JPanel {
 	
 	private final Map<String, Double> patchClassRatios;
 	
-	private final JList<Image> patchList;
+	private final JList<PatchInfo> patchList;
 	
 	public VisualPatchExtractor(final Image2DComponent view) {
 		super(new BorderLayout());
@@ -91,10 +93,10 @@ public final class VisualPatchExtractor extends JPanel {
 		this.patchClassRatios = new HashMap<>();
 		this.patchList = new JList<>(new DefaultListModel<>());
 		
+		SwingTools.setCheckAWT(false);
+		
 		this.setupView();
 		this.setupControls();
-		
-		SwingTools.setCheckAWT(false);
 		
 		final JComponent controlBox = verticalBox(
 				horizontalBox(new JLabel("patchSize"), Box.createHorizontalGlue(), this.getPatchSizeSpinner()),
@@ -137,11 +139,13 @@ public final class VisualPatchExtractor extends JPanel {
 		final Map<String, Double> classRatios = SVGTools.normalize(
 				SVGTools.getClassSurfaces(patchBounds0, getRegions()), patchBounds0.getWidth() * patchBounds0.getHeight());
 		
-		this.getPatchClassesView().setText("<html><body>" + classRatios.entrySet().stream().map(
-				e -> e.getKey() + ": " + String.format("%.2f&#37;<br>", 100.0 * e.getValue())).reduce("", String::concat) + "</body></html>");
+		this.getPatchClassRatios().clear();
+		this.getPatchClassRatios().putAll(classRatios);
+		
+		setClassesViewText(this.getPatchClassesView(), classRatios);
 	}
 	
-	public final JList<Image> getPatchList() {
+	public final JList<PatchInfo> getPatchList() {
 		return this.patchList;
 	}
 	
@@ -192,19 +196,23 @@ public final class VisualPatchExtractor extends JPanel {
 	}
 	
 	final void updatePatchListCellHeight() {
-		final ListModel<Image> model = this.getPatchList().getModel();
+		final ListModel<PatchInfo> model = this.getPatchList().getModel();
 		final int n = model.getSize();
 		int h = 1;
 		
 		for (int i = 0; i < n; ++i) {
-			h = max(h, 2 + model.getElementAt(i).getHeight(null));
+			h = max(h, 2 + model.getElementAt(i).getImage().getHeight(null));
 		}
 		
 		this.getPatchList().setFixedCellHeight(h);
 	}
 	
 	final void addPatchToList() {
-		((DefaultListModel<Image>) this.getPatchList().getModel()).insertElementAt(this.getPatchAsBufferedImage(), 0);
+		((DefaultListModel<PatchInfo>) this.getPatchList().getModel()).insertElementAt(
+				new PatchInfo(
+						new Rectangle(this.getPatchBounds()),
+						new TreeMap<>(this.getPatchClassRatios()),
+						this.getPatchAsBufferedImage()), 0);
 	}
 	
 	final Point getMouseLocation() {
@@ -225,17 +233,21 @@ public final class VisualPatchExtractor extends JPanel {
 		this.getPatchStrideSpinner().addChangeListener(e -> this.getView().repaint());
 		this.getPatchStrideSpinner().setMaximumSize(this.getPatchStrideSpinner().getPreferredSize());
 		
-		this.getPatchList().setCellRenderer(new ListCellRenderer<Image>() {
+		this.getPatchList().setCellRenderer(new ListCellRenderer<PatchInfo>() {
 			
 			private final JLabel patchRenderer = new JLabel();
 			
-			private final JComponent renderer = center(this.patchRenderer);
+			private final JLabel patchClassesRenderer = new JLabel();
+			
+			private final JComponent renderer = center(horizontalBox(this.patchRenderer, this.patchClassesRenderer));
 			
 			@Override
 			public final Component getListCellRendererComponent(
-					final JList<? extends Image> list, final Image value, final int index,
+					final JList<? extends PatchInfo> list, final PatchInfo value, final int index,
 					final boolean isSelected, final boolean cellHasFocus) {
-				this.patchRenderer.setIcon(new ImageIcon(value));
+				this.patchRenderer.setIcon(new ImageIcon(value.getImage()));
+				
+				setClassesViewText(this.patchClassesRenderer, value.getClassRatios());
 				
 				return this.renderer;
 			}
@@ -399,14 +411,55 @@ public final class VisualPatchExtractor extends JPanel {
 		return coordinate / patchStride * patchStride + patchStride / 2;
 	}
 	
+	public static final void setClassesViewText(final JLabel classesView, final Map<String, Double> classRatios) {
+		classesView.setText("<html><body>" + classRatios.entrySet().stream().map(
+				e -> e.getKey() + ": " + String.format("%.2f&#37;<br>", 100.0 * e.getValue())).reduce("", String::concat) + "</body></html>");
+	}
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
 	 */
 	public static final void main(final String[] commandLineArguments) {
+		SwingTools.useSystemLookAndFeel();
+		
 		final Image2DComponent component = new Image2DComponent(IMJTools.read(commandLineArguments[0]));
 		
 		SwingTools.show(new VisualPatchExtractor(component), commandLineArguments[0], false);
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-07-21)
+	 */
+	public static final class PatchInfo implements Serializable {
+		
+		private final Rectangle bounds;
+		
+		private final Map<String, Double> classRatios;
+		
+		private final Image image;
+		
+		public PatchInfo(final Rectangle bounds, final Map<String, Double> classRatios,
+				final Image image) {
+			this.bounds = bounds;
+			this.classRatios = classRatios;
+			this.image = image;
+		}
+		
+		public final Rectangle getBounds() {
+			return this.bounds;
+		}
+		
+		public final Map<String, Double> getClassRatios() {
+			return this.classRatios;
+		}
+		
+		public final Image getImage() {
+			return this.image;
+		}
+		
+		private static final long serialVersionUID = 3361034415891899914L;
+		
 	}
 	
 }
