@@ -1,6 +1,7 @@
 package imj3.draft;
 
 import static imj3.draft.SVG2Bin.*;
+import static imj3.draft.SVGTools.*;
 import static java.lang.Math.pow;
 import static multij.tools.Tools.*;
 import static multij.xml.XMLTools.*;

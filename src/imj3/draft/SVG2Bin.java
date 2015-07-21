@@ -1,11 +1,14 @@
 package imj3.draft;
 
+import static imj3.draft.SVGTools.*;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.pow;
 import static multij.tools.Tools.*;
 import static multij.xml.XMLTools.*;
+
 import imj2.tools.BigBitSet;
+
 import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.tools.GroundTruth2Bin;
@@ -17,35 +20,28 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
-import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.Serializable;
-import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
-import java.util.Scanner;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 
 import multij.swing.SwingTools;
 import multij.tools.Canvas;
 import multij.tools.CommandLineArgumentsParser;
 import multij.tools.IllegalInstantiationException;
 import multij.tools.Tools;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 /**
  * @author codistmonk (creation 2015-06-05)
@@ -256,123 +252,6 @@ public final class SVG2Bin {
 		return actualResult;
 	}
 	
-	public static final Area newRegion(final Element svgPath) {
-		final Path2D path = new Path2D.Double();
-		
-		path.setWindingRule(Path2D.WIND_EVEN_ODD);
-		
-		if (true) {
-			String pathElement = "m";
-			final double[] buffer = new double[8];
-			int i = 2;
-			SVGPathDataParserState state = SVGPathDataParserState.READ_COMMAND;
-			
-			try (final Scanner scanner = new Scanner(svgPath.getAttribute("d"))) {
-				scanner.useLocale(Locale.ENGLISH);
-				
-				while (scanner.hasNext()) {
-					switch (state) {
-					case READ_COMMAND:
-						scanner.useDelimiter("");
-						final String command = scanner.next("[MmLlQqCcZz ]");
-						switch (command) {
-						case "M":
-						case "m":
-						case "L":
-						case "l":
-						case "Q":
-						case "q":
-						case "C":
-						case "c":
-							pathElement = command;
-						case " ":
-							state = SVGPathDataParserState.READ_NUMBER;
-							break;
-						case "Z":
-						case "z":
-							path.closePath();
-						}
-						break;
-					case READ_NUMBER:
-						scanner.useDelimiter("[^0-9.]");
-						buffer[i] = scanner.nextDouble();
-						
-						switch (++i) {
-						case 4:
-							switch (pathElement) {
-							case "m":
-								buffer[2] += buffer[0];
-								buffer[3] += buffer[1];
-							case "M":
-								path.moveTo(buffer[2], buffer[3]);
-								break;
-							case "l":
-								buffer[2] += buffer[0];
-								buffer[3] += buffer[1];
-							case "L":
-								path.lineTo(buffer[2], buffer[3]);
-								break;
-							case "q":
-							case "c":
-								buffer[2] += buffer[0];
-								buffer[3] += buffer[1];
-							case "Q":
-							case "C":
-								break;
-							default:
-								throw new UnsupportedOperationException(pathElement);
-							}
-							
-							System.arraycopy(buffer, 2, buffer, 0, 2);
-							i = 2;
-							state = SVGPathDataParserState.READ_COMMAND;
-							break;
-						case 6:
-							switch (pathElement) {
-							case "q":
-								buffer[4] += buffer[0];
-								buffer[5] += buffer[1];
-							case "Q":
-								path.quadTo(buffer[2], buffer[3], buffer[4], buffer[5]);
-								break;
-							case "c":
-								buffer[4] += buffer[0];
-								buffer[5] += buffer[1];
-							case "C":
-								break;
-							default:
-								throw new UnsupportedOperationException(pathElement);
-							}
-							
-							System.arraycopy(buffer, 4, buffer, 0, 2);
-							i = 2;
-							state = SVGPathDataParserState.READ_COMMAND;
-							break;
-						case 8:
-							switch (pathElement) {
-							case "c":
-								buffer[6] += buffer[0];
-								buffer[7] += buffer[1];
-							case "C":
-								path.curveTo(buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7]);
-								break;
-							default:
-								throw new UnsupportedOperationException(pathElement);
-							}
-							
-							System.arraycopy(buffer, 6, buffer, 0, 2);
-							i = 2;
-							state = SVGPathDataParserState.READ_COMMAND;
-							break;
-						}
-					}
-				}
-			}
-		}
-		
-		return new Area(path);
-	}
-	
 	public static final <E> int indexOf(final E needle, final E... haystack) {
 		final int n = haystack.length;
 		
@@ -383,72 +262,6 @@ public final class SVG2Bin {
 		}
 		
 		return -1;
-	}
-	
-	public static final Document readXML(final File file) {
-		try (final InputStream input = new FileInputStream(file)) {
-			return parse(input);
-		} catch (final IOException exception) {
-			throw new UncheckedIOException(exception);
-		}
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-06-05)
-	 */
-	public static final class Region implements Serializable {
-		
-		private final int label;
-		
-		private final Rectangle bounds;
-		
-		private final BufferedImage mask;
-		
-		public Region(final int label, final Rectangle bounds, final BufferedImage mask) {
-			this.label = label;
-			this.bounds = bounds;
-			this.mask = mask;
-		}
-		
-		public final int getLabel() {
-			return this.label;
-		}
-		
-		public final Rectangle getBounds() {
-			return this.bounds;
-		}
-		
-		public final BufferedImage getMask() {
-			return this.mask;
-		}
-		
-		public final long getSize() {
-			final int width = this.getMask().getWidth();
-			final int height = this.getMask().getHeight();
-			long result = 0L;
-			
-			for (int y = 0; y < height; ++y) {
-				for (int x = 0; x < width; ++x) {
-					if ((this.getMask().getRGB(x, y) & 1) != 0) {
-						++result;
-					}
-				}
-			}
-			
-			return result;
-		}
-		
-		private static final long serialVersionUID = 3168354082192346491L;
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-06-05)
-	 */
-	private static enum SVGPathDataParserState {
-		
-		READ_COMMAND, READ_NUMBER;
-		
 	}
 	
 }
