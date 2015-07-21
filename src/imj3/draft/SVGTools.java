@@ -28,11 +28,8 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
-import multij.swing.SwingTools;
-import multij.tools.Canvas;
 import multij.tools.CommandLineArgumentsParser;
 import multij.tools.IllegalInstantiationException;
-import multij.xml.XMLTools;
 
 /**
  * @author codistmonk (creation 2015-07-21)
@@ -67,23 +64,6 @@ public final class SVGTools {
 			
 			debugPrint(classRatios);
 		}
-		
-		if (false) {
-			final int imageWidth = XMLTools.getNumber(svg, "svg/@width").intValue();
-			final int imageHeight = XMLTools.getNumber(svg, "svg/@height").intValue();
-			final int s = 32;
-			final Canvas canvas = new Canvas().setFormat(imageWidth / s, imageHeight / s);
-			
-			canvas.getGraphics().scale(1.0 / s, 1.0 / s);
-			
-			for (final Map.Entry<String, List<Area>> entry : regions.entrySet()) {
-				for (final Area region : entry.getValue()) {
-					canvas.getGraphics().fill(region);
-				}
-			}
-			
-			SwingTools.show(canvas.getImage(), "", false);
-		}
 	}
 	
 	public static final Document readXML(final File file) {
@@ -95,10 +75,15 @@ public final class SVGTools {
 	}
 	
 	public static final <K> Map<K, Double> normalize(final Map<K, Double> map) {
-		final double[] sum = { 0.0 };
+		final double[] total = { 0.0 };
 		
-		map.values().forEach(v -> sum[0] += v);
-		map.replaceAll((k, v) -> v / sum[0]);
+		map.values().forEach(v -> total[0] += v);
+		
+		return normalize(map, total[0]);
+	}
+	
+	public static final <K> Map<K, Double> normalize(final Map<K, Double> map, final double total) {
+		map.replaceAll((k, v) -> v / total);
 		
 		return map;
 	}
@@ -129,39 +114,46 @@ public final class SVGTools {
 				intersection.intersect(region);
 				
 				if (!intersection.isEmpty()) {
-					debugPrint(classId);
-					final double[] surface = { 0.0 };
-					final PathIterator pathIterator = intersection.getPathIterator(new AffineTransform(), flatness);
-					final double[] first = new double[2];
-					final double[] previous = new double[2];
-					final double[] current = new double[2];
-					
-					while (!pathIterator.isDone()) {
-						switch (pathIterator.currentSegment(current)) {
-						case PathIterator.SEG_CLOSE:
-							surface[0] -= previous[0] * first[1] - previous[1] * first[0];
-							break;
-						case PathIterator.SEG_LINETO:
-							surface[0] -= previous[0] * current[1] - previous[1] * current[0];
-							System.arraycopy(current, 0, previous, 0, 2);
-						case PathIterator.SEG_MOVETO:
-							System.arraycopy(current, 0, first, 0, 2);
-							System.arraycopy(current, 0, previous, 0, 2);
-							break;
-						case PathIterator.SEG_CUBICTO:
-						case PathIterator.SEG_QUADTO:
-							throw new IllegalStateException();
-						}
-						
-						pathIterator.next();
-					}
-					
-					result.compute(classId, (k, v) -> (v == null ? 0.0 : v) + surface[0]);
+					result.compute(classId, (k, v) -> (v == null ? 0.0 : v) + getSurface(intersection, flatness));
 				}
 			}
 		}
 		
 		return result;
+	}
+
+	public static double getSurface(final Area area, final double flatness) {
+		final double[] surface = { 0.0 };
+		final PathIterator pathIterator = area.getPathIterator(new AffineTransform(), flatness);
+		final double[] first = new double[2];
+		final double[] previous = new double[2];
+		final double[] current = new double[2];
+		
+		while (!pathIterator.isDone()) {
+			switch (pathIterator.currentSegment(current)) {
+			case PathIterator.SEG_CLOSE:
+				surface[0] -= previous[0] * first[1] - previous[1] * first[0];
+				break;
+			case PathIterator.SEG_LINETO:
+				surface[0] -= previous[0] * current[1] - previous[1] * current[0];
+				System.arraycopy(current, 0, previous, 0, 2);
+				break;
+			case PathIterator.SEG_MOVETO:
+				System.arraycopy(current, 0, first, 0, 2);
+				System.arraycopy(current, 0, previous, 0, 2);
+				break;
+			case PathIterator.SEG_CUBICTO:
+			case PathIterator.SEG_QUADTO:
+				throw new IllegalStateException();
+			}
+			
+			pathIterator.next();
+		}
+		
+		surface[0] /= 2.0;
+		
+		final double s = surface[0];
+		return s;
 	}
 	
 	public static final Area newRegion(final Element svgShape) {
