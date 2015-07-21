@@ -4,7 +4,7 @@ import static imj3.tools.CommonSwingTools.center;
 import static java.lang.Math.log;
 import static java.lang.Math.max;
 import static multij.swing.SwingTools.*;
-
+import static multij.tools.Tools.*;
 import imj3.core.Image2D;
 import imj3.tools.IMJTools;
 import imj3.tools.Image2DComponent;
@@ -18,11 +18,19 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.Area;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import javax.swing.Box;
 import javax.swing.DefaultListModel;
@@ -49,6 +57,10 @@ public final class VisualPatchExtractor extends JPanel {
 	
 	private final Image2DComponent view;
 	
+	private final Map<String, List<Area>> regions;
+	
+	private final Map<String, Color> classColors;
+	
 	private final Point mouseLocation;
 	
 	private final JSpinner patchSizeSpinner;
@@ -57,15 +69,26 @@ public final class VisualPatchExtractor extends JPanel {
 	
 	private final JLabel patchView;
 	
+	private final JLabel patchClassesView;
+	
+	private final Rectangle patchBounds;
+	
+	private final Map<String, Double> patchClassRatios;
+	
 	private final JList<Image> patchList;
 	
 	public VisualPatchExtractor(final Image2DComponent view) {
 		super(new BorderLayout());
 		this.view = view;
+		this.regions = new TreeMap<>();
+		this.classColors = new HashMap<>();
 		this.mouseLocation = new Point();
 		this.patchSizeSpinner = new JSpinner(new SpinnerNumberModel(32, 1, 1024, 1));
 		this.patchStrideSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 1024, 1));
 		this.patchView = new JLabel("");
+		this.patchClassesView = new JLabel("");
+		this.patchBounds = new Rectangle();
+		this.patchClassRatios = new HashMap<>();
 		this.patchList = new JList<>(new DefaultListModel<>());
 		
 		this.setupView();
@@ -77,6 +100,7 @@ public final class VisualPatchExtractor extends JPanel {
 				horizontalBox(new JLabel("patchSize"), Box.createHorizontalGlue(), this.getPatchSizeSpinner()),
 				horizontalBox(new JLabel("patchStride"), Box.createHorizontalGlue(), this.getPatchStrideSpinner()),
 				scrollable(center(this.getPatchView())),
+				scrollable(center(this.patchClassesView)),
 				scrollable(this.getPatchList()));
 		
 		this.add(horizontalSplit(controlBox, view), BorderLayout.CENTER);
@@ -94,6 +118,27 @@ public final class VisualPatchExtractor extends JPanel {
 	
 	public final JLabel getPatchView() {
 		return this.patchView;
+	}
+	
+	public final JLabel getPatchClassesView() {
+		return this.patchClassesView;
+	}
+	
+	public final Rectangle getPatchBounds() {
+		return this.patchBounds;
+	}
+	
+	public final Map<String, Double> getPatchClassRatios() {
+		return this.patchClassRatios;
+	}
+	
+	public final void updatePatchClasses() {
+		final Rectangle patchBounds0 = this.getPatchBounds();
+		final Map<String, Double> classRatios = SVGTools.normalize(
+				SVGTools.getClassSurfaces(patchBounds0, getRegions()), patchBounds0.getWidth() * patchBounds0.getHeight());
+		
+		this.getPatchClassesView().setText("<html><body>" + classRatios.entrySet().stream().map(
+				e -> e.getKey() + ": " + String.format("%.2f&#37;<br>", 100.0 * e.getValue())).reduce("", String::concat) + "</body></html>");
 	}
 	
 	public final JList<Image> getPatchList() {
@@ -122,6 +167,14 @@ public final class VisualPatchExtractor extends JPanel {
 	
 	public final Image2DComponent getView() {
 		return this.view;
+	}
+	
+	public final Map<String, List<Area>> getRegions() {
+		return this.regions;
+	}
+	
+	public final Map<String, Color> getClassColors() {
+		return this.classColors;
 	}
 	
 	public final BufferedImage getPatchAsBufferedImage() {
@@ -253,6 +306,22 @@ public final class VisualPatchExtractor extends JPanel {
 			
 			@Override
 			public final void update(final Graphics2D graphics, final Rectangle region) {
+				{
+					final AffineTransform transform = graphics.getTransform();
+					
+					graphics.setTransform(component.getView());
+					
+					for (final Map.Entry<String, List<Area>> entry : getRegions().entrySet()) {
+						graphics.setColor(getClassColors().getOrDefault(entry.getKey(), new Color(0x60000000, true)));
+						
+						for (final Area r : entry.getValue()) {
+							graphics.fill(r);
+						}
+					}
+					
+					graphics.setTransform(transform);
+				}
+				
 				if (0 <= getMouseLocation().x) {
 					try {
 						final int size = getPatchSize();
@@ -269,9 +338,14 @@ public final class VisualPatchExtractor extends JPanel {
 								&& 0 <= this.tmp.y && this.tmp.y < image0.getHeight()) {
 							this.tmp.x = patchStart(this.tmp.x, stride, size, imageScale);
 							this.tmp.y = patchStart(this.tmp.y, stride, size, imageScale);
+							final int left = (int) (this.tmp.x * imageScale);
+							final int top = (int) (this.tmp.y * imageScale);
 							
-							setPatchViewImage(new Patches.SubImage2D(
-									image, (int) (this.tmp.x * imageScale), (int) (this.tmp.y * imageScale), size, size).toAwt());
+							setPatchViewImage(new Patches.SubImage2D(image, left, top, size, size).toAwt());
+							
+							getPatchBounds().setBounds((int) (left / imageScale), (int) (top / imageScale),
+									(int) (size / imageScale), (int) (size / imageScale));
+							updatePatchClasses();
 							
 							view.transform(this.tmp, this.tmp);
 							
@@ -289,9 +363,41 @@ public final class VisualPatchExtractor extends JPanel {
 			private static final long serialVersionUID = -6646527468467687096L;
 			
 		});
+		
+		this.view.setDropTarget(new DropTarget() {
+			
+			@Override
+			public final synchronized void drop(final DropTargetDropEvent event) {
+				final File file = SwingTools.getFiles(event).get(0);
+				
+				try {
+					final Map<String, List<Area>> regions = SVGTools.getRegions(SVGTools.readXML(file));
+					
+					getRegions().clear();
+					getRegions().putAll(regions);
+					
+					regions.keySet().forEach(k -> getClassColors().putIfAbsent(k, new Color(0x60000000 | (int) (Math.random() * (1 << 24)), true)));
+					
+					getView().repaint();
+				} catch (final Exception exception) {
+					debugError(exception);
+				}
+			}
+			
+			private static final long serialVersionUID = 3099468766376236640L;
+			
+		});
 	}
 	
 	private static final long serialVersionUID = 2400491502237733629L;
+	
+	public static final int patchStart(final int coordinate, final int patchStride, final int patchSize, final double imageScale) {
+		return (int) (adjust(coordinate, (int) (patchStride / imageScale)) - patchSize / imageScale / 2.0);
+	}
+	
+	public static final int adjust(final int coordinate, final int patchStride) {
+		return coordinate / patchStride * patchStride + patchStride / 2;
+	}
 	
 	/**
 	 * @param commandLineArguments
@@ -301,14 +407,6 @@ public final class VisualPatchExtractor extends JPanel {
 		final Image2DComponent component = new Image2DComponent(IMJTools.read(commandLineArguments[0]));
 		
 		SwingTools.show(new VisualPatchExtractor(component), commandLineArguments[0], false);
-	}
-	
-	public static final int patchStart(final int coordinate, final int patchStride, final int patchSize, final double imageScale) {
-		return (int) (adjust(coordinate, (int) (patchStride / imageScale)) - patchSize / imageScale / 2.0);
-	}
-	
-	public static final int adjust(final int coordinate, final int patchStride) {
-		return coordinate / patchStride * patchStride + patchStride / 2;
 	}
 	
 }
