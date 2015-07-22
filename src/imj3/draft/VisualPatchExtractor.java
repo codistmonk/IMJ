@@ -1,6 +1,6 @@
 package imj3.draft;
 
-import static imj3.tools.CommonSwingTools.center;
+import static imj3.tools.CommonSwingTools.*;
 import static java.lang.Math.log;
 import static java.lang.Math.max;
 import static multij.swing.SwingTools.*;
@@ -388,7 +388,7 @@ public final class VisualPatchExtractor extends JPanel {
 					getRegions().clear();
 					getRegions().putAll(regions);
 					
-					regions.keySet().forEach(k -> getClassColors().putIfAbsent(k, new Color(0x60000000 | (int) (Math.random() * (1 << 24)), true)));
+					regions.keySet().forEach(k -> getClassColors().putIfAbsent(k, newRandomColor()));
 					
 					getView().repaint();
 				} catch (final Exception exception) {

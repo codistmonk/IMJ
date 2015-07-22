@@ -5,6 +5,7 @@ import static multij.tools.Tools.cast;
 import static multij.tools.Tools.unchecked;
 import imj3.tools.CommonTools.Property;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Composite;
 import java.awt.CompositeContext;
@@ -68,6 +69,10 @@ public final class CommonSwingTools {
 	
 	private CommonSwingTools() {
 		throw new IllegalInstantiationException();
+	}
+	
+	public static final Color newRandomColor() {
+		return new Color(0x60000000 | (int) (Math.random() * (1 << 24)), true);
 	}
 	
 	public static final TreePath getPath(final DefaultTreeModel model, final TreeNode node) {
