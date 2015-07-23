@@ -41,7 +41,7 @@ public final class Outline {
 		final int labelsHeight = labels.getHeight();
 		final int[] colors = arguments.get("colors");
 		final BufferedImage result = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_BGR);
-		final boolean binaryLabels = labels.getChannels().getValueBitCount() == 1;
+		final boolean binaryLabels = labels.getChannels().getValueBitCount() == 1 || arguments.get("binary", 0)[0] != 0;
 		
 		for (int y = 0; y < imageHeight; ++y) {
 			final int labelY = y * labelsHeight / imageHeight;
