@@ -373,7 +373,7 @@ public final class MultiresolutionAnalysis {
 												
 												for (int j = 0; j < n; ++j) {
 													if (!Double.isNaN(featureVector[j])) {
-														score += abs(featureVector[j] - prototype[j]);
+														score += abs(featureVector[j] - prototype[j]) * 1.0 / (1.0 + j / 3);
 													}
 												}
 												
