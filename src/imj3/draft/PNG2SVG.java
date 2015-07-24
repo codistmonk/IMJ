@@ -1,12 +1,17 @@
 package imj3.draft;
 
 import static imj2.topology.Manifold.*;
+import static imj2.topology.Manifold.Traversor.*;
 import static imj3.draft.AperioXML2SVG.formatColor;
-import static imj3.draft.AperioXML2SVG.readXML;
 import static imj3.draft.PNG2SVG.WeakProperties.weakProperties;
+import static java.lang.Math.PI;
 import static java.lang.Math.abs;
+import static java.lang.Math.atan2;
+import static java.lang.Math.cos;
+import static java.lang.Math.sin;
 import static multij.tools.Tools.*;
 import static multij.xml.XMLTools.parse;
+
 import imj2.topology.Manifold;
 
 import java.awt.Color;
@@ -17,7 +22,9 @@ import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
+import java.awt.geom.Ellipse2D;
 import java.awt.geom.PathIterator;
+import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -25,7 +32,6 @@ import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,15 +40,17 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import javax.imageio.ImageIO;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
+import javax.swing.SwingUtilities;
 
 import multij.swing.SwingTools;
 import multij.tools.CommandLineArgumentsParser;
 import multij.tools.ConsoleMonitor;
 import multij.tools.IllegalInstantiationException;
+import multij.tools.MathTools.Statistics;
 import multij.xml.XMLTools;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 /**
  * @author codistmonk (creation 2015-06-23)
@@ -56,6 +64,10 @@ public final class PNG2SVG {
 	private static final int LEFT_OFFSET = 0;
 	
 	private static final int BOTTOM_OFFSET = 2;
+	
+	public static final double projection(final Point2D point, final Point2D origin, final double px, final double py) {
+		return (point.getX() - origin.getX()) * px + (point.getY() - origin.getY()) * py;
+	}
 	
 	/**
 	 * @param commandLineArguments
@@ -103,6 +115,95 @@ public final class PNG2SVG {
 			debugPrint("Checking topology...");
 			assert manifold.isValid();
 			debugPrint("Topology is OK");
+			
+			if (false) {
+				final Point firstXY = new Point();
+				final Point lastXY = new Point();
+				final Point xy = new Point();
+				final Statistics statistics = new Statistics();
+				
+				manifold.forEach(FACE, f -> {
+					if (FACE.countDarts(manifold, f) < 3) {
+						return true;
+					}
+					
+					debugPrint(f, FACE.countDarts(manifold, f));
+					
+					int first = f;
+					
+					getDartXY(imageWidth, imageHeight, first, firstXY);
+					
+					int oldLast = -1;
+					int last = manifold.getNext(first, 2);
+					
+					getDartXY(imageWidth, imageHeight, last, lastXY);
+					
+					final double px, py;
+					
+					{
+						final double length = firstXY.distance(lastXY);
+						
+						if (length == 0.0) {
+							return true;
+						}
+						
+						px = (firstXY.y - lastXY.y) / length;
+						py = (lastXY.x - firstXY.x) / length;
+						
+						assert 0.0 == projection(lastXY, firstXY, px, py);
+					}
+					
+					statistics.reset();
+					statistics.addValue(0.0);
+					
+					lengthen_current_segment:
+					while (true) {
+						for (int dart = manifold.getNext(first); dart != last; dart = manifold.getNext(dart)) {
+							getDartXY(imageWidth, imageHeight, dart, xy);
+							statistics.addValue(projection(xy, firstXY, px, py));
+						}
+						
+						debugPrint(statistics.getAmplitude());
+						
+						if (statistics.getAmplitude() <= 1.0 && VERTEX.countDarts(manifold, last) == 2) {
+							oldLast = last;
+							last = manifold.getNext(last);
+						} else if (oldLast != -1) {
+							// TODO simplify topology
+							// first -> oldLast
+							
+							/*
+							 *   first       oldLast
+							 * ##---->##...##---->#
+							 * ##<----##...##<----#
+							 * 
+							 */
+							
+							final int afterFirst = manifold.getNext(first);
+							final int beforeOldLast = manifold.getPrevious(oldLast);
+							
+							debugPrint(getDartXY(imageWidth, imageHeight, first, new Point()));
+							debugPrint(getDartXY(imageWidth, imageHeight, oldLast, new Point()));
+							debugPrint(VERTEX.countDarts(manifold, first), VERTEX.countDarts(manifold, afterFirst));
+							debugPrint(VERTEX.countDarts(manifold, oldLast), VERTEX.countDarts(manifold, beforeOldLast));
+							
+//							manifold.setNext(afterFirst, opposite(afterFirst));
+//							manifold.setNext(opposite(beforeOldLast), beforeOldLast);
+//							manifold.setNext(first, oldLast);
+//							manifold.setNext(opposite(oldLast), opposite(first));
+							
+							break lengthen_current_segment;
+						} else {
+							first = manifold.getNext(first);
+							break lengthen_current_segment;
+						}
+					}
+					
+					return true;
+				});
+			}
+			
+			debugPrint(manifold.isValid());
 			
 			final Map<Integer, Collection<Polygon>> polygons = new HashMap<>();
 			final Rectangle bounds = new Rectangle();
@@ -179,6 +280,43 @@ public final class PNG2SVG {
 				
 				debugPrint("Writing", outputPath);
 				XMLTools.write(svg, new File(outputPath), 1);
+			}
+			
+			{
+				final DiagramComponent diagramComponent = new DiagramComponent();
+				final double scale = 100.0;
+				
+				diagramComponent.getRenderers().add(g -> {
+					for (final Map.Entry<Integer, ? extends Collection<? extends Shape>> entry : shapes.entrySet()) {
+						final AffineTransform transform = g.getTransform();
+						g.scale(scale, scale);
+						g.setColor(new Color(entry.getKey()));
+						entry.getValue().forEach(g::fill);
+						g.setTransform(transform);
+					}
+				});
+				
+				manifold.forEach(DART, d -> {
+					final int next = manifold.getNext(d);
+					
+					if (next != opposite(d)) {
+						final Point xy1 = new Point();
+						final Point xy2 = new Point();
+						getDartXY(imageWidth, imageHeight, d, xy1);
+						getDartXY(imageWidth, imageHeight, next, xy2);
+						xy1.x *= scale;
+						xy1.y *= scale;
+						xy2.x *= scale;
+						xy2.y *= scale;
+						diagramComponent.getRenderers().add(new DiagramComponent.Arrow()
+						.set("source", xy1).set("target", xy2).set("curvature", -0.2 * scale)
+						.set("label", Integer.toString(d)).set("color", Color.BLACK));
+					}
+					
+					return true;
+				});
+				
+				SwingUtilities.invokeLater(() -> SwingTools.show(diagramComponent, "diagram", false));
 			}
 		} catch (final IOException exception) {
 			throw new UncheckedIOException(exception);
@@ -345,7 +483,7 @@ public final class PNG2SVG {
 			y = pixel / imageWidth + 1;
 		}
 		
-		if (orientation == 0 || 0 < x && y + 1 < imageHeight) {
+		if (orientation == 0 || 0 < x && y + 1 <= imageHeight) {
 			polygon.addPoint(x, y);
 		}
 	}
