@@ -7,7 +7,6 @@ import static imj3.draft.PNG2SVG.WeakProperties.weakProperties;
 import static java.lang.Math.*;
 import static multij.tools.Tools.*;
 import static multij.xml.XMLTools.parse;
-
 import imj2.topology.Manifold;
 
 import java.awt.Color;
@@ -25,9 +24,11 @@ import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -81,8 +82,10 @@ public final class PNG2SVG {
 			final Manifold manifold = contoursOf(image);
 			final Point[] locations = generateLocations(imageWidth, imageHeight, manifold);
 			
-			if (true) {
+			if (false) {
 				simplify(manifold, locations);
+			} else {
+				simplify2(manifold, locations);
 			}
 			
 			final Map<Integer, Collection<Area>> shapes = toRegions(collectContours(image, manifold, new HashMap<>()));
@@ -150,6 +153,80 @@ public final class PNG2SVG {
 		return svg;
 	}
 	
+	public static final Point2D[] tightClone(final Point2D[] locations) {
+		final Map<Point2D, Point2D> existing = new IdentityHashMap<>();
+		
+		return Arrays.stream(locations).map(l -> existing.computeIfAbsent(l,
+				p -> new Point2D.Double(p.getX(), p.getY()))).toArray(Point2D[]::new);
+	}
+	
+	public static final Point2D setAverage(final Point2D result, final Point2D... points) {
+		double x = 0.0;
+		double y = 0.0;
+		
+		final int n = points.length;
+		
+		if (0 < n) {
+			for (final Point2D point : points) {
+				x += point.getX();
+				y += point.getY();
+			}
+			
+			x /= n;
+			y /= n;
+		}
+		
+		result.setLocation(x, y);
+		
+		return result;
+	}
+	
+	public static final double getSurface(final Manifold manifold, final Point2D[] locations, final int face) {
+		double result = 0.0;
+		int previous = face;
+		int current;
+		
+		do {
+			current = manifold.getNext(previous);
+			final Point2D p1 = locations[previous];
+			final Point2D p2 = locations[current];
+			
+			result += p1.getX() * p2.getY() - p1.getY() * p2.getX();
+			
+			previous = current;
+		} while (current != face);
+		
+		result /= 2.0;
+		
+		return result;
+	}
+	
+	public static final void simplify2(final Manifold manifold, final Point2D[] locations) {
+		final Point2D[] newLocations = tightClone(locations);
+		
+		// for each face
+		manifold.forEach(FACE, f -> {
+			// compute smoothed geometry
+			manifold.forEachDartIn(FACE, f, d -> {
+				final int previous = manifold.getPrevious(d);
+				final int next = manifold.getNext(d);
+				
+				setAverage(newLocations[d], locations[previous], locations[d], locations[next]);
+				
+				return true;
+			});
+			
+			// TODO compute actual surface vs smoothed surface
+			final double actualSurface = abs(getSurface(manifold, locations, f));
+			final double smoothedSurface = abs(getSurface(manifold, newLocations, f));
+			
+			debugPrint(actualSurface, smoothedSurface);
+			
+			// TODO move vertices to restore surface
+			
+			return true;
+		});
+	}
 	public static final void simplify(final Manifold manifold, final Point[] locations) {
 		final Statistics statistics = new Statistics();
 		
