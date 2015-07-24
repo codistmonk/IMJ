@@ -4,11 +4,7 @@ import static imj2.topology.Manifold.*;
 import static imj2.topology.Manifold.Traversor.*;
 import static imj3.draft.AperioXML2SVG.formatColor;
 import static imj3.draft.PNG2SVG.WeakProperties.weakProperties;
-import static java.lang.Math.PI;
-import static java.lang.Math.abs;
-import static java.lang.Math.atan2;
-import static java.lang.Math.cos;
-import static java.lang.Math.sin;
+import static java.lang.Math.*;
 import static multij.tools.Tools.*;
 import static multij.xml.XMLTools.parse;
 
@@ -22,7 +18,6 @@ import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
-import java.awt.geom.Ellipse2D;
 import java.awt.geom.PathIterator;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
@@ -123,7 +118,7 @@ public final class PNG2SVG {
 				final Statistics statistics = new Statistics();
 				
 				manifold.forEach(FACE, f -> {
-					if (FACE.countDarts(manifold, f) < 3) {
+					if (FACE.countDarts(manifold, f) < 4) {
 						return true;
 					}
 					
@@ -158,6 +153,7 @@ public final class PNG2SVG {
 					
 					lengthen_current_segment:
 					while (true) {
+						debugPrint();
 						for (int dart = manifold.getNext(first); dart != last; dart = manifold.getNext(dart)) {
 							getDartXY(imageWidth, imageHeight, dart, xy);
 							statistics.addValue(projection(xy, firstXY, px, py));
@@ -187,14 +183,21 @@ public final class PNG2SVG {
 							debugPrint(VERTEX.countDarts(manifold, first), VERTEX.countDarts(manifold, afterFirst));
 							debugPrint(VERTEX.countDarts(manifold, oldLast), VERTEX.countDarts(manifold, beforeOldLast));
 							
-//							manifold.setNext(afterFirst, opposite(afterFirst));
-//							manifold.setNext(opposite(beforeOldLast), beforeOldLast);
-//							manifold.setNext(first, oldLast);
-//							manifold.setNext(opposite(oldLast), opposite(first));
+							debugShow(f + ": " + first + "->" + oldLast + " (before)", imageWidth, imageHeight, manifold, null);
+							manifold.setNext(afterFirst, opposite(afterFirst));
+							manifold.setNext(opposite(beforeOldLast), beforeOldLast);
+							manifold.setNext(first, oldLast);
+							manifold.setNext(opposite(oldLast), opposite(first));
+							debugShow(f + ": " + first + "->" + oldLast + " (after)", imageWidth, imageHeight, manifold, null);
 							
 							break lengthen_current_segment;
 						} else {
 							first = manifold.getNext(first);
+							
+							if (first == f) {
+								debugPrint();
+							}
+							
 							break lengthen_current_segment;
 						}
 					}
@@ -282,45 +285,50 @@ public final class PNG2SVG {
 				XMLTools.write(svg, new File(outputPath), 1);
 			}
 			
-			{
-				final DiagramComponent diagramComponent = new DiagramComponent();
-				final double scale = 100.0;
-				
-				diagramComponent.getRenderers().add(g -> {
-					for (final Map.Entry<Integer, ? extends Collection<? extends Shape>> entry : shapes.entrySet()) {
-						final AffineTransform transform = g.getTransform();
-						g.scale(scale, scale);
-						g.setColor(new Color(entry.getKey()));
-						entry.getValue().forEach(g::fill);
-						g.setTransform(transform);
-					}
-				});
-				
-				manifold.forEach(DART, d -> {
-					final int next = manifold.getNext(d);
-					
-					if (next != opposite(d)) {
-						final Point xy1 = new Point();
-						final Point xy2 = new Point();
-						getDartXY(imageWidth, imageHeight, d, xy1);
-						getDartXY(imageWidth, imageHeight, next, xy2);
-						xy1.x *= scale;
-						xy1.y *= scale;
-						xy2.x *= scale;
-						xy2.y *= scale;
-						diagramComponent.getRenderers().add(new DiagramComponent.Arrow()
-						.set("source", xy1).set("target", xy2).set("curvature", -0.2 * scale)
-						.set("label", Integer.toString(d)).set("color", Color.BLACK));
-					}
-					
-					return true;
-				});
-				
-				SwingUtilities.invokeLater(() -> SwingTools.show(diagramComponent, "diagram", false));
-			}
+			debugShow("result", imageWidth, imageHeight, manifold, shapes);
 		} catch (final IOException exception) {
 			throw new UncheckedIOException(exception);
 		}
+	}
+
+	public static final void debugShow(final String title, final int imageWidth, final int imageHeight,
+			final Manifold manifold, final Map<Integer, Collection<Area>> shapes) {
+		final DiagramComponent diagramComponent = new DiagramComponent();
+		final double scale = 100.0;
+		
+		if (shapes != null) {
+			diagramComponent.getRenderers().add(g -> {
+				for (final Map.Entry<Integer, ? extends Collection<? extends Shape>> entry : shapes.entrySet()) {
+					final AffineTransform transform = g.getTransform();
+					g.scale(scale, scale);
+					g.setColor(new Color(entry.getKey()));
+					entry.getValue().forEach(g::fill);
+					g.setTransform(transform);
+				}
+			});
+		}
+		
+		manifold.forEach(DART, d -> {
+			final int next = manifold.getNext(d);
+			
+			if (next != opposite(d)) {
+				final Point xy1 = new Point();
+				final Point xy2 = new Point();
+				getDartXY(imageWidth, imageHeight, d, xy1);
+				getDartXY(imageWidth, imageHeight, next, xy2);
+				xy1.x *= scale;
+				xy1.y *= scale;
+				xy2.x *= scale;
+				xy2.y *= scale;
+				diagramComponent.getRenderers().add(new DiagramComponent.Arrow()
+				.set("source", xy1).set("target", xy2).set("curvature", -0.2 * scale)
+				.set("label", Integer.toString(d)).set("color", Color.BLACK));
+			}
+			
+			return true;
+		});
+		
+		SwingUtilities.invokeLater(() -> SwingTools.show(diagramComponent, title, false));
 	}
 	
 	public static final String join(final String separator, final double[] array, final int n) {
