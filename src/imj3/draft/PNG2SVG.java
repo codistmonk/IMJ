@@ -11,10 +11,8 @@ import static multij.xml.XMLTools.parse;
 import imj2.topology.Manifold;
 
 import java.awt.Color;
-import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Polygon;
-import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
@@ -80,62 +78,122 @@ public final class PNG2SVG {
 			final BufferedImage image = ImageIO.read(new File(imagePath));
 			final int imageWidth = image.getWidth();
 			final int imageHeight = image.getHeight();
-			final Manifold manifold = newGrid(imageWidth, imageHeight);
-			final ConsoleMonitor monitor = new ConsoleMonitor(10_000L);
+			final Manifold manifold = contoursOf(image);
+			final Point[] locations = generateLocations(imageWidth, imageHeight, manifold);
 			
-			debugPrint("imageWidth:", imageWidth, "imageHeight:", imageHeight);
-			debugPrint("dartCount:", manifold.getDartCount());
-			debugPrint("Pruning...");
-			
-			int disconnections = 0;
-			
-			for (int y = 0; y < imageHeight; ++y) {
-				monitor.ping("Pruning: " + y + "/" + imageHeight + "\r");
-				for (int x = 0; x < imageWidth; ++x) {
-					if (x + 1 < imageWidth && image.getRGB(x, y) == image.getRGB(x + 1, y)) {
-//						debugPrint("Disconnecting right of (" + x + " " + y + ")");
-						disconnectEdge(manifold, (y * imageWidth + x + 1) * 4 + LEFT_OFFSET);
-						++disconnections;
-					}
-					if (y + 1 < imageHeight && image.getRGB(x, y) == image.getRGB(x, y + 1)) {
-//						debugPrint("Disconnecting bottom of (" + x + " " + y + ")");
-						disconnectEdge(manifold, (y * imageWidth + x) * 4 + BOTTOM_OFFSET);
-						++disconnections;
-					}
-				}
+			if (true) {
+				simplify(manifold, locations);
 			}
 			
-			debugPrint("Pruned:", disconnections);
+			final Map<Integer, Collection<Area>> shapes = toRegions(collectContours(image, manifold, new HashMap<>()));
 			
-			debugPrint("Checking topology...");
-			assert manifold.isValid();
-			debugPrint("Topology is OK");
-			
-			if (false) {
-				final Point firstXY = new Point();
-				final Point lastXY = new Point();
-				final Point xy = new Point();
-				final Statistics statistics = new Statistics();
+			{
+				debugPrint("Creating SVG...");
+				final List<String> classIds = classIdsPath.isEmpty() ? null : Files.readAllLines(new File("").toPath());
+				final Document svg = toSVG(shapes, classIds);
 				
-				manifold.forEach(FACE, f -> {
-					if (FACE.countDarts(manifold, f) < 4) {
-						return true;
+				debugPrint("Writing", outputPath);
+				XMLTools.write(svg, new File(outputPath), 1);
+			}
+			
+			debugShow("result", manifold, locations, shapes);
+		} catch (final IOException exception) {
+			throw new UncheckedIOException(exception);
+		}
+	}
+	
+	public static final Document toSVG(final Map<Integer, ? extends Collection<? extends Shape>> shapes,
+			final List<String> classIds) {
+		final AffineTransform identity = new AffineTransform();
+		final double[] segment = new double[6];
+		final Document svg = parse("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:imj=\"IMJ\"/>");
+		final Element svgRoot  = svg.getDocumentElement();
+		
+		for (final Map.Entry<Integer, ? extends Collection<? extends Shape>> entry : shapes.entrySet()) {
+			for (final Shape s : entry.getValue()) {
+				final StringBuilder pathData = new StringBuilder();
+				
+				for (final PathIterator pathIterator = s.getPathIterator(identity, 1.0);
+						!pathIterator.isDone(); pathIterator.next()) {
+					switch (pathIterator.currentSegment(segment)) {
+					case PathIterator.SEG_CLOSE:
+						pathData.append('Z');
+						break;
+					case PathIterator.SEG_CUBICTO:
+						pathData.append('C');
+						pathData.append(join(" ", segment, 6));
+						break;
+					case PathIterator.SEG_LINETO:
+						pathData.append('L');
+						pathData.append(join(" ", segment, 2));
+						break;
+					case PathIterator.SEG_MOVETO:
+						pathData.append('M');
+						pathData.append(join(" ", segment, 2));
+						break;
+					case PathIterator.SEG_QUADTO:
+						pathData.append('Q');
+						pathData.append(join(" ", segment, 4));
+						break;
 					}
-					
-					debugPrint(f, FACE.countDarts(manifold, f));
-					
-					int first = f;
-					
-					getDartXY(imageWidth, imageHeight, first, firstXY);
-					
-					int oldLast = -1;
-					int last = manifold.getNext(first, 2);
-					
-					getDartXY(imageWidth, imageHeight, last, lastXY);
-					
-					final double px, py;
+				}
+				
+				final int label = entry.getKey() & 0x00FFFFFF;
+				final String classId = classIds == null ? Integer.toString(label) : classIds.get(label);
+				final Element svgRegion = (Element) svgRoot.appendChild(svg.createElement("path"));
+				
+				svgRegion.setAttribute("d", pathData.toString());
+				svgRegion.setAttribute("style", "fill:" + formatColor(entry.getKey()));
+				svgRegion.setAttribute("imj:classId", classId);
+			}
+		}
+		return svg;
+	}
+	
+	public static final void simplify(final Manifold manifold, final Point[] locations) {
+		final Statistics statistics = new Statistics();
+		
+		manifold.forEach(FACE, f -> {
+			int limit = FACE.countDarts(manifold, f);
+			
+			if (limit < 4) {
+				return true;
+			}
+			
+			int first = f;
+			int oldLast = -1;
+			int last = manifold.getNext(first, 2);
+			Point firstXY = locations[first];
+			Point lastXY;
+			double px, py;
+			
+			{
+				lastXY = locations[last];
+				final double length = firstXY.distance(lastXY);
+				
+				if (length == 0.0) {
+					return true;
+				}
+				
+				px = (firstXY.y - lastXY.y) / length;
+				py = (lastXY.x - firstXY.x) / length;
+				
+				assert 0.0 == projection(lastXY, firstXY, px, py);
+			}
+			
+			lengthen_current_segment:
+			while (true) {
+				for (int dart = manifold.getNext(first); dart != last; dart = manifold.getNext(dart)) {
+					statistics.addValue(projection(locations[dart], firstXY, px, py));
+				}
+				
+				if (statistics.getAmplitude() < 1.0 && VERTEX.countDarts(manifold, last) == 2
+						&& (statistics.getAmplitude() == 0.0 || statistics.getMinimum() * statistics.getMaximum() < 0.0)) {
+					oldLast = last;
+					last = manifold.getNext(last);
 					
 					{
+						lastXY = locations[last];
 						final double length = firstXY.distance(lastXY);
 						
 						if (length == 0.0) {
@@ -150,149 +208,127 @@ public final class PNG2SVG {
 					
 					statistics.reset();
 					statistics.addValue(0.0);
+				} else if (oldLast != -1) {
+					// TODO simplify topology
+					// first -> oldLast
 					
-					lengthen_current_segment:
-					while (true) {
+					/*
+					 *   first       oldLast
+					 * ##---->##...##---->#
+					 * ##<----##...##<----#
+					 * 
+					 */
+					
+					final int afterFirst = manifold.getNext(first);
+					final int beforeOldLast = manifold.getPrevious(oldLast);
+					
+//							debugShow(f + ": " + first + "->" + oldLast + " (before)", manifold, locations, null);
+					manifold.setNext(first, oldLast);
+					manifold.setNext(opposite(oldLast), opposite(first));
+					manifold.setNext(opposite(afterFirst), afterFirst);
+					manifold.setNext(beforeOldLast, opposite(beforeOldLast));
+					
+					locations[opposite(first)] = locations[oldLast];
+//							debugShow(f + ": " + first + "->" + oldLast + " (after)", manifold, locations, null);
+//							
+//							return false;
+					
+					break lengthen_current_segment;
+				} else {
+					if (--limit < 0) {
+						break lengthen_current_segment;
+					}
+					
+					first = manifold.getNext(first);
+					firstXY = locations[first];
+					last = manifold.getNext(first, 2);
+					
+					{
+						lastXY = locations[last];
+						
+						debugPrint(first, firstXY, last, lastXY);
+						
+						final double length = firstXY.distance(lastXY);
+						
+						if (length == 0.0) {
+							return true;
+						}
+						
+						px = (firstXY.y - lastXY.y) / length;
+						py = (lastXY.x - firstXY.x) / length;
+						
+						assert 0.0 == projection(lastXY, firstXY, px, py);
+					}
+					
+					if (first == f) {
 						debugPrint();
-						for (int dart = manifold.getNext(first); dart != last; dart = manifold.getNext(dart)) {
-							getDartXY(imageWidth, imageHeight, dart, xy);
-							statistics.addValue(projection(xy, firstXY, px, py));
-						}
-						
-						debugPrint(statistics.getAmplitude());
-						
-						if (statistics.getAmplitude() <= 1.0 && VERTEX.countDarts(manifold, last) == 2) {
-							oldLast = last;
-							last = manifold.getNext(last);
-						} else if (oldLast != -1) {
-							// TODO simplify topology
-							// first -> oldLast
-							
-							/*
-							 *   first       oldLast
-							 * ##---->##...##---->#
-							 * ##<----##...##<----#
-							 * 
-							 */
-							
-							final int afterFirst = manifold.getNext(first);
-							final int beforeOldLast = manifold.getPrevious(oldLast);
-							
-							debugPrint(getDartXY(imageWidth, imageHeight, first, new Point()));
-							debugPrint(getDartXY(imageWidth, imageHeight, oldLast, new Point()));
-							debugPrint(VERTEX.countDarts(manifold, first), VERTEX.countDarts(manifold, afterFirst));
-							debugPrint(VERTEX.countDarts(manifold, oldLast), VERTEX.countDarts(manifold, beforeOldLast));
-							
-							debugShow(f + ": " + first + "->" + oldLast + " (before)", imageWidth, imageHeight, manifold, null);
-							manifold.setNext(afterFirst, opposite(afterFirst));
-							manifold.setNext(opposite(beforeOldLast), beforeOldLast);
-							manifold.setNext(first, oldLast);
-							manifold.setNext(opposite(oldLast), opposite(first));
-							debugShow(f + ": " + first + "->" + oldLast + " (after)", imageWidth, imageHeight, manifold, null);
-							
-							break lengthen_current_segment;
-						} else {
-							first = manifold.getNext(first);
-							
-							if (first == f) {
-								debugPrint();
-							}
-							
-							break lengthen_current_segment;
-						}
-					}
-					
-					return true;
-				});
-			}
-			
-			debugPrint(manifold.isValid());
-			
-			final Map<Integer, Collection<Polygon>> polygons = new HashMap<>();
-			final Rectangle bounds = new Rectangle();
-			
-			collectPolygons(image, manifold, polygons, bounds);
-			
-			// TODO simplify polygons
-			
-			final Map<Integer, Collection<Area>> shapes = toShapes(polygons);
-			
-//			debugPrint(shapes.keySet().stream().map(Integer::toHexString).toArray());
-			
-			if (false) {
-				final BufferedImage tmp = new BufferedImage(bounds.width + 1, bounds.height + 1, BufferedImage.TYPE_INT_ARGB);
-				final Graphics2D graphics = tmp.createGraphics();
-				
-				for (final Map.Entry<Integer, ? extends Collection<? extends Shape>> entry : shapes.entrySet()) {
-					graphics.setColor(new Color(entry.getKey()));
-					entry.getValue().forEach(graphics::fill);
-				}
-				
-				graphics.dispose();
-				
-				SwingTools.show(tmp, "polygons", false);
-			}
-			
-			{
-				debugPrint("Creating SVG...");
-				
-				final AffineTransform identity = new AffineTransform();
-				final double[] segment = new double[6];
-				final Document svg = parse("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:imj=\"IMJ\"/>");
-				final Element svgRoot  = svg.getDocumentElement();
-				final List<String> classIds = classIdsPath.isEmpty() ? null : Files.readAllLines(new File("").toPath());
-				
-				for (final Map.Entry<Integer, ? extends Collection<? extends Shape>> entry : shapes.entrySet()) {
-					for (final Shape s : entry.getValue()) {
-						final StringBuilder pathData = new StringBuilder();
-						
-						for (final PathIterator pathIterator = s.getPathIterator(identity, 1.0);
-								!pathIterator.isDone(); pathIterator.next()) {
-							switch (pathIterator.currentSegment(segment)) {
-							case PathIterator.SEG_CLOSE:
-								pathData.append('Z');
-								break;
-							case PathIterator.SEG_CUBICTO:
-								pathData.append('C');
-								pathData.append(join(" ", segment, 6));
-								break;
-							case PathIterator.SEG_LINETO:
-								pathData.append('L');
-								pathData.append(join(" ", segment, 2));
-								break;
-							case PathIterator.SEG_MOVETO:
-								pathData.append('M');
-								pathData.append(join(" ", segment, 2));
-								break;
-							case PathIterator.SEG_QUADTO:
-								pathData.append('Q');
-								pathData.append(join(" ", segment, 4));
-								break;
-							}
-						}
-						
-						final int label = entry.getKey() & 0x00FFFFFF;
-						final String classId = classIds == null ? Integer.toString(label) : classIds.get(label);
-						final Element svgRegion = (Element) svgRoot.appendChild(svg.createElement("path"));
-						
-						svgRegion.setAttribute("d", pathData.toString());
-						svgRegion.setAttribute("style", "fill:" + formatColor(entry.getKey()));
-						svgRegion.setAttribute("imj:classId", classId);
 					}
 				}
-				
-				debugPrint("Writing", outputPath);
-				XMLTools.write(svg, new File(outputPath), 1);
 			}
 			
-			debugShow("result", imageWidth, imageHeight, manifold, shapes);
-		} catch (final IOException exception) {
-			throw new UncheckedIOException(exception);
+			return true;
+		});
+		
+		debugPrint(manifold.isValid());
+	}
+	
+	public static final Point[] generateLocations(final int imageWidth, final int imageHeight, final Manifold manifold) {
+		final Point[] result = new Point[manifold.getDartCount()];
+		
+		manifold.forEach(VERTEX, v -> {
+			final Point location = getDartXY(imageWidth, imageHeight, v, new Point());
+			
+			manifold.forEachDartIn(VERTEX, v, d -> {
+				result[d] = location;
+				
+				return true;
+			});
+			
+			return true;
+		});
+		
+		return result;
+	}
+	
+	public static final Manifold contoursOf(final BufferedImage image) {
+		final int imageWidth = image.getWidth();
+		final int imageHeight = image.getHeight();
+		final Manifold result = newGrid(imageWidth, imageHeight);
+		final ConsoleMonitor monitor = new ConsoleMonitor(10_000L);
+		
+		debugPrint("imageWidth:", imageWidth, "imageHeight:", imageHeight);
+		debugPrint("dartCount:", result.getDartCount());
+		debugPrint("Pruning...");
+		
+		int disconnections = 0;
+		
+		for (int y = 0; y < imageHeight; ++y) {
+			monitor.ping("Pruning: " + y + "/" + imageHeight + "\r");
+			for (int x = 0; x < imageWidth; ++x) {
+				if (x + 1 < imageWidth && image.getRGB(x, y) == image.getRGB(x + 1, y)) {
+//					debugPrint("Disconnecting right of (" + x + " " + y + ")");
+					disconnectEdge(result, (y * imageWidth + x + 1) * 4 + LEFT_OFFSET);
+					++disconnections;
+				}
+				if (y + 1 < imageHeight && image.getRGB(x, y) == image.getRGB(x, y + 1)) {
+//					debugPrint("Disconnecting bottom of (" + x + " " + y + ")");
+					disconnectEdge(result, (y * imageWidth + x) * 4 + BOTTOM_OFFSET);
+					++disconnections;
+				}
+			}
 		}
+		
+		debugPrint("Pruned:", disconnections);
+		
+		debugPrint("Checking topology...");
+		assert result.isValid();
+		debugPrint("Topology is OK");
+		
+		return result;
 	}
 
-	public static final void debugShow(final String title, final int imageWidth, final int imageHeight,
-			final Manifold manifold, final Map<Integer, Collection<Area>> shapes) {
+	public static final void debugShow(final String title,
+			final Manifold manifold, final Point[] locations, final Map<Integer, Collection<Area>> shapes) {
 		final DiagramComponent diagramComponent = new DiagramComponent();
 		final double scale = 100.0;
 		
@@ -311,11 +347,11 @@ public final class PNG2SVG {
 		manifold.forEach(DART, d -> {
 			final int next = manifold.getNext(d);
 			
-			if (next != opposite(d)) {
-				final Point xy1 = new Point();
-				final Point xy2 = new Point();
-				getDartXY(imageWidth, imageHeight, d, xy1);
-				getDartXY(imageWidth, imageHeight, next, xy2);
+			// XXX hide thin faces
+			if (!locations[d].equals(locations[manifold.getNext(next)])
+					&& !locations[manifold.getPrevious(d)].equals(locations[next])) {
+				final Point xy1 = new Point(locations[d]);
+				final Point xy2 = new Point(locations[next]);
 				xy1.x *= scale;
 				xy1.y *= scale;
 				xy2.x *= scale;
@@ -362,7 +398,7 @@ public final class PNG2SVG {
 		return result;
 	}
 	
-	public static final Map<Integer, Collection<Area>> toShapes(final Map<Integer, Collection<Polygon>> polygons) {
+	public static final Map<Integer, Collection<Area>> toRegions(final Map<Integer, Collection<Polygon>> polygons) {
 		debugPrint("Creating shapes...");
 		
 		final ConsoleMonitor monitor = new ConsoleMonitor(10_000L);
@@ -417,8 +453,8 @@ public final class PNG2SVG {
 		return result;
 	}
 	
-	public static final void collectPolygons(final BufferedImage image, final Manifold manifold,
-			final Map<Integer, Collection<Polygon>> polygons, final Rectangle bounds) {
+	public static final Map<Integer, Collection<Polygon>> collectContours(final BufferedImage image, final Manifold manifold,
+			final Map<Integer, Collection<Polygon>> result) {
 		debugPrint("Collecting polygons...");
 		
 		final ConsoleMonitor monitor = new ConsoleMonitor(10_000L);
@@ -455,11 +491,9 @@ public final class PNG2SVG {
 				weakProperties.set(polygon, "label", image.getRGB(tmp.x, tmp.y));
 				weakProperties.set(polygon, "determinant", determinant(polygon));
 				
-				final Collection<Polygon> collection = polygons.computeIfAbsent(image.getRGB(tmp.x, tmp.y),
+				final Collection<Polygon> collection = result.computeIfAbsent(image.getRGB(tmp.x, tmp.y),
 						k -> new ArrayList<>());
 				collection.add(polygon);
-				
-				bounds.add(polygon.getBounds());
 			}
 			
 			return true;
@@ -469,10 +503,12 @@ public final class PNG2SVG {
 		
 		debugPrint("Sorting...");
 		
-		polygons.forEach((k, v) -> ((List<Polygon>) v).sort((p1, p2) -> Long.compare(
+		result.forEach((k, v) -> ((List<Polygon>) v).sort((p1, p2) -> Long.compare(
 				abs((long) weakProperties.get(p2, "determinant")), abs((long) weakProperties.get(p1, "determinant")))));
 		
 		debugPrint("Polygons collected");
+		
+		return result;
 	}
 	
 	public static final void processInternalDart(final int dart, final int imageWidth, final int imageHeight, final Polygon polygon) {
