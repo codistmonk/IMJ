@@ -1,6 +1,7 @@
 package imj2.topology;
 
 import static multij.tools.Tools.debugPrint;
+import imj2.topology.Manifold.Traversor.Limit;
 
 import java.io.Serializable;
 import java.util.BitSet;
@@ -38,12 +39,14 @@ public final class Manifold implements Serializable {
 	}
 	
 	public final int getPrevious(final int dart) {
+		final Limit limit = new Limit(this);
 		int result;
 		int next = dart;
 		
 		do {
 			result = next;
 			next = this.getNext(result);
+			limit.check();
 		} while (next != dart);
 		
 		return result;
@@ -399,6 +402,7 @@ public final class Manifold implements Serializable {
 		}
 		
 		protected final void defaultTraverse(final Manifold topology, final int dart, final DartProcessor processor) {
+			final Limit limit = new Limit(topology);
 			int d = dart;
 			
 			while (processor.process(d)) {
@@ -407,25 +411,54 @@ public final class Manifold implements Serializable {
 				if (d == dart) {
 					break;
 				}
+				
+				limit.check();
 			}
 		}
 		
 		protected final void defaultMark(final Manifold topology, final int dart, final BitSet marks) {
+			final Limit limit = new Limit(topology);
+			
 			marks.set(dart);
 			
 			for (int d = this.getNextDart(topology, dart); d != dart; d = this.getNextDart(topology, d)) {
 				marks.set(d);
+				limit.check();
 			}
 		}
 		
 		protected final int defaultGetPreviousDart(final Manifold topology, final int dart) {
+			final Limit limit = new Limit(topology);
 			int result = dart;
 			
 			for (int d = this.getNextDart(topology, dart); d != dart; d = this.getNextDart(topology, d)) {
 				result = d;
+				
+				limit.check();
 			}
 			
 			return result;
+		}
+		
+		/**
+		 * @author codistmonk (creation 2015-07-24)
+		 */
+		public static final class Limit implements Serializable {
+			
+			private int remaining;
+			
+			public Limit(final Manifold topology) {
+				this.remaining = topology.getDartCount();
+			}
+			
+			public final void check() {
+				if (--this.remaining < 0) {
+					throw new IllegalStateException("Infinite loop detected");
+				}
+			}
+			
+			private static final long serialVersionUID = -2252537298926386937L;
+			
 		}
 		
 	}
