@@ -122,9 +122,9 @@ public final class SVGTools {
 		return result;
 	}
 
-	public static double getSurface(final Area area, final double flatness) {
+	public static double getSurface(final Shape shape, final double flatness) {
 		final double[] surface = { 0.0 };
-		final PathIterator pathIterator = area.getPathIterator(new AffineTransform(), flatness);
+		final PathIterator pathIterator = shape.getPathIterator(new AffineTransform(), flatness);
 		final double[] first = new double[2];
 		final double[] previous = new double[2];
 		final double[] current = new double[2];

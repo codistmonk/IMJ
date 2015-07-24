@@ -15,6 +15,7 @@ import java.awt.Polygon;
 import java.awt.Shape;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
+import java.awt.geom.Path2D;
 import java.awt.geom.PathIterator;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
@@ -80,7 +81,7 @@ public final class PNG2SVG {
 			final int imageWidth = image.getWidth();
 			final int imageHeight = image.getHeight();
 			final Manifold manifold = contoursOf(image);
-			final Point[] locations = generateLocations(imageWidth, imageHeight, manifold);
+			final Point2D[] locations = generateLocations(imageWidth, imageHeight, manifold);
 			
 			if (false) {
 				simplify(manifold, locations);
@@ -88,7 +89,7 @@ public final class PNG2SVG {
 				simplify2(manifold, locations);
 			}
 			
-			final Map<Integer, Collection<Area>> shapes = toRegions(collectContours(image, manifold, new HashMap<>()));
+			final Map<Integer, Collection<Area>> shapes = toRegions(collectContours(image, manifold, locations, new HashMap<>()));
 			
 			{
 				debugPrint("Creating SVG...");
@@ -202,32 +203,65 @@ public final class PNG2SVG {
 	}
 	
 	public static final void simplify2(final Manifold manifold, final Point2D[] locations) {
+		final int n = locations.length;
 		final Point2D[] newLocations = tightClone(locations);
 		
 		// for each face
 		manifold.forEach(FACE, f -> {
+			if (FACE.countDarts(manifold, f) <= 4 || f == 1) {
+				return true;
+			}
+			
 			// compute smoothed geometry
+			manifold.forEachDartIn(FACE, f, d -> {
+				if (VERTEX.countDarts(manifold, d) == 2) {
+					final int previous = manifold.getPrevious(d);
+					final int next = manifold.getNext(d);
+					
+					setAverage(newLocations[d], locations[previous], locations[d], locations[next]);
+				}
+				
+				return true;
+			});
 			manifold.forEachDartIn(FACE, f, d -> {
 				final int previous = manifold.getPrevious(d);
 				final int next = manifold.getNext(d);
 				
-				setAverage(newLocations[d], locations[previous], locations[d], locations[next]);
+				if (locations[previous].distance(newLocations[previous]) <= 1.0E-6
+						&& locations[next].distance(newLocations[next]) <= 1.0E-6) {
+					newLocations[d].setLocation(locations[d]);
+				}
 				
 				return true;
 			});
 			
-			// TODO compute actual surface vs smoothed surface
 			final double actualSurface = abs(getSurface(manifold, locations, f));
-			final double smoothedSurface = abs(getSurface(manifold, newLocations, f));
+			double smoothedSurface = abs(getSurface(manifold, newLocations, f));
 			
-			debugPrint(actualSurface, smoothedSurface);
+			debugPrint(f, actualSurface, smoothedSurface);
 			
 			// TODO move vertices to restore surface
+			
+			for (int i = 0; i < 0; ++i) {
+				manifold.forEachDartIn(FACE, f, d -> {
+					setAverage(newLocations[d], newLocations[d], locations[d]);
+					
+					return true;
+				});
+				
+				smoothedSurface = abs(getSurface(manifold, newLocations, f));
+				debugPrint(actualSurface, smoothedSurface);
+			}
+			
+			for (int i = 0; i < n; ++i) {
+				locations[i].setLocation(newLocations[i]);
+			}
 			
 			return true;
 		});
 	}
-	public static final void simplify(final Manifold manifold, final Point[] locations) {
+	
+	public static final void simplify(final Manifold manifold, final Point2D[] locations) {
 		final Statistics statistics = new Statistics();
 		
 		manifold.forEach(FACE, f -> {
@@ -240,8 +274,8 @@ public final class PNG2SVG {
 			int first = f;
 			int oldLast = -1;
 			int last = manifold.getNext(first, 2);
-			Point firstXY = locations[first];
-			Point lastXY;
+			Point2D firstXY = locations[first];
+			Point2D lastXY;
 			double px, py;
 			
 			{
@@ -252,8 +286,8 @@ public final class PNG2SVG {
 					return true;
 				}
 				
-				px = (firstXY.y - lastXY.y) / length;
-				py = (lastXY.x - firstXY.x) / length;
+				px = (firstXY.getY() - lastXY.getY()) / length;
+				py = (lastXY.getX() - firstXY.getX()) / length;
 				
 				assert 0.0 == projection(lastXY, firstXY, px, py);
 			}
@@ -277,8 +311,8 @@ public final class PNG2SVG {
 							return true;
 						}
 						
-						px = (firstXY.y - lastXY.y) / length;
-						py = (lastXY.x - firstXY.x) / length;
+						px = (firstXY.getY() - lastXY.getY()) / length;
+						py = (lastXY.getX() - firstXY.getX()) / length;
 						
 						assert 0.0 == projection(lastXY, firstXY, px, py);
 					}
@@ -331,8 +365,8 @@ public final class PNG2SVG {
 							return true;
 						}
 						
-						px = (firstXY.y - lastXY.y) / length;
-						py = (lastXY.x - firstXY.x) / length;
+						px = (firstXY.getY() - lastXY.getY()) / length;
+						py = (lastXY.getX() - firstXY.getX()) / length;
 						
 						assert 0.0 == projection(lastXY, firstXY, px, py);
 					}
@@ -349,11 +383,11 @@ public final class PNG2SVG {
 		debugPrint(manifold.isValid());
 	}
 	
-	public static final Point[] generateLocations(final int imageWidth, final int imageHeight, final Manifold manifold) {
-		final Point[] result = new Point[manifold.getDartCount()];
+	public static final Point2D[] generateLocations(final int imageWidth, final int imageHeight, final Manifold manifold) {
+		final Point2D[] result = new Point2D[manifold.getDartCount()];
 		
 		manifold.forEach(VERTEX, v -> {
-			final Point location = getDartXY(imageWidth, imageHeight, v, new Point());
+			final Point2D location = getDartXY(imageWidth, imageHeight, v, new Point2D.Double());
 			
 			manifold.forEachDartIn(VERTEX, v, d -> {
 				result[d] = location;
@@ -405,7 +439,7 @@ public final class PNG2SVG {
 	}
 
 	public static final void debugShow(final String title,
-			final Manifold manifold, final Point[] locations, final Map<Integer, Collection<Area>> shapes) {
+			final Manifold manifold, final Point2D[] locations, final Map<Integer, Collection<Area>> shapes) {
 		final DiagramComponent diagramComponent = new DiagramComponent();
 		final double scale = 100.0;
 		
@@ -427,12 +461,9 @@ public final class PNG2SVG {
 			// XXX hide thin faces
 			if (!locations[d].equals(locations[manifold.getNext(next)])
 					&& !locations[manifold.getPrevious(d)].equals(locations[next])) {
-				final Point xy1 = new Point(locations[d]);
-				final Point xy2 = new Point(locations[next]);
-				xy1.x *= scale;
-				xy1.y *= scale;
-				xy2.x *= scale;
-				xy2.y *= scale;
+				final Point2D xy1 = new Point.Double(locations[d].getX() * scale, locations[d].getY() * scale);
+				final Point2D xy2 = new Point2D.Double(locations[next].getX() * scale, locations[next].getY() * scale);
+				
 				diagramComponent.getRenderers().add(new DiagramComponent.Arrow()
 				.set("source", xy1).set("target", xy2).set("curvature", -0.2 * scale)
 				.set("label", Integer.toString(d)).set("color", Color.BLACK));
@@ -475,7 +506,7 @@ public final class PNG2SVG {
 		return result;
 	}
 	
-	public static final Map<Integer, Collection<Area>> toRegions(final Map<Integer, Collection<Polygon>> polygons) {
+	public static final Map<Integer, Collection<Area>> toRegions(final Map<Integer, Collection<Path2D>> polygons) {
 		debugPrint("Creating shapes...");
 		
 		final ConsoleMonitor monitor = new ConsoleMonitor(10_000L);
@@ -488,9 +519,9 @@ public final class PNG2SVG {
 			
 			final List<Area> shapes = new ArrayList<>();
 			
-			for (final Polygon polygon : v) {
+			for (final Shape polygon : v) {
 				final Area newShape = new Area(polygon);
-				final long newShapeDeterminant = determinant(polygon);
+				final double newShapeDeterminant = SVGTools.getSurface(polygon, 1.0);
 				weakProperties.set(newShape, "determinant", newShapeDeterminant);
 				Area container = null;
 				final int n = shapes.size();
@@ -530,8 +561,8 @@ public final class PNG2SVG {
 		return result;
 	}
 	
-	public static final Map<Integer, Collection<Polygon>> collectContours(final BufferedImage image, final Manifold manifold,
-			final Map<Integer, Collection<Polygon>> result) {
+	public static final Map<Integer, Collection<Path2D>> collectContours(final BufferedImage image, final Manifold manifold,
+			final Point2D[] locations, final Map<Integer, Collection<Path2D>> result) {
 		debugPrint("Collecting polygons...");
 		
 		final ConsoleMonitor monitor = new ConsoleMonitor(10_000L);
@@ -544,33 +575,45 @@ public final class PNG2SVG {
 		manifold.forEach(Traversor.FACE, f -> {
 			monitor.ping("Collecting polygons " + f + "/" + manifold.getDartCount() + "\r");
 			
-			final Polygon polygon = new Polygon();
+			final Path2D polygon = new Path2D.Double();
 			
 			manifold.forEachDartIn(Traversor.FACE, f, d -> {
-				if (d < topBorder) {
-					processInternalDart(d, imageWidth, imageHeight, polygon);
-				} else if (d < rightBorder) {
-					if ((d & 1) == 0) {
-						polygon.addPoint((d - topBorder) / 2 + 1, 0);
-					}
+				final Point2D location = locations[d];
+				
+				if (f == d) {
+					polygon.moveTo(location.getX(), location.getY());
 				} else {
-					if ((d & 1) == 0) {
-						polygon.addPoint(imageWidth, (d - rightBorder) / 2 + 1);
-					}
+					polygon.lineTo(location.getX(), location.getY());
 				}
+//				if (d < topBorder) {
+//					processInternalDart(d, location, imageWidth, imageHeight, polygon);
+//				} else if (d < rightBorder) {
+//					if ((d & 1) == 0) {
+////						polygon.addPoint((d - topBorder) / 2 + 1, 0);
+//						polygon.addPoint((int) location.getX(), (int) location.getY());
+//					}
+//				} else {
+//					if ((d & 1) == 0) {
+////						polygon.addPoint(imageWidth, (d - rightBorder) / 2 + 1);
+//						polygon.addPoint((int) location.getX(), (int) location.getY());
+//					}
+//				}
 				
 				return true;
 			});
 			
-			if (2 < polygon.npoints) {
+			if (2 < FACE.countDarts(manifold, f)) {
 				getPixelXY(imageWidth, imageHeight, f, tmp);
 				
-				weakProperties.set(polygon, "label", image.getRGB(tmp.x, tmp.y));
-				weakProperties.set(polygon, "determinant", determinant(polygon));
-				
-				final Collection<Polygon> collection = result.computeIfAbsent(image.getRGB(tmp.x, tmp.y),
-						k -> new ArrayList<>());
-				collection.add(polygon);
+				if (0 <= tmp.x && tmp.x < imageWidth && 0 <= tmp.y && tmp.y < imageHeight) {
+					weakProperties.set(polygon, "label", image.getRGB(tmp.x, tmp.y));
+//					weakProperties.set(polygon, "determinant", determinant(polygon));
+					weakProperties.set(polygon, "determinant", SVGTools.getSurface(polygon, 1.0));
+					
+					final Collection<Path2D> collection = result.computeIfAbsent(image.getRGB(tmp.x, tmp.y),
+							k -> new ArrayList<>());
+					collection.add(polygon);
+				}
 			}
 			
 			return true;
@@ -580,7 +623,7 @@ public final class PNG2SVG {
 		
 		debugPrint("Sorting...");
 		
-		result.forEach((k, v) -> ((List<Polygon>) v).sort((p1, p2) -> Long.compare(
+		result.forEach((k, v) -> ((List<Path2D>) v).sort((p1, p2) -> Long.compare(
 				abs((long) weakProperties.get(p2, "determinant")), abs((long) weakProperties.get(p1, "determinant")))));
 		
 		debugPrint("Polygons collected");
@@ -588,7 +631,7 @@ public final class PNG2SVG {
 		return result;
 	}
 	
-	public static final void processInternalDart(final int dart, final int imageWidth, final int imageHeight, final Polygon polygon) {
+	public static final void processInternalDart(final int dart, final Point2D location, final int imageWidth, final int imageHeight, final Polygon polygon) {
 		final int orientation = dart & 1;
 		final int side = dart & 2;
 		final int pixel = dart / 4;
@@ -605,11 +648,12 @@ public final class PNG2SVG {
 		}
 		
 		if (orientation == 0 || 0 < x && y + 1 <= imageHeight) {
-			polygon.addPoint(x, y);
+//			polygon.addPoint(x, y);
+			polygon.addPoint((int) location.getX(), (int) location.getY());
 		}
 	}
 	
-	public static final Point getDartXY(final int imageWidth, final int imageHeight, final int dart, final Point result) {
+	public static final Point2D getDartXY(final int imageWidth, final int imageHeight, final int dart, final Point2D result) {
 		final int topBorder = imageWidth * imageHeight * 4;
 		final int rightBorder = topBorder + imageWidth * 2;
 		final int orientation = dart & 1;
@@ -620,19 +664,15 @@ public final class PNG2SVG {
 			
 			if (side == 0) {
 				// vertical
-				result.x = pixel % imageWidth;
-				result.y = pixel / imageWidth + orientation;
+				result.setLocation(pixel % imageWidth, pixel / imageWidth + orientation);
 			} else {
 				// horizontal
-				result.x = pixel % imageWidth + orientation;
-				result.y = pixel / imageWidth + 1;
+				result.setLocation(pixel % imageWidth + orientation, pixel / imageWidth + 1);
 			}
 		} else if (dart < rightBorder) {
-			result.x = (dart - topBorder) / 2 + (orientation ^ 1);
-			result.y = 0;
+			result.setLocation((dart - topBorder) / 2 + (orientation ^ 1), 0.0);
 		} else {
-			result.x = imageWidth;
-			result.y = (dart - rightBorder) / 2 + (orientation ^ 1);
+			result.setLocation(imageWidth, (dart - rightBorder) / 2 + (orientation ^ 1));
 		}
 		
 		return result;
