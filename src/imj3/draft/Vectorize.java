@@ -72,6 +72,7 @@ public final class Vectorize {
 		final String imagePath = arguments.get("image", "");
 		final String classIdsPath = arguments.get("classIds", "");
 		final String outputPath = arguments.get("output", baseName(imagePath) + ".svg");
+		final int quantization = arguments.get("quantization", 0)[0];
 		
 		debug.set(arguments.get("debug", 0)[0] != 0);
 		
@@ -79,7 +80,7 @@ public final class Vectorize {
 		
 		try {
 			final BufferedImage image = ImageIO.read(new File(imagePath));
-			final Map<Integer, Collection<Area>> shapes = getRegions(image);
+			final Map<Integer, Collection<Area>> shapes = getRegions(image, quantization);
 			
 			{
 				debugPrint("Creating SVG...");
@@ -94,15 +95,15 @@ public final class Vectorize {
 		}
 	}
 	
-	public static final Map<Integer, Collection<Area>> getRegions(final BufferedImage image) {
+	public static final Map<Integer, Collection<Area>> getRegions(final BufferedImage image, final int quantization) {
 		final int imageWidth = image.getWidth();
 		final int imageHeight = image.getHeight();
-		final Manifold manifold = contoursOf(image);
+		final Manifold manifold = contoursOf(image, quantization);
 		final Point2D[] locations = generateLocations(imageWidth, imageHeight, manifold);
 		
 		simplify(manifold, locations);
 		
-		final Map<Integer, Collection<Area>> result = toRegions(collectContours(image, manifold, locations, new HashMap<>()));
+		final Map<Integer, Collection<Area>> result = toRegions(collectContours(image, quantization, manifold, locations, new HashMap<>()));
 		
 		if (debug.get()) {
 			debugShow("result", manifold, locations, result);
@@ -326,7 +327,7 @@ public final class Vectorize {
 		return result;
 	}
 	
-	public static final Manifold contoursOf(final BufferedImage image) {
+	public static final Manifold contoursOf(final BufferedImage image, final int quantization) {
 		final int imageWidth = image.getWidth();
 		final int imageHeight = image.getHeight();
 		final Manifold result = newGrid(imageWidth, imageHeight);
@@ -341,12 +342,12 @@ public final class Vectorize {
 		for (int y = 0; y < imageHeight; ++y) {
 			monitor.ping("Pruning: " + y + "/" + imageHeight + "\r");
 			for (int x = 0; x < imageWidth; ++x) {
-				if (x + 1 < imageWidth && image.getRGB(x, y) == image.getRGB(x + 1, y)) {
+				if (x + 1 < imageWidth && getRGB(image, x, y, quantization) == getRGB(image, x + 1, y, quantization)) {
 //					debugPrint("Disconnecting right of (" + x + " " + y + ")");
 					disconnectEdge(result, (y * imageWidth + x + 1) * 4 + LEFT_OFFSET);
 					++disconnections;
 				}
-				if (y + 1 < imageHeight && image.getRGB(x, y) == image.getRGB(x, y + 1)) {
+				if (y + 1 < imageHeight && getRGB(image, x, y, quantization) == getRGB(image, x, y + 1, quantization)) {
 //					debugPrint("Disconnecting bottom of (" + x + " " + y + ")");
 					disconnectEdge(result, (y * imageWidth + x) * 4 + BOTTOM_OFFSET);
 					++disconnections;
@@ -486,8 +487,8 @@ public final class Vectorize {
 		return result;
 	}
 	
-	public static final Map<Integer, Collection<Path2D>> collectContours(final BufferedImage image, final Manifold manifold,
-			final Point2D[] locations, final Map<Integer, Collection<Path2D>> result) {
+	public static final Map<Integer, Collection<Path2D>> collectContours(final BufferedImage image, final int quantization,
+			final Manifold manifold, final Point2D[] locations, final Map<Integer, Collection<Path2D>> result) {
 		debugPrint("Collecting polygons...");
 		
 		final ConsoleMonitor monitor = new ConsoleMonitor(10_000L);
@@ -516,10 +517,10 @@ public final class Vectorize {
 				getPixelXY(imageWidth, imageHeight, f, tmp);
 				
 				if (f != 1 && 0 <= tmp.x && tmp.x < imageWidth && 0 <= tmp.y && tmp.y < imageHeight) {
-					weakProperties.set(polygon, "label", image.getRGB(tmp.x, tmp.y));
+					weakProperties.set(polygon, "label", getRGB(image, tmp.x, tmp.y, quantization));
 					weakProperties.set(polygon, "determinant", SVGTools.getSurface(polygon, 1.0));
 					
-					final Collection<Path2D> collection = result.computeIfAbsent(image.getRGB(tmp.x, tmp.y),
+					final Collection<Path2D> collection = result.computeIfAbsent(getRGB(image, tmp.x, tmp.y, quantization),
 							k -> new ArrayList<>());
 					collection.add(polygon);
 				}
@@ -538,6 +539,14 @@ public final class Vectorize {
 		debugPrint("Polygons collected");
 		
 		return result;
+	}
+	
+	public static final int getRGB(final BufferedImage image, final int x, final int y, final int quantization) {
+		return quantizeRGB(image.getRGB(x, y), quantization);
+	}
+	
+	public static final int quantizeRGB(final int rgb, final int quantization) {
+		return rgb & (0x01010101 * (((~1) << quantization) & 0xFF));
 	}
 	
 	public static final void processInternalDart(final int dart, final Point2D location, final int imageWidth, final int imageHeight, final Polygon polygon) {
