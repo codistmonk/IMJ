@@ -73,6 +73,8 @@ public final class Vectorize {
 		final String classIdsPath = arguments.get("classIds", "");
 		final String outputPath = arguments.get("output", baseName(imagePath) + ".svg");
 		final int quantization = arguments.get("quantization", 0)[0];
+		final int smoothing = arguments.get("smoothing", 2)[0];
+		final double flattening = Double.parseDouble(arguments.get("flattening", Double.toString(PI / 8.0)));
 		
 		debug.set(arguments.get("debug", 0)[0] != 0);
 		
@@ -80,7 +82,7 @@ public final class Vectorize {
 		
 		try {
 			final BufferedImage image = ImageIO.read(new File(imagePath));
-			final Map<Integer, Collection<Area>> shapes = getRegions(image, quantization);
+			final Map<Integer, Collection<Area>> shapes = getRegions(image, quantization, smoothing, flattening);
 			
 			{
 				debugPrint("Creating SVG...");
@@ -95,13 +97,13 @@ public final class Vectorize {
 		}
 	}
 	
-	public static final Map<Integer, Collection<Area>> getRegions(final BufferedImage image, final int quantization) {
+	public static final Map<Integer, Collection<Area>> getRegions(final BufferedImage image, final int quantization, final int smoothing, final double flattening) {
 		final int imageWidth = image.getWidth();
 		final int imageHeight = image.getHeight();
 		final Manifold manifold = contoursOf(image, quantization);
 		final Point2D[] locations = generateLocations(imageWidth, imageHeight, manifold);
 		
-		simplify(manifold, locations);
+		simplify(manifold, locations, smoothing, flattening);
 		
 		final Map<Integer, Collection<Area>> result = toRegions(collectContours(image, quantization, manifold, locations, new HashMap<>()));
 		
@@ -188,79 +190,86 @@ public final class Vectorize {
 		return result;
 	}
 	
-	public static final void simplify(final Manifold manifold, final Point2D[] locations) {
+	public static final void simplify(final Manifold manifold, final Point2D[] locations, final int smoothing, final double flattening) {
 		final Point2D[] newLocations = identityClone(locations);
-		final int smoothing = 2;
 		
-		for (int j = 0; j < smoothing; ++j) {
+		if (0 < smoothing) {
+			debugPrint("Smoothing...");
+			
+			for (int j = 0; j < smoothing; ++j) {
+				manifold.forEach(FACE, f -> {
+					if (4 < FACE.countDarts(manifold, f)) {
+						smootheLinearConnections(manifold, locations, newLocations, f);
+						restoreCorners(manifold, locations, newLocations, f);
+						setLocations(manifold, locations, newLocations, f);
+					}
+					
+					return true;
+				});
+			}
+		}
+		
+		if (0.0 <= flattening) {
+			debugPrint("Flattening...");
+			
+			final double angularThresholdForLinearity = flattening;
+			
 			manifold.forEach(FACE, f -> {
-				if (4 < FACE.countDarts(manifold, f)) {
-					smootheLinearConnections(manifold, locations, newLocations, f);
-					restoreCorners(manifold, locations, newLocations, f);
-					setLocations(manifold, locations, newLocations, f);
+				final int n = FACE.countDarts(manifold, f);
+				
+				if (4 < n) {
+					for (int i = 0, d = f; i < 2 * n; ++i) {
+						final int next = manifold.getNext(d);
+						
+						if (VERTEX.countDarts(manifold, d) == 2) {
+							final int previous = manifold.getPrevious(d);
+							final double angle = angle(locations[previous], locations[d], locations[next]);
+							
+							if (angle <= angularThresholdForLinearity) {
+								/*
+								 * #--p->##--d->##--n->#
+								 * #<----##<----##<----#
+								 *              ^|
+								 *              ||
+								 *              x|
+								 *              ||
+								 *              ||
+								 *              ##
+								 * 
+								 *           V
+								 *           V
+								 *           V
+								 * 
+								 * #------p---->##--n->#
+								 * #<-----------##<----#
+								 *              ^|
+								 *              ||
+								 *              x|
+								 *              ||
+								 *              ||
+								 *              ##
+								 */
+								
+								final int x = manifold.getPrevious(opposite(d));
+								
+								manifold.setNext(previous, next);
+								manifold.setNext(x, opposite(previous));
+								locations[opposite(previous)] = locations[opposite(d)];
+								manifold.setCycle(d, opposite(d));
+								
+								assert 0 <= manifold.getPrevious(previous);
+								assert 0 <= manifold.getPrevious(x);
+								assert 0 <= manifold.getPrevious(next);
+							}
+						}
+						
+						d = next;
+					}
 				}
 				
 				return true;
 			});
 		}
-		
-		final double angularThresholdForLinearity = PI * 1.0 / 8.0;
-		
-		manifold.forEach(FACE, f -> {
-			final int n = FACE.countDarts(manifold, f);
-			
-			if (4 < n) {
-				for (int i = 0, d = f; i < 2 * n; ++i) {
-					final int next = manifold.getNext(d);
-					
-					if (VERTEX.countDarts(manifold, d) == 2) {
-						final int previous = manifold.getPrevious(d);
-						final double angle = angle(locations[previous], locations[d], locations[next]);
-						
-						if (angle <= angularThresholdForLinearity) {
-							/*
-							 * #--p->##--d->##--n->#
-							 * #<----##<----##<----#
-							 *              ^|
-							 *              ||
-							 *              x|
-							 *              ||
-							 *              ||
-							 *              ##
-							 * 
-							 *           V
-							 *           V
-							 *           V
-							 * 
-							 * #------p---->##--n->#
-							 * #<-----------##<----#
-							 *              ^|
-							 *              ||
-							 *              x|
-							 *              ||
-							 *              ||
-							 *              ##
-							 */
-							
-							final int x = manifold.getPrevious(opposite(d));
-							
-							manifold.setNext(previous, next);
-							manifold.setNext(x, opposite(previous));
-							locations[opposite(previous)] = locations[opposite(d)];
-							manifold.setCycle(d, opposite(d));
-							
-							assert 0 <= manifold.getPrevious(previous);
-							assert 0 <= manifold.getPrevious(x);
-							assert 0 <= manifold.getPrevious(next);
-						}
-					}
-					
-					d = next;
-				}
-			}
-			
-			return true;
-		});
 	}
 	
 	public static final double angle(final Point2D a, final Point2D b, final Point2D c) {
