@@ -3,7 +3,7 @@ package imj3.draft;
 import static imj2.topology.Manifold.*;
 import static imj2.topology.Manifold.Traversor.*;
 import static imj3.draft.AperioXML2SVG.formatColor;
-import static imj3.draft.PNG2SVG.WeakProperties.weakProperties;
+import static imj3.draft.Vectorize.WeakProperties.weakProperties;
 import static java.lang.Math.*;
 import static multij.tools.MathTools.square;
 import static multij.tools.Tools.*;
@@ -43,7 +43,6 @@ import multij.swing.SwingTools;
 import multij.tools.CommandLineArgumentsParser;
 import multij.tools.ConsoleMonitor;
 import multij.tools.IllegalInstantiationException;
-import multij.tools.MathTools.Statistics;
 import multij.xml.XMLTools;
 
 import org.w3c.dom.Document;
@@ -52,19 +51,15 @@ import org.w3c.dom.Element;
 /**
  * @author codistmonk (creation 2015-06-23)
  */
-public final class PNG2SVG {
+public final class Vectorize {
 	
-	private PNG2SVG() {
+	private Vectorize() {
 		throw new IllegalInstantiationException();
 	}
 	
 	private static final int LEFT_OFFSET = 0;
 	
 	private static final int BOTTOM_OFFSET = 2;
-	
-	public static final double projection(final Point2D point, final Point2D origin, final double px, final double py) {
-		return (point.getX() - origin.getX()) * px + (point.getY() - origin.getY()) * py;
-	}
 	
 	/**
 	 * @param commandLineArguments
@@ -75,6 +70,7 @@ public final class PNG2SVG {
 		final String imagePath = arguments.get("image", "");
 		final String classIdsPath = arguments.get("classIds", "");
 		final String outputPath = arguments.get("output", baseName(imagePath) + ".svg");
+		final boolean debug = arguments.get("debug", 0)[0] != 0;
 		
 		debugPrint("imagePath:", imagePath);
 		
@@ -85,11 +81,7 @@ public final class PNG2SVG {
 			final Manifold manifold = contoursOf(image);
 			final Point2D[] locations = generateLocations(imageWidth, imageHeight, manifold);
 			
-			if (false) {
-				simplify(manifold, locations);
-			} else {
-				simplify2(manifold, locations);
-			}
+			simplify(manifold, locations);
 			
 			final Map<Integer, Collection<Area>> shapes = toRegions(collectContours(image, manifold, locations, new HashMap<>()));
 			
@@ -102,7 +94,9 @@ public final class PNG2SVG {
 				XMLTools.write(svg, new File(outputPath), 1);
 			}
 			
-			debugShow("result", manifold, locations, shapes);
+			if (debug) {
+				debugShow("result", manifold, locations, shapes);
+			}
 		} catch (final IOException exception) {
 			throw new UncheckedIOException(exception);
 		}
@@ -156,7 +150,7 @@ public final class PNG2SVG {
 		return svg;
 	}
 	
-	public static final Point2D[] tightClone(final Point2D[] locations) {
+	public static final Point2D[] identityClone(final Point2D[] locations) {
 		final Map<Point2D, Point2D> existing = new IdentityHashMap<>();
 		
 		return Arrays.stream(locations).map(l -> existing.computeIfAbsent(l,
@@ -184,8 +178,8 @@ public final class PNG2SVG {
 		return result;
 	}
 	
-	public static final void simplify2(final Manifold manifold, final Point2D[] locations) {
-		final Point2D[] newLocations = tightClone(locations);
+	public static final void simplify(final Manifold manifold, final Point2D[] locations) {
+		final Point2D[] newLocations = identityClone(locations);
 		final int smoothing = 2;
 		
 		for (int j = 0; j < smoothing; ++j) {
@@ -303,128 +297,6 @@ public final class PNG2SVG {
 			
 			return true;
 		});
-	}
-	
-	public static final void simplify(final Manifold manifold, final Point2D[] locations) {
-		final Statistics statistics = new Statistics();
-		
-		manifold.forEach(FACE, f -> {
-			int limit = FACE.countDarts(manifold, f);
-			
-			if (limit < 4) {
-				return true;
-			}
-			
-			int first = f;
-			int oldLast = -1;
-			int last = manifold.getNext(first, 2);
-			Point2D firstXY = locations[first];
-			Point2D lastXY;
-			double px, py;
-			
-			{
-				lastXY = locations[last];
-				final double length = firstXY.distance(lastXY);
-				
-				if (length == 0.0) {
-					return true;
-				}
-				
-				px = (firstXY.getY() - lastXY.getY()) / length;
-				py = (lastXY.getX() - firstXY.getX()) / length;
-				
-				assert 0.0 == projection(lastXY, firstXY, px, py);
-			}
-			
-			lengthen_current_segment:
-			while (true) {
-				for (int dart = manifold.getNext(first); dart != last; dart = manifold.getNext(dart)) {
-					statistics.addValue(projection(locations[dart], firstXY, px, py));
-				}
-				
-				if (statistics.getAmplitude() < 1.0 && VERTEX.countDarts(manifold, last) == 2
-						&& (statistics.getAmplitude() == 0.0 || statistics.getMinimum() * statistics.getMaximum() < 0.0)) {
-					oldLast = last;
-					last = manifold.getNext(last);
-					
-					{
-						lastXY = locations[last];
-						final double length = firstXY.distance(lastXY);
-						
-						if (length == 0.0) {
-							return true;
-						}
-						
-						px = (firstXY.getY() - lastXY.getY()) / length;
-						py = (lastXY.getX() - firstXY.getX()) / length;
-						
-						assert 0.0 == projection(lastXY, firstXY, px, py);
-					}
-					
-					statistics.reset();
-					statistics.addValue(0.0);
-				} else if (oldLast != -1) {
-					// TODO simplify topology
-					// first -> oldLast
-					
-					/*
-					 *   first       oldLast
-					 * ##---->##...##---->#
-					 * ##<----##...##<----#
-					 * 
-					 */
-					
-					final int afterFirst = manifold.getNext(first);
-					final int beforeOldLast = manifold.getPrevious(oldLast);
-					
-//							debugShow(f + ": " + first + "->" + oldLast + " (before)", manifold, locations, null);
-					manifold.setNext(first, oldLast);
-					manifold.setNext(opposite(oldLast), opposite(first));
-					manifold.setNext(opposite(afterFirst), afterFirst);
-					manifold.setNext(beforeOldLast, opposite(beforeOldLast));
-					
-					locations[opposite(first)] = locations[oldLast];
-//							debugShow(f + ": " + first + "->" + oldLast + " (after)", manifold, locations, null);
-//							
-//							return false;
-					
-					break lengthen_current_segment;
-				} else {
-					if (--limit < 0) {
-						break lengthen_current_segment;
-					}
-					
-					first = manifold.getNext(first);
-					firstXY = locations[first];
-					last = manifold.getNext(first, 2);
-					
-					{
-						lastXY = locations[last];
-						
-						debugPrint(first, firstXY, last, lastXY);
-						
-						final double length = firstXY.distance(lastXY);
-						
-						if (length == 0.0) {
-							return true;
-						}
-						
-						px = (firstXY.getY() - lastXY.getY()) / length;
-						py = (lastXY.getX() - firstXY.getX()) / length;
-						
-						assert 0.0 == projection(lastXY, firstXY, px, py);
-					}
-					
-					if (first == f) {
-						debugPrint();
-					}
-				}
-			}
-			
-			return true;
-		});
-		
-		debugPrint(manifold.isValid());
 	}
 	
 	public static final Point2D[] generateLocations(final int imageWidth, final int imageHeight, final Manifold manifold) {
@@ -612,8 +484,6 @@ public final class PNG2SVG {
 		final ConsoleMonitor monitor = new ConsoleMonitor(10_000L);
 		final int imageWidth = image.getWidth();
 		final int imageHeight = image.getHeight();
-		final int topBorder = imageWidth * imageHeight * 4;
-		final int rightBorder = topBorder + imageWidth * 2;
 		final Point tmp = new Point();
 		
 		manifold.forEach(Traversor.FACE, f -> {
@@ -629,19 +499,6 @@ public final class PNG2SVG {
 				} else {
 					polygon.lineTo(location.getX(), location.getY());
 				}
-//				if (d < topBorder) {
-//					processInternalDart(d, location, imageWidth, imageHeight, polygon);
-//				} else if (d < rightBorder) {
-//					if ((d & 1) == 0) {
-////						polygon.addPoint((d - topBorder) / 2 + 1, 0);
-//						polygon.addPoint((int) location.getX(), (int) location.getY());
-//					}
-//				} else {
-//					if ((d & 1) == 0) {
-////						polygon.addPoint(imageWidth, (d - rightBorder) / 2 + 1);
-//						polygon.addPoint((int) location.getX(), (int) location.getY());
-//					}
-//				}
 				
 				return true;
 			});
@@ -649,9 +506,8 @@ public final class PNG2SVG {
 			if (2 < FACE.countDarts(manifold, f)) {
 				getPixelXY(imageWidth, imageHeight, f, tmp);
 				
-				if (0 <= tmp.x && tmp.x < imageWidth && 0 <= tmp.y && tmp.y < imageHeight) {
+				if (f != 1 && 0 <= tmp.x && tmp.x < imageWidth && 0 <= tmp.y && tmp.y < imageHeight) {
 					weakProperties.set(polygon, "label", image.getRGB(tmp.x, tmp.y));
-//					weakProperties.set(polygon, "determinant", determinant(polygon));
 					weakProperties.set(polygon, "determinant", SVGTools.getSurface(polygon, 1.0));
 					
 					final Collection<Path2D> collection = result.computeIfAbsent(image.getRGB(tmp.x, tmp.y),
