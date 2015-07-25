@@ -5,8 +5,10 @@ import static imj2.topology.Manifold.Traversor.*;
 import static imj3.draft.AperioXML2SVG.formatColor;
 import static imj3.draft.PNG2SVG.WeakProperties.weakProperties;
 import static java.lang.Math.*;
+import static multij.tools.MathTools.square;
 import static multij.tools.Tools.*;
 import static multij.xml.XMLTools.parse;
+
 import imj2.topology.Manifold;
 
 import java.awt.Color;
@@ -188,17 +190,84 @@ public final class PNG2SVG {
 		
 		for (int j = 0; j < smoothing; ++j) {
 			manifold.forEach(FACE, f -> {
-				if (FACE.countDarts(manifold, f) <= 4) {
-					return true;
+				if (4 < FACE.countDarts(manifold, f)) {
+					smootheLinearConnections(manifold, locations, newLocations, f);
+					restoreCorners(manifold, locations, newLocations, f);
+					setLocations(manifold, locations, newLocations, f);
 				}
-				
-				smootheLinearConnections(manifold, locations, newLocations, f);
-				restoreCorners(manifold, locations, newLocations, f);
-				setLocations(manifold, locations, newLocations, f);
 				
 				return true;
 			});
 		}
+		
+		final double angularThresholdForLinearity = PI * 1.0 / 8.0;
+		
+		manifold.forEach(FACE, f -> {
+			final int n = FACE.countDarts(manifold, f);
+			
+			if (4 < n) {
+				for (int i = 0, d = f; i < 2 * n; ++i) {
+					final int next = manifold.getNext(d);
+					
+					if (VERTEX.countDarts(manifold, d) == 2) {
+						final int previous = manifold.getPrevious(d);
+						final double angle = angle(locations[previous], locations[d], locations[next]);
+						
+						if (angle <= angularThresholdForLinearity) {
+							/*
+							 * #--p->##--d->##--n->#
+							 * #<----##<----##<----#
+							 *              ^|
+							 *              ||
+							 *              x|
+							 *              ||
+							 *              ||
+							 *              ##
+							 * 
+							 *           V
+							 *           V
+							 *           V
+							 * 
+							 * #------p---->##--n->#
+							 * #<-----------##<----#
+							 *              ^|
+							 *              ||
+							 *              x|
+							 *              ||
+							 *              ||
+							 *              ##
+							 */
+							
+							final int x = manifold.getPrevious(opposite(d));
+							
+							manifold.setNext(previous, next);
+							manifold.setNext(x, opposite(previous));
+							locations[opposite(previous)] = locations[opposite(d)];
+							manifold.setCycle(d, opposite(d));
+							
+							assert 0 <= manifold.getPrevious(previous);
+							assert 0 <= manifold.getPrevious(x);
+							assert 0 <= manifold.getPrevious(next);
+						}
+					}
+					
+					d = next;
+				}
+			}
+			
+			return true;
+		});
+	}
+	
+	public static final double angle(final Point2D a, final Point2D b, final Point2D c) {
+		final double abX = b.getX() - a.getX();
+		final double abY = b.getY() - a.getY();
+		final double bcX = c.getX() - b.getX();
+		final double bcY = c.getY() - b.getY();
+		final double ab = sqrt(square(abX) + square(abY));
+		final double bc = sqrt(square(bcX) + square(bcY));
+		
+		return acos(max(-1.0, min((abX * bcX + abY * bcY) / ab / bc, 1.0)));
 	}
 	
 	private static final void smootheLinearConnections(final Manifold manifold, final Point2D[] locations, final Point2D[] newLocations, final int face) {
