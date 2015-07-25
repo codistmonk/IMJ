@@ -182,80 +182,55 @@ public final class PNG2SVG {
 		return result;
 	}
 	
-	public static final double getSurface(final Manifold manifold, final Point2D[] locations, final int face) {
-		double result = 0.0;
-		int previous = face;
-		int current;
-		
-		do {
-			current = manifold.getNext(previous);
-			final Point2D p1 = locations[previous];
-			final Point2D p2 = locations[current];
-			
-			result += p1.getX() * p2.getY() - p1.getY() * p2.getX();
-			
-			previous = current;
-		} while (current != face);
-		
-		result /= 2.0;
-		
-		return result;
-	}
-	
 	public static final void simplify2(final Manifold manifold, final Point2D[] locations) {
-		final int n = locations.length;
 		final Point2D[] newLocations = tightClone(locations);
+		final int smoothing = 2;
 		
-		// for each face
-		manifold.forEach(FACE, f -> {
-			if (FACE.countDarts(manifold, f) <= 4 || f == 1) {
-				return true;
-			}
-			
-			// compute smoothed geometry
-			manifold.forEachDartIn(FACE, f, d -> {
-				if (VERTEX.countDarts(manifold, d) == 2) {
-					final int previous = manifold.getPrevious(d);
-					final int next = manifold.getNext(d);
-					
-					setAverage(newLocations[d], locations[previous], locations[d], locations[next]);
+		for (int j = 0; j < smoothing; ++j) {
+			manifold.forEach(FACE, f -> {
+				if (FACE.countDarts(manifold, f) <= 4) {
+					return true;
 				}
+				
+				smootheLinearConnections(manifold, locations, newLocations, f);
+				restoreCorners(manifold, locations, newLocations, f);
+				setLocations(manifold, locations, newLocations, f);
 				
 				return true;
 			});
-			manifold.forEachDartIn(FACE, f, d -> {
+		}
+	}
+	
+	private static final void smootheLinearConnections(final Manifold manifold, final Point2D[] locations, final Point2D[] newLocations, final int face) {
+		manifold.forEachDartIn(FACE, face, d -> {
+			if (VERTEX.countDarts(manifold, d) == 2) {
 				final int previous = manifold.getPrevious(d);
 				final int next = manifold.getNext(d);
 				
-				if (locations[previous].distance(newLocations[previous]) <= 1.0E-6
-						&& locations[next].distance(newLocations[next]) <= 1.0E-6) {
-					newLocations[d].setLocation(locations[d]);
-				}
-				
-				return true;
-			});
-			
-			final double actualSurface = abs(getSurface(manifold, locations, f));
-			double smoothedSurface = abs(getSurface(manifold, newLocations, f));
-			
-			debugPrint(f, actualSurface, smoothedSurface);
-			
-			// TODO move vertices to restore surface
-			
-			for (int i = 0; i < 0; ++i) {
-				manifold.forEachDartIn(FACE, f, d -> {
-					setAverage(newLocations[d], newLocations[d], locations[d]);
-					
-					return true;
-				});
-				
-				smoothedSurface = abs(getSurface(manifold, newLocations, f));
-				debugPrint(actualSurface, smoothedSurface);
+				setAverage(newLocations[d], locations[previous], locations[d], locations[next]);
 			}
 			
-			for (int i = 0; i < n; ++i) {
-				locations[i].setLocation(newLocations[i]);
+			return true;
+		});
+	}
+	
+	private static final void restoreCorners(final Manifold manifold, final Point2D[] locations, final Point2D[] newLocations, final int face) {
+		manifold.forEachDartIn(FACE, face, d -> {
+			final int previous = manifold.getPrevious(d);
+			final int next = manifold.getNext(d);
+			
+			if (locations[previous].distance(newLocations[previous]) <= 1.0E-6
+					&& locations[next].distance(newLocations[next]) <= 1.0E-6) {
+				newLocations[d].setLocation(locations[d]);
 			}
+			
+			return true;
+		});
+	}
+	
+	private static final void setLocations(final Manifold manifold, final Point2D[] locations, final Point2D[] newLocations, final int face) {
+		manifold.forEachDartIn(FACE, face, d -> {
+			locations[d].setLocation(newLocations[d]);
 			
 			return true;
 		});
@@ -540,7 +515,7 @@ public final class PNG2SVG {
 				if (container == null) {
 					shapes.add(newShape);
 				} else {
-					final long containerDeterminant = weakProperties.get(container, "determinant");
+					final double containerDeterminant = weakProperties.get(container, "determinant");
 					
 					container.subtract(newShape);
 					
@@ -623,8 +598,8 @@ public final class PNG2SVG {
 		
 		debugPrint("Sorting...");
 		
-		result.forEach((k, v) -> ((List<Path2D>) v).sort((p1, p2) -> Long.compare(
-				abs((long) weakProperties.get(p2, "determinant")), abs((long) weakProperties.get(p1, "determinant")))));
+		result.forEach((k, v) -> ((List<Path2D>) v).sort((p1, p2) -> Double.compare(
+				abs((double) weakProperties.get(p2, "determinant")), abs((double) weakProperties.get(p1, "determinant")))));
 		
 		debugPrint("Polygons collected");
 		
