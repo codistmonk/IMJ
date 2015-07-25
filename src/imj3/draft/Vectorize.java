@@ -8,7 +8,6 @@ import static java.lang.Math.*;
 import static multij.tools.MathTools.square;
 import static multij.tools.Tools.*;
 import static multij.xml.XMLTools.parse;
-
 import imj2.topology.Manifold;
 
 import java.awt.Color;
@@ -35,6 +34,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.imageio.ImageIO;
 import javax.swing.SwingUtilities;
@@ -61,6 +61,8 @@ public final class Vectorize {
 	
 	private static final int BOTTOM_OFFSET = 2;
 	
+	static final AtomicBoolean debug = new AtomicBoolean();
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
@@ -70,20 +72,14 @@ public final class Vectorize {
 		final String imagePath = arguments.get("image", "");
 		final String classIdsPath = arguments.get("classIds", "");
 		final String outputPath = arguments.get("output", baseName(imagePath) + ".svg");
-		final boolean debug = arguments.get("debug", 0)[0] != 0;
+		
+		debug.set(arguments.get("debug", 0)[0] != 0);
 		
 		debugPrint("imagePath:", imagePath);
 		
 		try {
 			final BufferedImage image = ImageIO.read(new File(imagePath));
-			final int imageWidth = image.getWidth();
-			final int imageHeight = image.getHeight();
-			final Manifold manifold = contoursOf(image);
-			final Point2D[] locations = generateLocations(imageWidth, imageHeight, manifold);
-			
-			simplify(manifold, locations);
-			
-			final Map<Integer, Collection<Area>> shapes = toRegions(collectContours(image, manifold, locations, new HashMap<>()));
+			final Map<Integer, Collection<Area>> shapes = getRegions(image);
 			
 			{
 				debugPrint("Creating SVG...");
@@ -93,13 +89,26 @@ public final class Vectorize {
 				debugPrint("Writing", outputPath);
 				XMLTools.write(svg, new File(outputPath), 1);
 			}
-			
-			if (debug) {
-				debugShow("result", manifold, locations, shapes);
-			}
 		} catch (final IOException exception) {
 			throw new UncheckedIOException(exception);
 		}
+	}
+	
+	public static final Map<Integer, Collection<Area>> getRegions(final BufferedImage image) {
+		final int imageWidth = image.getWidth();
+		final int imageHeight = image.getHeight();
+		final Manifold manifold = contoursOf(image);
+		final Point2D[] locations = generateLocations(imageWidth, imageHeight, manifold);
+		
+		simplify(manifold, locations);
+		
+		final Map<Integer, Collection<Area>> result = toRegions(collectContours(image, manifold, locations, new HashMap<>()));
+		
+		if (debug.get()) {
+			debugShow("result", manifold, locations, result);
+		}
+		
+		return result;
 	}
 	
 	public static final Document toSVG(final Map<Integer, ? extends Collection<? extends Shape>> shapes,
