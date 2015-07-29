@@ -8,6 +8,7 @@ import static java.lang.Math.*;
 import static multij.tools.MathTools.square;
 import static multij.tools.Tools.*;
 import static multij.xml.XMLTools.parse;
+
 import imj2.topology.Manifold;
 
 import java.awt.Color;
@@ -153,7 +154,6 @@ public final class Vectorize {
 				
 				final int label = entry.getKey() & 0x00FFFFFF;
 				final String classId = classIds == null ? Integer.toString(label) : classIds.get(binary ? (label != 0 ? 1 : 0) : label);
-				debugPrint(classId);
 				final Element svgRegion = (Element) svgRoot.appendChild(svg.createElement("path"));
 				
 				svgRegion.setAttribute("d", pathData.toString());
