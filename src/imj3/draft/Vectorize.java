@@ -2,8 +2,8 @@ package imj3.draft;
 
 import static imj2.topology.Manifold.*;
 import static imj2.topology.Manifold.Traversor.*;
-import static imj3.draft.AperioXML2SVG.formatColor;
 import static imj3.draft.Vectorize.WeakProperties.weakProperties;
+import static imj3.tools.CommonTools.formatColor;
 import static java.lang.Math.*;
 import static multij.tools.MathTools.square;
 import static multij.tools.Tools.*;
@@ -77,6 +77,8 @@ public final class Vectorize {
 		final int smoothing = arguments.get("smoothing", 2)[0];
 		final double flattening = Double.parseDouble(arguments.get("flattening", Double.toString(PI / 8.0)));
 		final boolean binary = arguments.get("binary", 0)[0] != 0;
+		final int forcedWidth = arguments.get("width", 0)[0];
+		final int forcedHeight = arguments.get("height", 0)[0];
 		
 		debug.set(arguments.get("debug", 0)[0] != 0);
 		
@@ -90,6 +92,14 @@ public final class Vectorize {
 				debugPrint("Creating SVG...");
 				final List<String> classIds = classIdsPath.isEmpty() ? null : Files.readAllLines(new File(classIdsPath).toPath());
 				final Document svg = toSVG(shapes, classIds, binary);
+				
+				{
+					final int width = 0 < forcedWidth ? forcedWidth : image.getWidth();
+					final int height = 0 < forcedHeight ? forcedHeight : image.getHeight();
+					
+					svg.getDocumentElement().setAttribute("width", Integer.toString(width));
+					svg.getDocumentElement().setAttribute("height", Integer.toString(height));
+				}
 				
 				debugPrint("Writing", outputPath);
 				XMLTools.write(svg, new File(outputPath), 1);

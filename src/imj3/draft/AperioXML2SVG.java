@@ -1,5 +1,6 @@
 package imj3.draft;
 
+import static imj3.tools.CommonTools.formatColor;
 import static java.lang.Math.max;
 import static multij.tools.Tools.baseName;
 import static multij.tools.Tools.debugPrint;
@@ -16,7 +17,6 @@ import java.awt.geom.Path2D;
 import java.awt.geom.PathIterator;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -235,10 +235,6 @@ public final class AperioXML2SVG {
 		} catch (final IOException exception) {
 			throw new UncheckedIOException(exception);
 		}
-	}
-	
-	public static final String formatColor(final long color) {
-		return "#" + String.format("%06X", color & 0x00FFFFFF);
 	}
 	
 	/**
