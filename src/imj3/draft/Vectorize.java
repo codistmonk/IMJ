@@ -75,6 +75,7 @@ public final class Vectorize {
 		final int quantization = arguments.get("quantization", 0)[0];
 		final int smoothing = arguments.get("smoothing", 2)[0];
 		final double flattening = Double.parseDouble(arguments.get("flattening", Double.toString(PI / 8.0)));
+		final boolean binary = arguments.get("binary", 0)[0] != 0;
 		
 		debug.set(arguments.get("debug", 0)[0] != 0);
 		
@@ -86,8 +87,8 @@ public final class Vectorize {
 			
 			{
 				debugPrint("Creating SVG...");
-				final List<String> classIds = classIdsPath.isEmpty() ? null : Files.readAllLines(new File("").toPath());
-				final Document svg = toSVG(shapes, classIds);
+				final List<String> classIds = classIdsPath.isEmpty() ? null : Files.readAllLines(new File(classIdsPath).toPath());
+				final Document svg = toSVG(shapes, classIds, binary);
 				
 				debugPrint("Writing", outputPath);
 				XMLTools.write(svg, new File(outputPath), 1);
@@ -115,7 +116,7 @@ public final class Vectorize {
 	}
 	
 	public static final Document toSVG(final Map<Integer, ? extends Collection<? extends Shape>> shapes,
-			final List<String> classIds) {
+			final List<String> classIds, final boolean binary) {
 		final AffineTransform identity = new AffineTransform();
 		final double[] segment = new double[6];
 		final Document svg = parse("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:imj=\"IMJ\"/>");
@@ -151,7 +152,8 @@ public final class Vectorize {
 				}
 				
 				final int label = entry.getKey() & 0x00FFFFFF;
-				final String classId = classIds == null ? Integer.toString(label) : classIds.get(label);
+				final String classId = classIds == null ? Integer.toString(label) : classIds.get(binary ? (label != 0 ? 1 : 0) : label);
+				debugPrint(classId);
 				final Element svgRegion = (Element) svgRoot.appendChild(svg.createElement("path"));
 				
 				svgRegion.setAttribute("d", pathData.toString());
