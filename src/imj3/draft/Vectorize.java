@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
 import javax.swing.SwingUtilities;
@@ -79,6 +80,8 @@ public final class Vectorize {
 		final boolean binary = arguments.get("binary", 0)[0] != 0;
 		final int forcedWidth = arguments.get("width", 0)[0];
 		final int forcedHeight = arguments.get("height", 0)[0];
+		final boolean rescale = arguments.get("rescale", 0)[0] != 0;
+		final Collection<String> excludedIds = Arrays.stream(arguments.get("exclude", "").split(",")).collect(Collectors.toSet());
 		
 		debug.set(arguments.get("debug", 0)[0] != 0);
 		
@@ -87,19 +90,25 @@ public final class Vectorize {
 		try {
 			final BufferedImage image = ImageIO.read(new File(imagePath));
 			final Map<Integer, Collection<Area>> shapes = getRegions(image, quantization, smoothing, flattening);
+			final int width = 0 < forcedWidth ? forcedWidth : image.getWidth();
+			final int height = 0 < forcedHeight ? forcedHeight : image.getHeight();
+			
+			if (rescale) {
+				debugPrint("Rescaling...");
+				
+				final AffineTransform transform = new AffineTransform();
+				transform.scale((double) width / image.getWidth(), (double) height / image.getHeight());
+				
+				shapes.values().forEach(l -> l.forEach(s -> s.transform(transform)));
+			}
 			
 			{
 				debugPrint("Creating SVG...");
 				final List<String> classIds = classIdsPath.isEmpty() ? null : Files.readAllLines(new File(classIdsPath).toPath());
-				final Document svg = toSVG(shapes, classIds, binary);
+				final Document svg = toSVG(shapes, classIds, binary, excludedIds);
 				
-				{
-					final int width = 0 < forcedWidth ? forcedWidth : image.getWidth();
-					final int height = 0 < forcedHeight ? forcedHeight : image.getHeight();
-					
-					svg.getDocumentElement().setAttribute("width", Integer.toString(width));
-					svg.getDocumentElement().setAttribute("height", Integer.toString(height));
-				}
+				svg.getDocumentElement().setAttribute("width", Integer.toString(width));
+				svg.getDocumentElement().setAttribute("height", Integer.toString(height));
 				
 				debugPrint("Writing", outputPath);
 				XMLTools.write(svg, new File(outputPath), 1);
@@ -127,7 +136,7 @@ public final class Vectorize {
 	}
 	
 	public static final Document toSVG(final Map<Integer, ? extends Collection<? extends Shape>> shapes,
-			final List<String> classIds, final boolean binary) {
+			final List<String> classIds, final boolean binary, final Collection<String> excludedIds) {
 		final AffineTransform identity = new AffineTransform();
 		final double[] segment = new double[6];
 		final Document svg = parse("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:imj=\"IMJ\"/>");
@@ -164,11 +173,14 @@ public final class Vectorize {
 				
 				final int label = entry.getKey() & 0x00FFFFFF;
 				final String classId = classIds == null ? Integer.toString(label) : classIds.get(binary ? (label != 0 ? 1 : 0) : label);
-				final Element svgRegion = (Element) svgRoot.appendChild(svg.createElement("path"));
 				
-				svgRegion.setAttribute("d", pathData.toString());
-				svgRegion.setAttribute("style", "fill:" + formatColor(entry.getKey()));
-				svgRegion.setAttribute("imj:classId", classId);
+				if (!excludedIds.contains(classId)) {
+					final Element svgRegion = (Element) svgRoot.appendChild(svg.createElement("path"));
+					
+					svgRegion.setAttribute("d", pathData.toString());
+					svgRegion.setAttribute("style", "fill:" + formatColor(entry.getKey()));
+					svgRegion.setAttribute("imj:classId", classId);
+				}
 			}
 		}
 		return svg;

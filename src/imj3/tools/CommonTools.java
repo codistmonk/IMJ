@@ -68,6 +68,10 @@ public final class CommonTools {
 		array2[index2] = tmp;
 	}
 	
+	public static final String formatColor(final long color) {
+		return "#" + String.format("%06X", color & 0x00FFFFFF);
+	}
+	
 	public static final Iterable<int[]> cartesian(final int... minMaxes) {
 		return new Iterable<int[]>() {
 			
