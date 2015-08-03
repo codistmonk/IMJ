@@ -5,6 +5,7 @@ import static java.lang.Integer.toHexString;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
@@ -54,26 +55,30 @@ public final class EvaluateClassification {
 		System.out.println("F1s: " +  confusionMatrix.computeF1s());
 		System.out.println("macroF1: " + confusionMatrix.computeMacroF1());
 		
+		System.out.println("BEGIN COUNTS TABLE");
+		writeCSV(confusionMatrix, "\t", System.out);
+		System.out.println("END COUNTS TABLE");
+	}
+	
+	public static void writeCSV(final ConfusionMatrix confusionMatrix, final String separator, final PrintStream output) {
 		final Collection<Comparable<?>> keys = collectKeys(confusionMatrix.getCounts());
 		
-		System.out.println("BEGIN COUNTS TABLE");
 		for (final Comparable<?> key : keys) {
 			final Map<Comparable<?>, AtomicLong> row = confusionMatrix.getCounts().getOrDefault(key, Collections.emptyMap());
 			boolean printSeparator = false;
 			
 			for (final Comparable<?> subkey : keys) {
 				if (printSeparator) {
-					System.out.print("\t");
+					output.print(separator);
 				} else {
 					printSeparator = true;
 				}
 				
-				System.out.print(row.getOrDefault(subkey, ZERO));
+				output.print(row.getOrDefault(subkey, ZERO));
 			}
 			
-			System.out.println();
+			output.println();
 		}
-		System.out.println("END COUNTS TABLE");
 	}
 	
 	public static final <V> Collection<Comparable<?>> collectKeys(final Map<Comparable<?>, Map<Comparable<?>, V>> map) {
