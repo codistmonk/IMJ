@@ -56,7 +56,8 @@ public final class SVG2PNG {
 		final int w = (image.getWidth() - stride / 2 + stride - 1) / stride;
 		final int h = (image.getHeight() - stride / 2 + stride - 1) / stride;
 		final double scale = pow(2.0, -lod) * max(w, h) / max(image.getWidth(), image.getHeight());
-		final Canvas canvas = new Canvas().setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR);
+		final int clearColor = arguments.get("clear", -1)[0];
+		final Canvas canvas = new Canvas().setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR).clear(new Color(clearColor));
 		final String outputPath = arguments.get("output", baseName(svgPath) + "_groundtruth.png");
 		
 		debugPrint("LOD:", lod, "imageWidth:", image.getWidth(), "imageWidth:", image.getHeight(), "imageChannels:", image.getChannels());
