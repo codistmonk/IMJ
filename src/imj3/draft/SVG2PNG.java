@@ -2,10 +2,10 @@ package imj3.draft;
 
 import static imj3.draft.SVG2Bin.*;
 import static imj3.draft.SVGTools.*;
+import static java.lang.Math.max;
 import static java.lang.Math.pow;
 import static multij.tools.Tools.*;
 import static multij.xml.XMLTools.*;
-
 import imj3.core.Image2D;
 import imj3.tools.IMJTools;
 
@@ -16,6 +16,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+
 import javax.imageio.ImageIO;
 
 import org.w3c.dom.Document;
@@ -51,10 +52,16 @@ public final class SVG2PNG {
 		final String[] classIds = arguments.get("classIds", join(",",
 				getNodes(classes, "//class").stream().map(node -> ((Element) node).getAttribute("id")).toArray())).split(",");
 		final Image2D image = IMJTools.read(imagePath, lod);
-		final Canvas canvas = new Canvas().setFormat(image.getWidth(), image.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
+		final int stride = arguments.get("stride", 1)[0];
+		final int w = (image.getWidth() - stride / 2 + stride - 1) / stride;
+		final int h = (image.getHeight() - stride / 2 + stride - 1) / stride;
+		final double scale = pow(2.0, -lod) * max(w, h) / max(image.getWidth(), image.getHeight());
+		final Canvas canvas = new Canvas().setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR);
+		final String outputPath = arguments.get("output", baseName(svgPath) + "_groundtruth.png");
 		
 		debugPrint("LOD:", lod, "imageWidth:", image.getWidth(), "imageWidth:", image.getHeight(), "imageChannels:", image.getChannels());
 		debugPrint("classIds", Arrays.toString(classIds));
+		debugPrint("stride:", stride, "scale:", scale, "w:", w, "h:", h);
 		
 		for (final Node regionNode : getNodes(svg, "//path")) {
 			final Element regionElement = (Element) regionNode;
@@ -65,7 +72,6 @@ public final class SVG2PNG {
 			}
 			
 			final Area region = newRegion(regionElement);
-			final double scale = pow(2.0, -lod);
 			
 			region.transform(AffineTransform.getScaleInstance(scale, scale));
 			
@@ -73,7 +79,7 @@ public final class SVG2PNG {
 			canvas.getGraphics().fill(region);
 		}
 		
-		final File outputFile = new File(baseName(svgPath) + "_groundtruth.png");
+		final File outputFile = new File(outputPath);
 		
 		try {
 			debugPrint(outputFile);
