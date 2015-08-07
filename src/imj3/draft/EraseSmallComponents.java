@@ -42,17 +42,18 @@ public final class EraseSmallComponents {
 		final int threshold = arguments.get("threshold", 0)[0];
 		final Image2D image = read(imagePath);
 		final String outputPath = arguments.get("output", baseName(imagePath) + "_filtered.png");
+		final Image2D mask = newMask(image, "_mask");
 		
 		debugPrint("image:", imagePath);
-		debugPrint("Locating components below", threshold + "...");
 		
-		final Image2D mask = locateSmallComponents(image, threshold, newMask(image, "_mask"));
-		
-		debugPrint("Locating borders...");
-		
-		final Collection<Long> borderPixels = locateBorderPixels(mask);
-		
-		shrinkBorders(image, mask, borderPixels);
+		for (int currentThreshold = 1; currentThreshold <= threshold; ++currentThreshold) {
+			debugPrint("Removing components below", currentThreshold + " pixels...");
+			
+			locateSmallComponents(image, currentThreshold, mask);
+			final Collection<Long> borderPixels = locateBorderPixels(mask);
+			
+			shrinkBorders(image, mask, borderPixels);
+		}
 		
 		try {
 			debugPrint("Writing", outputPath + "...");
