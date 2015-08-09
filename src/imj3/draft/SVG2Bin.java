@@ -87,7 +87,7 @@ public final class SVG2Bin {
 		debugPrint("svgPath:", svgPath);
 		debugPrint("classIds", Arrays.toString(classIds));
 		
-		collectRegions(svg, classIds, scaling, negativeRegion, regions);
+		collectRegions(svg, classIds, scaling, negativeRegion, 0, regions);
 		
 		debugPrint("regionCount:", regions.size());
 		
@@ -126,7 +126,11 @@ public final class SVG2Bin {
 	
 	public static final void collectRegions(final Document svg,
 			final String[] classIds, final AffineTransform scaling,
-			final Area negativeRegion, final List<Region> regions) {
+			final Area negativeRegion, final int negativeRegionLabel, final List<Region> regions) {
+		if (negativeRegion != null) {
+			negativeRegion.transform(scaling);
+		}
+		
 		for (final Node regionNode : getNodes(svg, "//path")) {
 			final Element regionElement = (Element) regionNode;
 			final int label = indexOf(regionElement.getAttribute("imj:classId"), classIds);
@@ -147,7 +151,7 @@ public final class SVG2Bin {
 		}
 		
 		if (negativeRegion != null) {
-			addTo(regions, negativeRegion, 0);
+			addTo(regions, negativeRegion, negativeRegionLabel);
 		}
 	}
 	
