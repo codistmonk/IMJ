@@ -87,6 +87,46 @@ public final class SVG2Bin {
 		debugPrint("svgPath:", svgPath);
 		debugPrint("classIds", Arrays.toString(classIds));
 		
+		collectRegions(svg, classIds, scaling, negativeRegion, regions);
+		
+		debugPrint("regionCount:", regions.size());
+		
+		final Map<Integer, Long> sizes = new HashMap<>();
+		
+		regions.forEach(region -> sizes.compute(region.getLabel(), (l, s) -> (s == null ? 0 : s) + region.getSize()));
+		
+		final Long totalSize = sizes.values().stream().reduce((x, y) -> x + y).get();
+		final long classLimit = min(limit, balance ? sizes.values().stream().min(Long::compare).get() : Long.MAX_VALUE);
+		final long selectionSize = sizes.values().stream().map(s -> min(s, classLimit)).reduce((x, y) -> x + y).get();
+		
+		debugPrint("classSizes:", sizes);
+		debugPrint("totalSize:", totalSize, "selectionSize:", selectionSize, "classLimit:", classLimit);
+		
+		final int classCount = classIds.length;
+		
+		{
+			final BigBitSet[] selections = generateSelections(classCount, sizes, classLimit, random);
+			final List<byte[]> items = generateItems(image, patchSize, regions, selectionSize, classCount, selections);
+			
+			Collections.shuffle(items, random);
+			
+			final String trainOutputPath = baseName(svgPath) + (trainRatio == 1.0 ? ".bin" : "_train.bin");
+			final String testOutputPath = baseName(svgPath) + "_test.bin";
+			
+			writeBins(items, trainRatio, trainOutputPath, testOutputPath);
+			
+			if (arguments.get("show", 0)[0] != 0) {
+				GroundTruth2Bin.BinView.main(trainOutputPath);
+				GroundTruth2Bin.BinView.main(testOutputPath);
+				
+				SwingTools.show(new Image2DComponent(image), "Image", false);
+			}
+		}
+	}
+	
+	public static final void collectRegions(final Document svg,
+			final String[] classIds, final AffineTransform scaling,
+			final Area negativeRegion, final List<Region> regions) {
 		for (final Node regionNode : getNodes(svg, "//path")) {
 			final Element regionElement = (Element) regionNode;
 			final int label = indexOf(regionElement.getAttribute("imj:classId"), classIds);
@@ -109,27 +149,42 @@ public final class SVG2Bin {
 		if (negativeRegion != null) {
 			addTo(regions, negativeRegion, 0);
 		}
+	}
+	
+	public static final List<byte[]> generateItems(final Image2D image,
+			final int patchSize, final List<Region> regions,
+			final long selectionSize, final int classCount,
+			final BigBitSet[] selections) {
+		final List<byte[]> items = new ArrayList<>((int) selectionSize);
+		final int[] selectionIndices = new int[classCount];
 		
-		debugPrint("regionCount:", regions.size());
+		for (final Region region : regions) {
+			final byte label = (byte) region.getLabel();
+			final Rectangle bounds = region.getBounds();
+			final BufferedImage mask = region.getMask();
+			final int width = mask.getWidth();
+			final int height = mask.getHeight();
+			
+			for (int y = 0; y < height; ++y) {
+				for (int x = 0; x < width; ++x) {
+					if ((mask.getRGB(x, y) & 1) != 0 && selections[label].get(++selectionIndices[label])) {
+						items.add(getItem(image, bounds.x + x, bounds.y + y, patchSize, label, null));
+					}
+				}
+			}
+		}
+		return items;
+	}
+	
+	public static final BigBitSet[] generateSelections(final int classCount,
+			final Map<Integer, Long> sizes, final long classLimit, final Random random) {
+		final BigBitSet[] result = new BigBitSet[classCount];
 		
-		final Map<Integer, Long> sizes = new HashMap<>();
-		
-		regions.forEach(region -> sizes.compute(region.getLabel(), (l, s) -> (s == null ? 0 : s) + region.getSize()));
-		
-		final Long totalSize = sizes.values().stream().reduce((x, y) -> x + y).get();
-		final long classLimit = min(limit, balance ? sizes.values().stream().min(Long::compare).get() : Long.MAX_VALUE);
-		final long selectionSize = sizes.values().stream().map(s -> min(s, classLimit)).reduce((x, y) -> x + y).get();
-		
-		debugPrint("classSizes:", sizes);
-		debugPrint("totalSize:", totalSize, "selectionSize:", selectionSize, "classLimit:", classLimit);
-		
-		final BigBitSet[] selections = new BigBitSet[classIds.length];
-		
-		for (int label = 0; label < classIds.length; ++label) {
+		for (int label = 0; label < classCount; ++label) {
 			final long labelSize = sizes.get(label);
 			final long n = min(labelSize, classLimit);
 			final BigBitSet selection = new BigBitSet(labelSize);
-			selections[label] = selection;
+			result[label] = selection;
 			
 			for (long i = 0L; i < n; ++i) {
 				selection.set(i, true);
@@ -146,40 +201,7 @@ public final class SVG2Bin {
 			}
 		}
 		
-		{
-			final List<byte[]> items = new ArrayList<>((int) selectionSize);
-			final int[] selectionIndices = new int[classIds.length];
-			
-			for (final Region region : regions) {
-				final byte label = (byte) region.getLabel();
-				final Rectangle bounds = region.getBounds();
-				final BufferedImage mask = region.getMask();
-				final int width = mask.getWidth();
-				final int height = mask.getHeight();
-				
-				for (int y = 0; y < height; ++y) {
-					for (int x = 0; x < width; ++x) {
-						if ((mask.getRGB(x, y) & 1) != 0 && selections[label].get(++selectionIndices[label])) {
-							items.add(getItem(image, bounds.x + x, bounds.y + y, patchSize, label, null));
-						}
-					}
-				}
-			}
-			
-			Collections.shuffle(items, random);
-			
-			final String trainOutputPath = baseName(svgPath) + (trainRatio == 1.0 ? ".bin" : "_train.bin");
-			final String testOutputPath = baseName(svgPath) + "_test.bin";
-			
-			writeBins(items, trainRatio, trainOutputPath, testOutputPath);
-			
-			if (arguments.get("show", 0)[0] != 0) {
-				GroundTruth2Bin.BinView.main(trainOutputPath);
-				GroundTruth2Bin.BinView.main(testOutputPath);
-				
-				SwingTools.show(new Image2DComponent(image), "Image", false);
-			}
-		}
+		return result;
 	}
 	
 	public static final void addTo(final List<Region> regions, final Area region, final int label) {
