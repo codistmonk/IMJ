@@ -127,10 +127,6 @@ public final class SVG2Bin {
 	public static final void collectRegions(final Document svg,
 			final String[] classIds, final AffineTransform scaling,
 			final Area negativeRegion, final int negativeRegionLabel, final List<Region> regions) {
-		if (negativeRegion != null) {
-			negativeRegion.transform(scaling);
-		}
-		
 		for (final Node regionNode : getNodes(svg, "//path")) {
 			final Element regionElement = (Element) regionNode;
 			final int label = indexOf(regionElement.getAttribute("imj:classId"), classIds);
