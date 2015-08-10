@@ -195,6 +195,7 @@ public final class SVGTools {
 					switch (state) {
 					case READ_COMMAND:
 						scanner.useDelimiter(" *");
+						
 						final String command = scanner.next("[MmLlQqCcZz]");
 						
 						switch (command) {
@@ -224,6 +225,7 @@ public final class SVGTools {
 						}
 						
 						buffer[i] = Double.parseDouble(s);
+						boolean changeState = true;
 						
 						switch (++i) {
 						case 4:
@@ -246,14 +248,17 @@ public final class SVGTools {
 								buffer[3] += buffer[1];
 							case "Q":
 							case "C":
+								changeState = false;
 								break;
 							default:
 								throw new UnsupportedOperationException(pathElement);
 							}
 							
-							System.arraycopy(buffer, 2, buffer, 0, 2);
-							i = 2;
-							state = SVGPathDataParserState.READ_COMMAND;
+							if (changeState) {
+								System.arraycopy(buffer, 2, buffer, 0, 2);
+								i = 2;
+								state = SVGPathDataParserState.READ_COMMAND;
+							}
 							break;
 						case 6:
 							switch (pathElement) {
@@ -267,14 +272,17 @@ public final class SVGTools {
 								buffer[4] += buffer[0];
 								buffer[5] += buffer[1];
 							case "C":
+								changeState = false;
 								break;
 							default:
 								throw new UnsupportedOperationException(pathElement);
 							}
 							
-							System.arraycopy(buffer, 4, buffer, 0, 2);
-							i = 2;
-							state = SVGPathDataParserState.READ_COMMAND;
+							if (changeState) {
+								System.arraycopy(buffer, 4, buffer, 0, 2);
+								i = 2;
+								state = SVGPathDataParserState.READ_COMMAND;
+							}
 							break;
 						case 8:
 							switch (pathElement) {
