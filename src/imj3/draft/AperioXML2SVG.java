@@ -2,6 +2,7 @@ package imj3.draft;
 
 import static imj3.tools.CommonTools.formatColor;
 import static java.lang.Math.max;
+import static multij.tools.Tools.array;
 import static multij.tools.Tools.baseName;
 import static multij.tools.Tools.debugPrint;
 import static multij.tools.Tools.getResourceAsStream;
@@ -9,6 +10,9 @@ import static multij.xml.XMLTools.getNode;
 import static multij.xml.XMLTools.getNodes;
 import static multij.xml.XMLTools.parse;
 import static multij.xml.XMLTools.write;
+
+import imj3.core.Image2D;
+import imj3.tools.IMJTools;
 
 import java.awt.Color;
 import java.awt.geom.AffineTransform;
@@ -56,9 +60,11 @@ public final class AperioXML2SVG {
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final File root = new File(arguments.get("in", ""));
+		final File outputRoot = new File(arguments.get("out", root.getPath()));
 		final String suffix = arguments.get("suffix", ".xml");
-		final File[] aperioXMLFiles = root.listFiles(RegexFilter.newSuffixFilter(suffix));
+		final File[] aperioFiles = root.listFiles(RegexFilter.newSuffixFilter(suffix));
 		final String author = arguments.get("author", "unknown");
+		final String seriesId = arguments.get("series", "");
 		final String sourceClassesPath = arguments.get("classes", "");
 		final Document classesXML = sourceClassesPath.isEmpty() ? parse("<classes nextId=\"1\"/>") : readXML(sourceClassesPath);
 		final Element classesRoot = classesXML.getDocumentElement();
@@ -71,15 +77,41 @@ public final class AperioXML2SVG {
 			classIds.put(element.getAttribute("description"), element.getAttribute("id"));
 		}
 		
-		for (final File aperioXMLFile : aperioXMLFiles) {
-			debugPrint(aperioXMLFile);
+		for (final File aperioFile : aperioFiles) {
+			debugPrint("aperioFile:", aperioFile);
 			
-			final Document aperioXML = parse(getResourceAsStream(aperioXMLFile.getPath()));
+			final Document aperioXML = parse(getResourceAsStream(aperioFile.getPath()));
 			final Document svg = parse("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:imj=\"IMJ\"/>");
 			final Element svgRoot  = svg.getDocumentElement();
+			
 			double lastX = 0.0;
 			double lastY = 0.0;
 			final List<Region> regions = new ArrayList<>();
+			
+			{
+				File imageFile = null;
+				
+				for (final String imageSuffix : array(".zip", ".svs")) {
+					imageFile = new File(baseName(aperioFile.getName()) + imageSuffix);
+					
+					if (imageFile.isFile()) {
+						break;
+					}
+					
+					imageFile = null;
+				}
+				
+				if (imageFile != null) {
+					try {
+						debugPrint("imageFile:", imageFile);
+						final Image2D image = IMJTools.read(imageFile.getPath());
+						lastX = image.getWidth() - 1;
+						lastY = image.getHeight() - 1;
+					} catch (final Exception exception) {
+						exception.printStackTrace();
+					}
+				}
+			}
 			
 			// collect_all_regions:
 			for (final Node aperioAnnotation : getNodes(aperioXML, "*//Annotation")) {
@@ -150,6 +182,7 @@ public final class AperioXML2SVG {
 				
 				for (int i = 0; i < regions.size(); ++i) {
 					final Region regionI = regions.get(i);
+					
 					for (int j = i + 1; j < regions.size(); ++j) {
 						final Region regionJ = regions.get(j);
 						final Area tmp = new Area(regionJ.getArea());
@@ -158,7 +191,8 @@ public final class AperioXML2SVG {
 						regionI.getArea().subtract(regionJ.getArea());
 						
 						if (tmp.isEmpty() && regionI.getClassId().equals(regionJ.getClassId())) {
-							debugPrint();
+							debugPrint("Region", j, " makes a hole in region", i);
+							
 							regions.remove(j--);
 						}
 					}
@@ -203,26 +237,32 @@ public final class AperioXML2SVG {
 			long fileTime = 0L;
 			
 			try {
-				fileTime = Files.readAttributes(aperioXMLFile.toPath(), BasicFileAttributes.class).creationTime().toMillis();
+				fileTime = Files.readAttributes(aperioFile.toPath(), BasicFileAttributes.class).creationTime().toMillis();
 			} catch (final IOException exception) {
 				exception.printStackTrace();
 			}
 			
 			if (fileTime == 0L) {
-				fileTime = aperioXMLFile.lastModified();
+				fileTime = aperioFile.lastModified();
 			}
 			
-			final String outputFilePath = baseName(aperioXMLFile.getPath()) + "_" + author
-					+ "_" + new SimpleDateFormat("yyyyMMddHHmmss").format(fileTime) + ".svg";
+			final File outputFile = new File(outputRoot, new File(baseName(aperioFile.getPath()) + "_" + author
+					+ "_" + getOrDefault(seriesId, new SimpleDateFormat("yyyyMMddHHmmss").format(fileTime)) + ".svg").getName());
 			
-			try (final OutputStream output = new FileOutputStream(outputFilePath)) {
+			debugPrint("Writing", outputFile);
+			
+			try (final OutputStream output = new FileOutputStream(outputFile)) {
 				write(svg, output, 1);
 			} catch (final IOException exception) {
 				exception.printStackTrace();
 			}
 		}
 		
-		try (final OutputStream output = new FileOutputStream(new File(root, "classes.xml"))) {
+		final File classesFile = new File(outputRoot, "classes.xml");
+		
+		debugPrint("Writing", classesFile);
+		
+		try (final OutputStream output = new FileOutputStream(classesFile)) {
 			write(classesXML, output, 1);
 		} catch (final IOException exception) {
 			exception.printStackTrace();
@@ -235,6 +275,10 @@ public final class AperioXML2SVG {
 		} catch (final IOException exception) {
 			throw new UncheckedIOException(exception);
 		}
+	}
+	
+	public static final String getOrDefault(final String string, final String resultIfStringIsNullOrEmpty) {
+		return string != null && !string.isEmpty() ? string : resultIfStringIsNullOrEmpty;
 	}
 	
 	/**
