@@ -40,6 +40,14 @@ public final class SVGTools {
 		throw new IllegalInstantiationException();
 	}
 	
+	public static final String COMMANDS = "MmLlQqCcZz";
+	
+	public static final String NUMERICAL = "0-9.-";
+	
+	public static final String COMMAND_PATTERN = "[" + COMMANDS + "]";
+	
+	public static final String NUMBER_PATTERN = "[" + NUMERICAL + "]+";
+
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
@@ -174,7 +182,7 @@ public final class SVGTools {
 			
 			try (final Scanner scanner = new Scanner(svgShape.getAttribute("points"))) {
 				scanner.useLocale(Locale.ENGLISH);
-				scanner.useDelimiter("[^0-9.]");
+				scanner.useDelimiter("[^0-9.-]");
 				
 				while (scanner.hasNext()) {
 					final double x = scanner.nextDouble();
@@ -191,148 +199,85 @@ public final class SVGTools {
 			
 			path.closePath();
 		} else if ("path".equals(svgShape.getTagName())) {
-			String pathElement = "m";
-			final double[] buffer = new double[8];
-			int i = 2;
-			SVGPathDataParserState state = SVGPathDataParserState.READ_COMMAND;
-			
 			try (final Scanner scanner = new Scanner(svgShape.getAttribute("d"))) {
 				scanner.useLocale(Locale.ENGLISH);
 				
+				double firstX = 0.0;
+				double firstY = 0.0;
+				double lastX = 0.0;
+				double lastY = 0.0;
+				String command = nextCommand(scanner);
+				
 				while (scanner.hasNext()) {
-					switch (state) {
-					case READ_COMMAND:
-						scanner.useDelimiter(" *");
+					final boolean relative = Character.isLowerCase(command.charAt(0));
+					
+					if ("zZ".contains(command)) {
+						path.closePath();
+						lastX = firstX;
+						lastY = firstY;
+					} else if ("mM".contains(command)) {
+						final double x = nextDouble(scanner, relative, lastX);
+						final double y = nextDouble(scanner, relative, lastY);
 						
-						final String command = scanner.next("[MmLlQqCcZz]");
+						path.moveTo(x, y);
+						command = relative ? "l" : "L";
 						
-						switch (command) {
-						case "M":
-						case "m":
-						case "L":
-						case "l":
-						case "Q":
-						case "q":
-						case "C":
-						case "c":
-							pathElement = command;
-						case "":
-							state = SVGPathDataParserState.READ_NUMBER;
-							break;
-						case "Z":
-						case "z":
-							path.closePath();
-						}
-						break;
-					case READ_NUMBER:
-						scanner.useDelimiter("[^0-9.-]");
-						String s = scanner.next();
+						lastX = firstX = x;
+						lastY = firstY = y;
+					} else if ("lL".contains(command)) {
+						final double x = nextDouble(scanner, relative, lastX);
+						final double y = nextDouble(scanner, relative, lastY);
 						
-						while (s.isEmpty()) {
-							s = scanner.next();
-						}
+						path.lineTo(x, y);
 						
-						buffer[i] = Double.parseDouble(s);
-						boolean changeState = true;
+						lastX = x;
+						lastY = y;
+					} else if ("qQ".contains(command)) {
+						final double x1 = nextDouble(scanner, relative, lastX);
+						final double y1 = nextDouble(scanner, relative, lastY);
+						final double x = nextDouble(scanner, relative, x1);
+						final double y = nextDouble(scanner, relative, y1);
 						
-						switch (++i) {
-						case 4:
-							switch (pathElement) {
-							case "m":
-								buffer[2] += buffer[0];
-								buffer[3] += buffer[1];
-							case "M":
-								buffer[2] += buffer[0];
-								buffer[3] += buffer[1];
-								path.moveTo(buffer[2], buffer[3]);
-								pathElement = "m".equals(pathElement) ? "l" : "L";
-								scanner.useDelimiter(" *");
-								changeState = scanner.hasNext("[MmLlQqCcZz]");
-								scanner.useDelimiter("[^0-9.-]");
-								if (!changeState) {
-									System.arraycopy(buffer, 2, buffer, 0, 2);
-									i = 2;
-								}
-								break;
-							case "l":
-								buffer[2] += buffer[0];
-								buffer[3] += buffer[1];
-							case "L":
-								path.lineTo(buffer[2], buffer[3]);
-								scanner.useDelimiter(" *");
-								changeState = scanner.hasNext("[MmLlQqCcZz]");
-								scanner.useDelimiter("[^0-9.-]");
-								if (!changeState) {
-									System.arraycopy(buffer, 2, buffer, 0, 2);
-									i = 2;
-								}
-								break;
-							case "q":
-							case "c":
-								buffer[2] += buffer[0];
-								buffer[3] += buffer[1];
-							case "Q":
-							case "C":
-								changeState = false;
-								break;
-							default:
-								throw new UnsupportedOperationException(pathElement);
-							}
-							
-							if (changeState) {
-								System.arraycopy(buffer, 2, buffer, 0, 2);
-								i = 2;
-								state = SVGPathDataParserState.READ_COMMAND;
-							}
-							
-							break;
-						case 6:
-							switch (pathElement) {
-							case "q":
-								buffer[4] += buffer[0];
-								buffer[5] += buffer[1];
-							case "Q":
-								path.quadTo(buffer[2], buffer[3], buffer[4], buffer[5]);
-								break;
-							case "c":
-								buffer[4] += buffer[0];
-								buffer[5] += buffer[1];
-							case "C":
-								changeState = false;
-								break;
-							default:
-								throw new UnsupportedOperationException(pathElement);
-							}
-							
-							if (changeState) {
-								System.arraycopy(buffer, 4, buffer, 0, 2);
-								i = 2;
-								state = SVGPathDataParserState.READ_COMMAND;
-							}
-							break;
-						case 8:
-							switch (pathElement) {
-							case "c":
-								buffer[6] += buffer[0];
-								buffer[7] += buffer[1];
-							case "C":
-								path.curveTo(buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7]);
-								break;
-							default:
-								throw new UnsupportedOperationException(pathElement);
-							}
-							
-							System.arraycopy(buffer, 6, buffer, 0, 2);
-							i = 2;
-							state = SVGPathDataParserState.READ_COMMAND;
-							break;
-						}
+						path.quadTo(x1, y1, x, y);
+						
+						lastX = x;
+						lastY = y;
+					} else if ("cC".contains(command)) {
+						final double x1 = nextDouble(scanner, relative, lastX);
+						final double y1 = nextDouble(scanner, relative, lastY);
+						final double x2 = nextDouble(scanner, relative, x1);
+						final double y2 = nextDouble(scanner, relative, y1);
+						final double x = nextDouble(scanner, relative, x2);
+						final double y = nextDouble(scanner, relative, y2);
+						
+						path.curveTo(x1, y1, x2, y2, x, y);
+						
+						lastX = x;
+						lastY = y;
+					}
+					
+					if (scanner.hasNext(COMMAND_PATTERN)) {
+						command = nextCommand(scanner);
 					}
 				}
 			}
 		}
 		
 		return new Area(path);
+	}
+	
+	public static final String nextCommand(final Scanner scanner) {
+		scanner.useDelimiter(" *");
+		
+		final String result = scanner.next(COMMAND_PATTERN);
+		
+		scanner.useDelimiter("[^" + NUMERICAL + "]+");
+		
+		return result;
+	}
+	
+	public static final double nextDouble(final Scanner scanner, final boolean relative, final double last) {
+		return scanner.nextDouble() + (relative ? last : 0.0);
 	}
 	
 	/**
@@ -381,15 +326,6 @@ public final class SVGTools {
 		}
 		
 		private static final long serialVersionUID = 3168354082192346491L;
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2015-06-05)
-	 */
-	private static enum SVGPathDataParserState {
-		
-		READ_COMMAND, READ_NUMBER;
 		
 	}
 	
