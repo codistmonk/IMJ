@@ -61,32 +61,38 @@ public final class SVG2PNG {
 		
 		final String[] classIdsArray = classIds.split(",");
 		
-		int w = arguments.get("width", getInt(svgRoot, "width", 0))[0];
-		int h = arguments.get("height", getInt(svgRoot, "height", w))[0];
+		int w = arguments.get("width", 0)[0];
+		int h = arguments.get("height", w)[0];
 		double scale = pow(2.0, -lod);
 		
 		if (w == 0 || h == 0) {
+			
 			if (!imagePath.isEmpty()) {
 				try {
 					final Image2D image = IMJTools.read(imagePath, lod);
 					
 					debugPrint("LOD:", lod, "imageWidth:", image.getWidth(), "imageWidth:", image.getHeight(), "imageChannels:", image.getChannels());
 					
-					w = (image.getWidth() - stride / 2 + stride - 1) / stride;
-					h = (image.getHeight() - stride / 2 + stride - 1) / stride;
+					w = resize(image.getWidth(), stride);
+					h = resize(image.getHeight(), stride);
 					scale *= max(w, h) / max(image.getWidth(), image.getHeight());
 				} catch (final Exception exception) {
 					debugError(exception);
 				}
 			} else {
-				final Rectangle bounds = new Rectangle();
+				w = resize(getInt(svgRoot, "width", 0) >> lod, stride);
+				h = resize(getInt(svgRoot, "height", 0) >> lod, stride);
 				
-				for (final Node regionNode : getNodes(svg, "//path|//polygon")) {
-					bounds.add(newRegion((Element) regionNode).getBounds());
+				if (w == 0 || h == 0) {
+					final Rectangle bounds = new Rectangle();
+					
+					for (final Node regionNode : getNodes(svg, "//path|//polygon")) {
+						bounds.add(newRegion((Element) regionNode).getBounds());
+					}
+					
+					w = resize((bounds.width + 1) >> lod, stride);
+					h = resize((bounds.height + 1) >> lod, stride);
 				}
-				
-				w = bounds.width + 1;
-				h = bounds.height + 1;
 			}
 		}
 		
@@ -121,6 +127,10 @@ public final class SVG2PNG {
 		} catch (final IOException exception) {
 			exception.printStackTrace();
 		}
+	}
+
+	public static int resize(final int size, final int stride) {
+		return (size - stride / 2 + stride - 1) / stride;
 	}
 	
 	public static final int getInt(final Node node, final String attributeName, final int defaultValue) {
