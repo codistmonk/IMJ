@@ -74,6 +74,14 @@ public final class SVGTools {
 		}
 	}
 	
+	public static final Document readXMLOrNull(final File file) {
+		try {
+			return readXML(file);
+		} catch (final Exception exception) {
+			return null;
+		}
+	}
+	
 	public static final <K> Map<K, Double> normalize(final Map<K, Double> map) {
 		final double[] total = { 0.0 };
 		
@@ -234,13 +242,30 @@ public final class SVGTools {
 								buffer[2] += buffer[0];
 								buffer[3] += buffer[1];
 							case "M":
+								buffer[2] += buffer[0];
+								buffer[3] += buffer[1];
 								path.moveTo(buffer[2], buffer[3]);
+								pathElement = "m".equals(pathElement) ? "l" : "L";
+								scanner.useDelimiter(" *");
+								changeState = scanner.hasNext("[MmLlQqCcZz]");
+								scanner.useDelimiter("[^0-9.-]");
+								if (!changeState) {
+									System.arraycopy(buffer, 2, buffer, 0, 2);
+									i = 2;
+								}
 								break;
 							case "l":
 								buffer[2] += buffer[0];
 								buffer[3] += buffer[1];
 							case "L":
 								path.lineTo(buffer[2], buffer[3]);
+								scanner.useDelimiter(" *");
+								changeState = scanner.hasNext("[MmLlQqCcZz]");
+								scanner.useDelimiter("[^0-9.-]");
+								if (!changeState) {
+									System.arraycopy(buffer, 2, buffer, 0, 2);
+									i = 2;
+								}
 								break;
 							case "q":
 							case "c":
@@ -259,6 +284,7 @@ public final class SVGTools {
 								i = 2;
 								state = SVGPathDataParserState.READ_COMMAND;
 							}
+							
 							break;
 						case 6:
 							switch (pathElement) {

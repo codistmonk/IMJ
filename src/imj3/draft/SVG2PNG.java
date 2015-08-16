@@ -6,16 +6,17 @@ import static java.lang.Math.max;
 import static java.lang.Math.pow;
 import static multij.tools.Tools.*;
 import static multij.xml.XMLTools.*;
+
 import imj3.core.Image2D;
 import imj3.tools.IMJTools;
 
 import java.awt.Color;
+import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 
 import javax.imageio.ImageIO;
 
@@ -44,29 +45,61 @@ public final class SVG2PNG {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String imagePath = arguments.get("image", "");
 		final int lod = arguments.get("lod", 4)[0];
+		final int stride = arguments.get("stride", 1)[0];
 		final String svgPath = arguments.get("svg", baseName(imagePath) + ".svg");
 		final File svgFile = new File(svgPath);
 		final File classesFile = new File(arguments.get("classes", new File(svgFile.getParentFile(), "classes.xml").getPath()));
 		final Document svg = readXML(svgFile);
-		final Document classes = readXML(classesFile);
-		final String[] classIds = arguments.get("classIds", join(",",
-				getNodes(classes, "//class").stream().map(node -> ((Element) node).getAttribute("id")).toArray())).split(",");
-		final Image2D image = IMJTools.read(imagePath, lod);
-		final int stride = arguments.get("stride", 1)[0];
-		final int w = (image.getWidth() - stride / 2 + stride - 1) / stride;
-		final int h = (image.getHeight() - stride / 2 + stride - 1) / stride;
-		final double scale = pow(2.0, -lod) * max(w, h) / max(image.getWidth(), image.getHeight());
+		final Element svgRoot = svg.getDocumentElement();
+		
+		String classIds = arguments.get("classIds", "");
+		
+		if (classIds.isEmpty()) {
+			final Document classes = readXML(classesFile);
+			classIds = join(",", getNodes(classes, "//class").stream().map(node -> ((Element) node).getAttribute("id")).toArray());
+		}
+		
+		final String[] classIdsArray = classIds.split(",");
+		
+		int w = arguments.get("width", getInt(svgRoot, "width", 0))[0];
+		int h = arguments.get("height", getInt(svgRoot, "height", w))[0];
+		double scale = pow(2.0, -lod);
+		
+		if (w == 0 || h == 0) {
+			if (!imagePath.isEmpty()) {
+				try {
+					final Image2D image = IMJTools.read(imagePath, lod);
+					
+					debugPrint("LOD:", lod, "imageWidth:", image.getWidth(), "imageWidth:", image.getHeight(), "imageChannels:", image.getChannels());
+					
+					w = (image.getWidth() - stride / 2 + stride - 1) / stride;
+					h = (image.getHeight() - stride / 2 + stride - 1) / stride;
+					scale *= max(w, h) / max(image.getWidth(), image.getHeight());
+				} catch (final Exception exception) {
+					debugError(exception);
+				}
+			} else {
+				final Rectangle bounds = new Rectangle();
+				
+				for (final Node regionNode : getNodes(svg, "//path|//polygon")) {
+					bounds.add(newRegion((Element) regionNode).getBounds());
+				}
+				
+				w = bounds.width + 1;
+				h = bounds.height + 1;
+			}
+		}
+		
 		final int clearColor = arguments.get("clear", -1)[0];
 		final Canvas canvas = new Canvas().setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR).clear(new Color(clearColor));
 		final String outputPath = arguments.get("output", baseName(svgPath) + "_groundtruth.png");
 		
-		debugPrint("LOD:", lod, "imageWidth:", image.getWidth(), "imageWidth:", image.getHeight(), "imageChannels:", image.getChannels());
-		debugPrint("classIds", Arrays.toString(classIds));
+		debugPrint("classIds:", classIds);
 		debugPrint("stride:", stride, "scale:", scale, "w:", w, "h:", h);
 		
-		for (final Node regionNode : getNodes(svg, "//path")) {
+		for (final Node regionNode : getNodes(svg, "//path|//polygon")) {
 			final Element regionElement = (Element) regionNode;
-			final int label = indexOf(regionElement.getAttribute("imj:classId"), classIds);
+			final int label = indexOf(regionElement.getAttribute("imj:classId"), classIdsArray);
 			
 			if (label < 0) {
 				continue;
@@ -83,11 +116,17 @@ public final class SVG2PNG {
 		final File outputFile = new File(outputPath);
 		
 		try {
-			debugPrint(outputFile);
+			debugPrint("Writing", outputFile);
 			ImageIO.write(canvas.getImage(), "png", outputFile);
 		} catch (final IOException exception) {
 			exception.printStackTrace();
 		}
+	}
+	
+	public static final int getInt(final Node node, final String attributeName, final int defaultValue) {
+		final String attributeValue = ((Element) node).getAttribute(attributeName);
+		
+		return attributeValue.isEmpty() ? defaultValue : Long.decode(attributeValue).intValue();
 	}
 	
 }

@@ -6,9 +6,7 @@ import static java.lang.Math.min;
 import static java.lang.Math.pow;
 import static multij.tools.Tools.*;
 import static multij.xml.XMLTools.*;
-
 import imj2.tools.BigBitSet;
-
 import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.tools.GroundTruth2Bin;
@@ -127,7 +125,7 @@ public final class SVG2Bin {
 	public static final void collectRegions(final Document svg,
 			final String[] classIds, final AffineTransform scaling,
 			final Area negativeRegion, final int negativeRegionLabel, final List<Region> regions) {
-		for (final Node regionNode : getNodes(svg, "//path")) {
+		for (final Node regionNode : getNodes(svg, "//path|//polygon")) {
 			final Element regionElement = (Element) regionNode;
 			final int label = indexOf(regionElement.getAttribute("imj:classId"), classIds);
 			
@@ -274,7 +272,7 @@ public final class SVG2Bin {
 		return actualResult;
 	}
 	
-	public static final <E> int indexOf(final E needle, final E... haystack) {
+	public static final <E> int indexOf(final E needle, @SuppressWarnings("unchecked") final E... haystack) {
 		final int n = haystack.length;
 		
 		for (int i = 0; i < n; ++i) {
