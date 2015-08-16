@@ -66,7 +66,6 @@ public final class SVG2PNG {
 		double scale = pow(2.0, -lod);
 		
 		if (w == 0 || h == 0) {
-			
 			if (!imagePath.isEmpty()) {
 				try {
 					final Image2D image = IMJTools.read(imagePath, lod);
@@ -75,24 +74,25 @@ public final class SVG2PNG {
 					
 					w = resize(image.getWidth(), stride);
 					h = resize(image.getHeight(), stride);
-					scale *= max(w, h) / max(image.getWidth(), image.getHeight());
+					scale *= (double) max(w, h) / max(image.getWidth(), image.getHeight());
 				} catch (final Exception exception) {
-					debugError(exception);
+					throw unchecked(exception);
 				}
 			} else {
-				w = resize(getInt(svgRoot, "width", 0) >> lod, stride);
-				h = resize(getInt(svgRoot, "height", 0) >> lod, stride);
+				final Rectangle bounds = new Rectangle(getInt(svgRoot, "width", 0), getInt(svgRoot, "height", 0));
 				
 				if (w == 0 || h == 0) {
-					final Rectangle bounds = new Rectangle();
-					
 					for (final Node regionNode : getNodes(svg, "//path|//polygon")) {
 						bounds.add(newRegion((Element) regionNode).getBounds());
 					}
 					
-					w = resize((bounds.width + 1) >> lod, stride);
-					h = resize((bounds.height + 1) >> lod, stride);
+					++bounds.width;
+					++bounds.height;
 				}
+				
+				w = resize(bounds.width >> lod, stride);
+				h = resize(bounds.height >> lod, stride);
+				scale = (double) max(w, h) / max(bounds.width, bounds.height);
 			}
 		}
 		
