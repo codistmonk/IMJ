@@ -6,7 +6,9 @@ import static java.lang.Math.min;
 import static java.lang.Math.pow;
 import static multij.tools.Tools.*;
 import static multij.xml.XMLTools.*;
+
 import imj2.tools.BigBitSet;
+
 import imj3.core.Channels;
 import imj3.core.Image2D;
 import imj3.tools.GroundTruth2Bin;
@@ -25,11 +27,14 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.function.Predicate;
 
 import multij.swing.SwingTools;
 import multij.tools.Canvas;
@@ -61,14 +66,7 @@ public final class SVG2Bin {
 		final int patchSize = arguments.get("patchSize", 32)[0];
 		final String svgPath = arguments.get("svg", baseName(imagePath) + ".svg");
 		final File svgFile = new File(svgPath);
-		final File classesFile = new File(arguments.get("classes", new File(svgFile.getParentFile(), "classes.xml").getPath()));
 		final Document svg = readXML(svgFile);
-		final Document classes = readXML(classesFile);
-		final boolean forceNegativeRegion = arguments.get("forceNegativeRegion", 0)[0] != 0;
-		final String[] userClassIds =  arguments.get("classIds", join(",",
-				getNodes(classes, "//class").stream().map(node -> ((Element) node).getAttribute("id")).toArray())).split(",");
-		final boolean useNegativeRegion = userClassIds.length == 1 || forceNegativeRegion;
-		final String[] classIds = append(useNegativeRegion ? array("") : array(), userClassIds);
 		final Image2D image = IMJTools.read(imagePath, lod);
 		final long seed = Long.decode(arguments.get("seed", "0"));
 		final boolean balance = arguments.get("balance", 1)[0] != 0;
@@ -77,15 +75,18 @@ public final class SVG2Bin {
 		final List<Region> regions = new ArrayList<>();
 		final double scale = pow(2.0, -lod);
 		final AffineTransform scaling = AffineTransform.getScaleInstance(scale, scale);
-		final Area negativeRegion = useNegativeRegion ? new Area(new Rectangle(image.getWidth(), image.getHeight())) : null;
+		final int negativeRegionLabel = arguments.get("negativeRegionLabel", -1)[0];
+		final Area negativeRegion = negativeRegionLabel != -1 ? new Area(new Rectangle(image.getWidth(), image.getHeight())) : null;
 		final double trainRatio = Double.parseDouble(arguments.get("trainRatio", Double.toString(GroundTruth2Bin.TRAIN_RATIO)));
+		final String[] classIds = getClassIdsArray(arguments.get("classIds", ""), svg);
+		final String outputPrefix = arguments.get("outputPrefix", baseName(svgPath));
 		
 		debugPrint("iamgePath:", imagePath);
 		debugPrint("LOD:", lod, "imageWidth:", image.getWidth(), "imageWidth:", image.getHeight(), "imageChannels:", image.getChannels());
 		debugPrint("svgPath:", svgPath);
 		debugPrint("classIds", Arrays.toString(classIds));
 		
-		collectRegions(svg, classIds, scaling, negativeRegion, 0, regions);
+		collectRegions(svg, classIds, scaling, negativeRegion, negativeRegionLabel, regions);
 		
 		debugPrint("regionCount:", regions.size());
 		
@@ -108,8 +109,8 @@ public final class SVG2Bin {
 			
 			Collections.shuffle(items, random);
 			
-			final String trainOutputPath = baseName(svgPath) + (trainRatio == 1.0 ? ".bin" : "_train.bin");
-			final String testOutputPath = baseName(svgPath) + "_test.bin";
+			final String trainOutputPath = outputPrefix + (trainRatio == 1.0 ? ".bin" : "_train.bin");
+			final String testOutputPath = outputPrefix + "_test.bin";
 			
 			writeBins(items, trainRatio, trainOutputPath, testOutputPath);
 			
@@ -285,6 +286,27 @@ public final class SVG2Bin {
 		}
 		
 		return -1;
+	}
+	
+	public static final String[] getClassIdsArray(final String classIdsAsString, final Document svg) {
+		final Collection<String> classIdsAsSet = new LinkedHashSet<>();
+		Arrays.stream(classIdsAsString.split(",")).filter(not(String::isEmpty)).forEach(classIdsAsSet::add);
+		
+		if (classIdsAsSet.isEmpty() && svg != null) {
+			for (final Node node : getNodes(svg, "//*")) {
+				final Node attribute = node.getAttributes().getNamedItem("imj:classId");
+				
+				if (attribute != null) {
+					classIdsAsSet.add(attribute.getNodeValue());
+				}
+			}
+		}
+		
+		return classIdsAsSet.toArray(new String[classIdsAsSet.size()]);
+	}
+	
+	public static <T> Predicate<T> not(final Predicate<T> t) {
+	    return t.negate();
 	}
 	
 }
