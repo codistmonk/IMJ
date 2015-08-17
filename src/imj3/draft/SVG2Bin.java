@@ -179,22 +179,25 @@ public final class SVG2Bin {
 		final BigBitSet[] result = new BigBitSet[classCount];
 		
 		for (int label = 0; label < classCount; ++label) {
-			final long labelSize = sizes.get(label);
-			final long n = min(labelSize, classLimit);
-			final BigBitSet selection = new BigBitSet(labelSize);
-			result[label] = selection;
+			final long labelSize = sizes.getOrDefault(label, 0L);
 			
-			for (long i = 0L; i < n; ++i) {
-				selection.set(i, true);
-			}
-			
-			if (n < labelSize) {
-				for (long i = 0; i < labelSize; ++i) {
-					final long j = (random.nextLong() & (~0L >>> 1)) % labelSize;
-					final boolean tmp = selection.get(i);
-					
-					selection.set(i, selection.get(j));
-					selection.set(j, tmp);
+			if (0L < labelSize) {
+				final long n = min(labelSize, classLimit);
+				final BigBitSet selection = new BigBitSet(labelSize);
+				result[label] = selection;
+				
+				for (long i = 0L; i < n; ++i) {
+					selection.set(i, true);
+				}
+				
+				if (n < labelSize) {
+					for (long i = 0; i < labelSize; ++i) {
+						final long j = (random.nextLong() & (~0L >>> 1)) % labelSize;
+						final boolean tmp = selection.get(i);
+						
+						selection.set(i, selection.get(j));
+						selection.set(j, tmp);
+					}
 				}
 			}
 		}
