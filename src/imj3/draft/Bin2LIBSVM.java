@@ -34,18 +34,19 @@ public final class Bin2LIBSVM {
 		try (final InputStream input = new FileInputStream(binPath);
 				final PrintStream output = new PrintStream(outPath)) {
 			while (input.read(item) == itemSize) {
-				output.print(0xFF & item[0]);
+				final StringBuilder line = new StringBuilder();
+				
+				line.append(0xFF & item[0]);
 				
 				for (int i = 1; i < itemSize; ++i) {
 					final int value = 0xFF & item[i];
 					
 					if (value != 0) {
-						output.print(" ");
-						output.print(i);
-						output.print(":");
-						output.println(value);
+						line.append(' ').append(i).append(':').append(value);
 					}
 				}
+				
+				output.println(line);
 			}
 		}
 	}
