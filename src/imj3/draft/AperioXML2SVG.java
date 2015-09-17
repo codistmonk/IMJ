@@ -258,6 +258,8 @@ public final class AperioXML2SVG {
 			}
 		}
 		
+		classesXML.getDocumentElement().setAttribute("nextId", "" + nextId[0]);
+		
 		final File classesFile = new File(outputRoot, "classes.xml");
 		
 		debugPrint("Writing", classesFile);
