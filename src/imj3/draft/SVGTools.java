@@ -107,7 +107,7 @@ public final class SVGTools {
 	public static final Map<String, List<Area>> getRegions(final Document svg) {
 		final Map<String, List<Area>> result = new TreeMap<>();
 		
-		for (final Node regionNode : getNodes(svg, "//path|//polygon")) {
+		for (final Node regionNode : getRegionElements(svg)) {
 			final Element regionElement = (Element) regionNode;
 			final String classId = regionElement.getAttribute("imj:classId");
 			
@@ -115,6 +115,11 @@ public final class SVGTools {
 		}
 		
 		return result;
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final List<Element> getRegionElements(final Document svg) {
+		return (List<Element>) (Object) getNodes(svg, "//path|//polygon");
 	}
 	
 	public static final Map<String, Double> getClassSurfaces(final Shape shape, final Map<String, List<Area>> regions) {
