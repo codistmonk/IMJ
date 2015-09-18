@@ -12,7 +12,6 @@ import org.w3c.dom.Element;
 
 import multij.tools.CommandLineArgumentsParser;
 import multij.tools.IllegalInstantiationException;
-import multij.tools.Tools;
 import multij.xml.XMLTools;
 
 /**

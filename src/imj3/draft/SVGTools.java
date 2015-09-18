@@ -24,12 +24,11 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeMap;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-
 import multij.tools.CommandLineArgumentsParser;
 import multij.tools.IllegalInstantiationException;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 /**
  * @author codistmonk (creation 2015-07-21)
@@ -86,6 +85,8 @@ public final class SVGTools {
 		try {
 			return readXML(file);
 		} catch (final Exception exception) {
+			ignore(exception);
+			
 			return null;
 		}
 	}
@@ -105,13 +106,21 @@ public final class SVGTools {
 	}
 	
 	public static final Map<String, List<Area>> getRegions(final Document svg) {
+		return getRegions(svg, null);
+	}
+	
+	public static final Map<String, List<Area>> getRegions(final Document svg, final Map<Object, Object> regionElements) {
 		final Map<String, List<Area>> result = new TreeMap<>();
 		
-		for (final Node regionNode : getRegionElements(svg)) {
-			final Element regionElement = (Element) regionNode;
+		for (final Element regionElement : getRegionElements(svg)) {
 			final String classId = regionElement.getAttribute("imj:classId");
+			final Area region = newRegion(regionElement);
 			
-			result.computeIfAbsent(classId, k -> new ArrayList<>()).add(newRegion(regionElement));
+			result.computeIfAbsent(classId, k -> new ArrayList<>()).add(region);
+			
+			if (regionElements != null) {
+				regionElements.put(region, regionElement);
+			}
 		}
 		
 		return result;
