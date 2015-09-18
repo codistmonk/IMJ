@@ -23,6 +23,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeMap;
+import java.util.regex.Pattern;
 
 import multij.tools.CommandLineArgumentsParser;
 import multij.tools.IllegalInstantiationException;
@@ -43,7 +44,7 @@ public final class SVGTools {
 	
 	public static final String NUMERICAL = "0-9.-";
 	
-	public static final String COMMAND_PATTERN = "[" + COMMANDS + "]";
+	public static final Pattern COMMAND_PATTERN = Pattern.compile("[" + COMMANDS + "]");
 	
 	public static final String NUMBER_PATTERN = "[" + NUMERICAL + "]+";
 
@@ -220,7 +221,7 @@ public final class SVGTools {
 				double firstY = 0.0;
 				double lastX = 0.0;
 				double lastY = 0.0;
-				String command = nextCommand(scanner);
+				String command = nextCommand(scanner, "M");
 				
 				while (scanner.hasNext()) {
 					final boolean relative = Character.isLowerCase(command.charAt(0));
@@ -270,9 +271,7 @@ public final class SVGTools {
 						lastY = y;
 					}
 					
-					if (scanner.hasNext(COMMAND_PATTERN)) {
-						command = nextCommand(scanner);
-					}
+					command = nextCommand(scanner, command);
 				}
 			}
 		}
@@ -280,10 +279,10 @@ public final class SVGTools {
 		return new Area(path);
 	}
 	
-	public static final String nextCommand(final Scanner scanner) {
+	public static final String nextCommand(final Scanner scanner, final String oldCommand) {
 		scanner.useDelimiter(" *");
 		
-		final String result = scanner.next(COMMAND_PATTERN);
+		final String result = scanner.hasNext(COMMAND_PATTERN) ? scanner.next(COMMAND_PATTERN) : oldCommand;
 		
 		scanner.useDelimiter("[^" + NUMERICAL + "]+");
 		
