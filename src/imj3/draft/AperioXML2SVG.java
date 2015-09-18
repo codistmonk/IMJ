@@ -201,6 +201,7 @@ public final class AperioXML2SVG {
 				}
 			}
 			
+			int objectId = 0;
 			// create_SVG_paths_from_regions:
 			for (final Region region : regions) {
 				final PathIterator pathIterator = region.getArea().getPathIterator(new AffineTransform());
@@ -231,6 +232,7 @@ public final class AperioXML2SVG {
 				svgRegion.setAttribute("d", pathData.toString());
 				svgRegion.setAttribute("style", "fill:" + formatColor(region.getColor().getRGB()));
 				svgRegion.setAttribute("imj:classId", region.getClassId());
+				svgRegion.setAttribute("imj:objectId", "" + (++objectId));
 			}
 			
 			svgRoot.setAttribute("width", Integer.toString((int) lastX + 1));
