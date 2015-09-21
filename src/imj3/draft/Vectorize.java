@@ -2,6 +2,7 @@ package imj3.draft;
 
 import static imj2.topology.Manifold.*;
 import static imj2.topology.Manifold.Traversor.*;
+import static imj3.draft.SVGTools.*;
 import static imj3.draft.Vectorize.WeakProperties.weakProperties;
 import static imj3.tools.CommonTools.formatColor;
 import static java.lang.Math.*;
@@ -76,7 +77,7 @@ public final class Vectorize {
 		final String outputPath = arguments.get("output", baseName(imagePath) + ".svg");
 		final int quantization = arguments.get("quantization", 0)[0];
 		final int smoothing = arguments.get("smoothing", 2)[0];
-		final double flattening = Double.parseDouble(arguments.get("flattening", Double.toString(PI / 8.0)));
+		final double flattening = Double.parseDouble(arguments.get("flattening", Double.toString(PI / 16.0)));
 		final boolean binary = arguments.get("binary", 0)[0] != 0;
 		final int forcedWidth = arguments.get("width", 0)[0];
 		final int forcedHeight = arguments.get("height", 0)[0];
@@ -141,6 +142,7 @@ public final class Vectorize {
 		final double[] segment = new double[6];
 		final Document svg = parse("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:imj=\"IMJ\"/>");
 		final Element svgRoot  = svg.getDocumentElement();
+		int objectId = 0;
 		
 		for (final Map.Entry<Integer, ? extends Collection<? extends Shape>> entry : shapes.entrySet()) {
 			for (final Shape s : entry.getValue()) {
@@ -180,6 +182,9 @@ public final class Vectorize {
 					svgRegion.setAttribute("d", pathData.toString());
 					svgRegion.setAttribute("style", "fill:" + formatColor(entry.getKey()));
 					svgRegion.setAttribute("imj:classId", classId);
+					svgRegion.setAttribute("imj:objectId", "" + (++objectId));
+					svgRegion.setAttribute("imj:area", "" + getSurface(s, 1.0));
+					svgRegion.setAttribute("imj:perimeter", "" + getPerimeter(s, 1.0));
 				}
 			}
 		}
