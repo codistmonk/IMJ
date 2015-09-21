@@ -152,21 +152,25 @@ public final class SVGTools {
 		
 		return result;
 	}
-
-	public static double getSurface(final Shape shape, final double flatness) {
-		final double[] surface = { 0.0 };
-		final PathIterator pathIterator = shape.getPathIterator(new AffineTransform(), flatness);
+	
+	public static final double getSurface(final Shape shape, final double flatness) {
+		return getSurface(shape, new AffineTransform(), flatness);
+	}
+	
+	public static final double getSurface(final Shape shape, final AffineTransform transform, final double flatness) {
+		final PathIterator pathIterator = shape.getPathIterator(transform, flatness);
 		final double[] first = new double[2];
 		final double[] previous = new double[2];
 		final double[] current = new double[2];
+		double sum = 0.0;
 		
 		while (!pathIterator.isDone()) {
 			switch (pathIterator.currentSegment(current)) {
 			case PathIterator.SEG_CLOSE:
-				surface[0] -= previous[0] * first[1] - previous[1] * first[0];
+				sum -= previous[0] * first[1] - previous[1] * first[0];
 				break;
 			case PathIterator.SEG_LINETO:
-				surface[0] -= previous[0] * current[1] - previous[1] * current[0];
+				sum -= previous[0] * current[1] - previous[1] * current[0];
 				System.arraycopy(current, 0, previous, 0, 2);
 				break;
 			case PathIterator.SEG_MOVETO:
@@ -181,10 +185,7 @@ public final class SVGTools {
 			pathIterator.next();
 		}
 		
-		surface[0] /= 2.0;
-		
-		final double s = surface[0];
-		return s;
+		return sum / 2.0;
 	}
 	
 	public static final Area newRegion(final Element svgShape) {
