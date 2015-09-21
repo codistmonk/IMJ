@@ -83,6 +83,8 @@ public final class Vectorize {
 		final int forcedHeight = arguments.get("height", 0)[0];
 		final boolean rescale = arguments.get("rescale", 0)[0] != 0;
 		final Collection<String> excludedIds = Arrays.stream(arguments.get("exclude", "").split(",")).collect(Collectors.toSet());
+		final String classesPath = arguments.get("classes", "");
+		final Document classes = classesPath.isEmpty() ? null : readXML(new File(classesPath));
 		
 		debug.set(arguments.get("debug", 0)[0] != 0);
 		
@@ -106,7 +108,7 @@ public final class Vectorize {
 			{
 				debugPrint("Creating SVG...");
 				final List<String> classIds = classIdsPath.isEmpty() ? null : Files.readAllLines(new File(classIdsPath).toPath());
-				final Document svg = toSVG(shapes, classIds, binary, excludedIds);
+				final Document svg = toSVG(shapes, classIds, classes, binary, excludedIds);
 				
 				svg.getDocumentElement().setAttribute("width", Integer.toString(width));
 				svg.getDocumentElement().setAttribute("height", Integer.toString(height));
@@ -137,7 +139,7 @@ public final class Vectorize {
 	}
 	
 	public static final Document toSVG(final Map<Integer, ? extends Collection<? extends Shape>> shapes,
-			final List<String> classIds, final boolean binary, final Collection<String> excludedIds) {
+			final List<String> classIds, final Document classes, final boolean binary, final Collection<String> excludedIds) {
 		final AffineTransform identity = new AffineTransform();
 		final double[] segment = new double[6];
 		final Document svg = parse("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:imj=\"IMJ\"/>");
@@ -150,6 +152,18 @@ public final class Vectorize {
 			
 			if (excludedIds.contains(classId)) {
 				continue;
+			}
+			
+			String color = formatColor(entry.getKey());
+			
+			if (classes != null) {
+				final Element classNode = (Element) XMLTools.getNode(classes, "//class[@id='" + classId + "']");
+				
+				if (classNode != null) {
+					color = classNode.getAttribute("preferredColor");
+				} else {
+					debugError("ClassId not found:", classId);
+				}
 			}
 			
 			for (final Shape s : entry.getValue()) {
@@ -184,7 +198,7 @@ public final class Vectorize {
 					final Element svgRegion = (Element) svgRoot.appendChild(svg.createElement("path"));
 					
 					svgRegion.setAttribute("d", pathData.toString());
-					svgRegion.setAttribute("style", "fill:" + formatColor(entry.getKey()));
+					svgRegion.setAttribute("style", "fill:" + color);
 					svgRegion.setAttribute("imj:classId", classId);
 					svgRegion.setAttribute("imj:objectId", "" + (++objectId));
 					svgRegion.setAttribute("imj:area", "" + abs(getSurface(s, 1.0)));
