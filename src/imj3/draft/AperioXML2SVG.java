@@ -1,6 +1,8 @@
 package imj3.draft;
 
+import static imj3.draft.SVGTools.*;
 import static imj3.tools.CommonTools.formatColor;
+import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static multij.tools.Tools.array;
 import static multij.tools.Tools.baseName;
@@ -233,6 +235,8 @@ public final class AperioXML2SVG {
 				svgRegion.setAttribute("style", "fill:" + formatColor(region.getColor().getRGB()));
 				svgRegion.setAttribute("imj:classId", region.getClassId());
 				svgRegion.setAttribute("imj:objectId", "" + (++objectId));
+				svgRegion.setAttribute("imj:area", "" + abs(getSurface(region.getArea(), 1.0)));
+				svgRegion.setAttribute("imj:perimeter", "" + getPerimeter(region.getArea(), 1.0));
 			}
 			
 			svgRoot.setAttribute("width", Integer.toString((int) lastX + 1));

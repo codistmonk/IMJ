@@ -1,5 +1,7 @@
 package imj3.draft;
 
+import static java.lang.Math.sqrt;
+import static multij.tools.MathTools.square;
 import static multij.tools.Tools.*;
 import static multij.xml.XMLTools.getNodes;
 import static multij.xml.XMLTools.parse;
@@ -23,6 +25,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeMap;
+import java.util.function.BiFunction;
 import java.util.regex.Pattern;
 
 import multij.tools.CommandLineArgumentsParser;
@@ -47,7 +50,9 @@ public final class SVGTools {
 	public static final Pattern COMMAND_PATTERN = Pattern.compile("[" + COMMANDS + "]");
 	
 	public static final String NUMBER_PATTERN = "[" + NUMERICAL + "]+";
-
+	
+	private static final AffineTransform IDENTITY = new AffineTransform();
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
@@ -154,23 +159,38 @@ public final class SVGTools {
 	}
 	
 	public static final double getSurface(final Shape shape, final double flatness) {
-		return getSurface(shape, new AffineTransform(), flatness);
+		return getSurface(shape, IDENTITY, flatness);
 	}
 	
 	public static final double getSurface(final Shape shape, final AffineTransform transform, final double flatness) {
+		return getMeasurement(shape, transform, flatness,
+				(previous, current) -> previous[0] * current[1] - previous[1] * current[0]) / 2.0;
+	}
+	
+	public static final double getPerimeter(final Shape shape, final double flatness) {
+		return getPerimeter(shape, IDENTITY, flatness);
+	}
+	
+	public static final double getPerimeter(final Shape shape, final AffineTransform transform, final double flatness) {
+		return getMeasurement(shape, transform, flatness,
+				(previous, current) -> sqrt(square(current[0] - previous[0]) + square(current[0] - previous[0])));
+	}
+	
+	public static final double getMeasurement(final Shape shape, final AffineTransform transform, final double flatness,
+			final BiFunction<double[], double[], Double> getDelta) {
 		final PathIterator pathIterator = shape.getPathIterator(transform, flatness);
 		final double[] first = new double[2];
 		final double[] previous = new double[2];
 		final double[] current = new double[2];
-		double sum = 0.0;
+		double result = 0.0;
 		
 		while (!pathIterator.isDone()) {
 			switch (pathIterator.currentSegment(current)) {
 			case PathIterator.SEG_CLOSE:
-				sum -= previous[0] * first[1] - previous[1] * first[0];
+				result += getDelta.apply(previous, first);
 				break;
 			case PathIterator.SEG_LINETO:
-				sum -= previous[0] * current[1] - previous[1] * current[0];
+				result += getDelta.apply(previous, current);
 				System.arraycopy(current, 0, previous, 0, 2);
 				break;
 			case PathIterator.SEG_MOVETO:
@@ -185,7 +205,7 @@ public final class SVGTools {
 			pathIterator.next();
 		}
 		
-		return sum / 2.0;
+		return result;
 	}
 	
 	public static final Area newRegion(final Element svgShape) {
