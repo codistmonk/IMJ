@@ -183,7 +183,7 @@ public final class Vectorize {
 					svgRegion.setAttribute("style", "fill:" + formatColor(entry.getKey()));
 					svgRegion.setAttribute("imj:classId", classId);
 					svgRegion.setAttribute("imj:objectId", "" + (++objectId));
-					svgRegion.setAttribute("imj:area", "" + getSurface(s, 1.0));
+					svgRegion.setAttribute("imj:area", "" + abs(getSurface(s, 1.0)));
 					svgRegion.setAttribute("imj:perimeter", "" + getPerimeter(s, 1.0));
 				}
 			}
