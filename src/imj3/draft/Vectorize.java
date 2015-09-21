@@ -145,6 +145,13 @@ public final class Vectorize {
 		int objectId = 0;
 		
 		for (final Map.Entry<Integer, ? extends Collection<? extends Shape>> entry : shapes.entrySet()) {
+			final int label = entry.getKey() & 0x00FFFFFF;
+			final String classId = classIds == null ? Integer.toString(label) : classIds.get(binary ? (label != 0 ? 1 : 0) : label);
+			
+			if (excludedIds.contains(classId)) {
+				continue;
+			}
+			
 			for (final Shape s : entry.getValue()) {
 				final StringBuilder pathData = new StringBuilder();
 				
@@ -173,10 +180,7 @@ public final class Vectorize {
 					}
 				}
 				
-				final int label = entry.getKey() & 0x00FFFFFF;
-				final String classId = classIds == null ? Integer.toString(label) : classIds.get(binary ? (label != 0 ? 1 : 0) : label);
-				
-				if (!excludedIds.contains(classId)) {
+				{
 					final Element svgRegion = (Element) svgRoot.appendChild(svg.createElement("path"));
 					
 					svgRegion.setAttribute("d", pathData.toString());
@@ -584,7 +588,7 @@ public final class Vectorize {
 	}
 	
 	public static final int quantizeRGB(final int rgb, final int quantization) {
-		return rgb & (0x01010101 * (((~1) << quantization) & 0xFF));
+		return rgb & (0x01010101 * (((~0) << quantization) & 0xFF));
 	}
 	
 	public static final void processInternalDart(final int dart, final Point2D location, final int imageWidth, final int imageHeight, final Polygon polygon) {
