@@ -64,6 +64,8 @@ public final class Vectorize {
 	
 	private static final int BOTTOM_OFFSET = 2;
 	
+	private static final AffineTransform IDENTITY = new AffineTransform();
+	
 	static final AtomicBoolean debug = new AtomicBoolean();
 	
 	/**
@@ -140,9 +142,7 @@ public final class Vectorize {
 	
 	public static final Document toSVG(final Map<Integer, ? extends Collection<? extends Shape>> shapes,
 			final List<String> classIds, final Document classes, final boolean binary, final Collection<String> excludedIds) {
-		final AffineTransform identity = new AffineTransform();
-		final double[] segment = new double[6];
-		final Document svg = parse("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:imj=\"IMJ\"/>");
+		final Document svg = newSVG();
 		final Element svgRoot  = svg.getDocumentElement();
 		int objectId = 0;
 		
@@ -167,46 +167,59 @@ public final class Vectorize {
 			}
 			
 			for (final Shape s : entry.getValue()) {
-				final StringBuilder pathData = new StringBuilder();
-				
-				for (final PathIterator pathIterator = s.getPathIterator(identity, 1.0);
-						!pathIterator.isDone(); pathIterator.next()) {
-					switch (pathIterator.currentSegment(segment)) {
-					case PathIterator.SEG_CLOSE:
-						pathData.append('Z');
-						break;
-					case PathIterator.SEG_CUBICTO:
-						pathData.append('C');
-						pathData.append(join(" ", segment, 6));
-						break;
-					case PathIterator.SEG_LINETO:
-						pathData.append('L');
-						pathData.append(join(" ", segment, 2));
-						break;
-					case PathIterator.SEG_MOVETO:
-						pathData.append('M');
-						pathData.append(join(" ", segment, 2));
-						break;
-					case PathIterator.SEG_QUADTO:
-						pathData.append('Q');
-						pathData.append(join(" ", segment, 4));
-						break;
-					}
-				}
-				
-				{
-					final Element svgRegion = (Element) svgRoot.appendChild(svg.createElement("path"));
-					
-					svgRegion.setAttribute("d", pathData.toString());
-					svgRegion.setAttribute("style", "fill:" + color);
-					svgRegion.setAttribute("imj:classId", classId);
-					svgRegion.setAttribute("imj:objectId", "" + (++objectId));
-					svgRegion.setAttribute("imj:area", "" + abs(getSurface(s, 1.0)));
-					svgRegion.setAttribute("imj:perimeter", "" + getPerimeter(s, 1.0));
-				}
+				svgRoot.appendChild(newSVGElement(s, ++objectId, classId, color, svg));
 			}
 		}
+		
 		return svg;
+	}
+	
+	public static final Document newSVG() {
+		return parse("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:imj=\"IMJ\"/>");
+	}
+	
+	public static final Element newSVGElement(final Shape shape, final int objectId, final String classId, final String color,
+			final Document svg) {
+		final double[] segment = new double[6];
+		final StringBuilder pathData = new StringBuilder();
+		
+		for (final PathIterator pathIterator = shape.getPathIterator(IDENTITY, 1.0);
+				!pathIterator.isDone(); pathIterator.next()) {
+			switch (pathIterator.currentSegment(segment)) {
+			case PathIterator.SEG_CLOSE:
+				pathData.append('Z');
+				break;
+			case PathIterator.SEG_CUBICTO:
+				pathData.append('C');
+				pathData.append(join(" ", segment, 6));
+				break;
+			case PathIterator.SEG_LINETO:
+				pathData.append('L');
+				pathData.append(join(" ", segment, 2));
+				break;
+			case PathIterator.SEG_MOVETO:
+				pathData.append('M');
+				pathData.append(join(" ", segment, 2));
+				break;
+			case PathIterator.SEG_QUADTO:
+				pathData.append('Q');
+				pathData.append(join(" ", segment, 4));
+				break;
+			}
+		}
+		
+		{
+			final Element result = svg.createElement("path");
+			
+			result.setAttribute("d", pathData.toString());
+			result.setAttribute("style", "fill:" + color);
+			result.setAttribute("imj:classId", classId);
+			result.setAttribute("imj:objectId", "" + objectId);
+			result.setAttribute("imj:area", "" + abs(getSurface(shape, 1.0)));
+			result.setAttribute("imj:perimeter", "" + getPerimeter(shape, 1.0));
+			
+			return result;
+		}
 	}
 	
 	public static final Point2D[] identityClone(final Point2D[] locations) {
