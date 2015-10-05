@@ -76,7 +76,7 @@ public final class AperioXML2SVG {
 		for (final Node node : getNodes(classesXML, "//class")) {
 			final Element element = (Element) node;
 			
-			classIds.put(element.getAttribute("description"), element.getAttribute("id"));
+			classIds.put(element.getAttribute("name") + ":" + element.getAttribute("description"), element.getAttribute("id"));
 		}
 		
 		for (final File aperioFile : aperioFiles) {
@@ -120,7 +120,9 @@ public final class AperioXML2SVG {
 				final String className = ((Element) aperioAnnotation).getAttribute("Name");
 				final String classDescription = ((Element) getNode(aperioAnnotation, "*//Attribute")).getAttribute("Name");
 				final String color = formatColor(Long.decode(((Element) aperioAnnotation).getAttribute("LineColor")));
-				final String classId = classIds.computeIfAbsent(className + ": " + classDescription, d -> {
+				final String key = className + ":" + classDescription;
+				
+				final String classId = classIds.computeIfAbsent(key, d -> {
 					final Element classElement = (Element) classesRoot.appendChild(classesXML.createElement("class"));
 					final String result = Integer.toString(nextId[0]++);
 					
