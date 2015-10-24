@@ -64,6 +64,7 @@ public final class SVG2Bin {
 		final String imagePath = arguments.get("image", "");
 		final int lod = arguments.get("lod", 4)[0];
 		final int patchSize = arguments.get("patchSize", 32)[0];
+		final int[] patchContext = arguments.get("patchContext", 0);
 		final String svgPath = arguments.get("svg", baseName(imagePath) + ".svg");
 		final File svgFile = new File(svgPath);
 		final Document svg = readXML(svgFile);
@@ -105,7 +106,7 @@ public final class SVG2Bin {
 		
 		{
 			final BigBitSet[] selections = generateSelections(classCount, sizes, classLimit, random);
-			final List<byte[]> items = generateItems(image, patchSize, regions, selectionSize, classCount, selections);
+			final List<byte[]> items = generateItems(image, patchSize, patchContext, regions, selectionSize, classCount, selections);
 			
 			Collections.shuffle(items, random);
 			
@@ -151,7 +152,7 @@ public final class SVG2Bin {
 	}
 	
 	public static final List<byte[]> generateItems(final Image2D image,
-			final int patchSize, final List<Region> regions,
+			final int patchSize, final int[] patchContext, final List<Region> regions,
 			final long selectionSize, final int classCount,
 			final BigBitSet[] selections) {
 		final List<byte[]> items = new ArrayList<>((int) selectionSize);
@@ -167,7 +168,7 @@ public final class SVG2Bin {
 			for (int y = 0; y < height; ++y) {
 				for (int x = 0; x < width; ++x) {
 					if ((mask.getRGB(x, y) & 1) != 0 && selections[label].get(++selectionIndices[label])) {
-						items.add(getItem(image, bounds.x + x, bounds.y + y, patchSize, label, null));
+						items.add(getItem(image, bounds.x + x, bounds.y + y, patchSize, patchContext, label, null));
 					}
 				}
 			}
@@ -248,6 +249,31 @@ public final class SVG2Bin {
 				exception.printStackTrace();
 			}
 		}
+	}
+	
+	public static final byte[] getItem(final Image2D image, final int x, final int y, final int patchSize, final int[] patchContext,
+			final byte classIndex, final byte[] result) {
+		final Channels channels = image.getChannels();
+		final int channelCount = channels.getChannelCount();
+		final int planeSize = patchSize * patchSize;
+		final int contextSize = channelCount * planeSize;
+		final int n = patchContext.length;
+		final byte[] actualResult = result != null ? result : new byte[1 + contextSize * n];
+		final byte[] partialResult = new byte[1 + contextSize];
+		final double scale = image.getScale();
+		
+		for (int i = 0; i < n; ++i) {
+			final int deltaLOD = patchContext[i];
+			final double k = pow(2.0, -deltaLOD);
+			
+			getItem(image.getScaledImage(scale * k), (int) (x * k), (int) (y * k), patchSize, classIndex, partialResult);
+			
+			System.arraycopy(partialResult, 1, actualResult, 1 + contextSize * i, contextSize);
+		}
+		
+		actualResult[0] = classIndex;
+		
+		return actualResult;
 	}
 	
 	public static final byte[] getItem(final Image2D image, final int x, final int y, final int patchSize,
