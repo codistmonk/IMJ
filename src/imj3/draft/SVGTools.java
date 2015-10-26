@@ -271,8 +271,8 @@ public final class SVGTools {
 					} else if ("qQ".contains(command)) {
 						final double x1 = nextDouble(scanner, relative, lastX);
 						final double y1 = nextDouble(scanner, relative, lastY);
-						final double x = nextDouble(scanner, relative, x1);
-						final double y = nextDouble(scanner, relative, y1);
+						final double x = nextDouble(scanner, relative, lastX);
+						final double y = nextDouble(scanner, relative, lastY);
 						
 						path.quadTo(x1, y1, x, y);
 						
@@ -281,10 +281,10 @@ public final class SVGTools {
 					} else if ("cC".contains(command)) {
 						final double x1 = nextDouble(scanner, relative, lastX);
 						final double y1 = nextDouble(scanner, relative, lastY);
-						final double x2 = nextDouble(scanner, relative, x1);
-						final double y2 = nextDouble(scanner, relative, y1);
-						final double x = nextDouble(scanner, relative, x2);
-						final double y = nextDouble(scanner, relative, y2);
+						final double x2 = nextDouble(scanner, relative, lastX);
+						final double y2 = nextDouble(scanner, relative, lastY);
+						final double x = nextDouble(scanner, relative, lastX);
+						final double y = nextDouble(scanner, relative, lastY);
 						
 						path.curveTo(x1, y1, x2, y2, x, y);
 						
