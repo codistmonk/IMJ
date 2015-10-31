@@ -1,5 +1,6 @@
 package imj3.draft;
 
+import static java.lang.Math.abs;
 import static java.lang.Math.sqrt;
 import static multij.tools.MathTools.square;
 import static multij.tools.Tools.*;
@@ -312,6 +313,73 @@ public final class SVGTools {
 	
 	public static final double nextDouble(final Scanner scanner, final boolean relative, final double last) {
 		return scanner.nextDouble() + (relative ? last : 0.0);
+	}
+	
+	public static final Document newSVG(final int width, final int height) {
+		return parse("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:imj=\"IMJ\" width=\"" + width + "\" height=\"" + height + "\"/>");
+	}
+	
+	public static final void addTo(final Document svg, final Shape s, final int rgb, final String classId, final String objectId) {
+		final Element svgRoot = svg.getDocumentElement();
+		final StringBuilder pathData = new StringBuilder();
+		final double[] segment = new double[6];
+		
+		for (final PathIterator pathIterator = s.getPathIterator(IDENTITY);
+				!pathIterator.isDone(); pathIterator.next()) {
+			final int segmentType = pathIterator.currentSegment(segment);
+			
+			switch (segmentType) {
+			case PathIterator.SEG_CLOSE:
+				pathData.append('Z');
+				break;
+			case PathIterator.SEG_CUBICTO:
+				pathData.append('C');
+				pathData.append(join(" ", segment, 6));
+				break;
+			case PathIterator.SEG_LINETO:
+				pathData.append('L');
+				pathData.append(join(" ", segment, 2));
+				break;
+			case PathIterator.SEG_MOVETO:
+				pathData.append('M');
+				pathData.append(join(" ", segment, 2));
+				break;
+			case PathIterator.SEG_QUADTO:
+				pathData.append('Q');
+				pathData.append(join(" ", segment, 4));
+				break;
+			default:
+				debugError("Unhandled segment type:", segmentType);
+			}
+		}
+		
+		final Element svgRegion = (Element) svgRoot.appendChild(svg.createElement("path"));
+		
+		svgRegion.setAttribute("d", pathData.toString());
+		svgRegion.setAttribute("style", "fill:" + formatColor(rgb));
+		svgRegion.setAttribute("imj:classId", classId);
+		svgRegion.setAttribute("imj:objectId", objectId);
+		svgRegion.setAttribute("imj:area", "" + abs(getSurface(s, 1.0)));
+		svgRegion.setAttribute("imj:perimeter", "" + getPerimeter(s, 1.0));
+	}
+	
+	public static final String formatColor(final long color) {
+		return "#" + String.format("%06X", color & 0x00FFFFFF);
+	}
+	
+	public static final String join(final String separator, final double[] array, final int n) {
+		final StringBuilder resultBuilder = new StringBuilder();
+		
+		if (0 < n) {
+			resultBuilder.append(array[0]);
+			
+			for (int i = 1; i < n; ++i) {
+				resultBuilder.append(separator);
+				resultBuilder.append(array[i]);
+			}
+		}
+		
+		return resultBuilder.toString();
 	}
 	
 	/**
