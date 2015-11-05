@@ -29,6 +29,7 @@ public final class Binarize {
 		final String imagePath = arguments.get("image", "");
 		final String outputPath = arguments.get("output", baseName(imagePath) + "_mask.png");
 		final String outputFormat = arguments.get("outputFormat", outputPath.substring(outputPath.lastIndexOf(".") + 1));
+		final int zero = arguments.get("zero", 0)[0];
 		final BufferedImage image = ImageIO.read(new File(imagePath));
 		final BufferedImage result = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_BINARY);
 		final int width = image.getWidth();
@@ -36,7 +37,7 @@ public final class Binarize {
 		
 		for (int y = 0; y < height; ++y) {
 			for (int x = 0; x < width; ++x) {
-				if ((image.getRGB(x, y) & 0x00FFFFFF) != 0) {
+				if ((image.getRGB(x, y) & 0x00FFFFFF) != zero) {
 					result.setRGB(x, y, ~0);
 				}
 			}
