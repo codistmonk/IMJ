@@ -82,7 +82,7 @@ public final class SVG2Bin {
 		final String[] classIds = getClassIdsArray(arguments.get("classIds", ""), svg);
 		final String outputPrefix = arguments.get("outputPrefix", baseName(svgPath));
 		
-		debugPrint("iamgePath:", imagePath);
+		debugPrint("imagePath:", imagePath);
 		debugPrint("LOD:", lod, "imageWidth:", image.getWidth(), "imageWidth:", image.getHeight(), "imageChannels:", image.getChannels());
 		debugPrint("svgPath:", svgPath);
 		debugPrint("classIds", Arrays.toString(classIds));
