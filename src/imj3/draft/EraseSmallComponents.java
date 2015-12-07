@@ -42,9 +42,21 @@ public final class EraseSmallComponents {
 		final int threshold = arguments.get("threshold", 0)[0];
 		final Image2D image = read(imagePath);
 		final String outputPath = arguments.get("output", baseName(imagePath) + "_filtered.png");
-		final Image2D mask = newMask(image, "_mask");
 		
 		debugPrint("image:", imagePath);
+		
+		process(image, threshold);
+		
+		try {
+			debugPrint("Writing", outputPath + "...");
+			ImageIO.write((RenderedImage) image.toAwt(), "png", new File(outputPath));
+		} catch (final IOException exception) {
+			exception.printStackTrace();
+		}
+	}
+	
+	public static final void process(final Image2D image, final int threshold) {
+		final Image2D mask = newMask(image, "_mask");
 		
 		for (int currentThreshold = 1; currentThreshold <= threshold; ++currentThreshold) {
 			debugPrint("Removing components below", currentThreshold + " pixels...");
@@ -53,13 +65,6 @@ public final class EraseSmallComponents {
 			final Collection<Long> borderPixels = locateBorderPixels(mask);
 			
 			shrinkBorders(image, mask, borderPixels);
-		}
-		
-		try {
-			debugPrint("Writing", outputPath + "...");
-			ImageIO.write((RenderedImage) image.toAwt(), "png", new File(outputPath));
-		} catch (final IOException exception) {
-			exception.printStackTrace();
 		}
 	}
 	
