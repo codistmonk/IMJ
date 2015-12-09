@@ -122,7 +122,14 @@ public final class SVS2Multifile {
 					final int[] level = { 0 };
 					
 					{
-						final String mpp = Array.get(getFieldValue(((ImageReader) reader).getReader(), "pixelSize"), 0).toString();
+						String mpp = "0";
+						
+						try {
+							mpp = Array.get(getFieldValue(((ImageReader) reader).getReader(), "pixelSize"), 0).toString();
+						} catch (final Exception exception) {
+							exception.printStackTrace();
+						}
+						
 						final Document xml = newMetadata(imageWidth, imageHeight, tileSize, tileSize, tileFormat, mpp, level);
 						
 						output.putNextEntry(new ZipEntry("metadata.xml"));
