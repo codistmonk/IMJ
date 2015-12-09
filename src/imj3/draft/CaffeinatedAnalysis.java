@@ -166,7 +166,7 @@ public final class CaffeinatedAnalysis {
 		mainPanel.setFocusable(true);
 		mainPanel.addKeyListener(new KeyAdapter() {
 			
-			private Collection<String> cacheKeys = new HashSet<>();
+			private final Collection<String> cacheKeys = new HashSet<>();
 			
 			@Override
 			public final void keyPressed(final KeyEvent event) {
