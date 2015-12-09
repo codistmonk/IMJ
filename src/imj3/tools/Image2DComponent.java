@@ -114,46 +114,13 @@ public final class Image2DComponent extends JComponent {
 					return;
 				}
 				
-				final AffineTransform view = Image2DComponent.this.getView();
-				final Point2D center = new Point2D.Double(getWidth() / 2.0, getHeight() / 2.0);
-				final Point2D newCenter = new Point2D.Double(getWidth() / 2.0, getHeight() / 2.0);
+				final int direction = event.getWheelRotation();
+				final double n = 8.0;
+				final double scale = Image2DComponent.this.getView().getScaleX();
+				final double logScale = round(n * log(scale) / log(2.0)) / n;
+				final double newScale = pow(2.0, logScale + signum(direction) / n);
 				
-				try {
-					view.inverseTransform(center, center);
-				} catch (final NoninvertibleTransformException exception) {
-					exception.printStackTrace();
-				}
-				
-//				update_scale:
-				{
-					final double n = 8.0;
-					final double scale = view.getScaleX();
-					final double logScale = round(n * log(scale) / log(2.0)) / n;
-					final double newScale = pow(2.0, logScale + signum(event.getWheelRotation()) / n);
-					
-					view.setTransform(newScale, view.getShearY(), view.getShearX(), newScale, view.getTranslateX(), view.getTranslateY());
-				}
-				
-//				center_view:
-				{
-					try {
-						view.inverseTransform(newCenter, newCenter);
-					} catch (final NoninvertibleTransformException exception) {
-						exception.printStackTrace();
-					}
-					
-					view.translate(-(center.getX() - newCenter.getX()), -(center.getY() - newCenter.getY()));
-					
-					newCenter.setLocation(getWidth() / 2.0, getHeight() / 2.0);
-					
-					try {
-						view.inverseTransform(newCenter, newCenter);
-					} catch (final NoninvertibleTransformException exception) {
-						exception.printStackTrace();
-					}
-				}
-				
-				Image2DComponent.this.repaint();
+				Image2DComponent.this.setViewScale(newScale);
 			}
 			
 			private static final long serialVersionUID = -8787564920294626502L;
@@ -337,6 +304,41 @@ public final class Image2DComponent extends JComponent {
 				overlay.update((Graphics2D) g, this.getVisibleRect());
 			}
 		}
+	}
+	
+	public final void setViewScale(final double newScale) {
+		final AffineTransform view = this.getView();
+		final Point2D center = new Point2D.Double(getWidth() / 2.0, getHeight() / 2.0);
+		final Point2D newCenter = new Point2D.Double(getWidth() / 2.0, getHeight() / 2.0);
+		
+		try {
+			view.inverseTransform(center, center);
+		} catch (final NoninvertibleTransformException exception) {
+			exception.printStackTrace();
+		}
+		
+		view.setTransform(newScale, view.getShearY(), view.getShearX(), newScale, view.getTranslateX(), view.getTranslateY());
+		
+//		center_view:
+		{
+			try {
+				view.inverseTransform(newCenter, newCenter);
+			} catch (final NoninvertibleTransformException exception) {
+				exception.printStackTrace();
+			}
+			
+			view.translate(-(center.getX() - newCenter.getX()), -(center.getY() - newCenter.getY()));
+			
+			newCenter.setLocation(getWidth() / 2.0, getHeight() / 2.0);
+			
+			try {
+				view.inverseTransform(newCenter, newCenter);
+			} catch (final NoninvertibleTransformException exception) {
+				exception.printStackTrace();
+			}
+		}
+		
+		this.repaint();
 	}
 	
 	final Collection<TileKey> getActiveTiles() {
@@ -550,7 +552,10 @@ public final class Image2DComponent extends JComponent {
 		public final synchronized void drop(final DropTargetDropEvent event) {
 			final Image2D newImage = IMJTools.read(SwingTools.getFiles(event).get(0).getPath());
 			
-			SwingUtilities.invokeLater(() -> this.component.setImage(newImage));
+			SwingUtilities.invokeLater(() -> {
+				this.component.setImage(newImage);
+				this.component.setViewScale(min((double) this.component.getWidth() / newImage.getWidth(), (double) this.component.getHeight() / newImage.getHeight()));
+			});
 		}
 		
 		private static final long serialVersionUID = 4728142083998773248L;
