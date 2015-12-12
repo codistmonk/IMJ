@@ -45,7 +45,7 @@ public final class EraseSmallComponents {
 		
 		debugPrint("image:", imagePath);
 		
-		process(image, threshold);
+		process(image, threshold, false);
 		
 		try {
 			debugPrint("Writing", outputPath + "...");
@@ -55,11 +55,13 @@ public final class EraseSmallComponents {
 		}
 	}
 	
-	public static final void process(final Image2D image, final int threshold) {
+	public static final void process(final Image2D image, final int threshold, final boolean quiet) {
 		final Image2D mask = newMask(image, "_mask");
 		
 		for (int currentThreshold = 1; currentThreshold <= threshold; ++currentThreshold) {
-			debugPrint("Removing components below", currentThreshold + " pixels...");
+			if (!quiet) {
+				debugPrint("Removing components below", currentThreshold + " pixels...");
+			}
 			
 			locateSmallComponents(image, currentThreshold, mask);
 			final Collection<Long> borderPixels = locateBorderPixels(mask);
