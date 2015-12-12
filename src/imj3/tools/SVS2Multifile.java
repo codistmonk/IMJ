@@ -156,6 +156,8 @@ public final class SVS2Multifile {
 						}
 					}
 					
+					timer.toc();
+					
 					debugPrint(fileName, "done in", timer.getTotalTime(), "ms");
 					
 					for (final Exception problem : problems) {
