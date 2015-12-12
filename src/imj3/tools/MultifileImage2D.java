@@ -229,9 +229,9 @@ public final class MultifileImage2D implements Image2D {
 	
 	private static final long serialVersionUID = -4265650676493772608L;
 	
-	static final String TILE_PREFIX = "tiles/tile_";
+	public static final String TILE_PREFIX = "tiles/tile_";
 	
-	static final String TILE_FORMAT = "jpg";
+	public static final String TILE_FORMAT = "jpg";
 	
 	@Deprecated
 	private static final String OLD_TILE_PREFIX = "tile_";
