@@ -33,7 +33,7 @@ public final class Image2DRawSource extends Image2DSource {
 	
 	@Override
 	protected final Context newContext() {
-		return this.new Context(this.getLabels() != null);
+		return new Context(this.getInputDimension(), this.getClassDimension(), this.getLabels() != null);
 	}
 	
 	@Override
@@ -90,7 +90,7 @@ public final class Image2DRawSource extends Image2DSource {
 	/**
 	 * @author codistmonk (creation 2015-02-06)
 	 */
-	public final class Context implements Serializable {
+	public static final class Context implements Serializable {
 		
 		private final double[] datum;
 		
@@ -98,11 +98,11 @@ public final class Image2DRawSource extends Image2DSource {
 		
 		private final Datum classification;
 		
-		public Context(final boolean separateLabel) {
-			this.datum = new double[Image2DRawSource.this.getInputDimension()];
+		public Context(final int inputDimension, final int classDimension, final boolean separateLabel) {
+			this.datum = new double[inputDimension];
 			
 			if (separateLabel) {
-				this.label = new double[Image2DRawSource.this.getClassDimension()];
+				this.label = new double[classDimension];
 				this.classification = datum(this.datum).setPrototype(datum(this.label));
 			} else {
 				this.label = this.datum;
