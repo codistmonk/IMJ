@@ -8,6 +8,7 @@ import static multij.tools.Tools.array;
 import static multij.tools.Tools.baseName;
 import static multij.tools.Tools.debugPrint;
 import static multij.tools.Tools.getResourceAsStream;
+import static multij.tools.Tools.ignore;
 import static multij.xml.XMLTools.getNode;
 import static multij.xml.XMLTools.getNodes;
 import static multij.xml.XMLTools.parse;
@@ -142,7 +143,6 @@ public final class AperioXML2SVG {
 					boolean prependSpace = false;
 					final Path2D region = new Path2D.Double();
 					boolean regionIsEmpty = true;
-					final double size = Double.parseDouble(((Element) aperioRegion).getAttribute("Area"));
 					
 					region.setWindingRule(Path2D.WIND_EVEN_ODD);
 					
@@ -171,6 +171,16 @@ public final class AperioXML2SVG {
 					}
 					
 					region.closePath();
+					double size = 0.0;
+					
+					try {
+						size = Double.parseDouble(((Element) aperioRegion).getAttribute("Area"));
+					} catch (final NumberFormatException exception) {
+						ignore(exception);
+						
+						size = getSurface(region, 1.0);
+					}
+					
 					regions.add(new Region(classId, new Area(region), size, new Color(Long.decode(color).intValue())));
 				}
 			}
