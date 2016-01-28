@@ -161,38 +161,47 @@ public final class ExtractComponents {
 		final int height = image.getHeight();
 		
 		for (long pixel = 0L; pixel < pixelCount; ++pixel) {
-			if (!done.get(pixel)) {
-				schedule(pixel, todo, done);
+			processComponent4(image, process, todo, done, width, height, pixel);
+		}
+	}
+	
+	public static final void forEachPixelInComponent4(final Image2D image, final long componentPixel, final Pixel2DProcessor process) {
+		processComponent4(image, process, new LongList(), new BigBitSet(image.getPixelCount()), image.getWidth(), image.getHeight(), componentPixel);
+	}
+	
+	public static final void processComponent4(final Image2D image, final Pixel2DProcessor process, final LongList todo,
+			final BigBitSet done, final int width, final int height, final long componentPixel) {
+		if (!done.get(componentPixel)) {
+			schedule(componentPixel, todo, done);
+			
+			boolean processing = true;
+			
+			while (!todo.isEmpty()) {
+				final long p = todo.remove(0);
+				final long value = image.getPixelValue(p);
+				final int x = (int) (p % width);
+				final int y = (int) (p / width);
 				
-				boolean processing = true;
-				
-				while (!todo.isEmpty()) {
-					final long p = todo.remove(0);
-					final long value = image.getPixelValue(p);
-					final int x = (int) (p % width);
-					final int y = (int) (p / width);
-					
-					if (processing && !process.pixel(x, y)) {
-						processing = false;
-					}
-					
-					if (0 < y) {
-						maybeSchedule(image, p - width, value, todo, done);
-					}
-					if (0 < x) {
-						maybeSchedule(image, p - 1, value, todo, done);
-					}
-					if (x + 1 < width) {
-						maybeSchedule(image, p + 1, value, todo, done);
-					}
-					if (y + 1 < height) {
-						maybeSchedule(image, p + width, value, todo, done);
-					}
+				if (processing && !process.pixel(x, y)) {
+					processing = false;
 				}
 				
-				if (processing) {
-					process.endOfPatch();
+				if (0 < y) {
+					maybeSchedule(image, p - width, value, todo, done);
 				}
+				if (0 < x) {
+					maybeSchedule(image, p - 1, value, todo, done);
+				}
+				if (x + 1 < width) {
+					maybeSchedule(image, p + 1, value, todo, done);
+				}
+				if (y + 1 < height) {
+					maybeSchedule(image, p + width, value, todo, done);
+				}
+			}
+			
+			if (processing) {
+				process.endOfPatch();
 			}
 		}
 	}
