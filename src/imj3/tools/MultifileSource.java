@@ -67,6 +67,10 @@ public final class MultifileSource implements Serializable, Closeable {
 	public static final String JAVA_PROTOCOL_HANDLER_PKGS = "java.protocol.handler.pkgs";
 	
 	static {
+		setupProtocolHandlers();
+	}
+	
+	public static final synchronized void setupProtocolHandlers() {
 		final String oldPackages = System.getProperty(JAVA_PROTOCOL_HANDLER_PKGS);
 		
 		System.setProperty(JAVA_PROTOCOL_HANDLER_PKGS, (oldPackages == null ? "" : (oldPackages + "|")) + "imj3.protocol");

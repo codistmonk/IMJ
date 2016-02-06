@@ -5,6 +5,12 @@ import static java.util.Collections.synchronizedMap;
 import static multij.swing.SwingTools.*;
 import static multij.tools.Tools.*;
 
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.Session;
+import com.jcraft.jsch.SftpException;
+
 import java.awt.GraphicsEnvironment;
 import java.io.Console;
 import java.io.File;
@@ -31,12 +37,6 @@ import javax.swing.JTextField;
 import multij.swing.SwingTools;
 import multij.tools.Pair;
 
-import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.Session;
-import com.jcraft.jsch.SftpException;
-
 /**
  * @author codistmonk (creation 2013-11-20)
  */
@@ -51,58 +51,7 @@ public final class Handler extends URLStreamHandler implements Serializable {
 				return null;
 			}
 			
-			return new URLConnection(url) {
-				
-				@Override
-				public final void connect() throws IOException {
-					// NOP
-				}
-				
-				@Override
-				public final InputStream getInputStream() throws IOException {
-					try {
-						final String urlString = this.getURL().toString();
-						final String src = urlString.substring(urlString.indexOf(this.getURL().getPath()));
-						
-						return channel.get(src);
-					} catch (final SftpException exception) {
-						debugError(this.getURL());
-						
-						throw new IOException(exception);
-					}
-				}
-				
-				@Override
-				public final OutputStream getOutputStream() throws IOException {
-					try {
-						final String path = this.getURL().getFile();
-						
-						{
-							final String[] pathElements = path.split("/");
-							String directory = "";
-							final int n = pathElements.length - 1;
-							
-							for (int i = 0; i < n; ++i) {
-								directory += pathElements[i] + "/";
-								
-								try {
-									channel.get(directory).close();
-								} catch (final SftpException exception) {
-									System.out.println("sftp: mkdir: " + directory);
-									channel.mkdir(directory);
-								}
-							}
-						}
-						
-						return channel.put(path);
-					} catch (final SftpException exception) {
-						debugError(this.getURL());
-						
-						throw new IOException(exception);
-					}
-				}
-				
-			};
+			return new SFTPConnection(url, channel);
 		} catch (final JSchException exception) {
 			exception.printStackTrace();
 		}
@@ -198,6 +147,74 @@ public final class Handler extends URLStreamHandler implements Serializable {
 		return result;
 	}
 	
+	/**
+	 * @author codistmonk (creation 2016-02-06)
+	 *
+	 */
+	public static final class SFTPConnection extends URLConnection {
+		
+		private final ChannelSftp channel;
+		
+		public SFTPConnection(final URL url, final ChannelSftp channel) {
+			super(url);
+			this.channel = channel;
+		}
+		
+		public final ChannelSftp getChannel() {
+			return this.channel;
+		}
+		
+		@Override
+		public final void connect() throws IOException {
+			// NOP
+		}
+		
+		@Override
+		public final InputStream getInputStream() throws IOException {
+			try {
+				final String urlString = this.getURL().toString();
+				final String src = urlString.substring(urlString.indexOf(this.getURL().getPath()));
+				
+				return this.channel.get(src);
+			} catch (final SftpException exception) {
+				debugError(this.getURL());
+				
+				throw new IOException(exception);
+			}
+		}
+		
+		@Override
+		public final OutputStream getOutputStream() throws IOException {
+			try {
+				final String path = this.getURL().getFile();
+				
+				{
+					final String[] pathElements = path.split("/");
+					String directory = "";
+					final int n = pathElements.length - 1;
+					
+					for (int i = 0; i < n; ++i) {
+						directory += pathElements[i] + "/";
+						
+						try {
+							this.channel.get(directory).close();
+						} catch (final SftpException exception) {
+							System.out.println("sftp: mkdir: " + directory);
+							this.channel.mkdir(directory);
+						}
+					}
+				}
+				
+				return this.channel.put(path);
+			} catch (final SftpException exception) {
+				debugError(this.getURL());
+				
+				throw new IOException(exception);
+			}
+		}
+		
+	}
+
 	/**
 	 * @author codistmonk (creation 2013-11-18)
 	 */
