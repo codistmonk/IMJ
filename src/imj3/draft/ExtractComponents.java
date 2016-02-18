@@ -154,23 +154,31 @@ public final class ExtractComponents {
 	}
 	
 	public static final void forEachPixelInEachComponent4(final Image2D image, final Pixel2DProcessor process) {
+		forEachPixelInEachComponent4(image, process, new Rectangle(0, 0, image.getWidth(), image.getHeight()));
+	}
+	
+	public static final void forEachPixelInEachComponent4(final Image2D image, final Pixel2DProcessor process, final Rectangle bounds) {
 		final LongList todo = new LongList();
 		final long pixelCount = image.getPixelCount();
 		final BigBitSet done = new BigBitSet(pixelCount);
-		final int width = image.getWidth();
-		final int height = image.getHeight();
 		
 		for (long pixel = 0L; pixel < pixelCount; ++pixel) {
-			processComponent4(image, process, todo, done, width, height, pixel);
+			processComponent4(image, process, todo, done, pixel, bounds);
 		}
 	}
 	
 	public static final void forEachPixelInComponent4(final Image2D image, final long componentPixel, final Pixel2DProcessor process) {
-		processComponent4(image, process, new LongList(), new BigBitSet(image.getPixelCount()), image.getWidth(), image.getHeight(), componentPixel);
+		forEachPixelInComponent4(image, componentPixel, process, new Rectangle(0, 0, image.getWidth(), image.getHeight()));
+	}
+	
+	public static final void forEachPixelInComponent4(final Image2D image, final long componentPixel, final Pixel2DProcessor process, final Rectangle bounds) {
+		processComponent4(image, process, new LongList(), new BigBitSet(image.getPixelCount()), componentPixel, bounds);
 	}
 	
 	public static final void processComponent4(final Image2D image, final Pixel2DProcessor process, final LongList todo,
-			final BigBitSet done, final int width, final int height, final long componentPixel) {
+			final BigBitSet done, final long componentPixel, final Rectangle bounds) {
+		final int width = image.getWidth();
+		
 		if (!done.get(componentPixel)) {
 			schedule(componentPixel, todo, done);
 			
@@ -186,16 +194,16 @@ public final class ExtractComponents {
 					processing = false;
 				}
 				
-				if (0 < y) {
+				if (bounds.y < y) {
 					maybeSchedule(image, p - width, value, todo, done);
 				}
-				if (0 < x) {
+				if (bounds.x < x) {
 					maybeSchedule(image, p - 1, value, todo, done);
 				}
-				if (x + 1 < width) {
+				if (x + 1 < bounds.x + bounds.width) {
 					maybeSchedule(image, p + 1, value, todo, done);
 				}
-				if (y + 1 < height) {
+				if (y + 1 < bounds.y + bounds.height) {
 					maybeSchedule(image, p + width, value, todo, done);
 				}
 			}
