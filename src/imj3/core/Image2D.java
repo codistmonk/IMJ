@@ -101,6 +101,14 @@ public abstract interface Image2D extends Image {
 		return this.getHeight();
 	}
 	
+	public default int getTileXContaining(final int x) {
+		return quantize(x, this.getOptimalTileWidth());
+	}
+	
+	public default int getTileYContaining(final int y) {
+		return quantize(y, this.getOptimalTileHeight());
+	}
+	
 	public default Image2D getTileContaining(final int x, final int y) {
 		final int tileX = quantize(x, this.getOptimalTileWidth());
 		final int tileY = quantize(y, this.getOptimalTileHeight());
