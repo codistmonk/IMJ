@@ -326,6 +326,25 @@ public final class SVG2Bin {
 		return actualResult;
 	}
 	
+	public static final BufferedImage getPatch(final Image2D image, final int x, final int y, final int patchSize,
+			final BufferedImage result) {
+		final BufferedImage actualResult = result != null ? result : new BufferedImage(patchSize, patchSize, BufferedImage.TYPE_3BYTE_BGR);
+		final int top = y - patchSize / 2;
+		final int bottom = min(top + patchSize, image.getHeight());
+		final int left = x - patchSize / 2;
+		final int right = min(left + patchSize, image.getWidth());
+		
+		for (int yy = max(0, top); yy < bottom; ++yy) {
+			for (int xx = max(0, left); xx < right; ++xx) {
+				final long pixelValue = image.getPixelValue(xx, yy);
+				
+				actualResult.setRGB(xx - left, yy - top, (int) pixelValue);
+			}
+		}
+		
+		return actualResult;
+	}
+	
 	public static final <E> int indexOf(final E needle, @SuppressWarnings("unchecked") final E... haystack) {
 		final int n = haystack.length;
 		
