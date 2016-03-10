@@ -139,6 +139,28 @@ public final class EvaluateClassification {
 					expected, e -> new AtomicLong()).incrementAndGet();
 		}
 		
+		public final double computeAccuracy() {
+			final AtomicLong tp = new AtomicLong();
+			final AtomicLong total = new AtomicLong();
+			
+			for (final Entry<Comparable<?>, Map<Comparable<?>, AtomicLong>> entry : this.getCounts().entrySet()) {
+				final Object predicted = entry.getKey();
+				
+				for (final Map.Entry<?, AtomicLong> subentry : entry.getValue().entrySet()) {
+					final Object expected = subentry.getKey();
+					final long delta = subentry.getValue().get();
+					
+					if (predicted.equals(expected)) {
+						tp.addAndGet(delta);
+					}
+					
+					total.addAndGet(delta);
+				}
+			}
+			
+			return (double) tp.get() / total.get();
+		}
+		
 		public final Map<Comparable<?>, Double> computeF1s() {
 			final Map<Object, AtomicLong> tps = new HashMap<>();
 			final Map<Object, AtomicLong> fps = new HashMap<>();
