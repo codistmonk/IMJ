@@ -16,6 +16,7 @@ import multij.tools.IllegalInstantiationException;
 import weka.classifiers.Classifier;
 import weka.classifiers.trees.RandomForest;
 import weka.core.Attribute;
+import weka.core.DenseInstance;
 import weka.core.FastVector;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -58,7 +59,7 @@ public final class UseWeka {
 						values[i] = 0xFF & item[i];
 					}
 					
-					trainingData.add(new Instance(1.0, values.clone()));
+					trainingData.add(new DenseInstance(1.0, values.clone()));
 				}
 			} catch (final IOException exception) {
 				throw unchecked(exception);
@@ -93,7 +94,7 @@ public final class UseWeka {
 							values[i] = 0xFF & item[i];
 						}
 						
-						final Instance instance = new Instance(1.0, values);
+						final Instance instance = new DenseInstance(1.0, values);
 						
 						instance.setDataset(trainingData);
 						
