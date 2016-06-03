@@ -35,7 +35,7 @@
             <fileset dir="src"/>
             <fileset dir="." includes="lib/tango/**"/>
             <fileset dir="." includes="lib/openseadragon/**"/>
-            <zipfileset excludes="META-INF/*.SF" src="lib/multij-1.8.201509270502.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/multij-1.8.201606031427.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/bioformats_package.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/commons-compress-1.8.1.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/ojalgo-33.0.jar"/>
@@ -67,7 +67,7 @@
         	</fileset>
             <fileset dir="src" includes="imj3/core/**,imj3/tools/**,imj3/protocol/**"/>
             <fileset dir="." includes="lib/openseadragon/**"/>
-            <zipfileset excludes="META-INF/*.SF" src="lib/multij-1.8.201509270502.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/multij-1.8.201606031427.jar"/>
         </jar>
         <jar destfile="evaluateclassification.jar" filesetmanifest="mergewithoutmain">
             <manifest>
@@ -80,7 +80,7 @@
             	<present present="srconly" targetdir="test"/>
         	</fileset>
             <fileset dir="src" includes="imj3/draft/EvaluateClassification*"/>
-            <zipfileset excludes="META-INF/*.SF" src="lib/multij-1.8.201509270502.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/multij-1.8.201606031427.jar"/>
         </jar>
     	<antcall target="jar2script_bash"/>
     </target>
