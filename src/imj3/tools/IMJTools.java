@@ -7,9 +7,15 @@ import static java.lang.Math.pow;
 import static multij.tools.Tools.array;
 import static multij.tools.Tools.invoke;
 
+import imj2.tools.BigBitSet;
 import imj3.core.IMJCoreTools;
 import imj3.core.Image2D;
+import imj3.core.Image2D.Pixel2DProcessor;
 
+import java.awt.Rectangle;
+import java.io.Serializable;
+
+import multij.primitivelists.LongList;
 import multij.tools.IllegalInstantiationException;
 import multij.tools.Tools;
 
@@ -127,6 +133,98 @@ public final class IMJTools {
 			private static final long serialVersionUID = 3431410834328760116L;
 			
 		});
+	}
+	
+	public static final void forEachPixelInEachComponent4(final Image2D image, final Rectangle bounds, final ComponentComembership comembership, final Pixel2DProcessor process) {
+		final int xStart = bounds.x;
+		final int xEnd = bounds.x + bounds.width;
+		final int yStart = bounds.y;
+		final int yEnd = bounds.y + bounds.height;
+		final BigBitSet done = new BigBitSet(image.getPixelCount());
+		final LongList todo = new LongList();
+		
+		for (int y = yStart; y < yEnd; ++y) {
+			for (int x = xStart; x < xEnd; ++x) {
+				final long pixel = image.getPixel(x, y);
+				
+				if (!done.get(pixel)) {
+					todo.add(pixel);
+					
+					done.set(pixel, true);
+					
+					while (!todo.isEmpty()) {
+						final long p = todo.remove(0);
+						final int xx = image.getX(p);
+						final int yy = image.getY(p);
+						
+						if (!process.pixel(xx, yy)) {
+							return;
+						}
+						
+						if (yStart < yy) {
+							final long neighbor = image.getPixel(xx, yy - 1);
+							
+							if (!done.get(neighbor) && comembership.test(image, p, neighbor)) {
+								todo.add(neighbor);
+								done.set(neighbor, true);
+							}
+						}
+						
+						if (xStart < xx) {
+							final long neighbor = image.getPixel(xx - 1, yy);
+							
+							if (!done.get(neighbor) && comembership.test(image, p, neighbor)) {
+								todo.add(neighbor);
+								done.set(neighbor, true);
+							}
+						}
+						
+						if (xx + 1 < xEnd) {
+							final long neighbor = image.getPixel(xx + 1, yy);
+							
+							if (!done.get(neighbor) && comembership.test(image, p, neighbor)) {
+								todo.add(neighbor);
+								done.set(neighbor, true);
+							}
+						}
+						
+						if (yy + 1 < yEnd) {
+							final long neighbor = image.getPixel(xx, yy + 1);
+							
+							if (!done.get(neighbor) && comembership.test(image, p, neighbor)) {
+								todo.add(neighbor);
+								done.set(neighbor, true);
+							}
+						}
+					}
+					
+					process.endOfPatch();
+				}
+			}
+		}
+	}
+	
+	/**
+	 * @author codistmonk (creation 2016-02-24)
+	 */
+	public static abstract interface ComponentComembership extends Serializable {
+		
+		public abstract boolean test(Image2D image, long pixel, long otherPixel);
+		
+		/**
+		 * @author codistmonk (creation 2016-02-24)
+		 */
+		public static final class Default implements ComponentComembership {
+			
+			@Override
+			public final boolean test(final Image2D image, final long pixel, final long otherPixel) {
+				return image.getPixelValue(pixel) == image.getPixelValue(otherPixel);
+			}
+			
+			private static final long serialVersionUID = 3705129683034846142L;
+			
+		}
+		
 	}
 	
 }
