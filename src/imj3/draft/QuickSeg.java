@@ -136,6 +136,9 @@ public final class QuickSeg {
 												final int qMask = ((~0) << q) & 0xFF;
 												
 												for (int y = 0; y < h; ++y) {
+													if (!keys.contains(key)) {
+														return null;
+													}
 													for (int x = 0; x < w; ++x) {
 														final long value = tile.getPixelValue(x, y);
 														
@@ -171,6 +174,10 @@ public final class QuickSeg {
 													
 													@Override
 													public final boolean pixel(final int tileX, final int tileY) {
+														if (!keys.contains(key)) {
+															return false;
+														}
+														
 														final int tw = min(s, w - tileX);
 														final int th = min(s, h - tileY);
 														
@@ -218,6 +225,9 @@ public final class QuickSeg {
 												final AwtImage2D result = new AwtImage2D("", w, h);
 												
 												for (int y = 0; y < h; ++y) {
+													if (!keys.contains(key)) {
+														return null;
+													}
 													for (int x = 0; x < w; ++x) {
 														final long center = segments.getRGB(x, y);
 														boolean mark = false;
@@ -249,8 +259,11 @@ public final class QuickSeg {
 									
 								});
 							}
-						} else {
+						} else if (cached.hasObject()) {
 							graphics.drawImage((Image) cached.getObject().toAwt(), region.x, region.y, region.width, region.height, null);
+						} else {
+							graphics.setColor(Color.RED);
+							graphics.draw(region);
 						}
 					}
 					
@@ -265,6 +278,7 @@ public final class QuickSeg {
 					@Override
 					public final void windowClosing(final WindowEvent event) {
 						executor.shutdown();
+						keys.clear();
 					}
 					
 				});

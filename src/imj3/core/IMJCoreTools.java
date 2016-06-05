@@ -167,7 +167,7 @@ public final class IMJCoreTools {
 			return this.key;
 		}
 		
-		public final synchronized boolean hasObject() {
+		public final boolean hasObject() {
 			return this.object != null;
 		}
 		
