@@ -78,6 +78,41 @@ public final class QuickSeg2 {
 	}
 	
 	/**
+	 * @author codistmonk (creation 2016-06-06)
+	 */
+	public static final class Context implements Serializable {
+		
+		private final ExecutorService executor = Executors.newFixedThreadPool(4);
+		
+		private final Collection<String> keys = new HashSet<>();
+		
+		public final ExecutorService getExecutor() {
+			return this.executor;
+		}
+		
+		public final Collection<String> getKeys() {
+			return this.keys;
+		}
+		
+		public final void clearKeys() {
+			this.getKeys().forEach(IMJCoreTools::uncache);
+			this.getKeys().clear();
+		}
+		
+		public final Monitor newKeyMonitor(final String key) {
+			return () -> !this.getKeys().contains(key);
+		}
+		
+		public final void destroy() {
+			this.getExecutor().shutdown();
+			this.getKeys().clear();
+		}
+		
+		private static final long serialVersionUID = -5610744496161785513L;
+		
+	}
+	
+	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
 	 */
@@ -106,233 +141,15 @@ public final class QuickSeg2 {
 			
 			@Override
 			public final void run() {
-				final JPanel mainPanel = new JPanel(new BorderLayout());
-				final JTextField qField = new JTextField("6");
-				final JTextField sField = new JTextField("32");
-				final JCheckBox fineCheckBox = new JCheckBox("Fine view");
-				final Box optionsBox = horizontalBox(
-						new JLabel("Q:"), qField,
-						new JLabel("S:"), sField,
-						fineCheckBox);
-				final Image2DComponent imageComponent = new Image2DComponent(new AwtImage2D("", 256, 256)).setDropImageEnabled(true);
-				final Collection<String> keys = new HashSet<>();
-				final AtomicInteger hash = new AtomicInteger(1);
-				
-				mainPanel.add(optionsBox, BorderLayout.NORTH);
-				mainPanel.add(imageComponent, BorderLayout.CENTER);
-				
-				final ActionListener fieldActionListener = new ActionListener() {
-					
-					@Override
-					public final void actionPerformed(final ActionEvent event) {
-						keys.forEach(IMJCoreTools::uncache);
-						keys.clear();
-						hash.incrementAndGet();
-						imageComponent.repaint();
-					}
-					
-				};
-				
-				qField.addActionListener(fieldActionListener);
-				sField.addActionListener(fieldActionListener);
-				fineCheckBox.addActionListener(fieldActionListener);
-				
-				final ExecutorService executor = Executors.newFixedThreadPool(4);
-				
-				imageComponent.setTileOverlay(new TileOverlay() {
-					
-					@Override
-					public final int hashCode() {
-						return hash.get();
-					}
-					
-					@Override
-					public final void update(final Graphics2D graphics, final Point tileXY, final Rectangle region) {
-						final Image2D image = imageComponent.getImage();
-						final String key = image.getTileKey(tileXY.x, tileXY.y) + "_outlines";
-						final Reference<Image2D> cached = getCached(key);
-						
-						if (cached == null) {
-							graphics.setColor(Color.RED);
-							graphics.draw(region);
-							
-							if (keys.add(key)) {
-								executor.submit(new Runnable() {
-									
-									@Override
-									public final void run() {
-										cache(key, new Supplier<Image2D>() {
-											
-											@Override
-											public final Image2D get() {
-												final Monitor monitor = new Monitor() {
-													
-													@Override
-													public boolean isCancelRequested() {
-														return (!keys.contains(key));
-													}
-													
-													private static final long serialVersionUID = -3736045057872099915L;
-													
-												};
-												
-												final int q = Integer.decode(qField.getText());
-												final int s = Integer.decode(sField.getText());
-												final Image2D tile = image.getTile(tileXY.x, tileXY.y);
-												final int w = tile.getWidth();
-												final int h = tile.getHeight();
-												final BufferedImage segments = segment(tile, q, s, 0, monitor);
-												
-												if (segments == null) {
-													return null;
-												}
-												
-												cache(image.getTileKey(tileXY.x, tileXY.y) + "_segments", () -> segments, true);
-												
-												if (fineCheckBox.isSelected()) {
-													return null;
-												}
-												
-												final AwtImage2D result = new AwtImage2D("", w, h);
-												
-												for (int y = 0; y < h; ++y) {
-													if (monitor.isCancelRequested()) {
-														return null;
-													}
-													
-													for (int x = 0; x < w; ++x) {
-														final long center = segments.getRGB(x, y);
-														boolean mark = false;
-														
-														if (0 < y) {
-															mark = mark || center != segments.getRGB(x, y - 1);
-														}
-														
-														if (0 < x) {
-															mark = mark || center != segments.getRGB(x - 1, y);
-														}
-														
-														mark = mark || x == 0 || x == w - 1 || y == 0 || y == h - 1;
-														
-														if (mark) {
-															result.setPixelValue(x, y, 0xFF00FF00L);
-														}
-													}
-												}
-												
-												return result;
-											}
-											
-										});
-										
-										hash.incrementAndGet();
-										imageComponent.repaint();
-									}
-									
-								});
-							}
-						} else if (cached.hasObject()) {
-							graphics.drawImage((Image) cached.getObject().toAwt(), region.x, region.y, region.width, region.height, null);
-						} else {
-							graphics.setColor(Color.RED);
-							graphics.draw(region);
-						}
-					}
-					
-					private static final long serialVersionUID = -4573576871706331668L;
-					
-				});
-				
-				imageComponent.setOverlay(new Overlay() {
-					
-					private final Canvas canvas = new Canvas();
-					
-					@Override
-					public final void update(final Graphics2D graphics, final Rectangle region) {
-						if (region.isEmpty() || !fineCheckBox.isSelected()) {
-							return;
-						}
-						
-						this.canvas.setFormat(region.width, region.height).clear(new Color(0, true));
-						
-						final Point2D p0 = new Point2D.Double(0.0, 0.0);
-						final Point2D p1 = new Point2D.Double(1.0, 1.0);
-						
-						try {
-							imageComponent.getView().inverseTransform(p0, p0);
-							imageComponent.getView().inverseTransform(p1, p1);
-							
-							final double dx = p1.getX() - p0.getX();
-							final double dy = p1.getY() - p0.getY();
-							final int w = region.width;
-							final int h = region.height;
-							final Image2D image = imageComponent.getImage();
-							final double scale = image.getScale();
-							
-							for (int y = 0; y < h; ++y) {
-								for (int x = 0; x < w; ++x) {
-									final int xIm = (int) ((p0.getX() + x * dx) * scale);
-									final int yIm = (int) ((p0.getY() + y * dy) * scale);
-									
-									if (0 <= xIm && xIm < image.getWidth() && 0 <= yIm && yIm < image.getHeight()) {
-										final int tileX = image.getTileXContaining(xIm);
-										final int tileY = image.getTileYContaining(yIm);
-										final String key = image.getTileKey(tileX, tileY) + "_segments";
-										final Reference<BufferedImage> segments = getCached(key);
-										
-										if (segments != null && segments.hasObject()) {
-											final int centerId = segments.getObject().getRGB(xIm - tileX, yIm - tileY);
-											final int north = (int) ((p0.getY() + (y - 1) * dy) * scale);
-											final int west = (int) ((p0.getX() + (x - 1) * dx) * scale);
-											
-											boolean mark = false;
-											
-											if (0 <= north && north < yIm) {
-												final int northTileY = image.getTileYContaining(north);
-												final String northKey = image.getTileKey(tileX, northTileY) + "_segments";
-												final Reference<BufferedImage> northSegments = getCached(northKey);
-												
-												if (northSegments != null && northSegments.hasObject()) {
-													mark = mark || centerId != northSegments.getObject().getRGB(xIm - tileX, north - northTileY);
-												}
-											}
-											
-											if (0 <= west && west < xIm) {
-												final int westTileX = image.getTileXContaining(west);
-												final String westKey = image.getTileKey(westTileX, tileY) + "_segments";
-												final Reference<BufferedImage> westSegments = getCached(westKey);
-												
-												if (westSegments != null && westSegments.hasObject()) {
-													mark = mark || centerId != westSegments.getObject().getRGB(west - westTileX, yIm - tileY);
-												}
-											}
-											
-											if (mark) {
-												this.canvas.getImage().setRGB(x, y, 0xFF00FF00);
-											}
-										}
-									}
-								}
-							}
-							
-							graphics.drawImage(this.canvas.getImage(), 0, 0, null);
-						} catch (final NoninvertibleTransformException exception) {
-							exception.printStackTrace();
-						}
-					}
-					
-					private static final long serialVersionUID = -6245612608729813604L;
-					
-				});
-				
+				final Context context = new Context();
+				final JPanel mainPanel = newMainPanel(context);
 				final Window mainFrame = show(mainPanel, "Image");
 				
 				mainFrame.addWindowListener(new WindowAdapter() {
 					
 					@Override
 					public final void windowClosing(final WindowEvent event) {
-						executor.shutdown();
-						keys.clear();
+						context.destroy();
 					}
 					
 				});
@@ -474,6 +291,219 @@ public final class QuickSeg2 {
 		});
 		
 		return id[0] == -1 ? null : segments;
+	}
+	
+	public static final Image2D outline(final BufferedImage segments, final Monitor monitor) {
+		final int w = segments.getWidth();
+		final int h = segments.getHeight();
+		final AwtImage2D result = new AwtImage2D("", w, h);
+		
+		for (int y = 0; y < h; ++y) {
+			if (monitor.isCancelRequested()) {
+				return null;
+			}
+			
+			for (int x = 0; x < w; ++x) {
+				final long center = segments.getRGB(x, y);
+				boolean mark = false;
+				
+				if (0 < y) {
+					mark = mark || center != segments.getRGB(x, y - 1);
+				}
+				
+				if (0 < x) {
+					mark = mark || center != segments.getRGB(x - 1, y);
+				}
+				
+				mark = mark || x == 0 || x == w - 1 || y == 0 || y == h - 1;
+				
+				if (mark) {
+					result.setPixelValue(x, y, 0xFF00FF00L);
+				}
+			}
+		}
+		
+		return result;
+	}
+	
+	public static final JPanel newMainPanel(final Context context) {
+		final JPanel result = new JPanel(new BorderLayout());
+		final JTextField qField = new JTextField("6");
+		final JTextField sField = new JTextField("32");
+		final JCheckBox fineCheckBox = new JCheckBox("Fine view");
+		final Box optionsBox = horizontalBox(
+				new JLabel("Q:"), qField,
+				new JLabel("S:"), sField,
+				fineCheckBox);
+		final Image2DComponent imageComponent = new Image2DComponent(new AwtImage2D("", 256, 256)).setDropImageEnabled(true);
+		final AtomicInteger hash = new AtomicInteger(1);
+		
+		result.add(optionsBox, BorderLayout.NORTH);
+		result.add(imageComponent, BorderLayout.CENTER);
+		
+		final ActionListener fieldActionListener = new ActionListener() {
+			
+			@Override
+			public final void actionPerformed(final ActionEvent event) {
+				context.clearKeys();
+				hash.incrementAndGet();
+				imageComponent.repaint();
+			}
+			
+		};
+		
+		qField.addActionListener(fieldActionListener);
+		sField.addActionListener(fieldActionListener);
+		fineCheckBox.addActionListener(fieldActionListener);
+		
+		imageComponent.setTileOverlay(new TileOverlay() {
+			
+			@Override
+			public final int hashCode() {
+				return hash.get();
+			}
+			
+			@Override
+			public final void update(final Graphics2D graphics, final Point tileXY, final Rectangle region) {
+				final Image2D image = imageComponent.getImage();
+				final String key = image.getTileKey(tileXY.x, tileXY.y) + "_outlines";
+				final Reference<Image2D> cached = getCached(key);
+				
+				if (cached == null) {
+					graphics.setColor(Color.RED);
+					graphics.draw(region);
+					
+					if (context.getKeys().add(key)) {
+						context.getExecutor().submit(new Runnable() {
+							
+							@Override
+							public final void run() {
+								cache(key, new Supplier<Image2D>() {
+									
+									@Override
+									public final Image2D get() {
+										final Monitor monitor = context.newKeyMonitor(key);
+										final int q = Integer.decode(qField.getText());
+										final int s = Integer.decode(sField.getText());
+										final Image2D tile = image.getTile(tileXY.x, tileXY.y);
+										final BufferedImage segments = segment(tile, q, s, 0, monitor);
+										
+										if (segments == null) {
+											return null;
+										}
+										
+										cache(image.getTileKey(tileXY.x, tileXY.y) + "_segments", () -> segments, true);
+										
+										if (fineCheckBox.isSelected()) {
+											return null;
+										}
+										
+										return outline(segments, monitor);
+									}
+									
+								});
+								
+								hash.incrementAndGet();
+								imageComponent.repaint();
+							}
+							
+						});
+					}
+				} else if (cached.hasObject()) {
+					graphics.drawImage((Image) cached.getObject().toAwt(), region.x, region.y, region.width, region.height, null);
+				} else if (!fineCheckBox.isSelected()) {
+					graphics.setColor(Color.RED);
+					graphics.draw(region);
+				}
+			}
+			
+			private static final long serialVersionUID = -4573576871706331668L;
+			
+		});
+		
+		imageComponent.setOverlay(new Overlay() {
+			
+			private final Canvas canvas = new Canvas();
+			
+			@Override
+			public final void update(final Graphics2D graphics, final Rectangle region) {
+				if (region.isEmpty() || !fineCheckBox.isSelected()) {
+					return;
+				}
+				
+				this.canvas.setFormat(region.width, region.height).clear(new Color(0, true));
+				
+				final Point2D p0 = new Point2D.Double(0.0, 0.0);
+				final Point2D p1 = new Point2D.Double(1.0, 1.0);
+				
+				try {
+					imageComponent.getView().inverseTransform(p0, p0);
+					imageComponent.getView().inverseTransform(p1, p1);
+					
+					final double dx = p1.getX() - p0.getX();
+					final double dy = p1.getY() - p0.getY();
+					final int w = region.width;
+					final int h = region.height;
+					final Image2D image = imageComponent.getImage();
+					final double scale = image.getScale();
+					
+					for (int y = 0; y < h; ++y) {
+						for (int x = 0; x < w; ++x) {
+							final int xIm = (int) ((p0.getX() + x * dx) * scale);
+							final int yIm = (int) ((p0.getY() + y * dy) * scale);
+							
+							if (0 <= xIm && xIm < image.getWidth() && 0 <= yIm && yIm < image.getHeight()) {
+								final int tileX = image.getTileXContaining(xIm);
+								final int tileY = image.getTileYContaining(yIm);
+								final String key = image.getTileKey(tileX, tileY) + "_segments";
+								final Reference<BufferedImage> segments = getCached(key);
+								
+								if (segments != null && segments.hasObject()) {
+									final int centerId = segments.getObject().getRGB(xIm - tileX, yIm - tileY);
+									final int north = (int) ((p0.getY() + (y - 1) * dy) * scale);
+									final int west = (int) ((p0.getX() + (x - 1) * dx) * scale);
+									
+									boolean mark = false;
+									
+									if (0 <= north && north < yIm) {
+										final int northTileY = image.getTileYContaining(north);
+										final String northKey = image.getTileKey(tileX, northTileY) + "_segments";
+										final Reference<BufferedImage> northSegments = getCached(northKey);
+										
+										if (northSegments != null && northSegments.hasObject()) {
+											mark = mark || centerId != northSegments.getObject().getRGB(xIm - tileX, north - northTileY);
+										}
+									}
+									
+									if (0 <= west && west < xIm) {
+										final int westTileX = image.getTileXContaining(west);
+										final String westKey = image.getTileKey(westTileX, tileY) + "_segments";
+										final Reference<BufferedImage> westSegments = getCached(westKey);
+										
+										if (westSegments != null && westSegments.hasObject()) {
+											mark = mark || centerId != westSegments.getObject().getRGB(west - westTileX, yIm - tileY);
+										}
+									}
+									
+									if (mark) {
+										this.canvas.getImage().setRGB(x, y, 0xFF00FF00);
+									}
+								}
+							}
+						}
+					}
+					
+					graphics.drawImage(this.canvas.getImage(), 0, 0, null);
+				} catch (final NoninvertibleTransformException exception) {
+					exception.printStackTrace();
+				}
+			}
+			
+			private static final long serialVersionUID = -6245612608729813604L;
+			
+		});
+		
+		return result;
 	}
 	
 	/**
