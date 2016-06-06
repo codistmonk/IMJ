@@ -7,6 +7,8 @@ import static imj3.tools.SVS2Multifile.newMetadata;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static multij.swing.SwingTools.horizontalBox;
+import static multij.swing.SwingTools.horizontalSplit;
+import static multij.swing.SwingTools.scrollable;
 import static multij.swing.SwingTools.show;
 import static multij.tools.Tools.*;
 
@@ -15,6 +17,7 @@ import imj3.core.IMJCoreTools;
 import imj3.core.IMJCoreTools.Reference;
 import imj3.core.Image2D;
 import imj3.core.Image2D.Pixel2DProcessor;
+import imj3.draft.QuickSeg2.Context.RepaintListener;
 import imj3.tools.AwtImage2D;
 import imj3.tools.IMJTools;
 import imj3.tools.IMJTools.ComponentComembership;
@@ -25,6 +28,8 @@ import imj3.tools.SVS2Multifile;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Point;
@@ -32,18 +37,27 @@ import java.awt.Rectangle;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
+import java.awt.image.ConvolveOp;
+import java.awt.image.Kernel;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.OptionalInt;
+import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -53,12 +67,16 @@ import java.util.zip.ZipOutputStream;
 
 import javax.imageio.ImageIO;
 import javax.swing.Box;
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
+import multij.primitivelists.FloatList;
 import multij.swing.SwingTools;
 import multij.tools.Canvas;
 import multij.tools.CommandLineArgumentsParser;
@@ -152,7 +170,9 @@ public final class QuickSeg2 {
 					public final boolean pixel(final int tileX, final int tileY) {
 						final BufferedImage segments = segment(im.getTile(tileX, tileY), q, s, 0xFF000000, monitor);
 						
-						debugPrint(type, tileX, tileY);
+						if (tileX == 0) {
+							debugPrint(type, tileX, tileY);
+						}
 						
 						try {
 							output.putNextEntry(new ZipEntry("tiles/tile_" + type + "_y" + tileY + "_x" + tileX + "." + tileFormat));
@@ -299,10 +319,13 @@ public final class QuickSeg2 {
 		context.setsField(new JTextField("32"));
 		context.setFineCheckBox(new JCheckBox("Fine view"));
 		
+		final JButton convolutionalHistogramButton = new JButton("ConvHisto...");
+		
 		final Box optionsBox = horizontalBox(
 				new JLabel("Q:"), context.getqField(),
 				new JLabel("S:"), context.getsField(),
-				context.getFineCheckBox());
+				context.getFineCheckBox(),
+				convolutionalHistogramButton);
 		context.setImageComponent(new Image2DComponent(new AwtImage2D("", 256, 256)).setDropImageEnabled(true));
 		
 		result.add(optionsBox, BorderLayout.NORTH);
@@ -323,10 +346,148 @@ public final class QuickSeg2 {
 		context.getsField().addActionListener(fieldActionListener);
 		context.getFineCheckBox().addActionListener(fieldActionListener);
 		
+		convolutionalHistogramButton.addActionListener(new ActionListener() {
+			
+			@Override
+			public final void actionPerformed(final ActionEvent event) {
+				final ConvolutionalHistogramPanel convhistoPanel = new ConvolutionalHistogramPanel(context);
+				final Window window = show(convhistoPanel, "Convolutional histogram");
+				
+				window.addWindowListener(new WindowAdapter() {
+					
+					@Override
+					public final void windowClosing(WindowEvent event) {
+						context.getRepaintListeners().remove(convhistoPanel);
+					}
+					
+				});
+			}
+			
+		});
+		
 		context.getImageComponent().setTileOverlay(new QuickSegTileOverlay(context));
 		context.getImageComponent().setOverlay(new QuickSegOverlay(context));
 		
 		return result;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2016-06-06)
+	 */
+	public static final class ConvolutionalHistogramPanel extends JPanel implements Context.RepaintListener {
+		
+		private final Context context;
+		
+		private final Canvas canvas;
+		
+		private final JTextArea kernelEditor;
+		
+		private final JComponent histoView;
+		
+		private final int[] counts;
+		
+		private Kernel kernel;
+		
+		private ConvolveOp op;
+		
+		public ConvolutionalHistogramPanel(final Context context) {
+			super(new BorderLayout());
+			this.context = context;
+			this.canvas = new Canvas();
+			this.kernelEditor = new JTextArea("1");
+			this.histoView = new JComponent() {
+
+				{
+					this.setPreferredSize(new Dimension(256, 256));
+					this.setMinimumSize(new Dimension(256, 256));
+				}
+				
+				@Override
+				public final void paintComponent(final Graphics graphics) {
+					graphics.setColor(Color.WHITE);
+					graphics.fillRect(0, 0, 256, 256);
+					
+					final OptionalInt s = Arrays.stream(counts).max();
+					
+					if (s.isPresent() && 0 < s.getAsInt()) {
+						graphics.setColor(Color.BLACK);
+						
+						for (int i = 0; i < 256; ++i) {
+							graphics.drawLine(i, 255, i, 255 - 255 * counts[i] / s.getAsInt());
+						}
+					}
+				}
+				
+				private static final long serialVersionUID = 619396278275341879L;
+				
+			};
+			this.counts = new int[256];
+			this.kernel = new Kernel(1, 1, new float[] { 1F });
+			this.op = new ConvolveOp(this.kernel);
+			
+			context.getRepaintListeners().add(this);
+			
+			this.add(horizontalSplit(scrollable(this.kernelEditor), scrollable(this.histoView)), BorderLayout.CENTER);
+			
+			this.kernelEditor.addKeyListener(new KeyAdapter() {
+				
+				@Override
+				public final void keyPressed(final KeyEvent event) {
+					if (event.isControlDown() && event.getKeyCode() == KeyEvent.VK_ENTER) {
+						final FloatList data = new FloatList();
+						int rowCount = 0;
+						
+						try (final Scanner scanner = new Scanner(kernelEditor.getText())) {
+							scanner.useLocale(Locale.ENGLISH);
+							
+							while (scanner.hasNext()) {
+								try (final Scanner lineScanner = new Scanner(scanner.nextLine())) {
+									lineScanner.useLocale(Locale.ENGLISH);
+									
+									while (lineScanner.hasNext()) {
+										data.add(lineScanner.nextFloat());
+									}
+									
+									++rowCount;
+								}
+							}
+						} catch (final Exception exception) {
+							exception.printStackTrace();
+							return;
+						}
+						
+						kernel = new Kernel(data.size() / rowCount, rowCount, data.toArray());
+						op = new ConvolveOp(kernel);
+						repainted();
+					}
+				}
+				
+			});
+		}
+		
+		@Override
+		public final void repainted() {
+			final BufferedImage source = this.context.getImageComponent().getCanvasImage();
+			final int w = source.getWidth();
+			final int h = source.getHeight();
+			this.canvas.setFormat(w, h, source.getType());
+			this.op.filter(source, this.canvas.getImage());
+			
+			Arrays.fill(this.counts, 0);
+			
+			for (int y = 0; y < h; ++y) {
+				for (int x = 0; x < w; ++x) {
+					final Color c = new Color(this.canvas.getImage().getRGB(x, y));
+					
+					++this.counts[(c.getRed() + c.getGreen() + c.getBlue()) / 3];
+				}
+			}
+			
+			this.repaint();
+		}
+		
+		private static final long serialVersionUID = -5126774744460467675L;
+		
 	}
 	
 	/**
@@ -469,8 +630,8 @@ public final class QuickSeg2 {
 			final Reference<Image2D> cached = getCached(key);
 			
 			if (cached == null) {
-				graphics.setColor(Color.RED);
-				graphics.draw(region);
+//				graphics.setColor(Color.RED);
+//				graphics.draw(region);
 				
 				if (context.getKeys().add(key)) {
 					context.getExecutor().submit(new Runnable() {
@@ -493,7 +654,7 @@ public final class QuickSeg2 {
 									
 									cache(image.getTileKey(tileXY.x, tileXY.y) + "_segments", () -> segments, true);
 									
-									if (fineCheckBox.isSelected()) {
+									if (fineCheckBox.isSelected() || max(tile.getWidth(), tile.getHeight()) < s) {
 										return null;
 									}
 									
@@ -511,9 +672,11 @@ public final class QuickSeg2 {
 			} else if (cached.hasObject()) {
 				graphics.drawImage((Image) cached.getObject().toAwt(), region.x, region.y, region.width, region.height, null);
 			} else if (!fineCheckBox.isSelected()) {
-				graphics.setColor(Color.RED);
-				graphics.draw(region);
+//				graphics.setColor(Color.RED);
+//				graphics.draw(region);
 			}
+			
+			this.context.getRepaintListeners().forEach(RepaintListener::repainted);
 		}
 		
 		private static final long serialVersionUID = -4573576871706331668L;
@@ -530,6 +693,8 @@ public final class QuickSeg2 {
 		private final Collection<String> keys = new HashSet<>();
 		
 		private final AtomicInteger hash = new AtomicInteger(1);
+		
+		private final Collection<RepaintListener> repaintListeners = new ArrayList<>();
 		
 		private JPanel mainPanel;
 		
@@ -551,6 +716,10 @@ public final class QuickSeg2 {
 		
 		public final AtomicInteger getHash() {
 			return this.hash;
+		}
+		
+		public final Collection<RepaintListener> getRepaintListeners() {
+			return this.repaintListeners;
 		}
 		
 		public final JPanel getMainPanel() {
@@ -608,6 +777,15 @@ public final class QuickSeg2 {
 		}
 		
 		private static final long serialVersionUID = -5610744496161785513L;
+		
+		/**
+		 * @author codistmonk (creation 2016-06-06)
+		 */
+		public static abstract interface RepaintListener extends Serializable {
+			
+			public abstract void repainted();
+			
+		}
 		
 	}
 	

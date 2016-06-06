@@ -135,8 +135,8 @@ public final class Image2DComponent extends JComponent {
 			final AffineTransform view = this.getView();
 			this.image = image.getScaledImage(view.getScaleX());
 			final double newScale = image.getScale();
-			this.view.setToScale(newScale, newScale);
-			this.view.translate((-image.getWidth() / 2.0 + this.getWidth() / 2) / newScale,
+			this.getView().setToScale(newScale, newScale);
+			this.getView().translate((-image.getWidth() / 2.0 + this.getWidth() / 2) / newScale,
 					(-image.getHeight() / 2.0 + this.getHeight() / 2) / newScale);
 			this.repaint();
 			
@@ -208,6 +208,10 @@ public final class Image2DComponent extends JComponent {
 	
 	public final AffineTransform getView() {
 		return this.view;
+	}
+	
+	public final BufferedImage getCanvasImage() {
+		return this.canvas.getImage();
 	}
 	
 	@Override
@@ -296,7 +300,7 @@ public final class Image2DComponent extends JComponent {
 		}
 		
 		synchronized (canvasGraphics) {
-			g.drawImage(this.canvas.getImage(), 0, 0, null);
+			g.drawImage(this.getCanvasImage(), 0, 0, null);
 			
 			final Overlay overlay = this.getOverlay();
 			
