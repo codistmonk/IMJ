@@ -1,6 +1,6 @@
 package imj3.draft;
 
-import static imj3.core.IMJCoreTools.cache;
+import static imj3.core.IMJCoreTools.*;
 import static imj3.tools.IMJTools.forEachPixelInEachComponent4;
 import static imj3.tools.IMJTools.forEachTile;
 import static imj3.tools.SVS2Multifile.newMetadata;
@@ -8,8 +8,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static multij.swing.SwingTools.horizontalBox;
 import static multij.swing.SwingTools.show;
-import static multij.tools.Tools.baseName;
-import static multij.tools.Tools.debugPrint;
+import static multij.tools.Tools.*;
 
 import imj3.core.Channels;
 import imj3.core.IMJCoreTools;
@@ -54,18 +53,20 @@ import java.util.zip.ZipOutputStream;
 
 import javax.imageio.ImageIO;
 import javax.swing.Box;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-
+import multij.swing.SwingTools;
 import multij.tools.Canvas;
 import multij.tools.CommandLineArgumentsParser;
 import multij.tools.IllegalInstantiationException;
 import multij.xml.XMLTools;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 
 /**
  * @author codistmonk (creation 2016-06-03)
@@ -94,6 +95,8 @@ public final class QuickSeg2 {
 			return;
 		}
 		
+		SwingTools.useSystemLookAndFeel();
+		
 		SwingUtilities.invokeLater(new Runnable() {
 			
 			@Override
@@ -101,9 +104,11 @@ public final class QuickSeg2 {
 				final JPanel mainPanel = new JPanel(new BorderLayout());
 				final JTextField qField = new JTextField("6");
 				final JTextField sField = new JTextField("32");
+				final JCheckBox fineCheckBox = new JCheckBox("Fine view");
 				final Box optionsBox = horizontalBox(
 						new JLabel("Q:"), qField,
-						new JLabel("S:"), sField);
+						new JLabel("S:"), sField,
+						fineCheckBox);
 				final Image2DComponent imageComponent = new Image2DComponent(new AwtImage2D("", 256, 256)).setDropImageEnabled(true);
 				final Collection<String> keys = new HashSet<>();
 				final AtomicInteger hash = new AtomicInteger(1);
@@ -125,8 +130,9 @@ public final class QuickSeg2 {
 				
 				qField.addActionListener(fieldActionListener);
 				sField.addActionListener(fieldActionListener);
+				fineCheckBox.addActionListener(fieldActionListener);
 				
-				final ExecutorService executor = Executors.newFixedThreadPool(2);
+				final ExecutorService executor = Executors.newFixedThreadPool(4);
 				
 				imageComponent.setTileOverlay(new TileOverlay() {
 					
@@ -139,7 +145,7 @@ public final class QuickSeg2 {
 					public final void update(final Graphics2D graphics, final Point tileXY, final Rectangle region) {
 						final Image2D image = imageComponent.getImage();
 						final String key = image.getTileKey(tileXY.x, tileXY.y) + "_outlines";
-						final Reference<Image2D> cached = IMJCoreTools.getCached(key);
+						final Reference<Image2D> cached = getCached(key);
 						
 						if (cached == null) {
 							graphics.setColor(Color.RED);
@@ -173,6 +179,12 @@ public final class QuickSeg2 {
 												final BufferedImage segments = segment(tile, q, s, 0, monitor);
 												
 												if (segments == null) {
+													return null;
+												}
+												
+												cache(image.getTileKey(tileXY.x, tileXY.y) + "_segments", () -> segments, true);
+												
+												if (fineCheckBox.isSelected()) {
 													return null;
 												}
 												
@@ -232,14 +244,11 @@ public final class QuickSeg2 {
 					
 					@Override
 					public final void update(final Graphics2D graphics, final Rectangle region) {
-						if (region.isEmpty()) {
+						if (region.isEmpty() || !fineCheckBox.isSelected()) {
 							return;
 						}
 						
 						this.canvas.setFormat(region.width, region.height).clear(new Color(0, true));
-						
-						graphics.setColor(Color.BLUE);
-						graphics.draw(region);
 						
 						final Point2D p0 = new Point2D.Double(0.0, 0.0);
 						final Point2D p1 = new Point2D.Double(1.0, 1.0);
@@ -259,22 +268,43 @@ public final class QuickSeg2 {
 								for (int x = 0; x < w; ++x) {
 									final int xIm = (int) ((p0.getX() + x * dx) * scale);
 									final int yIm = (int) ((p0.getY() + y * dy) * scale);
-									final int north = (int) ((p0.getY() + (y - 1) * dy) * scale);
-									final int west = (int) ((p0.getX() + (x - 1) * dx) * scale);
 									
-									if (0 <= xIm && xIm < w && 0 <= yIm && yIm < h) {
-										boolean mark = false;
+									if (0 <= xIm && xIm < image.getWidth() && 0 <= yIm && yIm < image.getHeight()) {
+										final int tileX = image.getTileXContaining(xIm);
+										final int tileY = image.getTileYContaining(yIm);
+										final String key = image.getTileKey(tileX, tileY) + "_segments";
+										final Reference<BufferedImage> segments = getCached(key);
 										
-										if (0 <= north && north < y) {
-											// TODO
-										}
-										
-										if (0 <= west && west < x) {
-											// TODO
-										}
-										
-										if (mark) {
-											this.canvas.getImage().setRGB(x, y, 0xFF00FF00);
+										if (segments != null && segments.hasObject()) {
+											final int centerId = segments.getObject().getRGB(xIm - tileX, yIm - tileY);
+											final int north = (int) ((p0.getY() + (y - 1) * dy) * scale);
+											final int west = (int) ((p0.getX() + (x - 1) * dx) * scale);
+											
+											boolean mark = false;
+											
+											if (0 <= north && north < yIm) {
+												final int northTileY = image.getTileYContaining(north);
+												final String northKey = image.getTileKey(tileX, northTileY) + "_segments";
+												final Reference<BufferedImage> northSegments = getCached(northKey);
+												
+												if (northSegments != null && northSegments.hasObject()) {
+													mark = mark || centerId != northSegments.getObject().getRGB(xIm - tileX, north - northTileY);
+												}
+											}
+											
+											if (0 <= west && west < xIm) {
+												final int westTileX = image.getTileXContaining(west);
+												final String westKey = image.getTileKey(westTileX, tileY) + "_segments";
+												final Reference<BufferedImage> westSegments = getCached(westKey);
+												
+												if (westSegments != null && westSegments.hasObject()) {
+													mark = mark || centerId != westSegments.getObject().getRGB(west - westTileX, yIm - tileY);
+												}
+											}
+											
+											if (mark) {
+												this.canvas.getImage().setRGB(x, y, 0xFF00FF00);
+											}
 										}
 									}
 								}
