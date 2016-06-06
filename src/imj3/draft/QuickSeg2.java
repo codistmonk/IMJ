@@ -86,8 +86,13 @@ public final class QuickSeg2 {
 		final String imagePath = arguments.get("image", "");
 		
 		if (!imagePath.isEmpty()) {
+			debugPrint("image:", imagePath);
+			
 			final int q = arguments.get("q", 5)[0];
 			final int s = arguments.get("s", 16)[0];
+			
+			debugPrint("q:", q, "s:", s);
+			
 			final Image2D image = IMJTools.read(imagePath);
 			
 			segmentFull(image, q, s, baseName(imagePath) + "_segments.zip", Monitor.DEFAULT);
