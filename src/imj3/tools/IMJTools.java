@@ -2,6 +2,7 @@ package imj3.tools;
 
 import static imj3.tools.CommonTools.classForName;
 import static imj3.tools.CommonTools.fieldValue;
+import static imj3.tools.SVS2Multifile.newMetadata;
 import static java.lang.Math.min;
 import static java.lang.Math.pow;
 import static multij.tools.Tools.array;
@@ -13,11 +14,21 @@ import imj3.core.Image2D;
 import imj3.core.Image2D.Pixel2DProcessor;
 
 import java.awt.Rectangle;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.Serializable;
+import java.io.UncheckedIOException;
+import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import multij.primitivelists.LongList;
 import multij.tools.IllegalInstantiationException;
 import multij.tools.Tools;
+import multij.xml.XMLTools;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 /**
  * @author codistmonk (creation 2014-11-29)
@@ -202,6 +213,47 @@ public final class IMJTools {
 				}
 			}
 		}
+	}
+	
+	public static final void createZipImage(final String path, final int width0, final int height0,
+			final int optimalTileWidth, final int optimalTileHeight, final String tileFormat, final double micronsPerPixel,
+			final TileGenerator generator) {
+		try (final ZipOutputStream output = new ZipOutputStream(new FileOutputStream(path))) {
+			generator.setOutput(output);
+			
+			final Document xml = newMetadata(width0, height0,
+					optimalTileWidth, optimalTileHeight,
+					tileFormat, "" + micronsPerPixel, new int[] { 0 });
+			
+			output.putNextEntry(new ZipEntry("metadata.xml"));
+			XMLTools.write(xml, output, 0);
+			output.closeEntry();
+			final List<Element> elements = XMLTools.getElements(xml, "//image");
+			
+			for (final Element imageElement : elements) {
+				generator.setElement(imageElement);
+				
+				final int w = XMLTools.getNumber(imageElement, "@width").intValue();
+				final int h = XMLTools.getNumber(imageElement, "@height").intValue();
+				
+				forEachTile(w, h, optimalTileWidth, optimalTileHeight, generator);
+			}
+			
+			SVS2Multifile.includeHTMLViewer(output, width0, height0, optimalTileWidth, elements.size() - 1, tileFormat);
+		} catch (final IOException exception) {
+			throw new UncheckedIOException(exception);
+		}
+	}
+	
+	/**
+	 * @author codistmonk (creation 2016-06-07)
+	 */
+	public static abstract interface TileGenerator extends Pixel2DProcessor {
+		
+		public abstract void setOutput(ZipOutputStream output);
+		
+		public abstract void setElement(Element imageElement);
+		
 	}
 	
 	/**

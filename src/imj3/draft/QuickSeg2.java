@@ -1,9 +1,7 @@
 package imj3.draft;
 
 import static imj3.core.IMJCoreTools.*;
-import static imj3.tools.IMJTools.forEachPixelInEachComponent4;
-import static imj3.tools.IMJTools.forEachTile;
-import static imj3.tools.SVS2Multifile.newMetadata;
+import static imj3.tools.IMJTools.*;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static multij.swing.SwingTools.horizontalBox;
@@ -11,6 +9,7 @@ import static multij.swing.SwingTools.horizontalSplit;
 import static multij.swing.SwingTools.scrollable;
 import static multij.swing.SwingTools.show;
 import static multij.tools.Tools.*;
+import static multij.xml.XMLTools.getNumber;
 
 import imj3.core.Channels;
 import imj3.core.IMJCoreTools;
@@ -24,7 +23,6 @@ import imj3.tools.IMJTools.ComponentComembership;
 import imj3.tools.Image2DComponent;
 import imj3.tools.Image2DComponent.Overlay;
 import imj3.tools.Image2DComponent.TileOverlay;
-import imj3.tools.SVS2Multifile;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -46,7 +44,6 @@ import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.ConvolveOp;
 import java.awt.image.Kernel;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
@@ -54,7 +51,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.OptionalInt;
 import java.util.Scanner;
@@ -81,10 +77,8 @@ import multij.swing.SwingTools;
 import multij.tools.Canvas;
 import multij.tools.CommandLineArgumentsParser;
 import multij.tools.IllegalInstantiationException;
-import multij.xml.XMLTools;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
+import org.w3c.dom.Element;
 
 /**
  * @author codistmonk (creation 2016-06-03)
@@ -142,58 +136,53 @@ public final class QuickSeg2 {
 	}
 	
 	public static final void segmentFull(final Image2D image, final int q, final int s, final String outputPath, final Monitor monitor) {
-		try (final ZipOutputStream output = new ZipOutputStream(new FileOutputStream(outputPath))) {
-			final int w0 = image.getWidth();
-			final int h0 = image.getHeight();
-			final String tileFormat = "png";
-			final Document xml = newMetadata(w0, h0,
-					image.getOptimalTileWidth(), image.getOptimalTileHeight(),
-					tileFormat, image.getMetadata().get("micronsPerPixel").toString(), new int[] { 0 });
+		final int w0 = image.getWidth();
+		final int h0 = image.getHeight();
+		final String tileFormat = "png";
+		
+		createZipImage(outputPath, image.getWidth(), image.getHeight(), image.getOptimalTileWidth(), image.getOptimalTileHeight(), tileFormat, (Double) image.getMetadata().get("micronsPerPixel"), new TileGenerator() {
 			
-			output.putNextEntry(new ZipEntry("metadata.xml"));
-			XMLTools.write(xml, output, 0);
-			output.closeEntry();
+			private ZipOutputStream output;
 			
-			final List<Node> nodes = XMLTools.getNodes(xml, "//image");
+			private String type;
 			
-			for (final Node imageNode : nodes) {
-				final String type = XMLTools.getString(imageNode, "@type");
-				final int w = XMLTools.getNumber(imageNode, "@width").intValue();
-				final int h = XMLTools.getNumber(imageNode, "@height").intValue();
-				final Image2D im = image.getScaledImage(max((double) w / w0, (double) h / h0));
-				
-				debugPrint(type, w, h, im.getWidth(), im.getHeight());
-				
-				forEachTile(w, h, im.getOptimalTileWidth(), im.getOptimalTileHeight(), new Pixel2DProcessor() {
-					
-					@Override
-					public final boolean pixel(final int tileX, final int tileY) {
-						final BufferedImage segments = segment(im.getTile(tileX, tileY), q, s, 0xFF000000, monitor);
-						
-						if (tileX == 0) {
-							debugPrint(type, tileX, tileY);
-						}
-						
-						try {
-							output.putNextEntry(new ZipEntry("tiles/tile_" + type + "_y" + tileY + "_x" + tileX + "." + tileFormat));
-							ImageIO.write(segments, tileFormat, output);
-							output.closeEntry();
-						} catch (final IOException exception) {
-							throw new UncheckedIOException(exception);
-						}
-						
-						return segments != null;
-					}
-					
-					private static final long serialVersionUID = 2620298775908199381L;
-					
-				});
+			private Image2D im;
+			
+			@Override
+			public final void setOutput(final ZipOutputStream output) {
+				this.output = output;
 			}
 			
-			SVS2Multifile.includeHTMLViewer(output, w0, h0, image.getOptimalTileWidth(), nodes.size() - 1, tileFormat);
-		} catch (final IOException exception) {
-			throw new UncheckedIOException(exception);
-		}
+			@Override
+			public final void setElement(final Element imageElement) {
+				this.type = imageElement.getAttribute("type");
+				final int w = getNumber(imageElement, "@width").intValue();
+				final int h = getNumber(imageElement, "@height").intValue();
+				this.im = image.getScaledImage(max((double) w / w0, (double) h / h0));
+			}
+			
+			@Override
+			public final boolean pixel(final int tileX, final int tileY) {
+				final BufferedImage segments = segment(this.im.getTile(tileX, tileY), q, s, 0xFF000000, monitor);
+				
+				if (tileX == 0) {
+					debugPrint(this.type, tileX, tileY);
+				}
+				
+				try {
+					this.output.putNextEntry(new ZipEntry("tiles/tile_" + this.type + "_y" + tileY + "_x" + tileX + "." + tileFormat));
+					ImageIO.write(segments, tileFormat, this.output);
+					this.output.closeEntry();
+				} catch (final IOException exception) {
+					throw new UncheckedIOException(exception);
+				}
+				
+				return segments != null;
+			}
+			
+			private static final long serialVersionUID = -349954077441100567L;
+			
+		});
 	}
 	
 	public static final BufferedImage segment(final Image2D image, final int q, final int s, final int id0, final Monitor monitor) {
