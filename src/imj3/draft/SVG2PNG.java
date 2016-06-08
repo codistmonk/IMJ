@@ -11,6 +11,7 @@ import imj3.core.Image2D;
 import imj3.tools.IMJTools;
 
 import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
@@ -99,10 +100,24 @@ public final class SVG2PNG {
 		final int clearColor = arguments.get("clear", -1)[0];
 		final Canvas canvas = new Canvas().setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR).clear(new Color(clearColor));
 		final String outputPath = arguments.get("output", baseName(svgPath) + "_groundtruth.png");
+		final Graphics2D graphics = canvas.getGraphics();
 		
 		debugPrint("classIds:", classIds);
 		debugPrint("stride:", stride, "scale:", scale, "w:", w, "h:", h);
 		
+		draw(svg, scale, classIdsArray, graphics);
+		
+		final File outputFile = new File(outputPath);
+		
+		try {
+			debugPrint("Writing", outputFile);
+			ImageIO.write(canvas.getImage(), "png", outputFile);
+		} catch (final IOException exception) {
+			exception.printStackTrace();
+		}
+	}
+	
+	public static final void draw(final Document svg, double scale, final String[] classIdsArray, final Graphics2D graphics) {
 		for (final Node regionNode : getNodes(svg, "//path|//polygon")) {
 			final Element regionElement = (Element) regionNode;
 			final int label = indexOf(regionElement.getAttribute("imj:classId"), classIdsArray);
@@ -115,20 +130,11 @@ public final class SVG2PNG {
 			
 			region.transform(AffineTransform.getScaleInstance(scale, scale));
 			
-			canvas.getGraphics().setColor(new Color(label));
-			canvas.getGraphics().fill(region);
-		}
-		
-		final File outputFile = new File(outputPath);
-		
-		try {
-			debugPrint("Writing", outputFile);
-			ImageIO.write(canvas.getImage(), "png", outputFile);
-		} catch (final IOException exception) {
-			exception.printStackTrace();
+			graphics.setColor(new Color(label));
+			graphics.fill(region);
 		}
 	}
-
+	
 	public static int resize(final int size, final int stride) {
 		return (size - stride / 2 + stride - 1) / stride;
 	}
