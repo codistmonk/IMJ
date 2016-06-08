@@ -8,7 +8,7 @@
 	<classpathentry kind="lib" path="lib/commons-compress-1.8.1.jar" sourcepath="/Libraries/commons-compress-1.8.1-src.zip"/>
 	<classpathentry kind="lib" path="lib/truezip-7.7.8.jar"/>
 	<classpathentry kind="lib" path="lib/weka.jar"/>
-	<classpathentry kind="lib" path="lib/multij-1.8.201606031427.jar"/>
+	<classpathentry kind="lib" path="lib/multij-1.8.201606081326.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="lib/bioformats_package.jar"/>
 	<classpathentry kind="output" path="bin"/>
