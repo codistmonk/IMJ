@@ -1,7 +1,6 @@
 package imj3.draft;
 
 import static multij.tools.Tools.*;
-import imj3.tools.GroundTruth2Bin.BinView;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -16,6 +15,7 @@ import java.util.List;
 
 import javax.imageio.ImageIO;
 
+import imj3.tools.BinView;
 import multij.tools.Canvas;
 import multij.tools.CommandLineArgumentsParser;
 import multij.tools.IllegalInstantiationException;

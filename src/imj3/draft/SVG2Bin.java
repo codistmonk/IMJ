@@ -11,6 +11,7 @@ import imj2.tools.BigBitSet;
 
 import imj3.core.Channels;
 import imj3.core.Image2D;
+import imj3.tools.BinView;
 import imj3.tools.GroundTruth2Bin;
 import imj3.tools.IMJTools;
 import imj3.tools.Image2DComponent;
@@ -116,8 +117,8 @@ public final class SVG2Bin {
 			writeBins(items, trainRatio, trainOutputPath, testOutputPath);
 			
 			if (arguments.get("show", 0)[0] != 0) {
-				GroundTruth2Bin.BinView.main(trainOutputPath);
-				GroundTruth2Bin.BinView.main(testOutputPath);
+				BinView.main(trainOutputPath);
+				BinView.main(testOutputPath);
 				
 				SwingTools.show(new Image2DComponent(image), "Image", false);
 			}
