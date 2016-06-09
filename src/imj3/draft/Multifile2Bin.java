@@ -75,6 +75,8 @@ public final class Multifile2Bin {
 		final Rectangle bounds = new Rectangle(xywh[0], xywh[1], xywh[2], xywh[3]);
 		final Map<Integer, Map<Point, long[]>> available = new TreeMap<>();
 		
+		debugPrint("Collecting examples...");
+		
 		IMJTools.forEachTileIn(image, new Pixel2DProcessor() {
 			
 			private final Rectangle tileBounds = new Rectangle();
@@ -83,6 +85,10 @@ public final class Multifile2Bin {
 			
 			@Override
 			public final boolean pixel(final int tileX, final int tileY) {
+				if (tileX == 0) {
+					debugPrint("tileY:", tileY);
+				}
+				
 				final Point tileXY = new Point(tileX, tileY);
 				
 				this.tileBounds.setBounds(tileX, tileY, image.getTileWidth(tileX), image.getTileHeight(tileY));
@@ -123,60 +129,66 @@ public final class Multifile2Bin {
 			}
 		}
 		
+		debugPrint("Sampling...");
+		
 		final Map<Point, Map<Integer, Collection<Long>>> requests = new HashMap<>();
 		
-		try (final FileOutputStream output = new FileOutputStream(outputPath)) {
-			for (final Map.Entry<Integer, Map<Point, long[]>> entry1 : available.entrySet()) {
-				final Point[] tiles = entry1.getValue().keySet().toArray(new Point[entry1.getValue().size()]);
-				final long[] counts = entry1.getValue().values().stream().mapToLong(v -> v[0]).toArray();
-				final long sum = Arrays.stream(counts).sum();
+		for (final Map.Entry<Integer, Map<Point, long[]>> entry1 : available.entrySet()) {
+			debugPrint("label:", Integer.toHexString(entry1.getKey()));
+			
+			final Point[] tiles = entry1.getValue().keySet().toArray(new Point[entry1.getValue().size()]);
+			final long[] counts = entry1.getValue().values().stream().mapToLong(v -> v[0]).toArray();
+			final long sum = Arrays.stream(counts).sum();
+			
+			final List<Long> indices = new ArrayList<>(perClassSampling);
+			
+			{
+				int i = 0;
 				
-				final List<Long> indices = new ArrayList<>(perClassSampling);
+				final int m = (int) (perClassSampling % sum);
+				
+				for (; i < m; ++i) {
+					Long candidate;
+					
+					do {
+						candidate = random.nextLong();
+						
+						if (candidate < 0L) {
+							candidate = -candidate;
+						}
+						
+						candidate = candidate % sum;
+					} while (indices.contains(candidate));
+					
+					indices.add(candidate);
+				}
 				
 				{
-					int i = 0;
+					long j = 0L;
 					
-					final int m = (int) (perClassSampling % sum);
-					
-					for (; i < m; ++i) {
-						Long candidate;
-						
-						do {
-							candidate = random.nextLong();
-							
-							if (candidate < 0L) {
-								candidate = -candidate;
-							}
-							
-							candidate = candidate % sum;
-						} while (indices.contains(candidate));
-						
-						indices.add(candidate);
+					for (; i < perClassSampling; ++i) {
+						indices.add(j % sum);
 					}
+				}
+			}
+			
+			for (final Long index : indices) {
+				final int[] i = { 0 };
+				
+				for (long acc = 0L; i[0] < counts.length; ++i[0]) {
+					acc += counts[i[0]];
 					
-					{
-						long j = 0L;
-						
-						for (; i < perClassSampling; ++i) {
-							indices.add(j % sum);
-						}
+					if (index < acc) {
+						break;
 					}
 				}
 				
-				for (final Long index : indices) {
-					final int[] i = { 0 };
-					
-					for (long acc = 0L; i[0] < counts.length; ++i[0]) {
-						acc += counts[i[0]];
-						
-						if (index < acc) {
-							break;
-						}
-					}
-					
-					requests.computeIfAbsent(tiles[i[0]], __ -> new HashMap<>()).computeIfAbsent(entry1.getKey(), __ -> new ArrayList<>()).add(index);
-				}
+				requests.computeIfAbsent(tiles[i[0]], __ -> new HashMap<>()).computeIfAbsent(entry1.getKey(), __ -> new ArrayList<>()).add(index);
 			}
+		}
+		
+		try (final FileOutputStream output = new FileOutputStream(outputPath)) {
+			debugPrint("Generating items...");
 			
 			final Map<Integer, long[]> ids = new HashMap<>();
 			
@@ -190,6 +202,10 @@ public final class Multifile2Bin {
 				
 				@Override
 				public final boolean pixel(final int tileX, final int tileY) {
+					if (tileX == 0) {
+						debugPrint("tileY:", tileY);
+					}
+					
 					final Point tileXY = new Point(tileX, tileY);
 					
 					this.tileBounds.setBounds(tileX, tileY, image.getTileWidth(tileX), image.getTileHeight(tileY));
