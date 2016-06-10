@@ -275,6 +275,8 @@ public final class IMJTools {
 			
 			private static final long serialVersionUID = 3705129683034846142L;
 			
+			public static final Default INSTANCE = new Default();
+			
 		}
 		
 	}
