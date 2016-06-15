@@ -106,8 +106,11 @@ public final class QuickSeg2 {
 			debugPrint("q:", q, "s:", s);
 			
 			final Image2D image = IMJTools.read(imagePath);
+			final String outputPath = baseName(imagePath) + "_segments.zip";
 			
-			segmentFull(image, q, s, baseName(imagePath) + "_segments.zip", Monitor.DEFAULT);
+			debugPrint("output:", outputPath);
+			
+			segmentFull(image, q, s, outputPath, Monitor.DEFAULT);
 			
 			return;
 		}
