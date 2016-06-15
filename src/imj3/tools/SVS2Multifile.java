@@ -72,7 +72,7 @@ public final class SVS2Multifile {
 	 * @param commandLineArguments
 	 * <br>Must not be null
 	 */
-	public static final void main(final String[] commandLineArguments) {
+	public static final void main(final String... commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String pathsAsString = arguments.get("files", "");
 		final String[] paths = pathsAsString.split(":");
@@ -80,7 +80,8 @@ public final class SVS2Multifile {
 		final RegexFilter filter = new RegexFilter(arguments.get("filter", ".*\\.svs"));
 		final File outRoot = new File(arguments.get("out", "."));
 		final int threads = max(1, arguments.get("threads", SystemProperties.getAvailableProcessorCount() / 2)[0]);
-		final boolean includeHTMLViewer = arguments.get("includeHTMLViewer", 1)[0] != 0;
+		final boolean includeHTMLViewer = arguments.get1("includeHTMLViewer", 1) != 0;
+		final int tileSide = arguments.get1("tileSide", 512);
 		
 		compressionQuality = Float.parseFloat(arguments.get("compressionQuality", "0.9"));
 		levelCPULoad = 1.0 / threads;
@@ -92,15 +93,15 @@ public final class SVS2Multifile {
 		debugPrint(tasks.getWorkerCount());
 		
 		if (!pathsAsString.isEmpty()) {
-			Arrays.stream(paths).forEach(p -> tasks.submit(() -> process(new File(p), null, outRoot, includeHTMLViewer)));
+			Arrays.stream(paths).forEach(p -> tasks.submit(() -> process(new File(p), null, tileSide, outRoot, includeHTMLViewer)));
 		} else {
-			FileProcessor.deepForEachFileIn(inRoot, f -> tasks.submit(() -> process(f, filter, outRoot, includeHTMLViewer)));
+			FileProcessor.deepForEachFileIn(inRoot, f -> tasks.submit(() -> process(f, filter, tileSide, outRoot, includeHTMLViewer)));
 		}
 		
 		tasks.join();
 	}
 	
-	public static final void process(final File file, final FilenameFilter filter, final File outRoot, final boolean includeHTMLViewer) {
+	public static final void process(final File file, final FilenameFilter filter, final int tileSide, final File outRoot, final boolean includeHTMLViewer) {
 		final String fileName = file.getName();
 		
 		if (!fileName.isEmpty() && (filter == null || filter.accept(file.getParentFile(), fileName))) {
@@ -118,7 +119,6 @@ public final class SVS2Multifile {
 					final IFormatReader reader = newImageReader(file.getPath());
 					final int imageWidth = reader.getSizeX();
 					final int imageHeight = reader.getSizeY();
-					final int tileSize = 512;
 					final int[] level = { 0 };
 					
 					{
@@ -130,7 +130,7 @@ public final class SVS2Multifile {
 							exception.printStackTrace();
 						}
 						
-						final Document xml = newMetadata(imageWidth, imageHeight, tileSize, tileSize, tileFormat, mpp, level);
+						final Document xml = newMetadata(imageWidth, imageHeight, tileSide, tileSide, tileFormat, mpp, level);
 						
 						output.putNextEntry(new ZipEntry("metadata.xml"));
 						XMLTools.write(xml, output, 0);
@@ -138,14 +138,14 @@ public final class SVS2Multifile {
 					}
 					
 					if (includeHTMLViewer) {
-						includeHTMLViewer(output, imageWidth, imageHeight, tileSize, level[0] - 1, tileFormat);
+						includeHTMLViewer(output, imageWidth, imageHeight, tileSide, level[0] - 1, tileFormat);
 					}
 					
 					debugPrint(fileName, imageWidth, imageHeight, predefinedChannelsFor(reader));
 					
 					final Collection<Exception> problems = synchronizedList(new ArrayList<>());
 					final ConsoleMonitor monitor = new ConsoleMonitor(30_000L);
-					final Level0 level0 = new Level0(reader, tileSize, tileFormat, output, problems);
+					final Level0 level0 = new Level0(reader, tileSide, tileFormat, output, problems);
 					
 					while (level0.next()) {
 						if (monitor.ping()) {
