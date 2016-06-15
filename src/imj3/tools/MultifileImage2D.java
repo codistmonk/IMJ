@@ -1,6 +1,8 @@
 package imj3.tools;
 
 import static imj3.core.IMJCoreTools.cache;
+import static java.lang.Integer.highestOneBit;
+import static java.lang.Integer.numberOfTrailingZeros;
 import static java.lang.Math.*;
 import static multij.tools.Tools.*;
 import static multij.xml.XMLTools.*;
@@ -79,10 +81,20 @@ public final class MultifileImage2D implements Image2D {
 	private MultifileImage2D(final MultifileSource source, final Document metadata, final int lod) {
 		this.metadata = new HashMap<>();
 		this.source = source;
-		this.lod = lod;
 		
-		final String imageXPath = "group/image[" + (lod + 1) + "]/";
+		int l = lod + 2;
+		String imageXPath;
 		
+		do {
+			--l;
+			imageXPath = "group/image[" + l + "]/";
+		} while (0 < l && null == getNode(metadata, imageXPath + "@tilePrefix"));
+		
+		if (l <= 0) {
+			throw new IllegalStateException();
+		}
+		
+		this.lod = l - 1;
 		this.tilePrefix = getOrDefault(metadata, imageXPath + "@tilePrefix", OLD_TILE_PREFIX);
 		this.width = getNumber(metadata, imageXPath + "@width").intValue();
 		this.height = getNumber(metadata, imageXPath + "@height").intValue();
@@ -155,7 +167,8 @@ public final class MultifileImage2D implements Image2D {
 	
 	@Override
 	public final Image2D getScaledImage(final double scale) {
-		final int newLod = max(0, (int) round(-log(scale) / log(2.0)));
+		final int maxLod = this.getLod() + maxLod(this);
+		final int newLod = min(maxLod, max(0, (int) round(-log(scale) / log(2.0))));
 		
 		if (this.getLod() == newLod) {
 			return this;
@@ -235,6 +248,14 @@ public final class MultifileImage2D implements Image2D {
 	
 	@Deprecated
 	private static final String OLD_TILE_PREFIX = "tile_";
+	
+	public static final int bits(final int n) {
+		return numberOfTrailingZeros(highestOneBit(n));
+	}
+	
+	public static final int maxLod(final Image2D image) {
+		return min(bits(image.getWidth()), image.getHeight());
+	}
 	
 	public static final Document getMetadataFrom(final MultifileSource source) {
 		return cache(source.getPath("metadata.xml"), () -> {
