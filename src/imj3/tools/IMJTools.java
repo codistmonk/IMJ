@@ -218,7 +218,10 @@ public final class IMJTools {
 	public static final void createZipImage(final String path, final int width0, final int height0,
 			final int optimalTileWidth, final int optimalTileHeight, final String tileFormat, final double micronsPerPixel,
 			final TileGenerator generator) {
+		final long t0 = System.currentTimeMillis();
+		
 		try (final ZipOutputStream output = new ZipOutputStream(new FileOutputStream(path))) {
+			output.setLevel(ZipOutputStream.STORED);
 			generator.setOutput(output);
 			
 			final Document xml = newMetadata(width0, height0,
@@ -240,6 +243,8 @@ public final class IMJTools {
 			}
 			
 			SVS2Multifile.includeHTMLViewer(output, width0, height0, optimalTileWidth, elements.size() - 1, tileFormat);
+			
+			Tools.debugPrint("Created", path, "in", System.currentTimeMillis() - t0, "ms");
 		} catch (final IOException exception) {
 			throw new UncheckedIOException(exception);
 		}
