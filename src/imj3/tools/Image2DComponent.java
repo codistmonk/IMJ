@@ -451,7 +451,15 @@ public final class Image2DComponent extends JComponent {
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String path = arguments.get("file", "");
-		final Image2DComponent component = new Image2DComponent(IMJTools.read(path)).setDropImageEnabled(true);
+		Image2D image = new AwtImage2D("", 1, 1);
+		
+		try {
+			image = IMJTools.read(path);
+		} catch (final Exception exception) {
+			exception.printStackTrace();
+		}
+		
+		final Image2DComponent component = new Image2DComponent(image).setDropImageEnabled(true);
 		
 		EventManager.getInstance().addWeakListener(component, ImageChangedEvent.class, new Object() {
 			
