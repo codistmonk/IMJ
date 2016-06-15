@@ -131,7 +131,14 @@ public final class SVG2PNG {
 			region.transform(AffineTransform.getScaleInstance(scale, scale));
 			
 			graphics.setColor(new Color(label));
-			graphics.fill(region);
+			
+			final Rectangle bounds = region.getBounds();
+			
+			if (bounds.width == 1 && bounds.height == 1) {
+				graphics.drawLine(bounds.x, bounds.y, bounds.x, bounds.y);
+			} else {
+				graphics.fill(region);
+			}
 		}
 	}
 	
