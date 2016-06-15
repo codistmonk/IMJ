@@ -7,7 +7,6 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.synchronizedList;
 import static multij.tools.Tools.*;
-
 import imj3.tools.CommonTools.FileProcessor;
 
 import java.awt.image.BufferedImage;
@@ -82,6 +81,7 @@ public final class SVS2Multifile {
 		final int threads = max(1, arguments.get("threads", SystemProperties.getAvailableProcessorCount() / 2)[0]);
 		final boolean includeHTMLViewer = arguments.get1("includeHTMLViewer", 1) != 0;
 		final int tileSide = arguments.get1("tileSide", 512);
+		final String tileFormat = arguments.get("tileFormat", MultifileImage2D.TILE_FORMAT);
 		
 		compressionQuality = Float.parseFloat(arguments.get("compressionQuality", "0.9"));
 		levelCPULoad = 1.0 / threads;
@@ -93,15 +93,16 @@ public final class SVS2Multifile {
 		debugPrint(tasks.getWorkerCount());
 		
 		if (!pathsAsString.isEmpty()) {
-			Arrays.stream(paths).forEach(p -> tasks.submit(() -> process(new File(p), null, tileSide, outRoot, includeHTMLViewer)));
+			Arrays.stream(paths).forEach(p -> tasks.submit(() -> process(new File(p), null, tileSide, tileFormat, outRoot, includeHTMLViewer)));
 		} else {
-			FileProcessor.deepForEachFileIn(inRoot, f -> tasks.submit(() -> process(f, filter, tileSide, outRoot, includeHTMLViewer)));
+			FileProcessor.deepForEachFileIn(inRoot, f -> tasks.submit(() -> process(f, filter, tileSide, tileFormat, outRoot, includeHTMLViewer)));
 		}
 		
 		tasks.join();
 	}
 	
-	public static final void process(final File file, final FilenameFilter filter, final int tileSide, final File outRoot, final boolean includeHTMLViewer) {
+	public static final void process(final File file, final FilenameFilter filter,
+			final int tileSide, final String tileFormat, final File outRoot, final boolean includeHTMLViewer) {
 		final String fileName = file.getName();
 		
 		if (!fileName.isEmpty() && (filter == null || filter.accept(file.getParentFile(), fileName))) {
@@ -110,7 +111,6 @@ public final class SVS2Multifile {
 			if (file.getPath().contains("/old/") || outputFile.isFile()) {
 				debugError("Ignoring", file);
 			} else {
-				final String tileFormat = MultifileImage2D.TILE_FORMAT;
 				final TicToc timer = new TicToc();
 				
 				debugPrint("Processing", file, new Date(timer.tic()));
@@ -268,7 +268,7 @@ public final class SVS2Multifile {
 			this.output = output;
 			this.problems = problems;
 			this.nextLevel = 2 <= this.imageWidth && 2 <= this.imageHeight ? new LevelN(
-					1, tileSize, this.imageWidth / 2, this.imageHeight / 2, tileFormat, output, problems) : null;
+					1, channelCount, tileSize, this.imageWidth / 2, this.imageHeight / 2, tileFormat, output, problems) : null;
 		}
 		
 		public final boolean next() {
@@ -308,28 +308,50 @@ public final class SVS2Multifile {
 							final Canvas tile = tiles.computeIfAbsent(Thread.currentThread(), t -> new Canvas());
 							final int w = min(tileSize, imageWidth - tileX0);
 							
-							tile.setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR);
+							if (channelCount == 1) {
+								tile.setFormat(w, h, BufferedImage.TYPE_BYTE_GRAY);
+							} else {
+								tile.setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR);
+							}
+							
+							final int[] pixelValue = { 0 };
 							
 							for (int y = 0; y < h; ++y) {
 								for (int x = 0; x < w; ++x) {
-									tile.getImage().setRGB(x, y, getPixelValueFromBuffer(
-											reader, buffer, imageWidth, h, channelCount, tileX0 + x, y));
+									pixelValue[0] = getPixelValueFromBuffer(
+											reader, buffer, imageWidth, h, channelCount, tileX0 + x, y);
+									
+									if (channelCount == 1) {
+										tile.getImage().getRaster().setPixel(x, y, pixelValue);
+									} else {
+										tile.getImage().setRGB(x, y, pixelValue[0]);
+									}
 								}
 							}
 							
 							if (nextLevel != null) {
 								for (int y = 0; y < (h & ~1); y += 2) {
 									for (int x = 0; x < (w & ~1); x += 2) {
-										final int rgb00 = tile.getImage().getRGB(x, y);
-										final int rgb01 = tile.getImage().getRGB(x, y + 1);
-										final int rgb10 = tile.getImage().getRGB(x + 1, y);
-										final int rgb11 = tile.getImage().getRGB(x + 1, y + 1);
-										final int r = (((rgb00 & R) + (rgb01 & R) + (rgb10 & R) + (rgb11 & R)) / 4) & R; 
-										final int g = (((rgb00 & G) + (rgb01 & G) + (rgb10 & G) + (rgb11 & G)) / 4) & G; 
-										final int b = (((rgb00 & B) + (rgb01 & B) + (rgb10 & B) + (rgb11 & B)) / 4) & B;
-										final int rgb = 0xFF000000 | r | g | b;
-										
-										nextLevel.setRGB((tileX0 + x) / 2, (tileY + y) / 2, rgb);
+										if (channelCount == 1) {
+											final int v00 = tile.getImage().getRaster().getPixel(x, y, pixelValue)[0];
+											final int v01 = tile.getImage().getRaster().getPixel(x, y + 1, pixelValue)[0];
+											final int v10 = tile.getImage().getRaster().getPixel(x + 1, y, pixelValue)[0];
+											final int v11 = tile.getImage().getRaster().getPixel(x + 1, y + 1, pixelValue)[0];
+											final int v = (v00 + v01 + v10 + v11) / 4; 
+											
+											nextLevel.setRGB((tileX0 + x) / 2, (tileY + y) / 2, v);
+										} else {
+											final int rgb00 = tile.getImage().getRGB(x, y);
+											final int rgb01 = tile.getImage().getRGB(x, y + 1);
+											final int rgb10 = tile.getImage().getRGB(x + 1, y);
+											final int rgb11 = tile.getImage().getRGB(x + 1, y + 1);
+											final int r = (((rgb00 & R) + (rgb01 & R) + (rgb10 & R) + (rgb11 & R)) / 4) & R; 
+											final int g = (((rgb00 & G) + (rgb01 & G) + (rgb10 & G) + (rgb11 & G)) / 4) & G; 
+											final int b = (((rgb00 & B) + (rgb01 & B) + (rgb10 & B) + (rgb11 & B)) / 4) & B;
+											final int rgb = 0xFF000000 | r | g | b;
+											
+											nextLevel.setRGB((tileX0 + x) / 2, (tileY + y) / 2, rgb);
+										}
 									}
 								}
 							}
@@ -383,6 +405,8 @@ public final class SVS2Multifile {
 		
 		private final int n;
 		
+		private final int channelCount;
+		
 		private int tileY;
 		
 		private final int[] buffer;
@@ -399,9 +423,10 @@ public final class SVS2Multifile {
 		
 		private boolean bufferDone;
 		
-		public LevelN(final int n, final int tileSize, final int levelWidth, final int levelHeight,
+		public LevelN(final int n, final int channelCount, final int tileSize, final int levelWidth, final int levelHeight,
 				final String tileFormat, final ZipOutputStream output, final Collection<Exception> problems) {
 			this.n = n;
+			this.channelCount = channelCount;
 			this.buffer = new int[tileSize * levelWidth];
 			this.tileSize = tileSize;
 			this.levelWidth = levelWidth;
@@ -410,7 +435,7 @@ public final class SVS2Multifile {
 			this.output = output;
 			this.problems = problems;
 			this.nextLevel = 2 <= levelWidth && 2 <= levelHeight ? new LevelN(
-					n + 1, tileSize, levelWidth / 2, levelHeight / 2, tileFormat, output, problems) : null;
+					n + 1, channelCount, tileSize, levelWidth / 2, levelHeight / 2, tileFormat, output, problems) : null;
 		}
 		
 		public final void setRGB(final int xInLevel, final int yInLevel, final int rgb) {
@@ -448,11 +473,23 @@ public final class SVS2Multifile {
 							final Canvas tile = new Canvas();
 							final int w = min(tileSize, levelWidth - tileX0);
 							
-							tile.setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR);
+							if (channelCount == 1) {
+								tile.setFormat(w, h, BufferedImage.TYPE_BYTE_GRAY);
+							} else {
+								tile.setFormat(w, h, BufferedImage.TYPE_3BYTE_BGR);
+							}
+							
+							final int[] pixelValue = { 0 };
 							
 							for (int y = 0; y < h; ++y) {
 								for (int x = 0; x < w; ++x) {
-									tile.getImage().setRGB(x, y, buffer[y * levelWidth + tileX0 + x]);
+									pixelValue[0] = buffer[y * levelWidth + tileX0 + x];
+									
+									if (channelCount == 1) {
+										tile.getImage().getRaster().setPixel(x, y, pixelValue);
+									} else {
+										tile.getImage().setRGB(x, y, pixelValue[0]);
+									}
 								}
 							}
 							
@@ -477,16 +514,26 @@ public final class SVS2Multifile {
 							if (nextLevel != null) {
 								for (int y = 0; y < (h & ~1); y += 2) {
 									for (int x = 0; x < (w & ~1); x += 2) {
-										final int rgb00 = buffer[y * levelWidth + tileX0 + x];
-										final int rgb01 = buffer[y * levelWidth + tileX0 + x + 1];
-										final int rgb10 = buffer[(y + 1) * levelWidth + tileX0 + x];
-										final int rgb11 = buffer[(y + 1) * levelWidth + tileX0 + x + 1];
-										final int r = (((rgb00 & R) + (rgb01 & R) + (rgb10 & R) + (rgb11 & R)) / 4) & R; 
-										final int g = (((rgb00 & G) + (rgb01 & G) + (rgb10 & G) + (rgb11 & G)) / 4) & G; 
-										final int b = (((rgb00 & B) + (rgb01 & B) + (rgb10 & B) + (rgb11 & B)) / 4) & B;
-										final int nextRGB = 0xFF000000 | r | g | b;
-										
-										nextLevel.setRGB((tileX0 + x) / 2, (tileY + y) / 2, nextRGB);
+										if (channelCount == 1) {
+											final int v00 = tile.getImage().getRaster().getPixel(x, y, pixelValue)[0];
+											final int v01 = tile.getImage().getRaster().getPixel(x, y + 1, pixelValue)[0];
+											final int v10 = tile.getImage().getRaster().getPixel(x + 1, y, pixelValue)[0];
+											final int v11 = tile.getImage().getRaster().getPixel(x + 1, y + 1, pixelValue)[0];
+											final int v = (v00 + v01 + v10 + v11) / 4; 
+											
+											nextLevel.setRGB((tileX0 + x) / 2, (tileY + y) / 2, v);
+										} else {
+											final int rgb00 = buffer[y * levelWidth + tileX0 + x];
+											final int rgb01 = buffer[y * levelWidth + tileX0 + x + 1];
+											final int rgb10 = buffer[(y + 1) * levelWidth + tileX0 + x];
+											final int rgb11 = buffer[(y + 1) * levelWidth + tileX0 + x + 1];
+											final int r = (((rgb00 & R) + (rgb01 & R) + (rgb10 & R) + (rgb11 & R)) / 4) & R; 
+											final int g = (((rgb00 & G) + (rgb01 & G) + (rgb10 & G) + (rgb11 & G)) / 4) & G; 
+											final int b = (((rgb00 & B) + (rgb01 & B) + (rgb10 & B) + (rgb11 & B)) / 4) & B;
+											final int nextRGB = 0xFF000000 | r | g | b;
+											
+											nextLevel.setRGB((tileX0 + x) / 2, (tileY + y) / 2, nextRGB);
+										}
 									}
 								}
 							}

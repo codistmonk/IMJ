@@ -89,12 +89,17 @@ public final class AwtImage2D implements Image2D {
 	
 	@Override
 	public final long getPixelValue(final int x, final int y) {
-		return this.getSource().getRGB(x, y);
+		return this.getChannels().getChannelCount() == 1 ? this.getSource().getRaster().getPixel(x, y, new int[1])[0]
+				: this.getSource().getRGB(x, y);
 	}
 	
 	@Override
 	public final AwtImage2D setPixelValue(final int x, final int y, final long value) {
-		this.getSource().setRGB(x, y, (int) value);
+		if (this.getChannels().getChannelCount() == 1) {
+			this.getSource().getRaster().setPixel(x, y, new int[] { (int) value });
+		} else {
+			this.getSource().setRGB(x, y, (int) value);
+		}
 		
 		return this;
 	}
