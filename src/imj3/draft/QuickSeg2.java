@@ -166,7 +166,7 @@ public final class QuickSeg2 {
 				final BufferedImage segments = segment(this.im.getTile(tileX, tileY), q, s, 0xFF000000, monitor);
 				
 				if (tileX == 0) {
-					debugPrint(this.type, tileX, tileY);
+					debugPrint(this.im.getId(), this.type, tileX, tileY);
 				}
 				
 				try {
@@ -375,8 +375,6 @@ public final class QuickSeg2 {
 		
 		private final int[] counts;
 		
-		private Kernel kernel;
-		
 		private ConvolveOp op;
 		
 		public ConvolutionalHistogramPanel(final Context context) {
@@ -396,13 +394,13 @@ public final class QuickSeg2 {
 					graphics.setColor(Color.WHITE);
 					graphics.fillRect(0, 0, 256, 256);
 					
-					final OptionalInt s = Arrays.stream(counts).max();
+					final OptionalInt s = Arrays.stream(getCounts()).max();
 					
 					if (s.isPresent() && 0 < s.getAsInt()) {
 						graphics.setColor(Color.BLACK);
 						
 						for (int i = 0; i < 256; ++i) {
-							graphics.drawLine(i, 255, i, 255 - 255 * counts[i] / s.getAsInt());
+							graphics.drawLine(i, 255, i, 255 - 255 * getCounts()[i] / s.getAsInt());
 						}
 					}
 				}
@@ -411,8 +409,7 @@ public final class QuickSeg2 {
 				
 			};
 			this.counts = new int[256];
-			this.kernel = new Kernel(1, 1, new float[] { 1F });
-			this.op = new ConvolveOp(this.kernel);
+			this.op = new ConvolveOp(new Kernel(1, 1, new float[] { 1F }));
 			
 			context.getRepaintListeners().add(this);
 			
@@ -426,7 +423,7 @@ public final class QuickSeg2 {
 						final FloatList data = new FloatList();
 						int rowCount = 0;
 						
-						try (final Scanner scanner = new Scanner(kernelEditor.getText())) {
+						try (final Scanner scanner = new Scanner(ConvolutionalHistogramPanel.this.getKernelEditor().getText())) {
 							scanner.useLocale(Locale.ENGLISH);
 							
 							while (scanner.hasNext()) {
@@ -445,8 +442,7 @@ public final class QuickSeg2 {
 							return;
 						}
 						
-						kernel = new Kernel(data.size() / rowCount, rowCount, data.toArray());
-						op = new ConvolveOp(kernel);
+						ConvolutionalHistogramPanel.this.setOp(new Kernel(data.size() / rowCount, rowCount, data.toArray()));
 						repainted();
 					}
 				}
@@ -475,6 +471,26 @@ public final class QuickSeg2 {
 			this.repaint();
 		}
 		
+		final JTextArea getKernelEditor() {
+			return this.kernelEditor;
+		}
+		
+		final int[] getCounts() {
+			return this.counts;
+		}
+		
+		final ConvolveOp getOp() {
+			return this.op;
+		}
+		
+		final void setOp(final Kernel kernel) {
+			this.setOp(new ConvolveOp(kernel));
+		}
+		
+		final void setOp(final ConvolveOp op) {
+			this.op = op;
+		}
+		
 		private static final long serialVersionUID = -5126774744460467675L;
 		
 	}
@@ -498,7 +514,7 @@ public final class QuickSeg2 {
 		
 		@Override
 		public final void update(final Graphics2D graphics, final Rectangle region) {
-			if (region.isEmpty() || !fineCheckBox.isSelected()) {
+			if (region.isEmpty() || !this.fineCheckBox.isSelected()) {
 				return;
 			}
 			
@@ -508,14 +524,14 @@ public final class QuickSeg2 {
 			final Point2D p1 = new Point2D.Double(1.0, 1.0);
 			
 			try {
-				imageComponent.getView().inverseTransform(p0, p0);
-				imageComponent.getView().inverseTransform(p1, p1);
+				this.imageComponent.getView().inverseTransform(p0, p0);
+				this.imageComponent.getView().inverseTransform(p1, p1);
 				
 				final double dx = p1.getX() - p0.getX();
 				final double dy = p1.getY() - p0.getY();
 				final int w = region.width;
 				final int h = region.height;
-				final Image2D image = imageComponent.getImage();
+				final Image2D image = this.imageComponent.getImage();
 				final double scale = image.getScale();
 				
 				for (int y = 0; y < h; ++y) {
@@ -614,7 +630,7 @@ public final class QuickSeg2 {
 
 		@Override
 		public final void update(final Graphics2D graphics, final Point tileXY, final Rectangle region) {
-			final Image2D image = imageComponent.getImage();
+			final Image2D image = this.imageComponent.getImage();
 			final String key = image.getTileKey(tileXY.x, tileXY.y) + "_outlines";
 			final Reference<Image2D> cached = getCached(key);
 			
@@ -622,8 +638,8 @@ public final class QuickSeg2 {
 //				graphics.setColor(Color.RED);
 //				graphics.draw(region);
 				
-				if (context.getKeys().add(key)) {
-					context.getExecutor().submit(new Runnable() {
+				if (this.context.getKeys().add(key)) {
+					this.context.getExecutor().submit(new Runnable() {
 						
 						@Override
 						public final void run() {
@@ -631,9 +647,9 @@ public final class QuickSeg2 {
 								
 								@Override
 								public final Image2D get() {
-									final Monitor monitor = context.newKeyMonitor(key);
-									final int q = Integer.decode(qField.getText());
-									final int s = Integer.decode(sField.getText());
+									final Monitor monitor = QuickSegTileOverlay.this.context.newKeyMonitor(key);
+									final int q = Integer.decode(QuickSegTileOverlay.this.qField.getText());
+									final int s = Integer.decode(QuickSegTileOverlay.this.sField.getText());
 									final Image2D tile = image.getTile(tileXY.x, tileXY.y);
 									final BufferedImage segments = segment(tile, q, s, 0, monitor);
 									
@@ -643,7 +659,7 @@ public final class QuickSeg2 {
 									
 									cache(image.getTileKey(tileXY.x, tileXY.y) + "_segments", () -> segments, true);
 									
-									if (fineCheckBox.isSelected() || max(tile.getWidth(), tile.getHeight()) < s) {
+									if (QuickSegTileOverlay.this.fineCheckBox.isSelected() || max(tile.getWidth(), tile.getHeight()) < s) {
 										return null;
 									}
 									
@@ -652,15 +668,15 @@ public final class QuickSeg2 {
 								
 							});
 							
-							context.getHash().incrementAndGet();
-							imageComponent.repaint();
+							QuickSegTileOverlay.this.context.getHash().incrementAndGet();
+							QuickSegTileOverlay.this.imageComponent.repaint();
 						}
 						
 					});
 				}
 			} else if (cached.hasObject()) {
 				graphics.drawImage((Image) cached.getObject().toAwt(), region.x, region.y, region.width, region.height, null);
-			} else if (!fineCheckBox.isSelected()) {
+			} else if (!this.fineCheckBox.isSelected()) {
 //				graphics.setColor(Color.RED);
 //				graphics.draw(region);
 			}
