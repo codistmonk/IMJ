@@ -611,7 +611,15 @@ public final class Vectorize {
 	}
 	
 	public static final int getRGB(final BufferedImage image, final int x, final int y, final int quantization) {
-		return quantizeRGB(image.getRGB(x, y), quantization);
+		final int rgb;
+		
+		if (image.getType() == BufferedImage.TYPE_BYTE_GRAY) {
+			rgb = image.getRaster().getPixel(x, y, new int[1])[0];
+		} else {
+			rgb = image.getRGB(x, y);
+		}
+		
+		return quantizeRGB(rgb, quantization);
 	}
 	
 	public static final int quantizeRGB(final int rgb, final int quantization) {
