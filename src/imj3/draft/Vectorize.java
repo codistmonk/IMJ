@@ -72,23 +72,23 @@ public final class Vectorize {
 	 * @param commandLineArguments
 	 * <br>Must not be null
 	 */
-	public static final void main(final String[] commandLineArguments) {
+	public static final void main(final String... commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String imagePath = arguments.get("image", "");
 		final String classIdsPath = arguments.get("classIds", "");
 		final String outputPath = arguments.get("output", baseName(imagePath) + ".svg");
-		final int quantization = arguments.get("quantization", 0)[0];
+		final int quantization = arguments.get1("quantization", 0);
 		final int smoothing = arguments.get("smoothing", 2)[0];
 		final double flattening = Double.parseDouble(arguments.get("flattening", Double.toString(PI / 16.0)));
-		final boolean binary = arguments.get("binary", 0)[0] != 0;
-		final int forcedWidth = arguments.get("width", 0)[0];
-		final int forcedHeight = arguments.get("height", 0)[0];
-		final boolean rescale = arguments.get("rescale", 0)[0] != 0;
+		final boolean binary = arguments.get1("binary", 0) != 0;
+		final int forcedWidth = arguments.get1("width", 0);
+		final int forcedHeight = arguments.get1("height", 0);
+		final boolean rescale = arguments.get1("rescale", 0) != 0;
 		final Collection<String> excludedIds = Arrays.stream(arguments.get("exclude", "").split(",")).collect(Collectors.toSet());
 		final String classesPath = arguments.get("classes", "");
 		final Document classes = classesPath.isEmpty() ? null : readXML(new File(classesPath));
 		
-		debug.set(arguments.get("debug", 0)[0] != 0);
+		debug.set(arguments.get1("debug", 0) != 0);
 		
 		debugPrint("imagePath:", imagePath);
 		
