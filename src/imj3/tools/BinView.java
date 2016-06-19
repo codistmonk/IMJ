@@ -31,8 +31,8 @@ public final class BinView extends JPanel {
 	
 	public BinView(final byte[] data, final int itemWidth, final int itemHeight, final int itemChannelCount) {
 		super(new BorderLayout());
-		final int rowSize = 1 + itemWidth * itemHeight * itemChannelCount;
-		final DefaultTableModel model = new DefaultTableModel(array("#", "class", "datum"), data.length / rowSize) {
+		final int itemSize = 1 + itemWidth * itemHeight * itemChannelCount;
+		final DefaultTableModel model = new DefaultTableModel(array("#", "class", "datum"), data.length / itemSize) {
 			
 			@Override
 			public final Class<?> getColumnClass(final int columnIndex) {
@@ -44,10 +44,10 @@ public final class BinView extends JPanel {
 		};
 		this.table = new JTable(model);
 		
-		for (int i = 0; i < data.length; i += rowSize) {
-			model.setValueAt(i / rowSize, i / rowSize, 0);
-			model.setValueAt(data[i] & 0xFF, i / rowSize, 1);
-			model.setValueAt(DUMMY, i / rowSize, 2);
+		for (int i = 0; i < data.length; i += itemSize) {
+			model.setValueAt(i / itemSize, i / itemSize, 0);
+			model.setValueAt(data[i] & 0xFF, i / itemSize, 1);
+			model.setValueAt(DUMMY, i / itemSize, 2);
 		}
 		
 		SwingTools.setCheckAWT(false);
@@ -69,17 +69,8 @@ public final class BinView extends JPanel {
 					final boolean isSelected, final boolean hasFocus, final int row, final int column) {
 				final int itemIndex = (int) table.getValueAt(row, 0);
 				
-				for (int y = 0; y < itemHeight; ++y) {
-					for (int x = 0; x < itemWidth; ++x) {
-						int rgb = ~0;
-						
-						for (int i = 0; i < itemChannelCount; ++i) {
-							rgb = (rgb << 8) | (data[itemIndex * rowSize + 1 + itemWidth * itemHeight * i + y * itemWidth + x] & 0xFF);
-						}
-						
-						this.image.setRGB(x, y, rgb);
-					}
-				}
+				drawItem(data, itemWidth, itemHeight, itemChannelCount,
+						itemSize, itemIndex, this.image);
 				
 				return this.label;
 			}
@@ -113,6 +104,21 @@ public final class BinView extends JPanel {
 		final String path = commandLineArguments[0];
 		
 		SwingTools.show(new BinView(GroundTruth2Bin.read(path), 32, 32, 3), path, false);
+	}
+	
+	public static final void drawItem(final byte[] data, final int itemWidth, final int itemHeight,
+			final int itemChannelCount, final int itemSize, final int itemIndex, final BufferedImage image) {
+		for (int y = 0; y < itemHeight; ++y) {
+			for (int x = 0; x < itemWidth; ++x) {
+				int rgb = ~0;
+				
+				for (int i = 0; i < itemChannelCount; ++i) {
+					rgb = (rgb << 8) | (data[itemIndex * itemSize + 1 + itemWidth * itemHeight * i + y * itemWidth + x] & 0xFF);
+				}
+				
+				image.setRGB(x, y, rgb);
+			}
+		}
 	}
 	
 }
