@@ -81,6 +81,7 @@ public final class SVS2Multifile {
 		final int threads = max(1, arguments.get("threads", SystemProperties.getAvailableProcessorCount() / 2)[0]);
 		final boolean includeHTMLViewer = arguments.get1("includeHTMLViewer", 1) != 0;
 		final int tileSide = arguments.get1("tileSide", 512);
+		final String defaultMicronsPerPixel = arguments.get("defaultMicronsPerPixel", "0.25");
 		final String tileFormat = arguments.get("tileFormat", MultifileImage2D.TILE_FORMAT);
 		
 		compressionQuality = Float.parseFloat(arguments.get("compressionQuality", "0.9"));
@@ -93,16 +94,16 @@ public final class SVS2Multifile {
 		debugPrint(tasks.getWorkerCount());
 		
 		if (!pathsAsString.isEmpty()) {
-			Arrays.stream(paths).forEach(p -> tasks.submit(() -> process(new File(p), null, tileSide, tileFormat, outRoot, includeHTMLViewer)));
+			Arrays.stream(paths).forEach(p -> tasks.submit(() -> process(new File(p), null, tileSide, defaultMicronsPerPixel, tileFormat, outRoot, includeHTMLViewer)));
 		} else {
-			FileProcessor.deepForEachFileIn(inRoot, f -> tasks.submit(() -> process(f, filter, tileSide, tileFormat, outRoot, includeHTMLViewer)));
+			FileProcessor.deepForEachFileIn(inRoot, f -> tasks.submit(() -> process(f, filter, tileSide, defaultMicronsPerPixel, tileFormat, outRoot, includeHTMLViewer)));
 		}
 		
 		tasks.join();
 	}
 	
 	public static final void process(final File file, final FilenameFilter filter,
-			final int tileSide, final String tileFormat, final File outRoot, final boolean includeHTMLViewer) {
+			final int tileSide, final String defaultMicronsPerPixels, final String tileFormat, final File outRoot, final boolean includeHTMLViewer) {
 		final String fileName = file.getName();
 		
 		if (!fileName.isEmpty() && (filter == null || filter.accept(file.getParentFile(), fileName))) {
@@ -122,12 +123,12 @@ public final class SVS2Multifile {
 					final int[] level = { 0 };
 					
 					{
-						String mpp = "0";
+						String mpp = defaultMicronsPerPixels;
 						
 						try {
 							mpp = Array.get(getFieldValue(((ImageReader) reader).getReader(), "pixelSize"), 0).toString();
 						} catch (final Exception exception) {
-							exception.printStackTrace();
+							debugError(exception);
 						}
 						
 						final Document xml = newMetadata(imageWidth, imageHeight, tileSide, tileSide, tileFormat, mpp, level);
