@@ -90,8 +90,8 @@ public final class GroundTruth2Bin {
 		}
 		
 		if (show) {
-			BinView.main(trainOutputPath);
-			BinView.main(testOutputPath);
+			BinView.main("bin", trainOutputPath);
+			BinView.main("bin", testOutputPath);
 		}
 	}
 	

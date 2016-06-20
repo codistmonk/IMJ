@@ -117,8 +117,8 @@ public final class SVG2Bin {
 			writeBins(items, trainRatio, trainOutputPath, testOutputPath);
 			
 			if (arguments.get("show", 0)[0] != 0) {
-				BinView.main(trainOutputPath);
-				BinView.main(testOutputPath);
+				BinView.main("bin", trainOutputPath);
+				BinView.main("bin", testOutputPath);
 				
 				SwingTools.show(new Image2DComponent(image), "Image", false);
 			}

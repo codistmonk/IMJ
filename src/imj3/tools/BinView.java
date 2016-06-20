@@ -119,7 +119,7 @@ public final class BinView extends JPanel {
 			@Override
 			public final synchronized void drop(final DropTargetDropEvent event) {
 				for (final File file : getFiles(event)) {
-					main(file.getPath());
+					main("bin", file.getPath());
 				}
 			}
 			

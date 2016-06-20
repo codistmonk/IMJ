@@ -94,7 +94,7 @@ public final class Dir2Bin {
 		}
 		
 		if (show) {
-			BinView.main(outputFile.getPath());
+			BinView.main("bin", outputFile.getPath());
 		}
 	}
 	

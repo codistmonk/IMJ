@@ -255,7 +255,7 @@ public final class Multifile2Bin {
 			});
 			
 			if (show) {
-				BinView.main(outputPath);
+				BinView.main("bin", outputPath);
 			}
 		} catch (final IOException exception) {
 			throw new UncheckedIOException(exception);
