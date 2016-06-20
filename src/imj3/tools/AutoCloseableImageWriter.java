@@ -29,16 +29,24 @@ public final class AutoCloseableImageWriter implements AutoCloseable, Serializab
 		this.outputParameters = this.writer.getDefaultWriteParam();
 	}
 	
+	public final ImageWriter getWriter() {
+		return this.writer;
+	}
+	
+	public final ImageWriteParam getOutputParameters() {
+		return this.outputParameters;
+	}
+	
 	public final AutoCloseableImageWriter setCompressionQuality(final float quality) {
-		this.outputParameters.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-		this.outputParameters.setCompressionQuality(quality);
+		this.getOutputParameters().setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+		this.getOutputParameters().setCompressionQuality(quality);
 		
 		return this;
 	}
 	
 	public AutoCloseableImageWriter setOutput(final OutputStream output) {
 		try {
-			this.writer.setOutput(ImageIO.createImageOutputStream(output));
+			this.getWriter().setOutput(ImageIO.createImageOutputStream(output));
 		} catch (final IOException exception) {
 			throw unchecked(exception);
 		}
@@ -48,7 +56,7 @@ public final class AutoCloseableImageWriter implements AutoCloseable, Serializab
 	
 	public final AutoCloseableImageWriter write(final RenderedImage image) {
 		try {
-			this.writer.write(null, new IIOImage(image, null, null), this.outputParameters);
+			this.getWriter().write(null, new IIOImage(image, null, null), this.outputParameters);
 		} catch (final IOException exception) {
 			throw unchecked(exception);
 		}
@@ -58,7 +66,7 @@ public final class AutoCloseableImageWriter implements AutoCloseable, Serializab
 	
 	@Override
 	public final void close() throws Exception {
-		this.writer.dispose();
+		this.getWriter().dispose();
 	}
 	
 	/**
