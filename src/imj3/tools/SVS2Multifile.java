@@ -360,8 +360,16 @@ public final class SVS2Multifile {
 							final String tileName = TILE_PREFIX + "lod0" + "_y" + tileY + "_x" + tileX0 + "." + tileFormat;
 							final ByteArrayOutputStream tmp = new ByteArrayOutputStream();
 							
-							try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(tileFormat)
-									.setCompressionQuality(compressionQuality).setOutput(tmp)) {
+							try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(tileFormat)) {
+								if (!"png".equalsIgnoreCase(tileFormat)) {
+									try {
+										imageWriter.setCompressionQuality(compressionQuality);									
+									} catch (final Exception exception) {
+										debugError(exception);
+									}
+								}
+								
+								imageWriter.setOutput(tmp);									
 								imageWriter.write(tile.getImage());
 								
 								synchronized (output) {
@@ -497,8 +505,16 @@ public final class SVS2Multifile {
 							final String tileName = TILE_PREFIX + "lod" + n + "_y" + tileY + "_x" + tileX0 + "." + tileFormat;
 							final ByteArrayOutputStream tmp = new ByteArrayOutputStream();
 							
-							try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(tileFormat)
-									.setCompressionQuality(compressionQuality).setOutput(tmp)) {
+							try (final AutoCloseableImageWriter imageWriter = new AutoCloseableImageWriter(tileFormat)) {
+								if (!"png".equalsIgnoreCase(tileFormat)) {
+									try {
+										imageWriter.setCompressionQuality(compressionQuality);									
+									} catch (final Exception exception) {
+										debugError(exception);
+									}
+								}
+								
+								imageWriter.setOutput(tmp);									
 								imageWriter.write(tile.getImage());
 								
 								synchronized (output) {
