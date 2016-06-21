@@ -7,6 +7,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.synchronizedList;
 import static multij.tools.Tools.*;
+
 import imj3.tools.CommonTools.FileProcessor;
 
 import java.awt.image.BufferedImage;
@@ -15,8 +16,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.Serializable;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,6 +29,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -45,7 +49,6 @@ import multij.tools.RegexFilter;
 import multij.tools.SystemProperties;
 import multij.tools.TaskManager;
 import multij.tools.TicToc;
-import multij.tools.Tools;
 import multij.xml.XMLTools;
 
 /**
@@ -174,28 +177,43 @@ public final class SVS2Multifile {
 	public static final void includeHTMLViewer(final ZipOutputStream output,
 			final int imageWidth, final int imageHeight, final int tileSize,
 			final int lastLOD, final String tileFormat) throws IOException {
-		try (final ZipInputStream template = new ZipInputStream(getResourceAsStream("lib/openseadragon/template.zip"))) {
-			for (ZipEntry entry = template.getNextEntry(); entry != null; entry = template.getNextEntry()) {
+		forEachEntryInZip("lib/openseadragon/template.zip", (template, entry) -> {
+			try {
 				output.putNextEntry(new ZipEntry(entry.getName()));
-				Tools.write(template, output);
+				write(template, output);
 				output.closeEntry();
+			} catch (final IOException exception) {
+				throw new UncheckedIOException(exception);
 			}
-		}
+		});
 		
 		{
 			output.putNextEntry(new ZipEntry("index_files/imj_metadata.js"));
-			
-			final PrintStream out = new PrintStream(output);
-			
-			out.println("var tilePrefix = \"" + TILE_PREFIX +"\";");
-			out.println("var imageWidth = " + imageWidth +";");
-			out.println("var imageHeight = " + imageHeight +";");
-			out.println("var tileSize = " + tileSize +";");
-			out.println("var lastLOD = " + lastLOD +";");
-			out.println("var tileFormat = \"" + tileFormat +"\";");
-			
+			printMetadataJS(output, imageWidth, imageHeight, tileSize, lastLOD, tileFormat);
 			output.closeEntry();
 		}
+	}
+	
+	public static final void forEachEntryInZip(final String resourcePath, final BiConsumer<ZipInputStream, ZipEntry> process) {
+		try (final ZipInputStream zip = new ZipInputStream(getResourceAsStream(resourcePath))) {
+			for (ZipEntry entry = zip.getNextEntry(); entry != null; entry = zip.getNextEntry()) {
+				process.accept(zip, entry);
+			}
+		} catch (final IOException exception) {
+			throw new UncheckedIOException(exception);
+		}
+	}
+	
+	public static final void printMetadataJS(final OutputStream output, final int imageWidth, final int imageHeight,
+			final int tileSize, final int lastLOD, final String tileFormat) {
+		final PrintStream out = new PrintStream(output);
+		
+		out.println("var tilePrefix = \"" + TILE_PREFIX +"\";");
+		out.println("var imageWidth = " + imageWidth +";");
+		out.println("var imageHeight = " + imageHeight +";");
+		out.println("var tileSize = " + tileSize +";");
+		out.println("var lastLOD = " + lastLOD +";");
+		out.println("var tileFormat = \"" + tileFormat +"\";");
 	}
 	
 	public static final Document newMetadata(final int imageWidth, final int imageHeight,
