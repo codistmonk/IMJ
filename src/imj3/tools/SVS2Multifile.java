@@ -176,8 +176,14 @@ public final class SVS2Multifile {
 	
 	public static final void includeHTMLViewer(final ZipOutputStream output,
 			final int imageWidth, final int imageHeight, final int tileSize,
-			final int lastLOD, final String tileFormat) throws IOException {
-		forEachEntryInZip("lib/openseadragon/template.zip", (template, entry) -> {
+			final int lastLOD, final String tileFormat) {
+		includeHTMLViewer("lib/openseadragon/template.zip", output, imageWidth, imageHeight, tileSize, lastLOD, tileFormat);
+	}
+	
+	public static final void includeHTMLViewer(final String zippedTemplatePath, final ZipOutputStream output,
+			final int imageWidth, final int imageHeight, final int tileSize,
+			final int lastLOD, final String tileFormat) {
+		forEachEntryInZip(zippedTemplatePath, (template, entry) -> {
 			try {
 				output.putNextEntry(new ZipEntry(entry.getName()));
 				write(template, output);
@@ -187,10 +193,12 @@ public final class SVS2Multifile {
 			}
 		});
 		
-		{
+		try {
 			output.putNextEntry(new ZipEntry("index_files/imj_metadata.js"));
 			printMetadataJS(output, imageWidth, imageHeight, tileSize, lastLOD, tileFormat);
 			output.closeEntry();
+		} catch (final IOException exception) {
+			throw new UncheckedIOException(exception);
 		}
 	}
 	
