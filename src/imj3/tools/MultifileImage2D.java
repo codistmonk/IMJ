@@ -254,7 +254,11 @@ public final class MultifileImage2D implements Image2D {
 	}
 	
 	public static final int maxLod(final Image2D image) {
-		return min(bits(image.getWidth()), image.getHeight());
+		return maxLod(image.getWidth(), image.getHeight());
+	}
+	
+	public static final int maxLod(final int width, final int height) {
+		return min(bits(width), bits(height));
 	}
 	
 	public static final Document getMetadataFrom(final MultifileSource source) {

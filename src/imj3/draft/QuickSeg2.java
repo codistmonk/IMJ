@@ -152,6 +152,11 @@ public final class QuickSeg2 {
 			private Image2D im;
 			
 			@Override
+			public final ZipOutputStream getOutput() {
+				return this.output;
+			}
+			
+			@Override
 			public final void setOutput(final ZipOutputStream output) {
 				this.output = output;
 			}

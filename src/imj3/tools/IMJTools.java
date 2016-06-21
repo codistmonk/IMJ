@@ -7,6 +7,7 @@ import static java.lang.Math.min;
 import static java.lang.Math.pow;
 import static multij.tools.Tools.array;
 import static multij.tools.Tools.invoke;
+import static multij.tools.Tools.write;
 
 import imj2.tools.BigBitSet;
 import imj3.core.IMJCoreTools;
@@ -14,8 +15,10 @@ import imj3.core.Image2D;
 import imj3.core.Image2D.Pixel2DProcessor;
 
 import java.awt.Rectangle;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.List;
@@ -250,14 +253,93 @@ public final class IMJTools {
 		}
 	}
 	
+	public static final void createDirImage(final String path, final int width0, final int height0,
+			final int optimalTileWidth, final int optimalTileHeight, final String tileFormat, final double micronsPerPixel,
+			final TileGenerator generator) {
+		final long t0 = System.currentTimeMillis();
+		
+		new File(path).mkdirs();
+		
+		final Document xml = newMetadata(width0, height0,
+				optimalTileWidth, optimalTileHeight,
+				tileFormat, "" + micronsPerPixel, new int[] { 0 });
+		
+		XMLTools.write(xml, new File(path, "metadata.xml"), 1);
+		
+		final List<Element> elements = XMLTools.getElements(xml, "//image");
+		
+		for (final Element imageElement : elements) {
+			generator.setElement(imageElement);
+			
+			final int w = XMLTools.getNumber(imageElement, "@width").intValue();
+			final int h = XMLTools.getNumber(imageElement, "@height").intValue();
+			
+			forEachTile(w, h, optimalTileWidth, optimalTileHeight, generator);
+		}
+		
+		generator.finish(path, width0, height0, optimalTileWidth, tileFormat);
+		
+		Tools.debugPrint("Created", path, "in", System.currentTimeMillis() - t0, "ms");
+	}
+	
+	public static final void includeHTMLViewer(final String outputPath, final int imageWidth, final int imageHeight,
+			final int optimalTileSide, final int lastLOD, final String tileFormat) {
+		includeHTMLViewer("../IMJ/lib/openseadragon/template.zip", outputPath, imageWidth, imageHeight, optimalTileSide, lastLOD, tileFormat);
+	}
+	
+	public static final void includeHTMLViewer(final String viewerTemplatePath, final String outputPath, final int imageWidth, final int imageHeight,
+			final int optimalTileSide, final int lastLOD, final String tileFormat) {
+		{
+			SVS2Multifile.forEachEntryInZip(viewerTemplatePath, (template, entry) -> {
+				final File newFile = new File(outputPath, entry.getName());
+				
+				if (entry.isDirectory()) {
+					newFile.mkdirs();
+				} else {
+					newFile.getParentFile().mkdirs();
+					
+					try (final OutputStream output = new FileOutputStream(newFile)) {
+						write(template, output);
+					} catch (final IOException exception) {
+						throw new UncheckedIOException(exception);
+					}					
+				}
+			});
+		}
+		
+		{
+			final File newFile = new File(outputPath, "index_files/imj_metadata.js");
+			
+			newFile.getParentFile().mkdirs();
+			
+			try (final OutputStream output = new FileOutputStream(newFile)) {
+				SVS2Multifile.printMetadataJS(output, imageWidth, imageHeight, optimalTileSide, lastLOD, tileFormat);
+			} catch (final IOException exception) {
+				throw new UncheckedIOException(exception);
+			}
+		}
+	}
+	
 	/**
 	 * @author codistmonk (creation 2016-06-07)
 	 */
 	public static abstract interface TileGenerator extends Pixel2DProcessor {
 		
+		public abstract ZipOutputStream getOutput();
+		
 		public abstract void setOutput(ZipOutputStream output);
 		
 		public abstract void setElement(Element imageElement);
+		
+		public default void finish(final String outputPath, final int imageWidth, final int imageHeight, final int optimalTileSide, final String tileFormat) {
+			final int lastLOD = MultifileImage2D.maxLod(imageWidth, imageHeight);
+			
+			if (outputPath.endsWith(".zip")) {
+				SVS2Multifile.includeHTMLViewer(this.getOutput(), imageWidth, imageHeight, optimalTileSide, lastLOD, tileFormat);
+			} else {
+				includeHTMLViewer(outputPath, imageWidth, imageHeight, optimalTileSide, lastLOD, tileFormat);
+			}
+		}
 		
 	}
 	

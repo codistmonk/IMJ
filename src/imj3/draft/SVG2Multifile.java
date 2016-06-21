@@ -75,6 +75,11 @@ public final class SVG2Multifile {
 			private double scale;
 			
 			@Override
+			public final ZipOutputStream getOutput() {
+				return this.output;
+			}
+			
+			@Override
 			public final void setOutput(final ZipOutputStream output) {
 				this.output = output;
 			}
