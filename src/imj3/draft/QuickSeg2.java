@@ -596,7 +596,7 @@ public final class QuickSeg2 {
 		
 		private static final long serialVersionUID = -6245612608729813604L;
 	}
-
+	
 	/**
 	 * @author codistmonk (creation 2016-06-06)
 	 */
