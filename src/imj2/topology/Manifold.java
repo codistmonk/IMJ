@@ -1,6 +1,6 @@
 package imj2.topology;
 
-import static multij.tools.Tools.debugPrint;
+import static multij.tools.Tools.*;
 import imj2.topology.Manifold.Traversor.Limit;
 
 import java.io.Serializable;
@@ -77,6 +77,10 @@ public final class Manifold implements Serializable {
 	}
 	
 	public final void setNext(final int dart, final int next) {
+		if (DEBUG) {
+			debugPrint(dart, "->", next);
+		}
+		
 		this.nexts.set(dart, next);
 	}
 	
@@ -157,12 +161,12 @@ public final class Manifold implements Serializable {
 			final int next = this.nexts.get(dart);
 			
 			if (next < 0 || n <= next) {
-				debugPrint(dart, n, next);
+				debugError("dart:", dart, "n:", n, "next:", next);
 				return false;
 			}
 			
 			if (dart != this.getPrevious(next)) {
-				debugPrint(dart, n, next);
+				debugError("dart:", dart, "n:", n, "next:", next, "next.previous:", this.getPrevious(next));
 				return false;
 			}
 		}
@@ -196,6 +200,8 @@ public final class Manifold implements Serializable {
 	 */
 	private static final long serialVersionUID = -2538040622973580305L;
 	
+	private static final boolean DEBUG = false;
+	
 	public static final int opposite(final int dart) {
 		return dart ^ 1;
 	}
@@ -203,7 +209,7 @@ public final class Manifold implements Serializable {
 	/**
 	 * @author codistmonk (creation 2013-04-06)
 	 */
-	public static abstract interface DartProcessor {
+	public static abstract interface DartProcessor extends Serializable {
 		
 		public abstract boolean process(int dart);
 		
@@ -350,6 +356,27 @@ public final class Manifold implements Serializable {
 					
 					return true;
 				}
+				
+				private static final long serialVersionUID = 4377255397062988188L;
+				
+			});
+			
+			return result[0];
+		}
+		
+		public final int count(final Manifold topology) {
+			final int[] result = { 0 };
+			
+			this.traverse(topology, new DartProcessor() {
+				
+				@Override
+				public final boolean process(final int dart) {
+					++result[0];
+					
+					return true;
+				}
+				
+				private static final long serialVersionUID = 4377255397062988188L;
 				
 			});
 			
