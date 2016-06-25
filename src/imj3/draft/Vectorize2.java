@@ -2,27 +2,35 @@ package imj3.draft;
 
 import static imj2.topology.Manifold.opposite;
 import static imj2.topology.Manifold.Traversor.FACE;
-import static multij.tools.Tools.baseName;
-import static multij.tools.Tools.debugPrint;
+import static java.lang.Math.abs;
+import static java.lang.Math.sqrt;
+import static multij.tools.Tools.*;
 
 import imj2.topology.Manifold;
 
 import java.awt.Point;
 import java.awt.Polygon;
+import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
+import java.awt.geom.Path2D;
+import java.awt.geom.PathIterator;
+import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
 
@@ -44,6 +52,20 @@ public final class Vectorize2 {
 	
 	private static final boolean DEBUG = false;
 	
+	static final Map<Integer, String> typeNames = new HashMap<>();
+	
+	static {
+		try {
+			for (final Field field : PathIterator.class.getDeclaredFields()) {
+				if (field.getName().startsWith("SEG_")) {
+					typeNames.put((Integer) field.get(null), field.getName());
+				}
+			}
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
@@ -51,6 +73,8 @@ public final class Vectorize2 {
 	public static final void main(final String... commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String imagePath = arguments.get("image", "");
+		final int smoothing = arguments.get1("smoothing", 1);
+		final Collection<Integer> excludedLabels = Arrays.stream(arguments.get("exclude", new int[0])).mapToObj(x -> x).collect(Collectors.toSet());
 		
 		debugPrint("image:", imagePath);
 		
@@ -60,52 +84,172 @@ public final class Vectorize2 {
 			debugPrint("points:", new HashSet<>(structure.getGeometry()).size());
 			debugPrint("objects:", FACE.count(structure.getTopology()));
 			final Document svg = SVGTools.newSVG(image.getWidth(), image.getHeight());
-			final List<Segment> segments = collectSegments(structure);
+			final List<Segment> segments = collectSegments(image, structure);
 			
 			debugPrint(segments.size());
 			
-			segments.sort((s1, s2) -> Double.compare(s1.getSurface(), s2.getSurface()));
-			final BitSet remove = new BitSet(segments.size());
-			
-			for (int i = 0; i < segments.size(); ++i) {
-				debugPrint(i, "/", segments.size());
-				
-				final Segment segmentI = segments.get(i);
-				
-				for (int j = i + 1; j < segments.size(); ++j) {
-					final Segment segmentJ = segments.get(j);
-					final Area tmp = new Area(segmentJ.getGeometry());
-					
-					tmp.subtract(segmentI.getGeometry());
-					
-					if (tmp.isEmpty()) {
-						segmentI.getGeometry().subtract(segmentJ.getGeometry());
-						remove.set(j);
-					}
-				}
-			}
-			
-			debugPrint(remove.cardinality());
-			
-			final List<Segment> newSegments = new ArrayList<>();
-			
-			for (int i = 0; i < segments.size(); ++i) {
-				if (remove.get(i)) {
-					newSegments.add(segments.get(i));
-				}
-			}
+			final List<Segment> newSegments = combineSegments(segments, excludedLabels);
 			
 			debugPrint(newSegments.size());
+			
+			smoothe(newSegments, smoothing);
+			
+			for (int objectId = 0; objectId < newSegments.size(); ++objectId) {
+				final Segment segment = newSegments.get(objectId);
+				
+				SVGTools.addTo(svg, segment.getGeometry(), segment.getLabel(), "TODO", "" + objectId);
+			}
 			
 			XMLTools.write(svg, new File(baseName(imagePath) + ".svg"), 1);
 		} catch (final IOException exception) {
 			throw new UncheckedIOException(exception);
 		}
 	}
-
-	public static List<Segment> collectSegments(final Structure structure) {
+	
+	public static final void smoothe(final List<Segment> segments, final int smoothing) {
+		if (0 < smoothing) {
+			final double[] xy = new double[2];
+			
+			for (final Segment segment : segments) {
+				Arrays.fill(xy, 0F);
+				
+				final List<Point2D> vertices = new ArrayList<>();
+				final List<Point2D> newVertices = new ArrayList<>();
+				final Path2D newShape = new Path2D.Double();
+				
+				for (final PathIterator i = segment.getGeometry().getPathIterator(new AffineTransform(), 0.0); !i.isDone(); i.next()) {
+					final int type = i.currentSegment(xy);
+					
+					if (type == PathIterator.SEG_MOVETO) {
+						if (!vertices.isEmpty()) {
+							smoothe(vertices, newVertices);
+							updateShape(newVertices, newShape, false);
+						}
+						
+						vertices.clear();
+						newVertices.clear();
+						vertices.add(new Point2D.Double(xy[0], xy[1]));
+					} else if (type == PathIterator.SEG_CLOSE) {
+						smoothe(vertices, newVertices);
+						updateShape(newVertices, newShape, true);
+						
+						vertices.clear();
+						newVertices.clear();
+					} else {
+						vertices.add(new Point2D.Double(xy[0], xy[1]));
+					}
+				}
+				
+				// TODO simplify new geometry
+				segment.getGeometry().reset();
+				segment.getGeometry().add(new Area(newShape));
+			}
+		}
+	}
+	
+	public static final void updateShape(final List<Point2D> newVertices, final Path2D newShape, final boolean close) {
+		newShape.moveTo(newVertices.get(0).getX(), newVertices.get(0).getY());
+		
+		for (int j = 0; j < newVertices.size(); ++j) {
+			newShape.lineTo(newVertices.get(j).getX(), newVertices.get(j).getY());
+		}
+		
+		if (close) {
+			newShape.closePath();
+		}
+	}
+	
+	public static final void smoothe(final List<Point2D> vertices, final List<Point2D> newVertices) {
+		final double s = abs(getSurface(vertices));
+		final int n = vertices.size();
+		final List<Point2D> deltas = new ArrayList<>(n);
+		
+		for (int i = 0; i < n; ++i) {
+			final Point2D p = vertices.get(i);
+			final Point2D q = vertices.get((i + n - 1) % n);
+			final Point2D r = vertices.get((i + 1) % n);
+			final Point2D v = new Point2D.Double((p.getX() + q.getX() + r.getX()) / 3.0 , (p.getY() + q.getY() + r.getY()) / 3.0);
+			
+			newVertices.add(v);
+			deltas.add(new Point2D.Double(v.getX() - p.getX(), v.getY() - p.getY()));
+		}
+		
+		final double newS = abs(getSurface(newVertices));
+		final double scale = sqrt(s / newS);
+		
+		for (int i = 0; i < n; ++i) {
+			final Point2D p = vertices.get(i);
+			final Point2D delta = deltas.get(i);
+			
+			newVertices.get(i).setLocation(p.getX() + scale * delta.getX(), p.getY() + scale * delta.getY());
+		}
+	}
+	
+	public static final double getSurface(final List<Point2D> vertices) {
+		double result = 0.0;
+		final int n = vertices.size();
+		
+		for (int i = 0; i < n; ++i) {
+			final Point2D p = vertices.get(i);
+			final Point2D q = vertices.get((i + 1) % n);
+			result += p.getX() * q.getY() - p.getY() * q.getX(); 
+		}
+		
+		return result;
+	}
+	
+	public static final List<Segment> combineSegments(final List<Segment> segments,
+			final Collection<Integer> excludedLabels) {
+		segments.sort((s1, s2) -> Double.compare(s1.getSurface(), s2.getSurface()));
+		
+		final BitSet remove = new BitSet(segments.size());
+		
+		for (int i = 0; i < segments.size(); ++i) {
+			debugPrint(i, "/", segments.size());
+			
+			final Segment segmentI = segments.get(i);
+			
+			if (excludedLabels.contains(segmentI.getLabel())) {
+				remove.set(i);
+			}
+			
+			find_parent:
+			for (int j = i + 1; j < segments.size(); ++j) {
+				final Segment segmentJ = segments.get(j);
+				
+				if (excludedLabels.contains(segmentJ.getLabel())) {
+					continue;
+				}
+				
+				if (segmentI.getSurface() != segmentJ.getSurface() && segmentI.getLabel() != segmentJ.getLabel()) {
+					final Area tmp = new Area(segmentI.getGeometry());
+					
+					tmp.subtract(segmentJ.getGeometry());
+					
+					if (tmp.isEmpty()) {
+						segmentJ.getGeometry().subtract(segmentI.getGeometry());
+						segmentI.setParent(segmentJ);
+						break find_parent;
+					}
+				}
+			}
+		}
+		
+		debugPrint(remove.cardinality());
+		
+		final List<Segment> newSegments = new ArrayList<>();
+		
+		for (int i = 0; i < segments.size(); ++i) {
+			if (!remove.get(i)) {
+				newSegments.add(segments.get(i));
+			}
+		}
+		return newSegments;
+	}
+	
+	public static List<Segment> collectSegments(final BufferedImage image, final Structure structure) {
 		final List<Segment> result = new ArrayList<>();
-		final int[] objectId = { 0 };
+		final int[] tmp = new int[1];
 		
 		final Statistics negative = new Statistics();
 		final Statistics positive = new Statistics();
@@ -132,9 +276,26 @@ public final class Vectorize2 {
 			
 			if (s < 0.0) {
 				negative.addValue(s);
-				result.add(new Segment(objectId[0], new Area(shape)));
 				
-				++objectId[0];
+				int label = 0;
+				
+				if (ys[0] > ys[1]) {
+					checkEqual(xs[0], xs[1]);
+					label = getValue(image, xs[0] - 1, ys[0] - 1, tmp);
+				} else if (ys[0] == ys[1]) {
+					if (xs[0] > xs[1]) {
+						label = getValue(image, xs[0] - 1, ys[0], tmp);
+					} else if (xs[0] < xs[1]) {
+						debugPrint(xs[0], ys[0], xs[1], ys[1]);
+						label = getValue(image, xs[0], ys[0] - 1, tmp);
+					} else {
+						throw new IllegalStateException();
+					}
+				} else if (ys[0] < ys[1]) {
+					label = getValue(image, xs[0], ys[0], tmp);
+				}
+				
+				result.add(new Segment(label, new Area(shape), abs(s)));
 			} else {
 				positive.addValue(s);
 			}
@@ -142,7 +303,7 @@ public final class Vectorize2 {
 			return true;
 		});
 		
-		debugPrint("Skipped", positive.getCount(), "objects, total surface:", new BigDecimal(positive.getSum()));
+		debugPrint("Discarded", positive.getCount(), "objects, total surface:", new BigDecimal(positive.getSum()));
 		debugPrint("Collected", negative.getCount(), "objects, total surface:", new BigDecimal(negative.getSum()));
 		
 		return result;
@@ -580,20 +741,22 @@ public final class Vectorize2 {
 	 */
 	public static final class Segment implements Serializable {
 		
-		private final int id;
+		private final int label;
 		
 		private final Area geometry;
 		
 		private final double surface;
 		
-		public Segment(final int id, final Area geometry) {
-			this.id = id;
+		private Segment parent;
+		
+		public Segment(final int label, final Area geometry, final double surface) {
+			this.label = label;
 			this.geometry = geometry;
-			this.surface = SVGTools.getSurface(geometry, 0.0);
+			this.surface = surface;
 		}
 		
-		public final int getId() {
-			return this.id;
+		public final int getLabel() {
+			return this.label;
 		}
 		
 		public final Area getGeometry() {
@@ -602,6 +765,14 @@ public final class Vectorize2 {
 		
 		public final double getSurface() {
 			return this.surface;
+		}
+		
+		public final Segment getParent() {
+			return this.parent;
+		}
+		
+		public final void setParent(final Segment parent) {
+			this.parent = parent;
 		}
 		
 		private static final long serialVersionUID = -6171824164546674105L;
