@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.math.BigDecimal;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -50,7 +51,9 @@ public final class Vectorize2 {
 		throw new IllegalInstantiationException();
 	}
 	
-	private static final boolean DEBUG = false;
+	private static final boolean TRACE_EDGES = false;
+	
+	private static final boolean CHECK_STRUCTURE = false;
 	
 	/**
 	 * @param commandLineArguments
@@ -58,40 +61,88 @@ public final class Vectorize2 {
 	 */
 	public static final void main(final String... commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
+		final long t0 = System.currentTimeMillis();
 		final String imagePath = arguments.get("image", "");
+		final String outputPath = arguments.get("output", baseName(imagePath) + ".svg");
 		final Collection<Integer> excludedLabels = Arrays.stream(arguments.get("exclude", new int[0])).mapToObj(x -> x).collect(Collectors.toSet());
+		final String classIdsPath = arguments.get("classIds", "");
+		final List<String> classIds = getClassIds(classIdsPath);
 		
+		process(imagePath, excludedLabels, classIds, outputPath);
+		
+		debugPrint("milliseconds:", System.currentTimeMillis() - t0);
+	}
+	
+	public static final List<String> getClassIds(final String classIdsPath) {
+		if (classIdsPath.isEmpty()) {
+			return null;
+		}
+		
+		try {
+			return Files.readAllLines(new File(classIdsPath).toPath());
+		} catch (final IOException exception) {
+			throw new UncheckedIOException(exception);
+		}
+	}
+	
+	public static final void process(final String imagePath, final Collection<Integer> excludedLabels,
+			final List<String> classIds, final String outputPath) {
 		debugPrint("image:", imagePath);
 		
 		try {
 			final BufferedImage image = ImageIO.read(new File(imagePath));
-			final Structure structure = getStructure(image);
-			debugPrint("points:", new HashSet<>(structure.getGeometry()).size());
-			debugPrint("objects:", FACE.count(structure.getTopology()));
-			final List<Segment> segments = collectSegments(image, structure);
-			
-			debugPrint(segments.size());
-			
-			simplify(segments);
-			
-			final List<Segment> newSegments = combineSegments(segments, excludedLabels);
-			
-			debugPrint(newSegments.size());
+			final List<Segment> combinedSegments = getCombinedSegments(image, excludedLabels);
 			
 			{
+				debugPrint("Generating SVG...");
+				
 				final Document svg = SVGTools.newSVG(image.getWidth(), image.getHeight());
 				
-				for (int objectId = 0; objectId < newSegments.size(); ++objectId) {
-					final Segment segment = newSegments.get(objectId);
-					
-					SVGTools.addTo(svg, segment.getGeometry(), segment.getLabel(), "TODO", "" + objectId);
-				}
+				addToSVG(combinedSegments, classIds, svg);
 				
-				XMLTools.write(svg, new File(baseName(imagePath) + ".svg"), 1);
+				debugPrint("Writing", outputPath);
+				
+				XMLTools.write(svg, new File(outputPath), 1);
 			}
 		} catch (final IOException exception) {
 			throw new UncheckedIOException(exception);
 		}
+	}
+	
+	public static final void addToSVG(final List<Segment> combinedSegments, final List<String> classIds, final Document svg) {
+		for (int objectId = 0; objectId < combinedSegments.size(); ++objectId) {
+			final Segment segment = combinedSegments.get(objectId);
+			final String id = classIds == null ? "" + segment.getLabel() : classIds.get(segment.getLabel());
+			
+			SVGTools.addTo(svg, segment.getGeometry(), segment.getLabel(), id, "" + objectId);
+		}
+	}
+	
+	public static final List<Segment> getCombinedSegments(final BufferedImage image,
+			final Collection<Integer> excludedLabels) {
+		final Structure structure = getStructure(image);
+		
+		debugPrint("edges:", structure.getTopology().getEdgeCount());
+		debugPrint("points:", new HashSet<>(structure.getGeometry()).size());
+		debugPrint("objects:", FACE.count(structure.getTopology()));
+		
+		debugPrint("Collecting segments...");
+		
+		final List<Segment> segments = collectSegments(image, structure);
+		
+		debugPrint("collectedSegments:", segments.size());
+		
+		debugPrint("Simplifying segments...");
+		
+		simplify(segments);
+		
+		debugPrint("Combining segments...");
+		
+		final List<Segment> result = combineSegments(segments, excludedLabels);
+		
+		debugPrint("combinedSegments:", result.size());
+		
+		return result;
 	}
 	
 	public static final void simplify(final List<Segment> segments) {
@@ -201,8 +252,6 @@ public final class Vectorize2 {
 	
 	public static final List<Segment> combineSegments(final List<Segment> segments,
 			final Collection<Integer> excludedLabels) {
-		debugPrint(getThisMethodName() + "...");
-		
 		segments.sort((s1, s2) -> Double.compare(s1.getSurface(), s2.getSurface()));
 		
 		final BitSet remove = new BitSet(segments.size());
@@ -344,7 +393,7 @@ public final class Vectorize2 {
 						geometry.add(points.computeIfAbsent(new Point(x + 1, y), k -> k));
 						geometry.add(points.computeIfAbsent(new Point(x, y), k -> k));
 						
-						if (DEBUG) {
+						if (TRACE_EDGES) {
 							debugPrint("x:", x, "y:", y, "northEdge:", northEdges[northEdgeIndex]);
 						}
 					} else {
@@ -358,7 +407,7 @@ public final class Vectorize2 {
 							geometry.add(points.computeIfAbsent(new Point(x + 1, y), k -> k));
 							geometry.add(points.computeIfAbsent(new Point(x, y), k -> k));
 							
-							if (DEBUG) {
+							if (TRACE_EDGES) {
 								debugPrint("x:", x, "y:", y, "northEdge:", northEdges[northEdgeIndex]);
 							}
 						}
@@ -373,7 +422,7 @@ public final class Vectorize2 {
 						geometry.add(points.computeIfAbsent(new Point(x, y), k -> k));
 						geometry.add(points.computeIfAbsent(new Point(x, y + 1), k -> k));
 						
-						if (DEBUG) {
+						if (TRACE_EDGES) {
 							debugPrint("x:", x, "y:", y, "westEdge:", westEdges[westEdgeIndex]);
 						}
 					} else {
@@ -387,7 +436,7 @@ public final class Vectorize2 {
 							geometry.add(points.computeIfAbsent(new Point(x, y), k -> k));
 							geometry.add(points.computeIfAbsent(new Point(x, y + 1), k -> k));
 							
-							if (DEBUG) {
+							if (TRACE_EDGES) {
 								debugPrint("x:", x, "y:", y, "westEdge:", westEdges[westEdgeIndex]);
 							}
 						}
@@ -412,7 +461,7 @@ public final class Vectorize2 {
 						final int dart = northEdges[northEdgeIndex];
 						final int next = westEdges[westEdgeIndex];
 						
-						if (DEBUG) {
+						if (TRACE_EDGES) {
 							debugPrint(dart, "->", next);
 						}
 						
@@ -428,7 +477,7 @@ public final class Vectorize2 {
 						final int dart = opposite(westEdges[westEdgeIndex]);
 						final int next = opposite(northEdges[northEdgeIndex]);
 						
-						if (DEBUG) {
+						if (TRACE_EDGES) {
 							debugPrint(dart, "->", next);
 						}
 						
@@ -444,7 +493,7 @@ public final class Vectorize2 {
 						final int dart = opposite(westEdges[westEdgeIndex]);
 						final int next = opposite(westEdges[northWestEdgeIndex]);
 						
-						if (DEBUG) {
+						if (TRACE_EDGES) {
 							debugPrint(dart, "->", next);
 						}
 						
@@ -460,7 +509,7 @@ public final class Vectorize2 {
 						final int dart = opposite(northEdges[westNorthEdgeIndex]);
 						final int next = opposite(northEdges[northEdgeIndex]);
 						
-						if (DEBUG) {
+						if (TRACE_EDGES) {
 							debugPrint(dart, "->", next);
 						}
 						
@@ -478,7 +527,7 @@ public final class Vectorize2 {
 						final int dart = opposite(westEdges[westEdgeIndex]);
 						final int next = northEdges[westNorthEdgeIndex];
 						
-						if (DEBUG) {
+						if (TRACE_EDGES) {
 							debugPrint(dart, "->", next);
 						}
 						
@@ -494,7 +543,7 @@ public final class Vectorize2 {
 						final int dart = opposite(northEdges[westNorthEdgeIndex]);
 						final int next = westEdges[westEdgeIndex];
 						
-						if (DEBUG) {
+						if (TRACE_EDGES) {
 							debugPrint(dart, "->", next);
 						}
 						
@@ -522,7 +571,7 @@ public final class Vectorize2 {
 						final int dart = westEdges[northWestEdgeIndex];
 						final int next = westEdges[westEdgeIndex];
 						
-						if (DEBUG) {
+						if (TRACE_EDGES) {
 							debugPrint(dart, "->", next);
 						}
 						
@@ -540,7 +589,7 @@ public final class Vectorize2 {
 						final int dart = opposite(northEdges[westNorthEdgeIndex]);
 						final int next = opposite(westEdges[northWestEdgeIndex]);
 						
-						if (DEBUG) {
+						if (TRACE_EDGES) {
 							debugPrint(dart, "->", next);
 						}
 						
@@ -556,7 +605,7 @@ public final class Vectorize2 {
 						final int dart = westEdges[northWestEdgeIndex];
 						final int next = northEdges[westNorthEdgeIndex];
 						
-						if (DEBUG) {
+						if (TRACE_EDGES) {
 							debugPrint(dart, "->", next);
 						}
 						
@@ -584,7 +633,7 @@ public final class Vectorize2 {
 						final int dart = northEdges[northEdgeIndex];
 						final int next = northEdges[westNorthEdgeIndex];
 						
-						if (DEBUG) {
+						if (TRACE_EDGES) {
 							debugPrint(dart, "->", next);
 						}
 						
@@ -602,7 +651,7 @@ public final class Vectorize2 {
 						final int dart = westEdges[northWestEdgeIndex];
 						final int next = opposite(northEdges[northEdgeIndex]);
 						
-						if (DEBUG) {
+						if (TRACE_EDGES) {
 							debugPrint(dart, "->", next);
 						}
 						
@@ -618,7 +667,7 @@ public final class Vectorize2 {
 						final int dart = northEdges[northEdgeIndex];
 						final int next = opposite(westEdges[northWestEdgeIndex]);
 						
-						if (DEBUG) {
+						if (TRACE_EDGES) {
 							debugPrint(dart, "->", next);
 						}
 						
@@ -661,7 +710,7 @@ public final class Vectorize2 {
 					final int dart2 = opposite(next1);
 					final int next2 = opposite(dart1);
 					
-					if (DEBUG) {
+					if (TRACE_EDGES) {
 						debugPrint(dart1, "->", next1);
 						debugPrint(dart2, "->", next2);
 					}
@@ -681,7 +730,7 @@ public final class Vectorize2 {
 					final int dart2 = opposite(next1);
 					final int next2 = opposite(dart1);
 					
-					if (DEBUG) {
+					if (TRACE_EDGES) {
 						debugPrint(dart1, "->", next1);
 						debugPrint(dart2, "->", next2);
 					}
@@ -692,9 +741,9 @@ public final class Vectorize2 {
 			}
 		}
 		
-		debugPrint("edges:", topology.getEdgeCount());
-		
-		if (false) {
+		if (CHECK_STRUCTURE) {
+			debugPrint("edges:", topology.getEdgeCount());
+			
 			checkEqual(geometry.size(), topology.getDartCount());
 			
 			debugPrint("Checking topology...");
