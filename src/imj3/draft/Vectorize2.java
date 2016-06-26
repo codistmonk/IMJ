@@ -4,6 +4,7 @@ import static imj2.topology.Manifold.opposite;
 import static imj2.topology.Manifold.Traversor.FACE;
 import static java.lang.Math.abs;
 import static java.lang.Math.sqrt;
+import static multij.tools.MathTools.square;
 import static multij.tools.Tools.*;
 
 import imj2.topology.Manifold;
@@ -20,7 +21,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
-import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -52,20 +52,6 @@ public final class Vectorize2 {
 	
 	private static final boolean DEBUG = false;
 	
-	static final Map<Integer, String> typeNames = new HashMap<>();
-	
-	static {
-		try {
-			for (final Field field : PathIterator.class.getDeclaredFields()) {
-				if (field.getName().startsWith("SEG_")) {
-					typeNames.put((Integer) field.get(null), field.getName());
-				}
-			}
-		} catch (final Exception exception) {
-			throw unchecked(exception);
-		}
-	}
-	
 	/**
 	 * @param commandLineArguments
 	 * <br>Must not be null
@@ -73,7 +59,6 @@ public final class Vectorize2 {
 	public static final void main(final String... commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String imagePath = arguments.get("image", "");
-		final int smoothing = arguments.get1("smoothing", 1);
 		final Collection<Integer> excludedLabels = Arrays.stream(arguments.get("exclude", new int[0])).mapToObj(x -> x).collect(Collectors.toSet());
 		
 		debugPrint("image:", imagePath);
@@ -83,105 +68,121 @@ public final class Vectorize2 {
 			final Structure structure = getStructure(image);
 			debugPrint("points:", new HashSet<>(structure.getGeometry()).size());
 			debugPrint("objects:", FACE.count(structure.getTopology()));
-			final Document svg = SVGTools.newSVG(image.getWidth(), image.getHeight());
 			final List<Segment> segments = collectSegments(image, structure);
 			
 			debugPrint(segments.size());
+			
+			simplify(segments);
 			
 			final List<Segment> newSegments = combineSegments(segments, excludedLabels);
 			
 			debugPrint(newSegments.size());
 			
-			smoothe(newSegments, smoothing);
-			
-			for (int objectId = 0; objectId < newSegments.size(); ++objectId) {
-				final Segment segment = newSegments.get(objectId);
+			{
+				final Document svg = SVGTools.newSVG(image.getWidth(), image.getHeight());
 				
-				SVGTools.addTo(svg, segment.getGeometry(), segment.getLabel(), "TODO", "" + objectId);
+				for (int objectId = 0; objectId < newSegments.size(); ++objectId) {
+					final Segment segment = newSegments.get(objectId);
+					
+					SVGTools.addTo(svg, segment.getGeometry(), segment.getLabel(), "TODO", "" + objectId);
+				}
+				
+				XMLTools.write(svg, new File(baseName(imagePath) + ".svg"), 1);
 			}
-			
-			XMLTools.write(svg, new File(baseName(imagePath) + ".svg"), 1);
 		} catch (final IOException exception) {
 			throw new UncheckedIOException(exception);
 		}
 	}
 	
-	public static final void smoothe(final List<Segment> segments, final int smoothing) {
-		if (0 < smoothing) {
-			final double[] xy = new double[2];
+	public static final void simplify(final List<Segment> segments) {
+		final double[] xy = new double[2];
+		
+		for (final Segment segment : segments) {
+			Arrays.fill(xy, 0F);
 			
-			for (final Segment segment : segments) {
-				Arrays.fill(xy, 0F);
+			final List<Point2D> vertices = new ArrayList<>();
+			final List<Point2D> newVertices = new ArrayList<>();
+			final Path2D newShape = new Path2D.Double();
+			
+			for (final PathIterator i = segment.getGeometry().getPathIterator(new AffineTransform(), 0.0); !i.isDone(); i.next()) {
+				final int type = i.currentSegment(xy);
 				
-				final List<Point2D> vertices = new ArrayList<>();
-				final List<Point2D> newVertices = new ArrayList<>();
-				final Path2D newShape = new Path2D.Double();
-				
-				for (final PathIterator i = segment.getGeometry().getPathIterator(new AffineTransform(), 0.0); !i.isDone(); i.next()) {
-					final int type = i.currentSegment(xy);
+				if (type == PathIterator.SEG_MOVETO) {
+					simplify(vertices, newVertices);
+					updateShape(newVertices, newShape, false);
 					
-					if (type == PathIterator.SEG_MOVETO) {
-						if (!vertices.isEmpty()) {
-							smoothe(vertices, newVertices);
-							updateShape(newVertices, newShape, false);
-						}
-						
-						vertices.clear();
-						newVertices.clear();
-						vertices.add(new Point2D.Double(xy[0], xy[1]));
-					} else if (type == PathIterator.SEG_CLOSE) {
-						smoothe(vertices, newVertices);
-						updateShape(newVertices, newShape, true);
-						
-						vertices.clear();
-						newVertices.clear();
-					} else {
-						vertices.add(new Point2D.Double(xy[0], xy[1]));
-					}
+					vertices.clear();
+					newVertices.clear();
+					
+					vertices.add(new Point2D.Double(xy[0], xy[1]));
+				} else if (type == PathIterator.SEG_CLOSE) {
+					simplify(vertices, newVertices);
+					updateShape(newVertices, newShape, true);
+					
+					vertices.clear();
+					newVertices.clear();
+				} else {
+					vertices.add(new Point2D.Double(xy[0], xy[1]));
 				}
-				
-				// TODO simplify new geometry
-				segment.getGeometry().reset();
-				segment.getGeometry().add(new Area(newShape));
 			}
+			
+			segment.getGeometry().reset();
+			segment.getGeometry().add(new Area(newShape));
 		}
 	}
 	
 	public static final void updateShape(final List<Point2D> newVertices, final Path2D newShape, final boolean close) {
-		newShape.moveTo(newVertices.get(0).getX(), newVertices.get(0).getY());
-		
-		for (int j = 0; j < newVertices.size(); ++j) {
-			newShape.lineTo(newVertices.get(j).getX(), newVertices.get(j).getY());
-		}
-		
-		if (close) {
-			newShape.closePath();
+		if (!newVertices.isEmpty()) {
+			newShape.moveTo(newVertices.get(0).getX(), newVertices.get(0).getY());
+			
+			for (int j = 0; j < newVertices.size(); ++j) {
+				newShape.lineTo(newVertices.get(j).getX(), newVertices.get(j).getY());
+			}
+			
+			if (close) {
+				newShape.closePath();
+			}
 		}
 	}
 	
-	public static final void smoothe(final List<Point2D> vertices, final List<Point2D> newVertices) {
-		final double s = abs(getSurface(vertices));
-		final int n = vertices.size();
-		final List<Point2D> deltas = new ArrayList<>(n);
+	public static final double cosAngle(final Point2D p, final Point2D q, final Point2D r) {
+		final double qpx = p.getX() - q.getX();
+		final double qpy = p.getY() - q.getY();
+		final double qp = sqrt(square(qpx) + square(qpy));
 		
-		for (int i = 0; i < n; ++i) {
-			final Point2D p = vertices.get(i);
-			final Point2D q = vertices.get((i + n - 1) % n);
-			final Point2D r = vertices.get((i + 1) % n);
-			final Point2D v = new Point2D.Double((p.getX() + q.getX() + r.getX()) / 3.0 , (p.getY() + q.getY() + r.getY()) / 3.0);
-			
-			newVertices.add(v);
-			deltas.add(new Point2D.Double(v.getX() - p.getX(), v.getY() - p.getY()));
+		if (qp == 0.0) {
+			return 1.0;
 		}
 		
-		final double newS = abs(getSurface(newVertices));
-		final double scale = sqrt(s / newS);
+		final double qrx = r.getX() - q.getX();
+		final double qry = r.getY() - q.getY();
+		final double qr = sqrt(square(qrx) + square(qry));
 		
-		for (int i = 0; i < n; ++i) {
-			final Point2D p = vertices.get(i);
-			final Point2D delta = deltas.get(i);
-			
-			newVertices.get(i).setLocation(p.getX() + scale * delta.getX(), p.getY() + scale * delta.getY());
+		if (qr == 0.0) {
+			return 1.0;
+		}
+		
+		final double qpqr = qpx * qrx + qpy * qry;
+		
+		return qpqr / (qp * qr);
+	}
+	
+	public static final void simplify(final List<Point2D> vertices, final List<Point2D> newVertices) {
+		final int n = vertices.size();
+		
+		if (4 < n) {
+			for (int i = 0; i < n; ++i) {
+				final Point2D p = vertices.get((i + n - 1) % n);
+				final Point2D q = vertices.get(i);
+				final Point2D r = vertices.get((i + 1) % n);
+				final double cosAngle = cosAngle(p, q, r);
+				
+				if (-1.0 != cosAngle) {
+					newVertices.add(q);
+				}
+			}
+		} else {
+			newVertices.addAll(vertices);
 		}
 	}
 	
@@ -200,13 +201,13 @@ public final class Vectorize2 {
 	
 	public static final List<Segment> combineSegments(final List<Segment> segments,
 			final Collection<Integer> excludedLabels) {
+		debugPrint(getThisMethodName() + "...");
+		
 		segments.sort((s1, s2) -> Double.compare(s1.getSurface(), s2.getSurface()));
 		
 		final BitSet remove = new BitSet(segments.size());
 		
 		for (int i = 0; i < segments.size(); ++i) {
-			debugPrint(i, "/", segments.size());
-			
 			final Segment segmentI = segments.get(i);
 			
 			if (excludedLabels.contains(segmentI.getLabel())) {
@@ -235,16 +236,15 @@ public final class Vectorize2 {
 			}
 		}
 		
-		debugPrint(remove.cardinality());
-		
-		final List<Segment> newSegments = new ArrayList<>();
+		final List<Segment> result = new ArrayList<>();
 		
 		for (int i = 0; i < segments.size(); ++i) {
 			if (!remove.get(i)) {
-				newSegments.add(segments.get(i));
+				result.add(segments.get(i));
 			}
 		}
-		return newSegments;
+		
+		return result;
 	}
 	
 	public static List<Segment> collectSegments(final BufferedImage image, final Structure structure) {
@@ -702,7 +702,36 @@ public final class Vectorize2 {
 			checkConnected(topology, northEdges);
 			checkConnected(topology, westEdges);
 			
-			debugPrint("valid:", topology.isValid());
+			if (!topology.isValid()) {
+				throw new IllegalStateException();
+			}
+			
+			debugPrint("Checking geometry...");
+			
+			FACE.traverse(topology, f -> {
+				final int n = FACE.countDarts(topology, f);
+				final List<Point2D> vertices = new ArrayList<>(n);
+				
+				FACE.traverse(topology, f, d -> {
+					vertices.add(geometry.get(d));
+					return true;
+				});
+				
+				for (int i = 0; i < n; ++i) {
+					final Point2D p = vertices.get((i + n - 1) % n);
+					final Point2D q = vertices.get(i);
+					final Point2D r = vertices.get((i + 1) % n);
+					final double cosAngle = cosAngle(p, q, r);
+					
+					if (1.0 == cosAngle) {
+						debugError(f, i, p, q, r);
+						
+						throw new IllegalStateException();
+					}
+				}
+				
+				return true;
+			});
 		}
 		
 		return result;
