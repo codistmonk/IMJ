@@ -10,7 +10,6 @@ import static multij.tools.Tools.array;
 import imj3.core.IMJCoreTools;
 import imj3.core.IMJCoreTools.Reference;
 import imj3.core.Image2D;
-import imj3.draft.QuickClassif.Context.RepaintListener;
 import imj3.draft.QuickSeg2.Monitor;
 import imj3.tools.AwtImage2D;
 import imj3.tools.Image2DComponent;
@@ -457,7 +456,7 @@ public final class QuickClassif {
 //				graphics.draw(region);
 			}
 			
-			this.context.getRepaintListeners().forEach(RepaintListener::repainted);
+			this.context.getRepaintListeners().forEach(Context.RepaintListener::repainted);
 		}
 		
 		private static final long serialVersionUID = -3312425399419835765L;

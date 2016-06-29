@@ -7,7 +7,6 @@ import static multij.tools.Tools.join;
 
 import imj2.core.Image2D;
 import imj2.draft.PaletteBasedSegmentation.NearestNeighborRGBQuantizer;
-import imj2.tools.ColorSeparationTest.RGBTransformer;
 import imj2.tools.AwtBackedImage;
 import imj2.tools.IMJTools;
 

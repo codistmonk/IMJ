@@ -16,7 +16,6 @@ import imj3.core.IMJCoreTools;
 import imj3.core.IMJCoreTools.Reference;
 import imj3.core.Image2D;
 import imj3.core.Image2D.Pixel2DProcessor;
-import imj3.draft.QuickSeg2.Context.RepaintListener;
 import imj3.tools.AwtImage2D;
 import imj3.tools.IMJTools;
 import imj3.tools.IMJTools.ComponentComembership;
@@ -689,7 +688,7 @@ public final class QuickSeg2 {
 //				graphics.draw(region);
 			}
 			
-			this.context.getRepaintListeners().forEach(RepaintListener::repainted);
+			this.context.getRepaintListeners().forEach(Context.RepaintListener::repainted);
 		}
 		
 		private static final long serialVersionUID = -4573576871706331668L;

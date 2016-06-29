@@ -1,7 +1,6 @@
 package imj3.draft.segmentation;
 
 import static imj3.draft.segmentation.SegmentationTools.*;
-import static imj3.draft.segmentation.TrainableSegmentation.Context.context;
 import static imj3.tools.CommonSwingTools.*;
 import static imj3.tools.CommonTools.*;
 import static java.lang.Math.max;
@@ -120,7 +119,7 @@ public final class TrainableSegmentation {
 				final JToolBar toolBar = new JToolBar();
 				final JTree tree = newClassifierTree();
 				
-				context(mainFrame).setClassifier((Classifier) tree.getModel().getRoot());
+				Context.context(mainFrame).setClassifier((Classifier) tree.getModel().getRoot());
 				
 				final Component[] view = { null };
 				final JComboBox<String> actionSelector = new JComboBox<>(array("Train and classify", "Classify"));
@@ -132,7 +131,7 @@ public final class TrainableSegmentation {
 					
 					@Override
 					public final void actionPerformed(final ActionEvent event) {
-						final Context context = context(mainFrame);
+						final Context context = Context.context(mainFrame);
 						
 						writeXML(context.getClassifier());
 						preferences.put("classifierFile", context.getClassifier().getFilePath());
@@ -181,7 +180,7 @@ public final class TrainableSegmentation {
 					
 					@Override
 					public final void actionPerformed(final ActionEvent event) {
-						final Context context = context(mainFrame);
+						final Context context = Context.context(mainFrame);
 						final Classifier classifier = context.getClassifier();
 						final BufferedImage image = ((ImageComponent) getSharedProperty(mainFrame, "view")).getImage();
 						final Canvas groundtruth = context.getGroundTruth();
@@ -431,7 +430,7 @@ public final class TrainableSegmentation {
 	}
 	
 	public static final void setView(final JFrame mainFrame, final Component[] view, final File file) {
-		final Context context = context(mainFrame);
+		final Context context = Context.context(mainFrame);
 		final Canvas input = context.getInput();
 		final Canvas groundTruth = context.getGroundTruth();
 		final Canvas classification = context.getClassification();

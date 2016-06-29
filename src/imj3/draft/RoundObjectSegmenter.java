@@ -6,8 +6,6 @@ import static multij.swing.SwingTools.*;
 import static multij.tools.MathTools.square;
 import static multij.tools.Tools.*;
 
-import imj3.draft.RoundObjectSegmenter.ImageComponent.ImageChangedEvent;
-
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -102,10 +100,10 @@ public final class RoundObjectSegmenter {
 		final int[][][] orientations = { null };
 		final int[][][] gradients = { null };
 		
-		EventManager.getInstance().addListener(imageComponent, ImageChangedEvent.class, new Serializable() {
+		EventManager.getInstance().addListener(imageComponent, ImageComponent.ImageChangedEvent.class, new Serializable() {
 			
 			@Listener
-			public final void imageChanged(final ImageChangedEvent event) {
+			public final void imageChanged(final ImageComponent.ImageChangedEvent event) {
 				debugPrint(event);
 				
 				final BufferedImage image = event.getSource().getImage();

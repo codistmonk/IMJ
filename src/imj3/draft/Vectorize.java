@@ -3,7 +3,6 @@ package imj3.draft;
 import static imj2.topology.Manifold.*;
 import static imj2.topology.Manifold.Traversor.*;
 import static imj3.draft.SVGTools.*;
-import static imj3.draft.Vectorize.WeakProperties.weakProperties;
 import static imj3.tools.CommonTools.formatColor;
 import static java.lang.Math.*;
 import static multij.tools.MathTools.square;
@@ -517,7 +516,7 @@ public final class Vectorize {
 			for (final Shape polygon : v) {
 				final Area newShape = new Area(polygon);
 				final double newShapeDeterminant = SVGTools.getSurface(polygon, 1.0);
-				weakProperties.set(newShape, "determinant", newShapeDeterminant);
+				WeakProperties.weakProperties.set(newShape, "determinant", newShapeDeterminant);
 				Area container = null;
 				final int n = shapes.size();
 				
@@ -535,15 +534,15 @@ public final class Vectorize {
 				if (container == null) {
 					shapes.add(newShape);
 				} else {
-					final double containerDeterminant = weakProperties.get(container, "determinant");
+					final double containerDeterminant = WeakProperties.weakProperties.get(container, "determinant");
 					
 					container.subtract(newShape);
 					
 					if (0 < containerDeterminant * newShapeDeterminant) {
 						debugError(Integer.toHexString(k), containerDeterminant, newShapeDeterminant);
-						weakProperties.set(container, "determinant", containerDeterminant - newShapeDeterminant);
+						WeakProperties.weakProperties.set(container, "determinant", containerDeterminant - newShapeDeterminant);
 					} else {
-						weakProperties.set(container, "determinant", containerDeterminant + newShapeDeterminant);
+						WeakProperties.weakProperties.set(container, "determinant", containerDeterminant + newShapeDeterminant);
 					}
 				}
 			}
@@ -586,8 +585,8 @@ public final class Vectorize {
 				getPixelXY(imageWidth, imageHeight, f, tmp);
 				
 				if (f != 1 && 0 <= tmp.x && tmp.x < imageWidth && 0 <= tmp.y && tmp.y < imageHeight) {
-					weakProperties.set(polygon, "label", getRGB(image, tmp.x, tmp.y, quantization));
-					weakProperties.set(polygon, "determinant", SVGTools.getSurface(polygon, 1.0));
+					WeakProperties.weakProperties.set(polygon, "label", getRGB(image, tmp.x, tmp.y, quantization));
+					WeakProperties.weakProperties.set(polygon, "determinant", SVGTools.getSurface(polygon, 1.0));
 					
 					final Collection<Path2D> collection = result.computeIfAbsent(getRGB(image, tmp.x, tmp.y, quantization),
 							k -> new ArrayList<>());
@@ -603,7 +602,7 @@ public final class Vectorize {
 		debugPrint("Sorting...");
 		
 		result.forEach((k, v) -> ((List<Path2D>) v).sort((p1, p2) -> Double.compare(
-				abs((double) weakProperties.get(p2, "determinant")), abs((double) weakProperties.get(p1, "determinant")))));
+				abs((double) WeakProperties.weakProperties.get(p2, "determinant")), abs((double) WeakProperties.weakProperties.get(p1, "determinant")))));
 		
 		debugPrint("Polygons collected");
 		

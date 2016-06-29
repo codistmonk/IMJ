@@ -5,6 +5,7 @@ import static java.util.Arrays.copyOfRange;
 import static multij.tools.Tools.debugPrint;
 import static multij.tools.Tools.ignore;
 import static multij.tools.Tools.unchecked;
+
 import imj.ImageOfBufferedImage;
 import imj.ImageOfBufferedImage.Feature;
 import imj.apps.modules.ImageComponent;
@@ -28,6 +29,7 @@ import javax.imageio.ImageIO;
 
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
+
 import multij.tools.CommandLineArgumentsParser;
 import multij.tools.IllegalInstantiationException;
 
@@ -43,7 +45,7 @@ public final class Experimental {
 	private static final Map<String, Class<?>> primitiveClasses;
 	
 	static {
-		primitiveClasses = new HashMap<String, Class<?>>();
+		primitiveClasses = new HashMap<>();
 		
 		primitiveClasses.put("boolean", boolean.class);
 		primitiveClasses.put("byte", byte.class);
@@ -94,7 +96,7 @@ public final class Experimental {
 				
 				try {
 					final BufferedImage image = ImageIO.read(new File(infile));
-					final Map<String, Object> data = new HashMap<String, Object>();
+					final Map<String, Object> data = new HashMap<>();
 					final int width = image.getWidth();
 					final int height = image.getHeight();
 					final int[] colorBits = image.getColorModel().getComponentSize();
@@ -112,11 +114,12 @@ public final class Experimental {
 					debugPrint("dataLength", Array.getLength(arraySetter.getArray()));
 					data.put("data", arraySetter.getArray());
 					
-					final ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(outfile));
-					oos.writeObject(data);
-					oos.flush();
-					oos.reset();
-					oos.close();
+					try (final ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(outfile))) {
+						oos.writeObject(data);
+						oos.flush();
+						oos.reset();
+						oos.close();
+					}
 				} catch (final Exception exception) {
 					throw unchecked(exception);
 				}
@@ -131,8 +134,7 @@ public final class Experimental {
 				final String format = arguments.get("format", "png");
 				final String outfile = outfile0 != null ? outfile0 : infile + "." + format;
 				
-				try {
-					final ObjectInputStream ois = new ObjectInputStream(new FileInputStream(infile));
+				try (final ObjectInputStream ois = new ObjectInputStream(new FileInputStream(infile))) {
 					final Map<String, Object> data = (Map<String, Object>) ois.readObject();
 					ois.close();
 					
@@ -192,8 +194,7 @@ public final class Experimental {
 			public final void process(final CommandLineArgumentsParser arguments) {
 				final String infile = arguments.get("file", (String) null);
 				
-				try {
-					final IFormatReader reader = new ImageReader();
+				try (final IFormatReader reader = new ImageReader()) {
 					reader.setId(infile);
 //					ImageComponent.show(new ImageOfBufferedImage(ImageIO.read(new File(infile))), infile);
 					ImageComponent.show(infile, new ImageOfBufferedImage(
@@ -250,8 +251,8 @@ public final class Experimental {
 				}
 			}
 			
-			debugPrint(layout);
-			debugPrint(indices);
+			debugPrint((Object[]) layout);
+			debugPrint((Object[]) indices);
 			
 			return new IndexIterator(indices);
 		}

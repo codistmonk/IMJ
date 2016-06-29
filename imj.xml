@@ -23,6 +23,7 @@
 	</target>
 	
     <target name="create_imj_jar">
+    	<javac source="8" srcdir="src" destdir="bin" includeantruntime="false" classpath="src:lib/multij-1.8.201606081340.jar:lib/jsch-0.1.50.jar:lib/bioformats_package.jar:lib/truezip-7.7.8.jar:lib/weka.jar"/>
         <jar destfile="imj-all.jar" filesetmanifest="mergewithoutmain">
             <manifest>
                 <attribute name="Class-Path" value="."/>

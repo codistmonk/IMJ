@@ -30,15 +30,12 @@ import static multij.tools.Tools.readObject;
 import static multij.tools.Tools.set;
 import static multij.tools.Tools.writeObject;
 
-import imj2.draft.PaletteBasedSegmentation.HistogramView.PointsUpdatedEvent;
-import imj2.draft.PaletteBasedSegmentation.HistogramView.SegmentsUpdatedEvent;
 import imj2.pixel3d.OrbiterMouseHandler;
 import imj2.pixel3d.OrthographicRenderer;
 import imj2.pixel3d.Renderer;
 import imj2.pixel3d.TiledRenderer;
 import imj2.pixel3d.OrbiterMouseHandler.OrbiterParameters;
 import imj2.tools.SimpleImageView;
-import imj2.tools.ColorSeparationTest.RGBTransformer;
 import imj2.tools.Image2DComponent.Painter;
 
 import java.awt.Color;
@@ -137,12 +134,12 @@ public final class PaletteBasedSegmentation {
 		EventManager.getInstance().addListener(histogramView, HistogramView.AbstractEvent.class, new Serializable() {
 			
 			@Listener
-			public final void segmentsUpdated(final SegmentsUpdatedEvent event) {
+			public final void segmentsUpdated(final HistogramView.SegmentsUpdatedEvent event) {
 				this.pointsUpdated(null);
 			}
 			
 			@Listener
-			public final void pointsUpdated(final PointsUpdatedEvent event) {
+			public final void pointsUpdated(final HistogramView.PointsUpdatedEvent event) {
 				final Map<Integer, Collection<Integer>> clusters = ((NearestNeighborRGBQuantizer) transformerSelector.getItemAt(1)).getClusters();
 				
 				{

@@ -12,7 +12,6 @@ import imj2.core.IMJCoreTools;
 import imj2.core.Image2D;
 import imj2.core.LinearIntImage;
 import imj2.core.TiledImage2D;
-import imj2.tools.IMJTools.TileProcessor.Info;
 
 import java.awt.Component;
 import java.awt.Container;
@@ -133,7 +132,7 @@ public final class IMJTools extends IMJCoreTools {
 	}
 	
 	public static final ConcreteImage2D<LinearIntImage> newConcreteImage2D(final String id, final Channels channels, final int width, final int height) {
-		return new ConcreteImage2D<LinearIntImage>(new LinearIntImage(id, (long) width * height, channels), width, height);
+		return new ConcreteImage2D<>(new LinearIntImage(id, (long) width * height, channels), width, height);
 	}
 	
 	public static final int a8gray888(final int alpha8, final int gray8) {
@@ -338,7 +337,7 @@ public final class IMJTools extends IMJCoreTools {
 			for (int tileX = 0; tileX < imageWidth; tileX += tileWidth) {
 				final int w = min(tileWidth, imageWidth - tileX);
 				
-				process.pixel(new Info(tileX, tileY, w, h, 0, 0));
+				process.pixel(new TileProcessor.Info(tileX, tileY, w, h, 0, 0));
 				process.endOfTile();
 			}
 		}

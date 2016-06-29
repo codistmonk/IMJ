@@ -5,7 +5,6 @@ import static java.lang.Double.parseDouble;
 import static java.lang.Long.parseLong;
 import static java.util.Locale.ENGLISH;
 import static multij.tools.Tools.unchecked;
-import imj.apps.modules.Annotations.Annotation.Region;
 
 import java.awt.Color;
 import java.awt.geom.Point2D;
@@ -46,8 +45,8 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 		return this.getItems();
 	}
 	
-	public final List<Region> collectAllRegions() {
-		final List<Region> result = new ArrayList<Region>();
+	public final List<Annotation.Region> collectAllRegions() {
+		final List<Annotation.Region> result = new ArrayList<>();
 		
 		for (final Annotation annotation : this.getAnnotations()) {
 			result.addAll(annotation.getRegions());
@@ -92,9 +91,9 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 					
 					private Annotation annotation;
 					
-					private Region region;
+					private Annotation.Region region;
 					
-					private final List<String> elements = new LinkedList<String>();
+					private final List<String> elements = new LinkedList<>();
 					
 					@Override
 					public final void startElement(final String uri, final String localName,
@@ -212,7 +211,7 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 			
 			int regionId = 1;
 			
-			for (final Region region : annotation.getRegions()) {
+			for (final Annotation.Region region : annotation.getRegions()) {
 				out.println("      <Region" +
 						attribute("Id", regionId) +
 						attribute("Zoom", 0) +
@@ -284,7 +283,7 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 	 * 
 	 * @author codistmonk (creation 2013-02-26)
 	 */
-	public final class Annotation extends GenericTreeNode<Region> {
+	public final class Annotation extends GenericTreeNode<Annotation.Region> {
 		
 		private Color lineColor;
 		
@@ -361,7 +360,7 @@ public final class Annotations extends GenericTreeNode<imj.apps.modules.Annotati
 			private boolean negative;
 			
 			public Region() {
-				this.vertices = new ArrayList<Point2D.Float>();
+				this.vertices = new ArrayList<>();
 				Annotation.this.getRegions().add(this);
 				this.setUserObject(this.getClass().getSimpleName() + " " + (Annotation.this.getRegions().indexOf(this) + 1));
 			}

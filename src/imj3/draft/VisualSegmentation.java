@@ -10,12 +10,15 @@ import static multij.swing.SwingTools.horizontalBox;
 import static multij.swing.SwingTools.scrollable;
 import static multij.tools.Tools.cast;
 import static multij.tools.Tools.ignore;
+import static multij.tools.Tools.iterable;
+
 import imj2.core.Image2D;
 import imj2.draft.KMeans;
 import imj2.draft.PaletteBasedHistograms;
 import imj2.draft.PaletteBasedHistograms.Patch2DProcessor;
 import imj2.tools.AwtBackedImage;
 import imj2.tools.IMJTools;
+
 import imj3.core.Channels;
 import imj3.tools.AwtImage2D;
 
@@ -683,7 +686,7 @@ public final class VisualSegmentation {
 		final Map<Integer, List<Pair<Point, Integer>>> result = new HashMap<>();
 		final Map<Integer, PaletteCluster> labelClusters = new HashMap<>();
 		
-		for (final PaletteCluster cluster : Tools.<PaletteCluster>iterable(palette.children())) {
+		for (final PaletteCluster cluster : (Iterable<PaletteCluster>) (Object) iterable(palette.children())) {
 			labelClusters.put(cluster.getLabel(), cluster);
 		}
 		
