@@ -4,11 +4,12 @@ import static imj3.tools.CommonTools.getFieldValue;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-import static multij.tools.Tools.unchecked;
+import static multij.tools.Tools.*;
 
 import imj3.core.Channels;
 import imj3.core.Image2D;
 
+import java.io.FileNotFoundException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,6 +21,7 @@ import java.util.Map;
 import loci.formats.FormatTools;
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
+import loci.formats.in.TiffReader;
 
 /**
  * @author codistmonk (creation 2015-03-20)
@@ -196,7 +198,7 @@ public final class BioFormatsImage2D implements Image2D {
 			
 			for (int y = 0; y < tileHeight; ++y) {
 				for (int x = 0; x < tileWidth; ++x) {
-					final int pixelValue = getPixelValueFromBuffer(
+					final long pixelValue = getPixelValueFromBuffer(
 							this.getReader(), buffer, tileWidth, tileHeight, this.getChannels().getChannelCount(), x, y);
 					result.setPixelValue(x, y, pixelValue);
 				}
@@ -225,9 +227,10 @@ public final class BioFormatsImage2D implements Image2D {
 	
 	private static final long serialVersionUID = 2586212892652688146L;
 	
-	public static final int getPixelValueFromBuffer(final IFormatReader reader, final byte[] buffer, final int bufferWidth, final int bufferHeight, final int channelCount, final int xInBuffer, final int yInBuffer) {
+	public static final long getPixelValueFromBuffer(final IFormatReader reader, final byte[] buffer, final int bufferWidth, final int bufferHeight, final int channelCount, final int xInBuffer, final int yInBuffer) {
 		final int bytesPerChannel = FormatTools.getBytesPerPixel(reader.getPixelType());
-		int result = 0;
+		long result = 0L;
+		final boolean littleEndian = reader.isLittleEndian();
 		
 		if (reader.isIndexed()) {
 			if (!reader.isInterleaved()) {
@@ -261,7 +264,13 @@ public final class BioFormatsImage2D implements Image2D {
 			final int pixelFirstByteIndex = (yInBuffer * bufferWidth + xInBuffer) * bytesPerChannel;
 			
 			for (int i = 0; i < channelCount; ++i) {
-				result = (result << 8) | (buffer[pixelFirstByteIndex + i * tileChannelByteCount] & 0x000000FF);
+				for (int j = 0; j < bytesPerChannel; ++j) {
+					if (littleEndian) {
+						result = (result << 8) | (buffer[pixelFirstByteIndex + i * tileChannelByteCount + (bytesPerChannel - 1 - j)] & 0x000000FF);
+					} else {
+						result = (result << 8) | (buffer[pixelFirstByteIndex + i * tileChannelByteCount + j] & 0x000000FF);
+					}
+				}
 			}
 		}
 		
@@ -270,17 +279,30 @@ public final class BioFormatsImage2D implements Image2D {
 	}
 	
 	public static final IFormatReader newImageReader(final String id) {
-		final IFormatReader reader = new ImageReader();
+		IFormatReader reader = new ImageReader();
 		
 		try {
 			reader.setId(id);
+		} catch (final FileNotFoundException exception) {
+			debugError(exception);
+			
+			if (exception.getMessage().contains("/null.tif")) {
+				reader = new TiffReader();
+				
+				try {
+					reader.setId(id);
+				} catch (final Exception e) {
+					throw unchecked(e);
+				}
+			}
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
 		
 		if ("portable gray map".equals(reader.getFormat().toLowerCase(Locale.ENGLISH))) {
 			// XXX This fixes a defect in Bio-Formats PPM loading, but is it always OK?
-			reader.getCoreMetadata()[0].interleaved = true;
+//			reader.getCoreMetadata()[0].interleaved = true;
+			// XXX method was removed from API, check if problem still exists, and fix if necessary
 		}
 		
 		reader.setSeries(0);
@@ -288,8 +310,8 @@ public final class BioFormatsImage2D implements Image2D {
 		return reader;
 	}
 	
-	public static final int packPixelValue(final byte[][] channelTables, final int colorIndex) {
-		int result = 0;
+	public static final long packPixelValue(final byte[][] channelTables, final int colorIndex) {
+		long result = 0;
 		
 		for (final byte[] channelTable : channelTables) {
 			result = (result << 8) | (channelTable[colorIndex] & 0x000000FF);
@@ -327,9 +349,23 @@ public final class BioFormatsImage2D implements Image2D {
 		case 2:
 			return Channels.Predefined.C2_U16;
 		case 3:
-			return Channels.Predefined.C3_U8;
+			switch (getBytesPerPixel(lociImage)) {
+			case 3:
+				return Channels.Predefined.C3_U8;
+			case 6:
+				return Channels.Predefined.C3_U16;
+			default:
+				return Channels.Predefined.C3_U16;
+			}
 		case 4:
-			return Channels.Predefined.C4_U8;
+			switch (getBytesPerPixel(lociImage)) {
+			case 4:
+				return Channels.Predefined.C4_U8;
+			case 8:
+				return Channels.Predefined.C4_U16;
+			default:
+				return Channels.Predefined.C4_U16;
+			}
 		default:
 			throw new IllegalArgumentException();
 		}

@@ -153,6 +153,18 @@ public abstract interface Channels extends Serializable {
 				return 8;
 			}
 			
+		}, C3_U16 {
+			
+			@Override
+			public final int getChannelCount() {
+				return 3;
+			}
+			
+			@Override
+			public final int getChannelBitCount() {
+				return 16;
+			}
+			
 		}, C4_U8 {
 			
 			@Override
@@ -163,6 +175,18 @@ public abstract interface Channels extends Serializable {
 			@Override
 			public final int getChannelBitCount() {
 				return 8;
+			}
+			
+		}, C4_U16 {
+			
+			@Override
+			public final int getChannelCount() {
+				return 4;
+			}
+			
+			@Override
+			public final int getChannelBitCount() {
+				return 16;
 			}
 			
 		};

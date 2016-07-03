@@ -294,7 +294,8 @@ public final class LociBackedImage extends TiledImage2D {
 		
 		if ("portable gray map".equals(reader.getFormat().toLowerCase(Locale.ENGLISH))) {
 			// XXX This fixes a defect in Bio-Formats PPM loading, but is it always OK?
-			reader.getCoreMetadata()[0].interleaved = true;
+//			reader.getCoreMetadata()[0].interleaved = true;
+			// XXX method was removed from API, check if problem still exists, and fix if necessary
 		}
 		
 		reader.setSeries(0);

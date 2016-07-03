@@ -154,7 +154,8 @@ public final class ImageWrangler {
 			
 			if (isPGM) {
 				// XXX This fixes a defect in Bio-Formats PPM loading, but is it always OK?
-				reader.getCoreMetadata()[0].interleaved = true;
+//				reader.getCoreMetadata()[0].interleaved = true;
+				// XXX method was removed from API, check if problem still exists, and fix if necessary
 			}
 			
 			for (int y = 0; y < rowCount; y += bufferRowCount) {

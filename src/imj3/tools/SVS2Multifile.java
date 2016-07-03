@@ -8,6 +8,7 @@ import static java.lang.Math.min;
 import static java.util.Collections.synchronizedList;
 import static multij.tools.Tools.*;
 
+import imj3.core.Channels;
 import imj3.tools.CommonTools.FileProcessor;
 
 import java.awt.image.BufferedImage;
@@ -37,10 +38,6 @@ import java.util.zip.ZipOutputStream;
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-
 import multij.tools.Canvas;
 import multij.tools.CommandLineArgumentsParser;
 import multij.tools.ConsoleMonitor;
@@ -50,6 +47,10 @@ import multij.tools.SystemProperties;
 import multij.tools.TaskManager;
 import multij.tools.TicToc;
 import multij.xml.XMLTools;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 /**
  * @author codistmonk (creation 2014-11-30)
@@ -86,6 +87,7 @@ public final class SVS2Multifile {
 		final int tileSide = arguments.get1("tileSide", 512);
 		final String defaultMicronsPerPixel = arguments.get("defaultMicronsPerPixel", "0.25");
 		final String tileFormat = arguments.get("tileFormat", MultifileImage2D.TILE_FORMAT);
+		final int[] channelRange = arguments.get("channelRange", 0, 0);
 		
 		compressionQuality = Float.parseFloat(arguments.get("compressionQuality", "0.9"));
 		levelCPULoad = 1.0 / threads;
@@ -97,16 +99,16 @@ public final class SVS2Multifile {
 		debugPrint(tasks.getWorkerCount());
 		
 		if (!pathsAsString.isEmpty()) {
-			Arrays.stream(paths).forEach(p -> tasks.submit(() -> process(new File(p), null, tileSide, defaultMicronsPerPixel, tileFormat, outRoot, includeHTMLViewer)));
+			Arrays.stream(paths).forEach(p -> tasks.submit(() -> process(new File(p), null, tileSide, defaultMicronsPerPixel, channelRange, tileFormat, outRoot, includeHTMLViewer)));
 		} else {
-			FileProcessor.deepForEachFileIn(inRoot, f -> tasks.submit(() -> process(f, filter, tileSide, defaultMicronsPerPixel, tileFormat, outRoot, includeHTMLViewer)));
+			FileProcessor.deepForEachFileIn(inRoot, f -> tasks.submit(() -> process(f, filter, tileSide, defaultMicronsPerPixel, channelRange, tileFormat, outRoot, includeHTMLViewer)));
 		}
 		
 		tasks.join();
 	}
 	
 	public static final void process(final File file, final FilenameFilter filter,
-			final int tileSide, final String defaultMicronsPerPixels, final String tileFormat, final File outRoot, final boolean includeHTMLViewer) {
+			final int tileSide, final String defaultMicronsPerPixels, final int[] channelRange, final String tileFormat, final File outRoot, final boolean includeHTMLViewer) {
 		final String fileName = file.getName();
 		
 		if (!fileName.isEmpty() && (filter == null || filter.accept(file.getParentFile(), fileName))) {
@@ -149,7 +151,7 @@ public final class SVS2Multifile {
 					
 					final Collection<Exception> problems = synchronizedList(new ArrayList<>());
 					final ConsoleMonitor monitor = new ConsoleMonitor(30_000L);
-					final Level0 level0 = new Level0(reader, tileSide, tileFormat, output, problems);
+					final Level0 level0 = new Level0(reader, tileSide, channelRange, tileFormat, output, problems);
 					
 					while (level0.next()) {
 						if (monitor.ping()) {
@@ -268,6 +270,10 @@ public final class SVS2Multifile {
 		
 		private final IFormatReader reader;
 		
+		private final Channels channels;
+		
+		private final int[] channelRange;
+		
 		private final int tileSize, channelCount, imageWidth, imageHeight, bufferRowSize;
 		
 		private final byte[] buffer;
@@ -282,10 +288,17 @@ public final class SVS2Multifile {
 		
 		private int tileY;
 		
-		public Level0(final IFormatReader reader, final int tileSize, final String tileFormat,
+		public Level0(final IFormatReader reader, final int tileSize, final int[] channelRange, final String tileFormat,
 				final ZipOutputStream output, final Collection<Exception> problems) {
 			this.reader = reader;
+			this.channels = predefinedChannelsFor(reader);
 			this.tileSize = tileSize;
+			this.channelRange = channelRange;
+			
+			if (channelRange[1] == 0) {
+				channelRange[1] = (1 << this.channels.getChannelBitCount()) - 1;
+			}
+			
 			this.channelCount = predefinedChannelsFor(reader).getChannelCount();
 			this.imageWidth = reader.getSizeX();
 			this.imageHeight = reader.getSizeY();
@@ -295,7 +308,7 @@ public final class SVS2Multifile {
 			this.output = output;
 			this.problems = problems;
 			this.nextLevel = 2 <= this.imageWidth && 2 <= this.imageHeight ? new LevelN(
-					1, channelCount, tileSize, this.imageWidth / 2, this.imageHeight / 2, tileFormat, output, problems) : null;
+					1, this.channelCount, tileSize, this.imageWidth / 2, this.imageHeight / 2, tileFormat, output, problems) : null;
 		}
 		
 		public final boolean next() {
@@ -345,8 +358,15 @@ public final class SVS2Multifile {
 							
 							for (int y = 0; y < h; ++y) {
 								for (int x = 0; x < w; ++x) {
-									pixelValue[0] = getPixelValueFromBuffer(
+									final long tmp = getPixelValueFromBuffer(
 											reader, buffer, imageWidth, h, channelCount, tileX0 + x, y);
+									pixelValue[0] = 0;
+									
+									for (int i = channels.getChannelCount(); 0 <= i; --i) {
+										final long v = channels.getChannelValue(tmp, i);
+										
+										pixelValue[0] = (pixelValue[0] << 8) | 0xFF & (int) (v - channelRange[0]) * 255 / channelRange[1];
+									}
 									
 									if (channelCount == 1) {
 										tile.getImage().getRaster().setPixel(x, y, pixelValue);
