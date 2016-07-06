@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -34,9 +35,13 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
+import java.util.TreeMap;
 import java.util.function.Predicate;
+import java.util.stream.LongStream;
 
+import multij.primitivelists.LongList;
 import multij.swing.SwingTools;
 import multij.tools.Canvas;
 import multij.tools.CommandLineArgumentsParser;
@@ -63,21 +68,23 @@ public final class SVG2Bin {
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String imagePath = arguments.get("image", "");
-		final int lod = arguments.get("lod", 4)[0];
-		final int patchSize = arguments.get("patchSize", 32)[0];
+		final int lod = arguments.get1("lod", 4);
+		final int patchSize = arguments.get1("patchSize", 32);
 		final int[] patchContext = arguments.get("patchContext", 0);
 		final String svgPath = arguments.get("svg", baseName(imagePath) + ".svg");
+		final String predictionPath = arguments.get("prediction", "");
+		final String softmaxPath = arguments.get("softmax", "");
 		final File svgFile = new File(svgPath);
 		final Document svg = readXML(svgFile);
 		final Image2D image = IMJTools.read(imagePath, lod);
 		final long seed = Long.decode(arguments.get("seed", "0"));
-		final boolean balance = arguments.get("balance", 1)[0] != 0;
+		final boolean balance = arguments.get1("balance", 1) != 0;
 		final long limit = Long.decode(arguments.get("limit", Long.toString(Long.MAX_VALUE)));
 		final Random random = seed == -1L ? new Random() : new Random(seed);
 		final List<Region> regions = new ArrayList<>();
 		final double scale = pow(2.0, -lod);
 		final AffineTransform scaling = AffineTransform.getScaleInstance(scale, scale);
-		final int negativeRegionLabel = arguments.get("negativeRegionLabel", -1)[0];
+		final int negativeRegionLabel = arguments.get1("negativeRegionLabel", -1);
 		final Area negativeRegion = negativeRegionLabel != -1 ? new Area(new Rectangle(image.getWidth(), image.getHeight())) : null;
 		final double trainRatio = Double.parseDouble(arguments.get("trainRatio", Double.toString(GroundTruth2Bin.TRAIN_RATIO)));
 		final String[] classIds = getClassIdsArray(arguments.get("classIds", ""), svg);
@@ -97,17 +104,17 @@ public final class SVG2Bin {
 		regions.forEach(region -> sizes.compute(region.getLabel(), (l, s) -> (s == null ? 0 : s) + region.getSize()));
 		
 		final Long totalSize = sizes.values().stream().reduce((x, y) -> x + y).get();
-		final long classLimit = min(limit, balance ? sizes.values().stream().min(Long::compare).get() : Long.MAX_VALUE);
-		final long selectionSize = sizes.values().stream().map(s -> min(s, classLimit)).reduce((x, y) -> x + y).get();
+		final long classLimit = balance ? limit : Integer.MAX_VALUE;
 		
 		debugPrint("classSizes:", sizes);
-		debugPrint("totalSize:", totalSize, "selectionSize:", selectionSize, "classLimit:", classLimit);
-		
-		final int classCount = classIds.length;
+		debugPrint("totalSize:", totalSize, "classLimit:", classLimit);
 		
 		{
-			final BigBitSet[] selections = generateSelections(classCount, sizes, classLimit, random);
-			final List<byte[]> items = generateItems(image, patchSize, patchContext, regions, selectionSize, classCount, selections);
+			final Image2D prediction = predictionPath.isEmpty() ? null : IMJTools.read(predictionPath);
+			final Image2D softmax = prediction == null || softmaxPath.isEmpty() ? null : IMJTools.read(predictionPath);
+			final Map<Byte, ClassSampler> samplers = buildSamplers(image, prediction, softmax, regions, sizes, balance,
+					classLimit, random);
+			final List<byte[]> items = collectItems(image, samplers, patchSize, patchContext);
 			
 			Collections.shuffle(items, random);
 			
@@ -116,13 +123,75 @@ public final class SVG2Bin {
 			
 			writeBins(items, trainRatio, trainOutputPath, testOutputPath);
 			
-			if (arguments.get("show", 0)[0] != 0) {
-				BinView.main("bin", trainOutputPath);
-				BinView.main("bin", testOutputPath);
+			if (arguments.get1("show", 0) != 0) {
+				BinView.main("bin", trainOutputPath, "itemWidth", "" + patchSize);
+				
+				if (1.0 != trainRatio) {
+					BinView.main("bin", testOutputPath, "itemWidth", "" + patchSize);
+				}
 				
 				SwingTools.show(new Image2DComponent(image), "Image", false);
 			}
 		}
+	}
+	
+	public static final List<byte[]> collectItems(final Image2D image, final Map<Byte, ClassSampler> samplers,
+			final int patchSide, final int[] patchContext) {
+		final List<byte[]> result = new ArrayList<>();
+		
+		for (final Map.Entry<Byte, ClassSampler> entry : samplers.entrySet()) {
+			entry.getValue().pixels().forEach(pixel -> {
+				result.add(getItem(image, image.getX(pixel), image.getY(pixel), patchSide, patchContext, entry.getKey(), null));
+			});
+		}
+		
+		return result;
+	}
+	
+	public static final Map<Byte, ClassSampler> buildSamplers(final Image2D image, final Image2D prediction,
+			final Image2D softmax, final List<Region> regions, final Map<Integer, Long> sizes, final boolean balance,
+			final long classLimit, final Random random) {
+		final Map<Byte, ClassSampler> result = new TreeMap<>();
+		
+		for (final Region region : regions) {
+			final byte label = (byte) region.getLabel();
+			final ClassSampler sampler = result.computeIfAbsent(label, __ -> new ClassSampler(random, (int) classLimit, sizes.get(region.getLabel())));
+			final Rectangle bounds = region.getBounds();
+			final BufferedImage mask = region.getMask();
+			final int width = mask.getWidth();
+			final int height = mask.getHeight();
+			
+			for (int y = 0; y < height; ++y) {
+				for (int x = 0; x < width; ++x) {
+					if ((mask.getRGB(x, y) & 1) != 0) {
+						short priority = 1;
+						final int xInImage = bounds.x + x;
+						final int yInImage = bounds.y + y;
+						
+						if (prediction != null) {
+							final int xInPrediction = xInImage * prediction.getWidth() / image.getWidth();
+							final int yInPrediction = yInImage * prediction.getHeight() / image.getHeight();
+							
+							if ((0xFFL & label) != (0xFFL & prediction.getPixelValue(xInPrediction, yInPrediction))) {
+								priority = -1;
+							}
+							
+							if (softmax != null) {
+								priority *= 0xFFL & softmax.getPixelValue(xInPrediction, yInPrediction);
+							}
+						}
+						
+						sampler.prepare(priority, image.getPixel(xInImage, yInImage));
+					}
+				}
+			}
+		}
+		
+		if (balance && classLimit < Integer.MAX_VALUE) {
+			result.values().forEach(ClassSampler::fill);
+		}
+		
+		return result;
 	}
 	
 	public static final void collectRegions(final Document svg,
@@ -152,11 +221,12 @@ public final class SVG2Bin {
 		}
 	}
 	
+	@Deprecated
 	public static final List<byte[]> generateItems(final Image2D image,
 			final int patchSize, final int[] patchContext, final List<Region> regions,
 			final long selectionSize, final int classCount,
 			final BigBitSet[] selections) {
-		final List<byte[]> items = new ArrayList<>((int) selectionSize);
+		final List<byte[]> result = new ArrayList<>((int) selectionSize);
 		final int[] selectionIndices = new int[classCount];
 		
 		for (final Region region : regions) {
@@ -169,14 +239,16 @@ public final class SVG2Bin {
 			for (int y = 0; y < height; ++y) {
 				for (int x = 0; x < width; ++x) {
 					if ((mask.getRGB(x, y) & 1) != 0 && selections[label].get(++selectionIndices[label])) {
-						items.add(getItem(image, bounds.x + x, bounds.y + y, patchSize, patchContext, label, null));
+						result.add(getItem(image, bounds.x + x, bounds.y + y, patchSize, patchContext, label, null));
 					}
 				}
 			}
 		}
-		return items;
+		
+		return result;
 	}
 	
+	@Deprecated
 	public static final BigBitSet[] generateSelections(final int classCount,
 			final Map<Integer, Long> sizes, final long classLimit, final Random random) {
 		final BigBitSet[] result = new BigBitSet[classCount];
@@ -377,6 +449,82 @@ public final class SVG2Bin {
 	
 	public static <T> Predicate<T> not(final Predicate<T> t) {
 	    return t.negate();
+	}
+	
+	/**
+	 * @author codistmonk (creation 2016-07-05)
+	 */
+	public static final class ClassSampler implements Serializable {
+		
+		private final Random random;
+		
+		private final TreeMap<Short, LongList> map;
+		
+		private final int limit;
+		
+		private final long totalPixelCount;
+		
+		private int size;
+		
+		private int i;
+		
+		public ClassSampler(final Random random, final int limit, final long totalPixelCount) {
+			this.random = random;
+			this.map = new TreeMap<>();
+			this.limit = limit;
+			this.totalPixelCount = totalPixelCount;
+		}
+		
+		public final void prepare(final short priority, final long pixel) {
+			if (this.size < this.limit) {
+				this.map.computeIfAbsent(priority, p -> new LongList()).add(pixel);
+				++this.size;
+			} else {
+				final Entry<Short, LongList> lastEntry = this.map.lastEntry();
+				
+				if (priority <= lastEntry.getKey()) {
+					final LongList pixels = this.map.computeIfAbsent(priority, p -> new LongList());
+					
+					if (lastEntry.getKey().equals(priority)) {
+						final long r = (0x7F_FF_FF_FF__FF_FF_FF_FFL & this.random.nextLong()) % this.totalPixelCount;
+						
+						if (r < pixels.size()) {
+							pixels.set(this.i % pixels.size(), pixel);
+							++this.i;
+						}
+					} else {
+						pixels.add(pixel);
+						
+						final LongList lastPixels = lastEntry.getValue();
+						
+						lastPixels.remove(0);
+						
+						if (lastPixels.isEmpty()) {
+							this.map.remove(lastEntry.getKey());
+						}
+					}
+				}
+			}
+		}
+		
+		public final ClassSampler fill() {
+			if (!this.map.isEmpty()) {
+				final LongList pixels = this.map.firstEntry().getValue();
+				
+				for (; this.size < this.limit; ++this.size) {
+					pixels.add(pixels.get(this.random.nextInt(pixels.size())));
+				}
+			}
+			
+			return this;
+		}
+		
+		public final LongStream pixels() {
+			return this.map.values().stream().flatMapToLong(l -> Arrays.stream(l.toArray()));
+		}
+		
+		private static final long serialVersionUID = -8987894943252816228L;
+		
 	}
 	
 }

@@ -138,7 +138,7 @@ public final class BinView extends JPanel {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final int classBytes = arguments.get1("classBytes", 1);
 		final int itemWidth = arguments.get1("itemWidth", 32);
-		final int itemHeight = arguments.get1("itemWidth", itemWidth);
+		final int itemHeight = arguments.get1("itemHeight", itemWidth);
 		final int itemChannels = arguments.get1("itemChannels", 3);
 		final String binPath = arguments.get("bin", "");
 		
