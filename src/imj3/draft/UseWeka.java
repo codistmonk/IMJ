@@ -2,8 +2,6 @@ package imj3.draft;
 
 import static multij.tools.Tools.*;
 
-import imj3.draft.EvaluateClassification.ConfusionMatrix;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
