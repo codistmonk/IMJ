@@ -113,6 +113,14 @@ public final class ConfusionMatrix<K extends Comparable<K>> implements Serializa
 		
 		private double value;
 		
+		public AtomicDouble() {
+			this(0.0);
+		}
+		
+		public AtomicDouble(final double value) {
+			this.value = value;
+		}
+		
 		public final synchronized double get() {
 			return this.value;
 		}
