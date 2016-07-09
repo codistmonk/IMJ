@@ -7,36 +7,39 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author codistmonk (creation 2015-04-22)
  */
 public final class ConfusionMatrix<K extends Comparable<K>> implements Serializable {
 	
-	private final Map<K, Map<K, AtomicLong>> counts = new TreeMap<>();
+	private final Map<K, Map<K, AtomicDouble>> counts = new TreeMap<>();
 	
-	public final Map<K, Map<K, AtomicLong>> getCounts() {
+	public final Map<K, Map<K, AtomicDouble>> getCounts() {
 		return this.counts;
 	}
 	
 	public final void count(final K predicted, final K actual) {
+		this.count(predicted, actual, 1.0);
+	}
+	
+	public final void count(final K predicted, final K actual, final double n) {
 		this.getCounts().computeIfAbsent(predicted, p -> new TreeMap<>()).computeIfAbsent(
-				actual, e -> new AtomicLong()).incrementAndGet();
+				actual, e -> new AtomicDouble()).addAndGet(n);
 	}
 	
 	public final double computeAccuracy() {
-		final AtomicLong tp = new AtomicLong();
-		final AtomicLong total = new AtomicLong();
+		final AtomicDouble tp = new AtomicDouble();
+		final AtomicDouble total = new AtomicDouble();
 		
-		for (final Entry<K, Map<K, AtomicLong>> entry : this.getCounts().entrySet()) {
+		for (final Entry<K, Map<K, AtomicDouble>> entry : this.getCounts().entrySet()) {
 			final Object predicted = entry.getKey();
 			
-			for (final Map.Entry<?, AtomicLong> subentry : entry.getValue().entrySet()) {
-				final Object expected = subentry.getKey();
-				final long delta = subentry.getValue().get();
+			for (final Map.Entry<?, AtomicDouble> subentry : entry.getValue().entrySet()) {
+				final Object actual = subentry.getKey();
+				final double delta = subentry.getValue().get();
 				
-				if (predicted.equals(expected)) {
+				if (predicted.equals(actual)) {
 					tp.addAndGet(delta);
 				}
 				
@@ -44,29 +47,29 @@ public final class ConfusionMatrix<K extends Comparable<K>> implements Serializa
 			}
 		}
 		
-		return (double) tp.get() / total.get();
+		return tp.get() / total.get();
 	}
 	
 	public final Map<K, Double> computeF1s() {
-		final Map<Object, AtomicLong> tps = new HashMap<>();
-		final Map<Object, AtomicLong> fps = new HashMap<>();
-		final Map<Object, AtomicLong> fns = new HashMap<>();
+		final Map<Object, AtomicDouble> tps = new HashMap<>();
+		final Map<Object, AtomicDouble> fps = new HashMap<>();
+		final Map<Object, AtomicDouble> fns = new HashMap<>();
 		final Collection<K> keys = new HashSet<>(this.getCounts().keySet());
 		
-		for (final Entry<K, Map<K, AtomicLong>> entry : this.getCounts().entrySet()) {
+		for (final Entry<K, Map<K, AtomicDouble>> entry : this.getCounts().entrySet()) {
 			final Object predicted = entry.getKey();
 			
 			keys.addAll(entry.getValue().keySet());
 			
-			for (final Map.Entry<?, AtomicLong> subentry : entry.getValue().entrySet()) {
-				final Object expected = subentry.getKey();
-				final long delta = subentry.getValue().get();
+			for (final Map.Entry<?, AtomicDouble> subentry : entry.getValue().entrySet()) {
+				final Object actual = subentry.getKey();
+				final double delta = subentry.getValue().get();
 				
-				if (predicted.equals(expected)) {
+				if (predicted.equals(actual)) {
 					increment(tps, predicted, delta);
 				} else {
 					increment(fps, predicted, delta);
-					increment(fns, expected, delta);
+					increment(fns, actual, delta);
 				}
 			}
 		}
@@ -93,10 +96,10 @@ public final class ConfusionMatrix<K extends Comparable<K>> implements Serializa
 	
 	private static final long serialVersionUID = -3078169987830724986L;
 	
-	public static final AtomicLong ZERO = new AtomicLong();
+	public static final AtomicDouble ZERO = new AtomicDouble();
 	
-	public static void increment(final Map<Object, AtomicLong> counts, final Object key, final long delta) {
-		counts.computeIfAbsent(key, e -> new AtomicLong()).addAndGet(delta);
+	public static void increment(final Map<Object, AtomicDouble> counts, final Object key, final double delta) {
+		counts.computeIfAbsent(key, e -> new AtomicDouble()).addAndGet(delta);
 	}
 	
 	public static final double computeMacroF1(final Map<?, Double> f1s) {

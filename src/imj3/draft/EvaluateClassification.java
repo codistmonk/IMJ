@@ -2,6 +2,8 @@ package imj3.draft;
 
 import static java.lang.Integer.toHexString;
 
+import imj3.draft.ConfusionMatrix.AtomicDouble;
+
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -10,7 +12,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicLong;
 
 import javax.imageio.ImageIO;
 
@@ -57,7 +58,7 @@ public final class EvaluateClassification {
 		final Collection<K> keys = collectKeys(confusionMatrix.getCounts());
 		
 		for (final K key : keys) {
-			final Map<K, AtomicLong> row = confusionMatrix.getCounts().getOrDefault(key, Collections.emptyMap());
+			final Map<K, AtomicDouble> row = confusionMatrix.getCounts().getOrDefault(key, Collections.emptyMap());
 			boolean printSeparator = false;
 			
 			for (final K subkey : keys) {
@@ -95,9 +96,9 @@ public final class EvaluateClassification {
 			for (int x = 0; x < groundtruthWidth; ++x) {
 				final int classificationX = x * classificationWidth / groundtruthWidth;
 				final int predicted = maybeBinarize(classification.getRGB(classificationX, classificationY), binarize);
-				final int expected = maybeBinarize(groundtruth.getRGB(x, y), binarize);
+				final int actual = maybeBinarize(groundtruth.getRGB(x, y), binarize);
 				
-				result.count(toHexString(predicted), toHexString(expected));
+				result.count(toHexString(predicted), toHexString(actual));
 			}
 		}
 		
