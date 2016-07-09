@@ -12,24 +12,24 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * @author codistmonk (creation 2015-04-22)
  */
-public final class ConfusionMatrix implements Serializable {
+public final class ConfusionMatrix<K extends Comparable<K>> implements Serializable {
 	
-	private final Map<Comparable<?>, Map<Comparable<?>, AtomicLong>> counts = new TreeMap<>();
+	private final Map<K, Map<K, AtomicLong>> counts = new TreeMap<>();
 	
-	public final Map<Comparable<?>, Map<Comparable<?>, AtomicLong>> getCounts() {
+	public final Map<K, Map<K, AtomicLong>> getCounts() {
 		return this.counts;
 	}
 	
-	public final <C extends Comparable<C>> void count(final C predicted, final C expected) {
+	public final void count(final K predicted, final K actual) {
 		this.getCounts().computeIfAbsent(predicted, p -> new TreeMap<>()).computeIfAbsent(
-				expected, e -> new AtomicLong()).incrementAndGet();
+				actual, e -> new AtomicLong()).incrementAndGet();
 	}
 	
 	public final double computeAccuracy() {
 		final AtomicLong tp = new AtomicLong();
 		final AtomicLong total = new AtomicLong();
 		
-		for (final Entry<Comparable<?>, Map<Comparable<?>, AtomicLong>> entry : this.getCounts().entrySet()) {
+		for (final Entry<K, Map<K, AtomicLong>> entry : this.getCounts().entrySet()) {
 			final Object predicted = entry.getKey();
 			
 			for (final Map.Entry<?, AtomicLong> subentry : entry.getValue().entrySet()) {
@@ -47,13 +47,13 @@ public final class ConfusionMatrix implements Serializable {
 		return (double) tp.get() / total.get();
 	}
 	
-	public final Map<Comparable<?>, Double> computeF1s() {
+	public final Map<K, Double> computeF1s() {
 		final Map<Object, AtomicLong> tps = new HashMap<>();
 		final Map<Object, AtomicLong> fps = new HashMap<>();
 		final Map<Object, AtomicLong> fns = new HashMap<>();
-		final Collection<Comparable<?>> keys = new HashSet<>(this.getCounts().keySet());
+		final Collection<K> keys = new HashSet<>(this.getCounts().keySet());
 		
-		for (final Entry<Comparable<?>, Map<Comparable<?>, AtomicLong>> entry : this.getCounts().entrySet()) {
+		for (final Entry<K, Map<K, AtomicLong>> entry : this.getCounts().entrySet()) {
 			final Object predicted = entry.getKey();
 			
 			keys.addAll(entry.getValue().keySet());
@@ -72,9 +72,9 @@ public final class ConfusionMatrix implements Serializable {
 		}
 		
 		{
-			final Map<Comparable<?>, Double> result = new TreeMap<>();
+			final Map<K, Double> result = new TreeMap<>();
 			
-			for (final Comparable<?> key : keys) {
+			for (final K key : keys) {
 				final double tp = tps.getOrDefault(key, ZERO).get();
 				final double fp = fps.getOrDefault(key, ZERO).get();
 				final double fn = fns.getOrDefault(key, ZERO).get();
@@ -101,6 +101,64 @@ public final class ConfusionMatrix implements Serializable {
 	
 	public static final double computeMacroF1(final Map<?, Double> f1s) {
 		return f1s.values().stream().mapToDouble(Double::doubleValue).average().getAsDouble();
+	}
+	
+	/**
+	 * @author codistmonk (creation 2016-07-09)
+	 */
+	public static final class AtomicDouble extends Number {
+		
+		private double value;
+		
+		public final synchronized double get() {
+			return this.value;
+		}
+		
+		public final synchronized void set(final double value) {
+			this.value = value;
+		}
+		
+		public final synchronized double addAndGet(final double delta) {
+			this.set(this.get() + delta);
+			
+			return this.get();
+		}
+		
+		public final synchronized double getAndAdd(final double delta) {
+			final double result = this.get();
+			
+			this.addAndGet(delta);
+			
+			return result;
+		}
+		
+		@Override
+		public final int intValue() {
+			return (int) this.get();
+		}
+		
+		@Override
+		public final long longValue() {
+			return (long) this.get();
+		}
+		
+		@Override
+		public final float floatValue() {
+			return (float) this.get();
+		}
+		
+		@Override
+		public final double doubleValue() {
+			return this.get();
+		}
+		
+		@Override
+		public final String toString() {
+			return Double.toString(this.get());
+		}
+		
+		private static final long serialVersionUID = -8053745274905128807L;
+		
 	}
 	
 }

@@ -42,7 +42,7 @@ public final class EvaluateClassification {
 		final BufferedImage groundtruth = ImageIO.read(groundtruthFile);
 		final BufferedImage classification = ImageIO.read(classificationFile);
 		final boolean binarize = arguments.get("binarize", 0)[0] != 0;
-		final ConfusionMatrix confusionMatrix = evaluate(classification, groundtruth, binarize);
+		final ConfusionMatrix<?> confusionMatrix = evaluate(classification, groundtruth, binarize);
 		
 		System.out.println("counts: " + confusionMatrix.getCounts());
 		System.out.println("F1s: " +  confusionMatrix.computeF1s());
@@ -53,14 +53,14 @@ public final class EvaluateClassification {
 		System.out.println("END COUNTS TABLE");
 	}
 	
-	public static void writeCSV(final ConfusionMatrix confusionMatrix, final String separator, final PrintStream output) {
-		final Collection<Comparable<?>> keys = collectKeys(confusionMatrix.getCounts());
+	public static final <K extends Comparable<K>> void writeCSV(final ConfusionMatrix<K> confusionMatrix, final String separator, final PrintStream output) {
+		final Collection<K> keys = collectKeys(confusionMatrix.getCounts());
 		
-		for (final Comparable<?> key : keys) {
-			final Map<Comparable<?>, AtomicLong> row = confusionMatrix.getCounts().getOrDefault(key, Collections.emptyMap());
+		for (final K key : keys) {
+			final Map<K, AtomicLong> row = confusionMatrix.getCounts().getOrDefault(key, Collections.emptyMap());
 			boolean printSeparator = false;
 			
-			for (final Comparable<?> subkey : keys) {
+			for (final K subkey : keys) {
 				if (printSeparator) {
 					output.print(separator);
 				} else {
@@ -74,20 +74,20 @@ public final class EvaluateClassification {
 		}
 	}
 	
-	public static final <V> Collection<Comparable<?>> collectKeys(final Map<Comparable<?>, Map<Comparable<?>, V>> map) {
-		final Collection<Comparable<?>> result = new TreeSet<>(map.keySet());
+	public static final <K extends Comparable<K>, V> Collection<K> collectKeys(final Map<K, Map<K, V>> map) {
+		final Collection<K> result = new TreeSet<>(map.keySet());
 		
 		map.values().stream().forEach(m -> result.addAll(m.keySet()));
 		
 		return result;
 	}
 	
-	public static final ConfusionMatrix evaluate(final BufferedImage classification, final BufferedImage groundtruth, final boolean binarize) {
+	public static final ConfusionMatrix<String> evaluate(final BufferedImage classification, final BufferedImage groundtruth, final boolean binarize) {
 		final int groundtruthWidth = groundtruth.getWidth();
 		final int groundtruthHeight = groundtruth.getHeight();
 		final int classificationWidth = classification.getWidth();
 		final int classificationHeight = classification.getHeight();
-		final ConfusionMatrix result = new ConfusionMatrix();
+		final ConfusionMatrix<String> result = new ConfusionMatrix<>();
 		
 		for (int y = 0; y < groundtruthHeight; ++y) {
 			final int classificationY = y * classificationHeight / groundtruthHeight;
