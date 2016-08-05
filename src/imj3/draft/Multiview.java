@@ -7,10 +7,12 @@ import imj3.tools.Image2DComponent.ImageChangedEvent;
 
 import java.awt.AWTEvent;
 import java.awt.Dimension;
+import java.awt.Frame;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
 
 import javax.swing.JSplitPane;
 import javax.swing.SwingUtilities;
@@ -87,6 +89,8 @@ public final class Multiview {
 			
 			@Listener
 			public final void imageChanged(final ImageChangedEvent event) {
+				((Frame) SwingUtilities.getWindowAncestor(event.getSource())).setTitle(new File(component1.getImage().getId()).getName() + " | " + new File(component2.getImage().getId()).getName());
+				
 				if (component2.getImage() != defaultImage) {
 					SwingUtilities.invokeLater(() -> {
 						component1.setViewScale(component2.getScaleX());
@@ -100,6 +104,8 @@ public final class Multiview {
 			
 			@Listener
 			public final void imageChanged(final ImageChangedEvent event) {
+				((Frame) SwingUtilities.getWindowAncestor(event.getSource())).setTitle(new File(component1.getImage().getId()).getName() + " | " + new File(component2.getImage().getId()).getName());
+				
 				if (component1.getImage() != defaultImage) {
 					SwingUtilities.invokeLater(() -> {
 						component2.setViewScale(component1.getScaleX());
