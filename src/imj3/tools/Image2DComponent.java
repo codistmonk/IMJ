@@ -402,6 +402,7 @@ public final class Image2DComponent extends JComponent {
 		synchronized (canvasGraphics) {
 			if (clearSomething) {
 				final AffineTransform transform = canvasGraphics.getTransform();
+				
 				final Point topLeft = new Point();
 				final Point bottomRight = new Point(this.getWidth(), this.getHeight());
 				
@@ -409,8 +410,11 @@ public final class Image2DComponent extends JComponent {
 					transform.inverseTransform(topLeft, topLeft);
 					transform.inverseTransform(bottomRight, bottomRight);
 					
+					final int r = (int) (sqrt(square(bottomRight.getX() - topLeft.getX()) + square(bottomRight.getY() - topLeft.getY())) / 2.0);
+					
 					final Rectangle canvasRegion = new Rectangle(
-							topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y);
+							(topLeft.x + bottomRight.x) / 2 - r, (topLeft.y + bottomRight.y) / 2 - r,
+							2 * r, 2 * r);
 					
 					canvasGraphics.setColor(Color.WHITE);
 					
@@ -433,7 +437,7 @@ public final class Image2DComponent extends JComponent {
 						canvasGraphics.fillRect(canvasRegion.x, region.y + region.height,
 								canvasRegion.width, canvasRegion.height);
 					}
-				} catch (final NoninvertibleTransformException exception) {
+				} catch (final Exception exception) {
 					exception.printStackTrace();
 				}
 			}
