@@ -2,6 +2,7 @@ package imj3.tools;
 
 import static imj3.core.IMJCoreTools.quantize;
 import static java.lang.Math.*;
+import static multij.tools.MathTools.square;
 import static multij.tools.Tools.*;
 
 import imj3.core.Image2D;
@@ -101,7 +102,31 @@ public final class Image2DComponent extends JComponent {
 				final AffineTransform view = Image2DComponent.this.getView();
 				final Point2D translation = new Point2D.Double((event.getX() - this.mouse.x) / view.getScaleX(), (event.getY() - this.mouse.y) / view.getScaleY());
 				
-				view.translate(translation.getX(), translation.getY());
+				if (event.isAltDown()) {
+					try {
+						final Point2D center = new Point2D.Double(getWidth() / 2, getHeight() / 2);
+						final double x1 = event.getX() - center.getX();
+						final double y1 = event.getY() - center.getY();
+						final double x2 = this.mouse.x - center.getX();
+						final double y2 = this.mouse.y - center.getY();
+						final double cross = x1 * y2 - y1 * x2;
+						final double l1 = sqrt(square(x1) + square(y1));
+						final double l2 = sqrt(square(x1) + square(y2));
+						final double sinTheta = cross / (l1 * l2);
+						
+						view.inverseTransform(center, center);
+						
+						view.rotate(-asin(sinTheta), center.getX(), center.getY());
+					} catch (final Exception exception) {
+						exception.printStackTrace();
+					}
+				} else {
+					final double theta = getAngle();
+					final double cosTheta = cos(theta);
+					final double sinTheta = sin(theta);
+					
+					view.translate(translation.getX() * cosTheta + translation.getY() * sinTheta, -translation.getX() * sinTheta + translation.getY() * cosTheta);
+				}
 				
 				this.mousePressed(event);
 				
@@ -116,7 +141,7 @@ public final class Image2DComponent extends JComponent {
 				
 				final int direction = event.getWheelRotation();
 				final double n = 8.0;
-				final double scale = Image2DComponent.this.getView().getScaleX();
+				final double scale = Image2DComponent.this.getScaleX();
 				final double logScale = round(n * log(scale) / log(2.0)) / n;
 				final double newScale = pow(2.0, logScale + signum(direction) / n);
 				
@@ -128,12 +153,20 @@ public final class Image2DComponent extends JComponent {
 		}.addTo(this);
 	}
 	
+	public final double getScaleX() {
+		return sqrt(square(this.getView().getScaleX()) + square(this.getView().getShearY()));
+	}
+	
+	public final double getScaleY() {
+		return sqrt(square(this.getView().getScaleY()) + square(this.getView().getShearX()));
+	}
+	
 	public final void setImage(final Image2D image) {
 		final Image2D oldImage = this.getImage();
 		
 		if (oldImage != image) {
 			final AffineTransform view = this.getView();
-			this.image = image.getScaledImage(view.getScaleX());
+			this.image = image.getScaledImage(this.getScaleX());
 			final double newScale = image.getScale();
 			this.getView().setToScale(newScale, newScale);
 			this.getView().translate((-image.getWidth() / 2.0 + this.getWidth() / 2) / newScale,
@@ -221,7 +254,7 @@ public final class Image2DComponent extends JComponent {
 		final Graphics2D canvasGraphics = this.canvas.setFormat(this.getWidth(), this.getHeight()).getGraphics();
 		
 		{
-			final double scale = max(this.getView().getScaleX(), this.getView().getScaleY());
+			final double scale = max(this.getScaleX(), this.getScaleY());
 			final Image2D image = this.getImage();
 			this.image = image.getScaledImage(scale);
 			
@@ -321,7 +354,11 @@ public final class Image2DComponent extends JComponent {
 			exception.printStackTrace();
 		}
 		
-		view.setTransform(newScale, view.getShearY(), view.getShearX(), newScale, view.getTranslateX(), view.getTranslateY());
+		final double theta = this.getAngle();
+		final double cosTheta = cos(theta);
+		final double sinTheta = sin(theta);
+		
+		view.setTransform(newScale * cosTheta, newScale * sinTheta, -newScale * sinTheta, newScale * cosTheta, view.getTranslateX(), view.getTranslateY());
 		
 //		center_view:
 		{
@@ -332,17 +369,15 @@ public final class Image2DComponent extends JComponent {
 			}
 			
 			view.translate(-(center.getX() - newCenter.getX()), -(center.getY() - newCenter.getY()));
-			
-			newCenter.setLocation(getWidth() / 2.0, getHeight() / 2.0);
-			
-			try {
-				view.inverseTransform(newCenter, newCenter);
-			} catch (final NoninvertibleTransformException exception) {
-				exception.printStackTrace();
-			}
 		}
 		
 		this.repaint();
+	}
+
+	public final double getAngle() {
+		final AffineTransform view = this.getView();
+		
+		return atan2(view.getShearY(), view.getScaleX());
 	}
 	
 	final Collection<TileKey> getActiveTiles() {
