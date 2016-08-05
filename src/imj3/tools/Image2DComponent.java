@@ -100,7 +100,6 @@ public final class Image2DComponent extends JComponent {
 				}
 				
 				final AffineTransform view = Image2DComponent.this.getView();
-				final Point2D translation = new Point2D.Double((event.getX() - this.mouse.x) / view.getScaleX(), (event.getY() - this.mouse.y) / view.getScaleY());
 				
 				if (event.isAltDown()) {
 					try {
@@ -121,6 +120,7 @@ public final class Image2DComponent extends JComponent {
 						exception.printStackTrace();
 					}
 				} else {
+					final Point2D translation = new Point2D.Double((event.getX() - this.mouse.x) / getScaleX(), (event.getY() - this.mouse.y) / getScaleY());
 					final double theta = getAngle();
 					final double cosTheta = cos(theta);
 					final double sinTheta = sin(theta);
@@ -165,7 +165,6 @@ public final class Image2DComponent extends JComponent {
 		final Image2D oldImage = this.getImage();
 		
 		if (oldImage != image) {
-			final AffineTransform view = this.getView();
 			this.image = image.getScaledImage(this.getScaleX());
 			final double newScale = image.getScale();
 			this.getView().setToScale(newScale, newScale);
