@@ -79,7 +79,7 @@ public final class SVG2Bin {
 		final Image2D image = IMJTools.read(imagePath, lod);
 		final long seed = Long.decode(arguments.get("seed", "0"));
 		final boolean balance = arguments.get1("balance", 1) != 0;
-		final long limit = Long.decode(arguments.get("limit", Long.toString(Long.MAX_VALUE)));
+		final int limit = Long.decode(arguments.get("limit", Integer.toString(Integer.MAX_VALUE))).intValue();
 		final Random random = seed == -1L ? new Random() : new Random(seed);
 		final List<Region> regions = new ArrayList<>();
 		final double scale = pow(2.0, -lod);
@@ -104,7 +104,7 @@ public final class SVG2Bin {
 		regions.forEach(region -> sizes.compute(region.getLabel(), (l, s) -> (s == null ? 0 : s) + region.getSize()));
 		
 		final Long totalSize = sizes.values().stream().reduce((x, y) -> x + y).get();
-		final long classLimit = balance ? limit : Integer.MAX_VALUE;
+		final int classLimit = balance ? limit : Integer.MAX_VALUE;
 		
 		debugPrint("classSizes:", sizes);
 		debugPrint("totalSize:", totalSize, "classLimit:", classLimit);
@@ -150,12 +150,12 @@ public final class SVG2Bin {
 	
 	public static final Map<Byte, ClassSampler> buildSamplers(final Image2D image, final Image2D prediction,
 			final Image2D softmax, final List<Region> regions, final Map<Integer, Long> sizes, final boolean balance,
-			final long classLimit, final Random random) {
+			final int classLimit, final Random random) {
 		final Map<Byte, ClassSampler> result = new TreeMap<>();
 		
 		for (final Region region : regions) {
 			final byte label = (byte) region.getLabel();
-			final ClassSampler sampler = result.computeIfAbsent(label, __ -> new ClassSampler(random, (int) classLimit, sizes.get(region.getLabel())));
+			final ClassSampler sampler = result.computeIfAbsent(label, __ -> new ClassSampler(random, classLimit, sizes.get(region.getLabel())));
 			final Rectangle bounds = region.getBounds();
 			final BufferedImage mask = region.getMask();
 			final int width = mask.getWidth();
