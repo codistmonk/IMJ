@@ -79,7 +79,7 @@ public final class SVG2Bin {
 		final Image2D image = IMJTools.read(imagePath, lod);
 		final long seed = Long.decode(arguments.get("seed", "0"));
 		final boolean balance = arguments.get1("balance", 1) != 0;
-		final int limit = Long.decode(arguments.get("limit", Integer.toString(Integer.MAX_VALUE))).intValue();
+		final int limit = (int) min(max(0L, Long.decode(arguments.get("limit", Integer.toString(Integer.MAX_VALUE)))), Integer.MAX_VALUE);
 		final Random random = seed == -1L ? new Random() : new Random(seed);
 		final List<Region> regions = new ArrayList<>();
 		final double scale = pow(2.0, -lod);
