@@ -394,7 +394,7 @@ public final class PaletteBasedSegmentation {
 			final Integer clusterRGB = stringsToRGB(cluster);
 			
 			for (int j = 0; j < model.getChildCount(cluster); ++j) {
-				getOrCreate((Map) result, clusterRGB, Factory.DefaultFactory.TREE_SET_FACTORY)
+				((Collection) getOrCreate((Map) result, clusterRGB, Factory.DefaultFactory.TREE_SET_FACTORY))
 				.add(stringsToRGB(model.getChild(cluster, j)));
 			}
 		}
