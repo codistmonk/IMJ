@@ -7,6 +7,7 @@ import static multij.swing.SwingTools.*;
 import static multij.tools.Tools.*;
 
 import imj3.core.Image2D;
+import imj3.tools.AwtImage2D;
 import imj3.tools.IMJTools;
 import imj3.tools.Image2DComponent;
 import imj3.tools.Image2DComponent.Overlay;
@@ -376,6 +377,10 @@ public final class VisualPatchExtractor extends JPanel {
 			
 		});
 		
+		this.view.setDropImageEnabled(true);
+		
+		final DropTarget dropImage = this.view.getDropTarget();
+		
 		this.view.setDropTarget(new DropTarget() {
 			
 			@Override
@@ -393,6 +398,8 @@ public final class VisualPatchExtractor extends JPanel {
 					getView().repaint();
 				} catch (final Exception exception) {
 					debugError(exception);
+					
+					dropImage.drop(event);
 				}
 			}
 			
@@ -420,12 +427,20 @@ public final class VisualPatchExtractor extends JPanel {
 	 * @param commandLineArguments
 	 * <br>Must not be null
 	 */
-	public static final void main(final String[] commandLineArguments) {
+	public static final void main(final String... commandLineArguments) {
 		SwingTools.useSystemLookAndFeel();
 		
-		final Image2DComponent component = new Image2DComponent(IMJTools.read(commandLineArguments[0]));
+		final Image2D image;
 		
-		SwingTools.show(new VisualPatchExtractor(component), commandLineArguments[0], false);
+		if (0 < commandLineArguments.length) {
+			image = IMJTools.read(commandLineArguments[0]);
+		} else {
+			image = new AwtImage2D("", new BufferedImage(256, 256, BufferedImage.TYPE_3BYTE_BGR));
+		}
+		
+		final Image2DComponent component = new Image2DComponent(image);
+		
+		SwingTools.show(new VisualPatchExtractor(component), image.getId(), false);
 	}
 	
 	/**

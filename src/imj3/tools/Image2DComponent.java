@@ -489,7 +489,7 @@ public final class Image2DComponent extends JComponent {
 	public static final void main(final String[] commandLineArguments) {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String path = arguments.get("file", "");
-		Image2D image = new AwtImage2D("", 1, 1);
+		Image2D image = new AwtImage2D("", 256, 256);
 		
 		try {
 			image = IMJTools.read(path);
