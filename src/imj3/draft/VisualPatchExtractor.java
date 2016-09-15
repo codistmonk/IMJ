@@ -29,12 +29,14 @@ import java.awt.geom.Area;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import javax.imageio.ImageIO;
 import javax.swing.Box;
 import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
@@ -306,6 +308,16 @@ public final class VisualPatchExtractor extends JPanel {
 			public final void mouseClicked(final MouseEvent event) {
 				if (!event.isPopupTrigger() && event.getClickCount() == 2) {
 					addPatchToList();
+					
+					try {
+						final Rectangle bounds = getPatchBounds();
+						
+						ImageIO.write(getPatchAsBufferedImage(), "png", new File(
+								baseName(getView().getImage().getId().substring("local:".length())) + "_" +
+								"patch_" + bounds.x + "_" + bounds.y + "_" + bounds.width + "_" + bounds.height + ".png"));
+					} catch (final IOException exception) {
+						exception.printStackTrace();
+					}
 				}
 			}
 			
