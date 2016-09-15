@@ -311,9 +311,10 @@ public final class VisualPatchExtractor extends JPanel {
 					
 					try {
 						final Rectangle bounds = getPatchBounds();
+						final String id = getView().getImage().getId();
 						
 						ImageIO.write(getPatchAsBufferedImage(), "png", new File(
-								baseName(getView().getImage().getId().substring("local:".length())) + "_" +
+								baseName(id.substring(id.indexOf(':') + 1)) + "_" +
 								"patch_" + bounds.x + "_" + bounds.y + "_" + bounds.width + "_" + bounds.height + ".png"));
 					} catch (final IOException exception) {
 						exception.printStackTrace();
