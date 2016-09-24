@@ -71,6 +71,7 @@ public final class SVG2Bin {
 		final int lod = arguments.get1("lod", 4);
 		final int patchSize = arguments.get1("patchSize", 32);
 		final int[] patchContext = arguments.get("patchContext", 0);
+		final boolean alterations = arguments.get1("alterations", 0) != 0;
 		final String svgPath = arguments.get("svg", baseName(imagePath) + ".svg");
 		final String predictionPath = arguments.get("prediction", "");
 		final String softmaxPath = arguments.get("softmax", "");
@@ -116,6 +117,10 @@ public final class SVG2Bin {
 					classLimit, random);
 			final List<byte[]> items = collectItems(image, samplers, patchSize, patchContext);
 			
+			if (alterations) {
+				alter(items, patchSize, random);
+			}
+			
 			Collections.shuffle(items, random);
 			
 			final String trainOutputPath = outputPrefix + (trainRatio == 1.0 ? ".bin" : "_train.bin");
@@ -133,6 +138,52 @@ public final class SVG2Bin {
 				SwingTools.show(new Image2DComponent(image), "Image", false);
 			}
 		}
+	}
+	
+	public static final void alter(final List<byte[]> items, final int patchSize, final Random random) {
+		final int channelSize = patchSize * patchSize;
+		
+		for (final byte[] item : items) {
+			if (random.nextBoolean()) {
+				for (int i = 1; i < item.length; i += channelSize) {
+					for (int y = 0; y < patchSize; ++y) {
+						for (int x = 0; x < patchSize / 2; ++x) {
+							swapb(item, i + x + patchSize * y, i + (patchSize - 1 - x) + patchSize * y);
+						}
+					}
+				}
+			}
+			
+			final int rotations = random.nextInt(4);
+			
+			for (int j = 0; j < rotations; ++j) {
+				for (int i = 1; i < item.length; i += channelSize) {
+					for (int y = 0; y < (patchSize + 1) / 2; ++y) {
+						for (int x = 0; x < (patchSize + 1) / 2; ++x) {
+							rotl(item,
+									i + x + patchSize * y,
+									i + (patchSize - 1 - y) + patchSize * x,
+									i + (patchSize - 1 - x) + patchSize * (patchSize - 1 - y),
+									i + y + patchSize * (patchSize - 1 - x));
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	public static final void swapb(final byte[] values, final int i, final int j) {
+		final byte tmp = values[i];
+		values[i] = values[j];
+		values[j] = tmp;
+	}
+	
+	public static final void rotl(final byte[] values, final int i, final int j, final int k, final int l) {
+		final byte tmp = values[i];
+		values[i] = values[j];
+		values[j] = values[k];
+		values[k] = values[l];
+		values[l] = tmp;
 	}
 	
 	public static final List<byte[]> collectItems(final Image2D image, final Map<Byte, ClassSampler> samplers,
