@@ -43,6 +43,8 @@
             <zipfileset excludes="META-INF/*.SF" src="lib/jsch-0.1.50.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/truezip-7.7.8.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="lib/weka.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/javax.activation-api-1.2.0.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/jaxb-api-2.4.0-b180725.0427.jar"/>
         </jar>
         <jar destfile="imj.jar" filesetmanifest="mergewithoutmain">
             <manifest>
